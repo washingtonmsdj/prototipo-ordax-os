@@ -213,7 +213,8 @@
         "system.boot-control"
       ],
       "privileged_capabilities": [
-        "creator.native-install"
+        "creator.native-install",
+        "host.raw-disk"
       ],
       "forbidden_capabilities": [],
       "privileged_boundary": "native-installer-only-explicit-user-authorization"
