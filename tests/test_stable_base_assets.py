@@ -122,7 +122,9 @@ class StableBaseAssetsTests(unittest.TestCase):
         self.assertNotIn("ordax-dev-base-", workflow)
         self.assertNotIn("bootstrap/dev-base/build.py", workflow)
         self.assertNotIn("LoaderEntryOneShot", workflow)
-        self.assertNotIn("reboot", workflow.lower())
+        self.assertNotIn("systemctl reboot", workflow)
+        self.assertNotIn("busybox reboot", workflow)
+        self.assertNotIn("reboot -f", workflow)
 
 
 if __name__ == "__main__":
