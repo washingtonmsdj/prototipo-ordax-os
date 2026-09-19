@@ -50,7 +50,12 @@
       "development_git_rescue_enabled": false,
       "development_base_channel_enabled": false,
       "shared_surface_health_supervision_enabled": true,
-      "continuous_signed_runtime_update_connected": false
+      "continuous_signed_runtime_update_connected": false,
+      "signed_release_discovery_primitive": "ordax-release-agent inspect",
+      "signed_release_discovery_implemented": true,
+      "signed_release_discovery_downloads_artifact": false,
+      "signed_release_discovery_changes_current": false,
+      "signed_release_discovery_requires_trust": true
     }
   },
   "invariants": {
@@ -64,8 +69,8 @@
     "base_updates_are_more_restrictive_than_app_updates": true
   },
   "next_gate": {
-    "id": "stable-continuous-signed-update",
-    "description": "Connect the existing signed release acquisition protocol to periodic Stable/MVP runtime update discovery without introducing Git or a second supervisor.",
+    "id": "stable-signed-channel-polling",
+    "description": "Connect the shared supervisor Stable profile to ordax-release-agent inspect for periodic signed release discovery, without artifact download or activation in this gate.",
     "implemented": false
   }
 }
