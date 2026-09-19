@@ -98,8 +98,10 @@ class StableRuntimeProfileTests(unittest.TestCase):
             rollback,
         )
         start = text.split("start_surface() {", 1)[1].split("\n}", 1)[0]
-        self.assertIn("ORDAX_DISTRIBUTION_PROFILE=$DISTRIBUTION_PROFILE", start)
-        self.assertIn("ORDAX_SOURCE_SHA=$(current_sha)", start)
+        self.assertIn('start_surface_from_system "$SYSTEM_ROOT" "$(current_sha)"', start)
+        shared_start = text.split("start_surface_from_system() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn('ORDAX_DISTRIBUTION_PROFILE="$DISTRIBUTION_PROFILE"', shared_start)
+        self.assertIn('ORDAX_SOURCE_SHA="$surface_source_sha"', shared_start)
         self.assertIn(
             'if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then\n    rm -f "$SUPERVISOR_GUARD_FILE"',
             text,
