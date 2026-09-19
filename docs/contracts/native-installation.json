@@ -58,8 +58,9 @@
     "native_target_identity_binding": "tools/creator/core/native_install_target.go#FinalizeNativeInstallTarget",
     "native_target_confirmation": "tools/creator/core/native_install_target.go#MatchConfirmedNativeInstallTarget",
     "native_target_bound_plan": "tools/creator/core/native_install_target.go#PlanNativeInstallationForTarget",
-    "native_target_adapter_discovery": false,
-    "native_target_apply_binding": false
+    "native_target_adapter_discovery": "tools/creator/host/linux/native_targets.go#EnumerateNativeInstallTargets",
+    "native_target_apply_binding": false,
+    "native_source_boot_identity_handoff": false
   },
   "fail_closed": [
     "never-touch-physical-device-during-plan",
@@ -81,6 +82,8 @@
     "read_only_target_forbidden": true,
     "transport_is_not_selection_authority": true,
     "confirmation_token": "sha256-fingerprint-not-secret",
-    "reenumeration_required_before_apply": true
+    "reenumeration_required_before_apply": true,
+    "adapter_discovery_requires_positive_source_boot_device": true,
+    "unknown_source_boot_device_behavior": "fail-closed-no-target-selection"
   }
 }
