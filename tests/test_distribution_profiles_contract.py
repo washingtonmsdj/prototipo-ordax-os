@@ -76,7 +76,7 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertFalse(stable["base_update_owner_active"])
         self.assertEqual(
             stable["base_update_owner_activation_gate"],
-            "stable-continuous-signed-update",
+            "stable-base-signed-update-integration",
         )
         self.assertEqual(
             stable["signed_release_discovery_primitive"],
