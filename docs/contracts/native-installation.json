@@ -54,13 +54,33 @@
     "non_destructive_cli": "ordax-creator plan-native --target-bytes <bytes>",
     "physical_apply_implemented": false,
     "physical_apply_authorized": false,
-    "first_boot_health_connected": false
+    "first_boot_health_connected": false,
+    "native_target_identity_binding": "tools/creator/core/native_install_target.go#FinalizeNativeInstallTarget",
+    "native_target_confirmation": "tools/creator/core/native_install_target.go#MatchConfirmedNativeInstallTarget",
+    "native_target_bound_plan": "tools/creator/core/native_install_target.go#PlanNativeInstallationForTarget",
+    "native_target_adapter_discovery": false,
+    "native_target_apply_binding": false
   },
   "fail_closed": [
     "never-touch-physical-device-during-plan",
     "never-allow-source-usb-as-install-target",
     "never-use-git-as-stable-install-source",
     "never-claim-install-complete-before-readback-and-first-boot-health",
-    "never-simulate-dual-boot-or-partition-resize"
-  ]
+    "never-simulate-dual-boot-or-partition-resize",
+    "never-authorize-a-target-whose-identity-changed-after-selection"
+  ],
+  "target_identity": {
+    "owner": "tools/creator/core/native_install_target.go",
+    "stable_identity_required": true,
+    "current_device_path_bound": true,
+    "capacity_bound": true,
+    "logical_sector_bytes_supported": [
+      512
+    ],
+    "source_boot_media_forbidden": true,
+    "read_only_target_forbidden": true,
+    "transport_is_not_selection_authority": true,
+    "confirmation_token": "sha256-fingerprint-not-secret",
+    "reenumeration_required_before_apply": true
+  }
 }
