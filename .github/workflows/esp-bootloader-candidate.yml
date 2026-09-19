@@ -52,10 +52,11 @@ jobs:
       - name: Build pinned bootctl proof parser
         run: |
           set -euo pipefail
-          ninja -C out/esp-work/systemd-build bootctl
-          mapfile -t candidates < <(find out/esp-work/systemd-build -type f -name bootctl -perm /111 -print)
-          test "${#candidates[@]}" -eq 1
-          printf '%s\n' "${candidates[0]}" > out/esp-work/pinned-bootctl-path
+          meson configure out/esp-work/systemd-build -Dblkid=enabled
+          ninja -C out/esp-work/systemd-build src/bootctl/bootctl
+          BOOTCTL=out/esp-work/systemd-build/src/bootctl/bootctl
+          test -x "$BOOTCTL"
+          printf '%s\n' "$BOOTCTL" > out/esp-work/pinned-bootctl-path
 
       - name: Prove single-try entry parsing with pinned systemd
         run: |
