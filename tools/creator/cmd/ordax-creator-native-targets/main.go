@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	creatorcore "github.com/washingtonmsdj/prototipo-ordax-os/tools/creator/core"
@@ -21,7 +21,7 @@ func readSourceBootDevice(path string) (string, error) {
 		return "", fmt.Errorf("source boot device handoff has invalid size")
 	}
 	value := strings.TrimSpace(string(data))
-	if !filepath.IsAbs(value) || !strings.HasPrefix(filepath.ToSlash(value), "/dev/") {
+	if !path.IsAbs(value) || !strings.HasPrefix(value, "/dev/") {
 		return "", fmt.Errorf("source boot device handoff is not an absolute /dev path")
 	}
 	return value, nil
