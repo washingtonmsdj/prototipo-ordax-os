@@ -219,18 +219,61 @@ def build(work_dir: Path, out_dir: Path) -> dict:
 
 
 def verify(out_dir: Path) -> dict:
+    contract = load_contract()
     out_dir = out_dir.resolve()
     sums = out_dir / "SHA256SUMS"
     prov = out_dir / "bootloader-provenance.json"
     if not sums.is_file() or sums.is_symlink() or not prov.is_file() or prov.is_symlink():
         raise BuildError("ESP candidate checksum/provenance missing or unsafe")
     provenance = json.loads(prov.read_text(encoding="utf-8"))
-    if provenance.get("$schema") != "prototype-ordax.esp-bootloader-provenance/1":
+
+    expected_provenance_fields = {
+        "$schema",
+        "status",
+        "physical_artifact_authorized",
+        "upstream_project",
+        "upstream_version",
+        "upstream_tag",
+        "upstream_tag_object_sha",
+        "upstream_source_commit",
+        "upstream_tag_signature_verified",
+        "meson_target",
+        "artifact",
+    }
+    if not isinstance(provenance, dict) or set(provenance) != expected_provenance_fields:
+        raise BuildError("ESP bootloader provenance fields are not canonical")
+    if provenance["$schema"] != "prototype-ordax.esp-bootloader-provenance/1":
         raise BuildError("unexpected ESP bootloader provenance schema")
-    if provenance.get("physical_artifact_authorized") is not False:
+    if provenance["status"] != "candidate":
+        raise BuildError("ESP bootloader provenance status is invalid")
+    if provenance["physical_artifact_authorized"] is not False:
         raise BuildError("ESP candidate must not authorize physical media")
-    if provenance.get("meson_target") != "systemd-boot":
+    if provenance["meson_target"] != "systemd-boot":
         raise BuildError("ESP provenance does not identify canonical systemd-boot target")
+
+    bootloader = contract["bootloader"]
+    expected_identity = {
+        "upstream_project": bootloader["project"].removesuffix("-boot"),
+        "upstream_version": bootloader["version"],
+        "upstream_tag": bootloader["tag"],
+        "upstream_tag_object_sha": bootloader["tag_object_sha"],
+        "upstream_source_commit": bootloader["source_commit"],
+        "upstream_tag_signature_verified": True,
+    }
+    for field, expected_value in expected_identity.items():
+        if provenance[field] != expected_value:
+            raise BuildError(f"ESP bootloader provenance does not match pinned contract: {field}")
+
+    artifact = provenance["artifact"]
+    if not isinstance(artifact, dict) or set(artifact) != {"name", "sha256", "size"}:
+        raise BuildError("ESP bootloader artifact provenance is malformed")
+    if artifact["name"] != "systemd-bootx64.efi":
+        raise BuildError("ESP bootloader artifact name is not canonical")
+    if not isinstance(artifact["sha256"], str) or not SHA256_RE.fullmatch(artifact["sha256"]):
+        raise BuildError("ESP bootloader artifact digest is invalid")
+    if not isinstance(artifact["size"], int) or isinstance(artifact["size"], bool) or artifact["size"] <= 0:
+        raise BuildError("ESP bootloader artifact size is invalid")
+
     entries = {}
     for line in sums.read_text(encoding="utf-8").splitlines():
         match = re.fullmatch(r"([0-9a-f]{64})  ([A-Za-z0-9][A-Za-z0-9._+-]*)", line)
@@ -244,9 +287,19 @@ def verify(out_dir: Path) -> dict:
         path = out_dir / name
         if path.is_symlink() or not path.is_file() or sha256_file(path) != digest:
             raise BuildError(f"ESP artifact verification failed: {name}")
-    if provenance["artifact"]["sha256"] != entries["systemd-bootx64.efi"]:
+    artifact_path = out_dir / artifact["name"]
+    if artifact["sha256"] != entries["systemd-bootx64.efi"]:
         raise BuildError("ESP provenance disagrees with bootloader digest")
-    return {"status": "verified", "artifact_count": len(entries), "source_commit": provenance["upstream_source_commit"]}
+    if artifact_path.stat().st_size != artifact["size"]:
+        raise BuildError("ESP provenance disagrees with bootloader size")
+    return {
+        "status": "verified",
+        "artifact_count": len(entries),
+        "upstream_version": provenance["upstream_version"],
+        "source_commit": provenance["upstream_source_commit"],
+        "artifact_sha256": artifact["sha256"],
+        "physical_artifact_authorized": False,
+    }
 
 
 def main() -> int:
