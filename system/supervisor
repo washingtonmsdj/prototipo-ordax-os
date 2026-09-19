@@ -1209,7 +1209,13 @@ stable_release_tree_is_valid() {
 
 restore_current_surface_after_probe() {
     current_sha_value=$1
+    candidate_sha=$2
 
+    is_sha "$current_sha_value" || return 1
+    is_sha "$candidate_sha" || return 1
+
+    set_update_context health-wait "$candidate_sha" "$(utc_now)" ""
+    write_update_state "$current_sha_value" restoring signed-release
     clear_surface_health
     stop_surface
     if ! start_surface || ! surface_stays_running 4 || ! wait_for_surface_health "$current_sha_value" "$SURFACE_HEALTH_TIMEOUT"; then
@@ -1244,7 +1250,7 @@ probe_staged_stable_release_health() {
 
     rm -f "$STABLE_HEALTH_READY_FILE"
     set_update_context health-wait "$candidate_sha" "$(utc_now)" ""
-    write_update_state "$current_sha_value" testing signed-release
+    write_update_state "$candidate_sha" testing signed-release
     log "probing staged Stable/MVP Surface health without changing current: $candidate_sha"
 
     clear_surface_health
@@ -1259,7 +1265,7 @@ probe_staged_stable_release_health() {
     fi
 
     stop_surface
-    restore_current_surface_after_probe "$current_sha_value"
+    restore_current_surface_after_probe "$current_sha_value" "$candidate_sha"
 
     if [ "$candidate_healthy" -eq 1 ]; then
         write_state_value "$STABLE_HEALTH_READY_FILE" "$candidate_sha"
