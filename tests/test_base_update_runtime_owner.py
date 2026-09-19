@@ -865,6 +865,50 @@ class BaseUpdateRuntimeOwnerTests(unittest.TestCase):
         self.assertNotIn("busybox reboot", stage)
         self.assertNotIn("power-request", stage)
 
+    def test_agent_collects_real_efivarfs_evidence_without_activation(self):
+        subprocess.run(["sh", "-n", str(AGENT)], check=True)
+        agent = AGENT.read_text(encoding="utf-8")
+        self.assertIn(
+            "EFIVARFS_PREFLIGHT_FILE=$HOST_STATE_ROOT/base-update/efivarfs-preflight.json",
+            agent,
+        )
+        self.assertIn(
+            "EFIVARFS_PREFLIGHT_LOG=$HOST_STATE_ROOT/base-update/efivarfs-preflight.log",
+            agent,
+        )
+        self.assertIn("prepare_efivarfs_preflight_evidence()", agent)
+        self.assertIn(
+            "helper=/srv/ordax-system/services/base-update/efivarfs_preflight.py",
+            agent,
+        )
+        self.assertIn('"status": "valid"', agent)
+        self.assertIn('"uefi_boot_environment_present": true', agent)
+        self.assertIn('"writable_mount": true', agent)
+        self.assertIn('"direct_mountpoint": true', agent)
+        self.assertIn('"probe_only": true', agent)
+        self.assertIn('"write_authorized": false', agent)
+        self.assertIn('"activation_authorized": false', agent)
+        self.assertIn('"variable_written": false', agent)
+        self.assertIn('"reboot_requested": false', agent)
+
+        loop = agent.split("while :; do", 1)[1]
+        self.assertLess(
+            loop.index("prepare_efivarfs_preflight_evidence"),
+            loop.index("prepare_dev_base_candidate"),
+        )
+
+        fn = agent.split("prepare_efivarfs_preflight_evidence() {", 1)[1].split(
+            "\n}",
+            1,
+        )[0]
+        self.assertNotIn("dev_activation_arm.py", fn)
+        self.assertNotIn("activate.py", fn)
+        self.assertNotIn("LoaderEntryOneShot", fn)
+        self.assertNotIn("efivars/LoaderEntryOneShot", fn)
+        self.assertNotIn("reboot -f", fn)
+        self.assertNotIn("busybox reboot", fn)
+        self.assertNotIn("power-request", fn)
+
     def test_agent_promotes_only_candidate_boot_after_matching_readiness(self):
         subprocess.run(["sh", "-n", str(AGENT)], check=True)
         agent = AGENT.read_text(encoding="utf-8")

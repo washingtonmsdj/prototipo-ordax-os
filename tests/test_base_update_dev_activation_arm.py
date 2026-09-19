@@ -89,6 +89,8 @@ class DevelopmentActivationArmBoundaryTests(unittest.TestCase):
         self.assertFalse(arm["reboot_requested"])
         self.assertFalse(arm["automatic_reboot_enabled"])
         self.assertFalse(arm["runtime_owner_wiring_enabled"])
+        self.assertTrue(arm["boot_counting_gate_merged"])
+        self.assertTrue(arm["physical_efivarfs_evidence_required"])
         self.assertFalse(arm["real_efivarfs_proven"])
         self.assertFalse(arm["physical_notebook_proven"])
         self.assertEqual(
@@ -101,7 +103,7 @@ class DevelopmentActivationArmBoundaryTests(unittest.TestCase):
         )
         self.assertEqual(
             arm["blocker"],
-            "runtime-owner-wiring-disabled-pending-systemd-boot-counting-gate",
+            "physical-efivarfs-evidence-required-before-runtime-owner-arm-wiring",
         )
 
     def test_persistent_owner_does_not_invoke_arm_helper(self):

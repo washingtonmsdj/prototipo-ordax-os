@@ -28,6 +28,8 @@ DEV_BASE_ACTIVATION_READINESS_FILE=$HOST_STATE_ROOT/base-update/dev-base-activat
 DEV_BASE_ACTIVATION_READINESS_SHA_FILE=$HOST_STATE_ROOT/base-update/dev-base-activation-readiness-sha
 ESP_ACTIVATION_READINESS_MOUNT_ROOT=${ORDAX_BASE_ESP_ACTIVATION_READINESS_MOUNT_ROOT:-/run/ordax-base-owner/esp-activation-readiness}
 DEV_BASE_ACTIVATION_READINESS_LOG=$HOST_STATE_ROOT/base-update/dev-activation-readiness.log
+EFIVARFS_PREFLIGHT_FILE=$HOST_STATE_ROOT/base-update/efivarfs-preflight.json
+EFIVARFS_PREFLIGHT_LOG=$HOST_STATE_ROOT/base-update/efivarfs-preflight.log
 DEV_BASE_PROMOTED_FILE=$HOST_STATE_ROOT/base-update/dev-base-promoted-sha
 DEV_BASE_PROMOTION_RESULT_FILE=$HOST_STATE_ROOT/base-update/dev-base-promotion-result.json
 DEV_BASE_PROMOTION_LOG=$HOST_STATE_ROOT/base-update/dev-postboot-promotion.log
@@ -372,6 +374,46 @@ discover_esp_read_only() {
     return 0
 }
 
+prepare_efivarfs_preflight_evidence() {
+    helper=/srv/ordax-system/services/base-update/efivarfs_preflight.py
+    [ -f "$RUNTIME_ROOT$helper" ] || {
+        /bin/busybox rm -f "$EFIVARFS_PREFLIGHT_FILE" >/dev/null 2>&1 || true
+        return 0
+    }
+
+    directory=${EFIVARFS_PREFLIGHT_FILE%/*}
+    /bin/busybox mkdir -p "$directory" >/dev/null 2>&1 || return 0
+    temporary=$(/bin/busybox mktemp "$directory/.efivarfs-preflight.XXXXXX") || return 0
+    /bin/busybox mkdir -p "${EFIVARFS_PREFLIGHT_LOG%/*}" >/dev/null 2>&1 || true
+
+    if /bin/busybox chroot "$RUNTIME_ROOT" /usr/bin/python3 "$helper" \
+        >"$temporary" 2>>"$EFIVARFS_PREFLIGHT_LOG"
+    then
+        if /bin/busybox grep -Fq '"status": "valid"' "$temporary" &&
+           /bin/busybox grep -Fq '"uefi_boot_environment_present": true' "$temporary" &&
+           /bin/busybox grep -Fq '"writable_mount": true' "$temporary" &&
+           /bin/busybox grep -Fq '"direct_mountpoint": true' "$temporary" &&
+           /bin/busybox grep -Fq '"probe_only": true' "$temporary" &&
+           /bin/busybox grep -Fq '"write_authorized": false' "$temporary" &&
+           /bin/busybox grep -Fq '"activation_authorized": false' "$temporary" &&
+           /bin/busybox grep -Fq '"variable_written": false' "$temporary" &&
+           /bin/busybox grep -Fq '"reboot_requested": false' "$temporary"
+        then
+            /bin/busybox chmod 600 "$temporary" >/dev/null 2>&1 || true
+            if /bin/busybox mv -f "$temporary" "$EFIVARFS_PREFLIGHT_FILE"; then
+                log "real efivarfs preflight evidence recorded without activation authorization"
+                return 0
+            fi
+        fi
+        log "efivarfs preflight evidence validation failed; activation remains disabled"
+    else
+        log "efivarfs preflight unavailable on this boot; activation remains disabled"
+    fi
+
+    /bin/busybox rm -f "$temporary" "$EFIVARFS_PREFLIGHT_FILE" >/dev/null 2>&1 || true
+    return 0
+}
+
 prepare_dev_base_candidate() {
     request_sha=$(read_state_value "$DEV_BASE_REQUEST_FILE")
     [ -n "$request_sha" ] || return 0
@@ -691,6 +733,7 @@ while :; do
             --physical-root "$PHYSICAL_MOUNT_CHROOT" \
             >/dev/null 2>&1 || true
         discover_esp_read_only
+        prepare_efivarfs_preflight_evidence
         prepare_dev_base_candidate
         prepare_esp_readonly_preflight
         prepare_dev_base_physical_stage
