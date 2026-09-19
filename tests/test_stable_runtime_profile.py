@@ -181,9 +181,16 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertFalse(stable["signed_release_staging_activation_performed"])
         self.assertFalse(stable["signed_release_activation_connected"])
         self.assertFalse(stable["continuous_signed_runtime_update_connected"])
+        self.assertTrue(stable["staged_release_health_connected"])
+        self.assertTrue(stable["staged_release_health_requires_candidate_sha_match"])
+        self.assertTrue(stable["staged_release_health_requires_process_survival"])
+        self.assertTrue(stable["staged_release_health_requires_heartbeat"])
+        self.assertTrue(stable["staged_release_health_requires_known_good_restore"])
+        self.assertFalse(stable["staged_release_health_changes_current"])
+        self.assertFalse(stable["staged_release_health_activation_performed"])
         self.assertEqual(
             CONTRACT["next_gate"]["id"],
-            "stable-staged-release-health",
+            "stable-exact-release-activation",
         )
 
 
