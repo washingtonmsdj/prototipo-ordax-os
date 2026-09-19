@@ -3,13 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="OrdaX — um produto, uma Surface e múltiplos modos de uso.">
+  <meta name="description" content="OrdaX — um sistema pensado para manter arquivos, apps, atualizações e recuperação em uma experiência simples.">
   <title>OrdaX — ideias organizam realidades</title>
   <link rel="stylesheet" href="/assets/site.css">
   <script src="/assets/site.js" defer></script>
 </head>
 <body data-page="landing">
   <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+
   <header class="site-header">
     <a class="brand" href="/" aria-label="OrdaX — início">
       <span class="brand-mark" aria-hidden="true"><span></span><i></i></span>
@@ -17,7 +18,9 @@
     </a>
     <nav class="site-nav" aria-label="Navegação principal">
       <a href="#produto">Produto</a>
-      <a href="/download/">Download</a><a href="/licencas/">Licenças</a>
+      <a href="#apps">Apps</a>
+      <a href="#atualizacoes">Atualizações</a>
+      <a href="/download/">Download</a>
       <a href="/login/">Entrar</a>
       <a class="nav-cta" href="/cadastro/">Criar conta</a>
     </nav>
@@ -26,15 +29,19 @@
   <main id="conteudo">
     <section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">ORDA X · SISTEMA EM EVOLUÇÃO</p>
-        <h1>Um sistema.<br>Uma experiência OrdaX.</h1>
-        <p class="hero-lead">Uma Surface compartilhada para Web, Mobile, Desktop, USB e instalação nativa, evoluindo a partir da mesma fonte de produto.</p>
+        <div class="hero-kicker-row">
+          <p class="eyebrow">ORDA X · MVP EM PREPARAÇÃO</p>
+          <span class="status-chip">Stable</span>
+        </div>
+        <h1>Seu sistema.<br>Sua experiência.</h1>
+        <p class="hero-lead">O OrdaX está sendo construído para reunir arquivos, notas, internet, ajustes e atualizações em uma experiência direta — com instalação simples e recuperação automática quando algo der errado.</p>
         <div class="hero-actions">
-          <a class="button button-primary" href="/download/">Ver downloads</a>
+          <a class="button button-primary" href="/download/">Ver disponibilidade</a>
           <a class="button button-quiet" href="#produto">Conhecer o OrdaX</a>
         </div>
-        <p class="prototype-note">Protótipo em desenvolvimento. Downloads públicos aparecem somente quando uma release estiver explicitamente autorizada.</p>
+        <p class="prototype-note">Protótipo em desenvolvimento. Downloads públicos aparecem somente quando uma release Stable/MVP estiver explicitamente autorizada.</p>
       </div>
+
       <div class="hero-art" aria-hidden="true">
         <span class="art-sun"></span>
         <span class="art-arc"></span>
@@ -46,37 +53,99 @@
       </div>
     </section>
 
+    <section class="release-ribbon" aria-label="Estado do produto">
+      <div><span>01</span><strong>Instalação guiada</strong><p>Creator como caminho principal para preparar o OrdaX.</p></div>
+      <div><span>02</span><strong>Atualização oficial</strong><p>Stable/MVP não depende de Git para atualizar.</p></div>
+      <div><span>03</span><strong>Recuperação</strong><p>Atualizações críticas preservam um conhecido-bom para rollback.</p></div>
+    </section>
+
     <section id="produto" class="section section-product">
       <div class="section-heading">
-        <p class="eyebrow">UM PRODUTO · CINCO MODOS</p>
-        <h2>A mesma identidade, adaptada à capacidade de cada ambiente.</h2>
+        <p class="eyebrow">O PRODUTO</p>
+        <h2>Um sistema feito para ser usado, não administrado.</h2>
       </div>
-      <div class="mode-grid">
-        <article><span>01</span><h3>Web</h3><p>Acesso pela Surface compartilhada em um host Web compatível.</p></article>
-        <article><span>02</span><h3>Mobile</h3><p>Experiência móvel planejada sobre os mesmos contratos de produto.</p></article>
-        <article><span>03</span><h3>Desktop</h3><p>Cliente instalado e integração com capacidades locais do computador.</p></article>
-        <article><span>04</span><h3>USB</h3><p>Inicialização portátil com bootstrap mínimo e runtime OrdaX verificável.</p></article>
-        <article><span>05</span><h3>Native</h3><p>Execução nativa em disco, com a mesma Surface e adapters próprios.</p></article>
+
+      <div class="product-proof-grid">
+        <article>
+          <span class="proof-number">01</span>
+          <h3>OrdaX Creator</h3>
+          <p>O caminho público planejado para criar a mídia OrdaX sem exigir terminal, Git, partições ou compilação.</p>
+        </article>
+        <article>
+          <span class="proof-number">02</span>
+          <h3>Surface</h3>
+          <p>Uma experiência visual única para abrir apps, arquivos, rede, ajustes e informações do sistema.</p>
+        </article>
+        <article>
+          <span class="proof-number">03</span>
+          <h3>Componentes independentes</h3>
+          <p>Apps e serviços evoluem separadamente sempre que uma mudança não precisa substituir a Base inteira.</p>
+        </article>
+        <article>
+          <span class="proof-number">04</span>
+          <h3>Conhecido-bom</h3>
+          <p>Mudanças de Base usam staging e health para evitar que uma atualização defeituosa destrua o último estado funcional.</p>
+        </article>
       </div>
     </section>
 
-    <section class="section split-section">
+    <section id="apps" class="section">
+      <div class="section-heading">
+        <p class="eyebrow">MVP · APPS PRINCIPAIS</p>
+        <h2>O essencial para trabalhar, navegar e cuidar do sistema.</h2>
+      </div>
+
+      <div class="mode-grid app-grid">
+        <article><span>01</span><h3>Arquivos</h3><p>Navegação pelos seus arquivos e pastas com uma interface nativa do OrdaX.</p></article>
+        <article><span>02</span><h3>Notas</h3><p>Notas, projetos e referências com salvamento local e funcionamento offline.</p></article>
+        <article><span>03</span><h3>Internet</h3><p>Navegação integrada ao sistema, respeitando as capacidades reais do ambiente.</p></article>
+        <article><span>04</span><h3>Ajustes</h3><p>Rede, data e hora, preferências e configurações do produto em um só lugar.</p></article>
+        <article><span>05</span><h3>Sistema</h3><p>Versão, canal, componentes, atualizações e estado do dispositivo sem ruído técnico desnecessário.</p></article>
+      </div>
+    </section>
+
+    <section id="atualizacoes" class="section split-section update-section">
       <div>
-        <p class="eyebrow">ARQUITETURA</p>
-        <h2>O produto muda sem transformar cada atualização em uma reinstalação.</h2>
+        <p class="eyebrow">ATUALIZAÇÕES</p>
+        <h2>O canal Stable não depende de Git.</h2>
+        <p class="section-copy">No MVP público, o OrdaX recebe somente releases disponibilizadas pelos canais oficiais. A interface normal do usuário não precisa conhecer branch, PR, commit ou repositório.</p>
       </div>
+
       <div class="feature-list">
-        <article><h3>Fonte única</h3><p>A `main` permanece a autoridade do protótipo; os alvos são materializações verificáveis.</p></article>
-        <article><h3>Build do afetado</h3><p>Surface, site, Creator e componentes de sistema têm limites de build separados.</p></article>
-        <article><h3>Capacidades reais</h3><p>A interface não anuncia login, cloud ou downloads que ainda não tenham um serviço real por trás.</p></article>
+        <article>
+          <h3>Release verificada</h3>
+          <p>Antes de aparecer ao usuário, uma release pública precisa carregar identidade, tamanho, integridade e os gates definidos pelo produto.</p>
+        </article>
+        <article>
+          <h3>Atualize só o necessário</h3>
+          <p>Quando possível, apps e componentes recebem sua própria evolução sem transformar toda mudança em reinstalação do sistema.</p>
+        </article>
+        <article>
+          <h3>Base com rollback</h3>
+          <p>Kernel, initramfs e rootfs seguem um caminho mais controlado, com staging, tentativa limitada e promoção apenas após health.</p>
+        </article>
       </div>
+    </section>
+
+    <section class="section creator-callout">
+      <div class="creator-copy">
+        <p class="eyebrow">ORDA X CREATOR</p>
+        <h2>Do download ao pendrive, sem transformar o usuário em instalador de sistema.</h2>
+        <p>O Creator é o caminho planejado para selecionar uma mídia compatível, preparar o OrdaX, verificar a gravação e deixar o espaço pronto para uso.</p>
+      </div>
+      <div class="creator-steps" aria-label="Fluxo do Creator">
+        <div><span>1</span><strong>Baixar</strong><p>Obter somente uma release pública autorizada.</p></div>
+        <div><span>2</span><strong>Criar</strong><p>Escolher o USB e deixar o Creator preparar a mídia.</p></div>
+        <div><span>3</span><strong>Iniciar</strong><p>Bootar um hardware suportado e continuar na Surface OrdaX.</p></div>
+      </div>
+      <a class="button button-dark" href="/download/">Ir para Download</a>
     </section>
 
     <section class="section account-callout">
       <div>
         <p class="eyebrow">CONTA ORDA X</p>
-        <h2>Uma identidade para continuar entre os modos do produto.</h2>
-        <p>A infraestrutura de identidade ainda será conectada. A página pública já possui o limite correto para login e cadastro sem criar uma conta fictícia no navegador.</p>
+        <h2>Uma identidade para continuar sua experiência.</h2>
+        <p>Login e cadastro só serão habilitados quando o serviço real de identidade e os requisitos de privacidade/termos estiverem prontos. O portal não cria contas fictícias no navegador.</p>
       </div>
       <div class="callout-actions">
         <a class="button button-dark" href="/login/">Entrar</a>
@@ -90,9 +159,10 @@
       <span class="brand-mark" aria-hidden="true"><span></span><i></i></span>
       <span class="brand-name">OrdaX</span>
     </a>
-    <p>Protótipo OrdaX · produto em evolução.</p>
+    <p>OrdaX Stable/MVP · produto em preparação.</p>
     <nav aria-label="Rodapé">
       <a href="/download/">Download</a>
+      <a href="/licencas/">Licenças</a>
       <a href="/login/">Entrar</a>
       <a href="/cadastro/">Cadastro</a>
       <a href="/privacidade/">Privacidade</a>

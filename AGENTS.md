@@ -23,18 +23,19 @@ Para geometria fisica, os contratos machine-readable vencem texto historico: `do
 Antes de alterar codigo, contratos ou midia:
 
 1. `README.md`
-2. `docs/CURRENT-STATE.md`
-3. `docs/ARCHITECTURE.md`
-4. `docs/BUILD-AUTONOMY.md`
-5. `docs/PRODUCT-MODES.md`
-6. `docs/MINIMAL-USB-BOOTSTRAP.md`
-7. `docs/HOST-INDEPENDENCE.md`
-8. `docs/REMOTE-CONTROL.md`
-9. `docs/PHYSICAL-MEDIA.md`
-10. `docs/DEVELOPMENT-WORKFLOW.md`
-11. `docs/SOURCE-MIGRATION.md`
-12. `docs/PROMOTION-GATES.md`
-13. `docs/DECISIONS.md`
+2. `MVP.md`
+3. `docs/CURRENT-STATE.md`
+4. `docs/ARCHITECTURE.md`
+5. `docs/BUILD-AUTONOMY.md`
+6. `docs/PRODUCT-MODES.md`
+7. `docs/MINIMAL-USB-BOOTSTRAP.md`
+8. `docs/HOST-INDEPENDENCE.md`
+9. `docs/REMOTE-CONTROL.md`
+10. `docs/PHYSICAL-MEDIA.md`
+11. `docs/DEVELOPMENT-WORKFLOW.md`
+12. `docs/SOURCE-MIGRATION.md`
+13. `docs/PROMOTION-GATES.md`
+14. `docs/DECISIONS.md`
 
 Quando um snapshot de estado conflitar com texto historico, `docs/CURRENT-STATE.md` e os contratos arquiteturais canonicos vencem. Para numero/geometria de particoes, os dois contratos fisicos acima sao a autoridade final porque descrevem artefatos diferentes.
 
@@ -48,7 +49,7 @@ Leia tambem a continuacao [PLANO-02-EVOLUCAO-E-REAPROVEITAMENTO-DO-LEGADO.md](PL
 
 ### Site publico
 
-Antes de alterar landing page, download, login/cadastro ou futura area publica da conta, leia `docs/PUBLIC-SITE.md` e `docs/contracts/public-site.json`.
+Antes de alterar landing page, download, login/cadastro ou futura area publica da conta, leia `MVP.md`, `docs/PUBLIC-SITE.md` e `docs/contracts/public-site.json`.
 
 O portal em `sites/public/` e um artefato separado do modo **OrdaX Web**. Nao importar a Surface para montar o site, nao duplicar identidade/conta e nao hard-codear uma release como "latest". Login/cadastro e download so ficam disponiveis quando seus owners reais estiverem configurados; o estado padrao deve falhar fechado sem credenciais, contas ou artefatos ficticios.
 

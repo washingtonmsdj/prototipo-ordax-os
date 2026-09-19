@@ -4,6 +4,8 @@ Status: FOUNDATION / NOT DEPLOYED
 
 The public OrdaX site is a separate delivery surface from the OrdaX Web product mode.
 
+The public portal presents the **Stable/MVP** distribution only. Owner/Development may use Git-first workflows internally, but Git, branches, pull requests and repository mechanics are not part of the normal public product experience. See `MVP.md`.
+
 `OrdaX Web` is the shared OrdaX Surface rendered for a Web-capable host. The public site is the product portal that presents OrdaX, exposes public release downloads, and provides entry points for account creation and sign-in.
 
 ## Repository boundary
@@ -104,6 +106,8 @@ The portal shares OrdaX brand language, not the desktop shell implementation:
 - responsive layout.
 
 It must not copy the Surface desktop markup or make the marketing site look like a fake operating-system screenshot.
+
+Public copy should explain user-facing product behavior: Creator, apps, official updates, rollback/recovery and account availability. Do not use the landing page to explain Owner/Development Git operations.
 
 ## Build
 
