@@ -23,6 +23,7 @@ import { PRODUCT_VERSION, productVersionLabel } from "../../contracts/product-ve
 import {
   deliveryLabel,
   formatUpdateTimestamp,
+  readableBaseUpdatePhase,
   readableUpdateMode,
   readableUpdatePhase,
   shortSha,
@@ -283,7 +284,7 @@ export function mountSystemOverviewControls(
         ? "attention"
         : "observed";
     health.textContent = updateSnapshot?.bootRefreshRequired
-      ? "Atualização de base pendente"
+      ? updateSummaryLabel(updateSnapshot)
       : alerting
         ? "Atenção na atualização"
         : hostSnapshot.connectivity === "offline"
@@ -555,6 +556,12 @@ export function mountSystemOverviewControls(
     }
     if (updateSnapshot.rejectedSha) {
       addFact("Commit bloqueado", shortSha(updateSnapshot.rejectedSha));
+    }
+    if (updateSnapshot.bootRefreshRequired) {
+      addFact("Progresso da Base", readableBaseUpdatePhase(updateSnapshot.baseUpdatePhase));
+      if (updateSnapshot.baseUpdateSha) {
+        addFact("Base candidata", shortSha(updateSnapshot.baseUpdateSha));
+      }
     }
     addFact("Boot", updateBootLabel(updateSnapshot));
     section.append(facts);
