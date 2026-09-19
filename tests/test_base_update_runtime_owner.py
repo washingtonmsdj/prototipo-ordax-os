@@ -865,6 +865,45 @@ class BaseUpdateRuntimeOwnerTests(unittest.TestCase):
         self.assertNotIn("busybox reboot", stage)
         self.assertNotIn("power-request", stage)
 
+    def test_agent_promotes_only_candidate_boot_after_matching_readiness(self):
+        subprocess.run(["sh", "-n", str(AGENT)], check=True)
+        agent = AGENT.read_text(encoding="utf-8")
+        self.assertIn(
+            "DEV_BASE_PROMOTED_FILE=$HOST_STATE_ROOT/base-update/dev-base-promoted-sha",
+            agent,
+        )
+        self.assertIn(
+            "DEV_BASE_PROMOTION_RESULT_FILE=$HOST_STATE_ROOT/base-update/dev-base-promotion-result.json",
+            agent,
+        )
+        self.assertIn("prepare_dev_base_postboot_promotion()", agent)
+        self.assertIn(
+            "helper=/srv/ordax-system/services/base-update/dev_postboot_promote.py",
+            agent,
+        )
+        self.assertIn(
+            'readiness_sha=$(read_state_value "$DEV_BASE_ACTIVATION_READINESS_SHA_FILE")',
+            agent,
+        )
+        self.assertIn('[ "$readiness_sha" != "$staged_sha" ]', agent)
+        self.assertIn("grep -q 'ordax.base_candidate=' /proc/cmdline", agent)
+        self.assertIn("grep -q 'ordax.base_slot=' /proc/cmdline", agent)
+        self.assertIn('--expected-release-sha "$staged_sha"', agent)
+        self.assertIn('--source-sha "$source_sha"', agent)
+        self.assertIn('--base-heartbeat "$base_heartbeat"', agent)
+        self.assertIn('--surface-heartbeat "$surface_heartbeat"', agent)
+        self.assertIn('--healthy-sha /run/ordax-update/healthy-sha', agent)
+        self.assertIn('"status": "promoted"', agent)
+        self.assertIn('"health_verified": true', agent)
+        self.assertIn('"postflight_verified": true', agent)
+        self.assertIn('"reboot_requested": false', agent)
+        self.assertIn('"efi_variable_written": false', agent)
+        loop = agent.split("while :; do", 1)[1]
+        self.assertLess(
+            loop.index("prepare_dev_base_activation_readiness"),
+            loop.index("prepare_dev_base_postboot_promotion"),
+        )
+
     def test_surface_binds_repo_and_ordax_before_starting_owner(self):
         text = SURFACE.read_text(encoding="utf-8")
         self.assertIn('BASE_UPDATE_SOURCE=$SYSTEM_ROOT/services/base-update/agent.sh', text)
