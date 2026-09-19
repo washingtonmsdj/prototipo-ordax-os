@@ -76,6 +76,9 @@ jobs:
       - name: Prove healthy postboot promotion on disposable media
         run: bash bootstrap/base-update/prove_dev_postboot_promotion.sh "out/base-update/dev-postboot-promotion-proof.json"
 
+      - name: Prove exact-state development one-shot arm on disposable media
+        run: bash bootstrap/base-update/prove_dev_activation_arm.sh "out/base-update/dev-activation-arm-proof.json"
+
       - name: Run base update regressions
         run: |
           python -m unittest tests.test_base_update_contract -v
@@ -85,6 +88,7 @@ jobs:
           python -m unittest tests.test_base_update_dev_stage -v
           python -m unittest tests.test_base_update_dev_physical_stage -v
           python -m unittest tests.test_base_update_activation_readiness -v
+          python -m unittest tests.test_base_update_dev_activation_arm -v
           python -m unittest tests.test_base_update_dev_postboot_promote -v
           python -m unittest tests.test_base_update_esp_discovery -v
           python -m unittest tests.test_base_update_esp_layout -v
@@ -165,6 +169,7 @@ jobs:
             out/base-update/signed-fat32-staging-proof.json
             out/base-update/esp-readonly-preflight-proof.json
             out/base-update/dev-physical-stage-proof.json
+            out/base-update/dev-activation-arm-proof.json
             out/base-update/dev-postboot-promotion-proof.json
             out/base-update/oneshot-activation-proof.json
           if-no-files-found: error
