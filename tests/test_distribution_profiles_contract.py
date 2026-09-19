@@ -73,6 +73,11 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertFalse(stable["development_base_channel_enabled"])
         self.assertTrue(stable["shared_surface_health_supervision_enabled"])
         self.assertFalse(stable["continuous_signed_runtime_update_connected"])
+        self.assertFalse(stable["base_update_owner_active"])
+        self.assertEqual(
+            stable["base_update_owner_activation_gate"],
+            "stable-continuous-signed-update",
+        )
 
     def test_stable_profile_reuses_existing_release_authorities(self):
         stable = CONTRACT["profiles"]["stable-mvp"]
