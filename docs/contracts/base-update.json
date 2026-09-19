@@ -98,6 +98,29 @@
       "disposable_efivarfs_only": true,
       "real_efivarfs_proven": false,
       "physical_notebook_proven": false
+    },
+    "efivarfs_preflight": {
+      "helper": "system/services/base-update/efivarfs_preflight.py",
+      "schema": "prototype-ordax.efivarfs-preflight/1",
+      "canonical_efi_root": "/sys/firmware/efi",
+      "canonical_efivarfs_root": "/sys/firmware/efi/efivars",
+      "exact_direct_mountpoint_required": true,
+      "non_symlink_directories_required": true,
+      "filesystem_required": "efivarfs",
+      "source_required": "efivarfs",
+      "mount_root_required": "/",
+      "writable_mount_required": true,
+      "readonly_mount_blocks": true,
+      "duplicate_mount_record_blocks": true,
+      "probe_only": true,
+      "write_authorized": false,
+      "activation_authorized": false,
+      "variable_written": false,
+      "reboot_requested": false,
+      "runtime_owner_wiring_enabled": false,
+      "fixture_regression": "tests/test_base_update_efivarfs_preflight.py",
+      "real_efivarfs_proven": false,
+      "physical_notebook_proven": false
     }
   },
   "staging": {
