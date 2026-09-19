@@ -15,6 +15,7 @@ class PublicSiteContractTests(unittest.TestCase):
             "download/index.html",
             "login/index.html",
             "cadastro/index.html",
+            "conta/index.html",
             "licencas/index.html",
             "privacidade/index.html",
             "termos/index.html",
@@ -37,6 +38,16 @@ class PublicSiteContractTests(unittest.TestCase):
             distribution["landing_may_expose_branch_pr_commit_as_normal_ux"]
         )
         self.assertTrue(distribution["creator_is_primary_public_media_path"])
+        self.assertTrue(distribution["landing_is_public_product_surface"])
+        self.assertFalse(distribution["authenticated_workspace_may_replace_landing"])
+        self.assertEqual(contract["routes"]["landing"], "/")
+        self.assertEqual(contract["routes"]["account"], "/conta/")
+        account = contract["account_area"]
+        self.assertTrue(account["requires_authenticated_session"])
+        self.assertTrue(account["fail_closed_until_identity_ready"])
+        self.assertFalse(account["may_simulate_user_data"])
+        self.assertFalse(account["public_root_may_render_authenticated_workspace"])
+        self.assertTrue(account["ordax_web_is_separate_product_mode"])
 
     def test_identity_fails_closed_and_downloads_use_generated_catalog(self):
         config = json.loads((SITE / "config" / "public-site.json").read_text(encoding="utf-8"))
@@ -49,9 +60,12 @@ class PublicSiteContractTests(unittest.TestCase):
 
         login = (SITE / "login" / "index.html").read_text(encoding="utf-8")
         register = (SITE / "cadastro" / "index.html").read_text(encoding="utf-8")
+        account = (SITE / "conta" / "index.html").read_text(encoding="utf-8")
         download = (SITE / "download" / "index.html").read_text(encoding="utf-8")
         self.assertIn("Serviço de identidade ainda não configurado", login)
         self.assertIn("Cadastro ainda não configurado", register)
+        self.assertIn("Área da conta ainda indisponível", account)
+        self.assertIn("não simula dados", account)
         self.assertIn("data-download-status", download)
 
         publications = json.loads(
@@ -117,6 +131,8 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertIn("Atualizações", landing)
         self.assertNotIn("git pull", landing.lower())
         self.assertNotIn("pull request", landing.lower())
+        self.assertNotIn('data-page="conta"', landing)
+        self.assertNotIn("Área da conta", landing)
 
 
 if __name__ == "__main__":
