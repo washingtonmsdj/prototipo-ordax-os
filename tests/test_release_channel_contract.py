@@ -38,6 +38,35 @@ class ReleaseChannelContractTest(unittest.TestCase):
         self.assertTrue(release["known_good_preservation_required"])
         self.assertTrue(release["offline_known_good_boot_required"])
 
+    def test_stable_runtime_health_gate_never_activates_current(self):
+        health = CONTRACT["runtime_health_gate"]
+        self.assertEqual(health["profile"], "stable-mvp")
+        self.assertEqual(health["owner"], "system/supervisor")
+        self.assertEqual(
+            health["candidate_source"],
+            "/ordax/releases/<source_commit>/system",
+        )
+        self.assertEqual(health["candidate_entrypoint"], "surface/entrypoint")
+        self.assertFalse(health["system_entrypoint_invoked"])
+        self.assertTrue(health["source_sha_must_match_candidate"])
+        self.assertTrue(health["process_survival_required"])
+        self.assertTrue(health["surface_health_required"])
+        self.assertTrue(health["known_good_surface_restored_after_probe"])
+        self.assertTrue(health["known_good_health_required_after_restore"])
+        self.assertEqual(
+            health["candidate_update_state_source_sha"],
+            "candidate-source-commit",
+        )
+        self.assertEqual(
+            health["known_good_restore_update_state_source_sha"],
+            "current-source-commit",
+        )
+        self.assertTrue(health["health_ready_written_only_after_known_good_restore"])
+        self.assertFalse(health["repeat_failed_candidate"])
+        self.assertFalse(health["current_pointer_changed"])
+        self.assertFalse(health["activation_performed"])
+        self.assertFalse(health["reboot_requested"])
+
     def test_kernel_is_compiled_in_repository_ci_not_on_device(self):
         kernel = CONTRACT["kernel"]
         self.assertFalse(kernel["compiled_on_device"])
