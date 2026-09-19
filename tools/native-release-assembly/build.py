@@ -76,6 +76,9 @@ def validate_source_tree() -> None:
         raise AssemblyError("system entrypoint must be mode 0755")
     if not (CREATOR / "go.mod").is_file():
         raise AssemblyError("Creator Go module is missing")
+    for path in SYSTEM.rglob("*"):
+        if path.is_symlink():
+            raise AssemblyError(f"symlink is forbidden in Native release source: {path}")
 
 
 def copy_system_tree(destination: Path) -> Path:
@@ -130,6 +133,7 @@ def write_provenance(destination: Path, helper: Path, source_commit: str) -> Pat
         "target": "linux/amd64",
         "cgo_enabled": False,
         "system_source": "system/",
+        "physical_apply_authorized": False,
         "injected_tools": [
             {
                 "path": relative_helper,
