@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Downloads públicos e releases verificadas do OrdaX.">
+  <meta name="description" content="OrdaX Stable — Creator e releases públicas verificadas.">
   <title>Download — OrdaX</title>
   <link rel="stylesheet" href="/assets/site.css">
   <script src="/assets/site.js" defer></script>
@@ -16,20 +16,44 @@
   </header>
   <main id="conteudo" class="page-shell">
     <header class="page-hero">
-      <p class="eyebrow">DOWNLOAD</p>
-      <h1>Baixe somente releases que o pipeline OrdaX tornou públicas.</h1>
-      <p>Esta página não inventa uma versão “latest”. Artefatos aparecem quando o catálogo público de releases estiver configurado e a release tiver autorização explícita.</p>
+      <p class="eyebrow">ORDA X STABLE · DOWNLOAD</p>
+      <h1>Baixe o OrdaX somente quando a release estiver pronta para você.</h1>
+      <p>O portal publica apenas releases Stable/MVP explicitamente autorizadas. Enquanto isso não acontecer, nenhum botão de download fictício será exibido.</p>
     </header>
+
     <section class="status-panel" data-download-status aria-live="polite">
       <span class="status-dot"></span>
-      <div><strong>Verificando catálogo público</strong><p>Consultando a fonte de releases autorizadas.</p></div>
+      <div><strong>Verificando catálogo público</strong><p>Consultando a fonte oficial de releases autorizadas.</p></div>
     </section>
+
     <section class="release-list" data-release-list aria-label="Releases públicas"></section>
+
     <section class="info-grid">
-      <article><p class="eyebrow">INTEGRIDADE</p><h2>Hash, inventário e proveniência</h2><p>Uma release pública só aparece depois de carregar SHA-256, tamanho, SBOM, avisos de terceiros e o pacote de código-fonte aplicável.</p><p><a href="/licencas/">Ver licenças e código aberto</a></p></article>
-      <article><p class="eyebrow">CREATOR</p><h2>Instalação segura</h2><p>O OrdaX Creator é o caminho planejado para preparar mídia compatível sem exigir que o usuário compile o sistema.</p></article>
+      <article>
+        <p class="eyebrow">ORDA X CREATOR</p>
+        <h2>O caminho simples para preparar seu USB</h2>
+        <p>Quando a primeira release pública estiver autorizada, o Creator será o caminho principal para preparar uma mídia compatível sem exigir terminal, Git, partições ou compilação do sistema.</p>
+      </article>
+      <article>
+        <p class="eyebrow">RELEASE VERIFICADA</p>
+        <h2>Integridade e conformidade antes do botão Baixar</h2>
+        <p>Uma release pública só aparece com tamanho, SHA-256 e os artefatos de conformidade exigidos pelo pipeline OrdaX.</p>
+        <p><a href="/licencas/">Ver licenças, SBOM e código-fonte aplicável</a></p>
+      </article>
+    </section>
+
+    <section class="section download-flow">
+      <div class="section-heading">
+        <p class="eyebrow">COMO VAI FUNCIONAR</p>
+        <h2>Baixar. Criar. Iniciar.</h2>
+      </div>
+      <div class="creator-steps">
+        <div><span>1</span><strong>Baixar</strong><p>O portal oferece somente o Creator/release que passou pelos gates públicos.</p></div>
+        <div><span>2</span><strong>Criar</strong><p>O Creator identifica a mídia compatível, prepara e verifica o USB.</p></div>
+        <div><span>3</span><strong>Iniciar</strong><p>O OrdaX começa pelo conhecido-bom e continua por canais oficiais de atualização.</p></div>
+      </div>
     </section>
   </main>
-  <footer class="site-footer"><a class="brand brand-small" href="/"><span class="brand-mark" aria-hidden="true"><span></span><i></i></span><span class="brand-name">OrdaX</span></a><p>Protótipo OrdaX · downloads falham fechado.</p><nav><a href="/">Início</a><a href="/login/">Entrar</a><a href="/privacidade/">Privacidade</a><a href="/termos/">Termos</a></nav></footer>
+  <footer class="site-footer"><a class="brand brand-small" href="/"><span class="brand-mark" aria-hidden="true"><span></span><i></i></span><span class="brand-name">OrdaX</span></a><p>OrdaX Stable/MVP · downloads falham fechado.</p><nav><a href="/">Início</a><a href="/licencas/">Licenças</a><a href="/login/">Entrar</a><a href="/privacidade/">Privacidade</a><a href="/termos/">Termos</a></nav></footer>
 </body>
 </html>
