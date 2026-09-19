@@ -92,7 +92,7 @@
       "reboot_requested": false,
       "automatic_reboot_enabled": false,
       "runtime_owner_wiring_enabled": false,
-      "blocker": "systemd-boot-counting-proof-not-merged",
+      "blocker": "runtime-owner-wiring-disabled-pending-systemd-boot-counting-gate",
       "disposable_proof": "bootstrap/base-update/prove_dev_activation_arm.sh",
       "disposable_proof_schema": "prototype-ordax.dev-base-activation-arm-proof/1",
       "disposable_efivarfs_only": true,
