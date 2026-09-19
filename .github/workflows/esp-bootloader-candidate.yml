@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'boot/esp/**'
+      - 'tests/test_esp_bootloader_candidate.py'
       - '.github/workflows/esp-bootloader-candidate.yml'
   pull_request:
     paths:
       - 'boot/esp/**'
+      - 'tests/test_esp_bootloader_candidate.py'
       - '.github/workflows/esp-bootloader-candidate.yml'
   workflow_dispatch:
 
@@ -43,11 +45,29 @@ jobs:
       - name: Validate ESP source contract
         run: python boot/esp/build.py check
 
+      - name: Regress pinned candidate provenance verification
+        run: python -m unittest tests.test_esp_bootloader_candidate -v
+
       - name: Build pinned systemd-boot candidate
         run: python boot/esp/build.py build
 
       - name: Verify ESP bootloader candidate
         run: python boot/esp/build.py verify
+
+      - name: Build pinned bootctl proof parser
+        run: |
+          set -euo pipefail
+          meson configure out/esp-work/systemd-build -Dblkid=enabled
+          ninja -C out/esp-work/systemd-build bootctl
+          mapfile -t candidates < <(find out/esp-work/systemd-build -type f -name bootctl -perm /111 -print)
+          test "${#candidates[@]}" -eq 1
+          printf '%s\n' "${candidates[0]}" > out/esp-work/pinned-bootctl-path
+
+      - name: Prove single-try entry parsing with pinned systemd
+        run: |
+          set -euo pipefail
+          BOOTCTL="$(cat out/esp-work/pinned-bootctl-path)"
+          bash boot/esp/prove_boot_counting.sh "$BOOTCTL" out/esp/boot-counting-proof.json
 
       - name: Upload ESP bootloader candidate
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
