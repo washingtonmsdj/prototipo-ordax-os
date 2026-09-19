@@ -38,6 +38,27 @@ GPT
 
 The pool fills the remaining usable target capacity. System deployments, apps, persistent machine state and user data share that pool through logical boundaries instead of rigid fixed-size partitions.
 
+## Target identity boundary
+
+The Native installer must not treat a device path such as `/dev/sda` as sufficient identity. The adapter must provide a stable device identity plus the current device path, exact capacity, logical-sector size and read-only/source-boot flags. The Creator Core binds those fields into a SHA-256 confirmation fingerprint.
+
+The current Core implementation is:
+
+```text
+read-only adapter enumeration
+ -> FinalizeNativeInstallTarget
+ -> user selects exact target
+ -> confirmation fingerprint
+ -> re-enumerate
+ -> MatchConfirmedNativeInstallTarget
+ -> PlanNativeInstallationForTarget
+ -> still no APPLY permission
+```
+
+Changing capacity, device path, serial/stable identity, read-only state or source-boot classification invalidates the confirmation. The currently booted OrdaX USB is always ineligible as a Native installation target.
+
+Transport alone is not authority: an internal NVMe/SATA disk and a suitable external SSD may both use the Native profile, while the source live USB remains forbidden.
+
 ## Required installation phases
 
 ```text
