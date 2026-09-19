@@ -65,6 +65,27 @@ class ReleaseProtocolContractTests(unittest.TestCase):
         self.assertIn('Role:   "system"', generator)
         self.assertIn("ReleaseID:           sourceCommit", generator)
 
+    def test_channel_inspection_is_signed_and_non_destructive(self):
+        current = self.load_contract()["current"]
+        inspection = current["channel_inspection"]
+        self.assertEqual(inspection["command"], "ordax-release-agent inspect")
+        self.assertTrue(inspection["signed_envelope_required"])
+        self.assertTrue(inspection["trust_anchor_required"])
+        self.assertFalse(inspection["artifact_download_performed"])
+        self.assertFalse(inspection["release_materialization_performed"])
+        self.assertFalse(inspection["current_pointer_changed"])
+        self.assertFalse(inspection["activation_performed"])
+
+        acquisition = self.read_source(ACQUISITION)
+        self.assertIn('flag.NewFlagSet("inspect"', acquisition)
+        self.assertIn("inspectRelease(", acquisition)
+        inspect = acquisition.split("func inspectRelease(", 1)[1].split("\n}", 1)[0]
+        self.assertIn("fetchBytes", inspect)
+        self.assertIn("verifyEnvelope", inspect)
+        self.assertNotIn("downloadArtifact", inspect)
+        self.assertNotIn("materialize(", inspect)
+        self.assertNotIn("activate(", inspect)
+
     def test_breaking_release_evolution_requires_new_schema(self):
         compatibility = self.load_contract()["compatibility"]
         self.assertTrue(compatibility["published_schema_semantics_are_immutable"])
