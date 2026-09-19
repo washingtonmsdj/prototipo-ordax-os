@@ -4,7 +4,7 @@
 
 The permanent end-user experience belongs inside OrdaX Desktop, but the prototype may publish a small `ordax-creator.exe` shell before the complete Desktop UI exists. Both must use the same Creator Core; a second flasher policy implementation is forbidden.
 
-Goal: prepare USB media and, later, native SSD/HD installation without requiring Codex, WSL, QEMU or a kernel toolchain on the user's machine.
+Goal: prepare USB media and the MVP Native SSD/NVMe/HD installation path without requiring Codex, WSL, QEMU or a kernel toolchain on the user's machine.
 
 ```text
 tools/creator/
@@ -128,6 +128,10 @@ EXPLICIT_OWNER_AUTHORIZATION_FIRST_USB=RECORDED
 CANONICAL_RELEASE_TRUST=PENDING
 AUTHORIZED_PHYSICAL_CANDIDATE=PENDING_CANONICAL_TRUST
 PHYSICAL_USB_WRITE=BLOCKED_UNTIL_PROMOTION_GATES_PASS
+NATIVE_INSTALL_GEOMETRY_PLAN=IMPLEMENTED
+NATIVE_INSTALL_PLAN=IMPLEMENTED_NON_DESTRUCTIVE
+NATIVE_INSTALL_PHYSICAL_APPLY=PENDING
+NATIVE_INSTALL_FIRST_BOOT_HEALTH=PENDING
 ```
 
 The development `OrdaX-Creator.exe` is intentionally useful for the graphical workflow, automatic development updates and safe USB discovery, but it cannot acquire a raw writer because its physical trust binding is unresolved. This separation prevents an ordinary development build from becoming destructive by accident.
@@ -162,3 +166,7 @@ ordax-creator stage-tree \
 ```
 
 See `docs/CREATOR-INSTALLATION.md`, `docs/PHYSICAL-MEDIA.md`, `docs/RELEASE-TRUST-CEREMONY.md` and `docs/PROMOTION-GATES.md`.
+
+## Native installation MVP
+
+The durable Native target geometry is already implemented by `PlanNativeDiskTargetStorage`. The first installer slice is now exposed as `ordax-creator plan-native --target-bytes <bytes>`, backed by `PlanNativeInstallation`. It is deliberately plan-only: it touches no device and cannot authorize physical APPLY. See `docs/NATIVE-INSTALLATION.md` and `docs/contracts/native-installation.json`.
