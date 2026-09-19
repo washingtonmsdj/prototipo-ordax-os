@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 import tempfile
@@ -32,10 +33,15 @@ class DevelopmentActivationArmBoundaryTests(unittest.TestCase):
         self.assertNotIn("power-request", text)
 
     def test_mismatched_readiness_sha_fails_before_activation(self):
-        namespace = {}
-        exec(HELPER.read_text(encoding="utf-8"), namespace)
-        read_exact_sha = namespace["_read_exact_sha"]
-        error = namespace["DevelopmentActivationArmError"]
+        spec = importlib.util.spec_from_file_location(
+            "ordax_dev_activation_arm_boundary_test",
+            HELPER,
+        )
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        read_exact_sha = module._read_exact_sha
+        error = module.DevelopmentActivationArmError
 
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "readiness-sha"
@@ -75,7 +81,7 @@ class DevelopmentActivationArmBoundaryTests(unittest.TestCase):
         self.assertFalse(arm["physical_notebook_proven"])
         self.assertEqual(
             arm["blocker"],
-            "systemd-boot-counting-proof-not-merged",
+            "runtime-owner-wiring-disabled-pending-systemd-boot-counting-gate",
         )
 
     def test_persistent_owner_does_not_invoke_arm_helper(self):
