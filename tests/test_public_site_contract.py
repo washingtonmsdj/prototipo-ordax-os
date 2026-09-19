@@ -125,6 +125,8 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertIn("Downloads públicos aparecem somente", landing)
         self.assertIn("Stable/MVP", landing)
         self.assertIn("OrdaX Creator", landing)
+        self.assertIn("usar o OrdaX diretamente pelo USB", landing)
+        self.assertIn("SSD/NVMe/HD", landing)
         self.assertIn("Arquivos", landing)
         self.assertIn("Notas", landing)
         self.assertIn("Internet", landing)
