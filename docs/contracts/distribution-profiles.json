@@ -71,7 +71,18 @@
       "signed_release_materialization_exact_commit_required": true,
       "signed_release_staging_changes_current": false,
       "signed_release_staging_activation_performed": false,
-      "signed_release_activation_connected": false
+      "signed_release_activation_connected": false,
+      "staged_release_health_connected": true,
+      "staged_release_health_owner": "system/supervisor",
+      "staged_release_health_runs_surface_entrypoint_only": true,
+      "staged_release_health_requires_candidate_sha_match": true,
+      "staged_release_health_requires_process_survival": true,
+      "staged_release_health_requires_heartbeat": true,
+      "staged_release_health_requires_known_good_restore": true,
+      "staged_release_health_rejects_failed_sha": true,
+      "staged_release_health_retests_same_failed_sha": false,
+      "staged_release_health_changes_current": false,
+      "staged_release_health_activation_performed": false
     }
   },
   "invariants": {
@@ -85,8 +96,8 @@
     "base_updates_are_more_restrictive_than_app_updates": true
   },
   "next_gate": {
-    "id": "stable-staged-release-health",
-    "description": "Run the staged signed Stable release through candidate Surface/runtime health before any exact activation of /ordax/current.",
+    "id": "stable-exact-release-activation",
+    "description": "Atomically activate only the exact health-ready signed release, preserving the previous known-good release for rollback; do not re-resolve latest during activation.",
     "implemented": false
   }
 }
