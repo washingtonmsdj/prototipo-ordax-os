@@ -57,6 +57,14 @@ read-only adapter enumeration
 
 Changing capacity, device path, serial/stable identity, read-only state or source-boot classification invalidates the confirmation. The currently booted OrdaX USB is always ineligible as a Native installation target.
 
+The initramfs now publishes the exact block device resolved from `LABEL=ORDAX` into the protected runtime handoff:
+
+```text
+/run/ordax-install/source-block-device
+```
+
+`ordax-creator-native-targets` consumes that file automatically, maps the partition to its containing physical disk through the read-only Linux adapter, and refuses all target selection if the source disk cannot be identified. No manual source-device input is part of the normal MVP path.
+
 Transport alone is not authority: an internal NVMe/SATA disk and a suitable external SSD may both use the Native profile, while the source live USB remains forbidden.
 
 ## Required installation phases
