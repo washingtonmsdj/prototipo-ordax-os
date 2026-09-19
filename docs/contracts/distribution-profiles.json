@@ -50,9 +50,9 @@
       "development_git_rescue_enabled": false,
       "development_base_channel_enabled": false,
       "shared_surface_health_supervision_enabled": true,
-      "continuous_signed_runtime_update_connected": false,
+      "continuous_signed_runtime_update_connected": true,
       "base_update_owner_active": false,
-      "base_update_owner_activation_gate": "stable-continuous-signed-update",
+      "base_update_owner_activation_gate": "stable-base-signed-update-integration",
       "signed_release_discovery_primitive": "ordax-release-agent inspect",
       "signed_release_discovery_implemented": true,
       "signed_release_discovery_downloads_artifact": false,
@@ -71,7 +71,7 @@
       "signed_release_materialization_exact_commit_required": true,
       "signed_release_staging_changes_current": false,
       "signed_release_staging_activation_performed": false,
-      "signed_release_activation_connected": false,
+      "signed_release_activation_connected": true,
       "staged_release_health_connected": true,
       "staged_release_health_owner": "system/supervisor",
       "staged_release_health_runs_surface_entrypoint_only": true,
@@ -96,13 +96,26 @@
       "exact_release_activation_revalidates_materialized_tree": true,
       "exact_release_activation_preserves_previous_commit_in_receipt": true,
       "exact_release_activation_atomic_current_swap": true,
-      "exact_release_activation_supervisor_connected": false,
+      "exact_release_activation_supervisor_connected": true,
       "signed_release_seed_media_agent_sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
       "exact_release_activation_physical_agent_target_sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
       "exact_release_activation_seed_media_includes_primitive": true,
-      "exact_release_activation_asset_published": false,
+      "exact_release_activation_asset_published": true,
       "exact_release_activation_asset_publish_gate": "release-agent-refresh-main-push",
-      "exact_release_activation_previous_agent_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596"
+      "exact_release_activation_previous_agent_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+      "activation_requires_staged_sha_equals_health_ready_sha": true,
+      "activation_guard_state": "/state/ordax/stable-release-activation-guard",
+      "activation_guard_persisted_before_current_swap": true,
+      "activation_guard_survives_process_crash": true,
+      "activated_release_requires_cold_health": true,
+      "activated_release_cold_health_requires_exact_sha": true,
+      "activated_release_failure_rolls_back_exact_previous_commit": true,
+      "rollback_revalidates_previous_signed_release": true,
+      "activation_and_rollback_require_no_git": true,
+      "activation_and_rollback_require_no_network": true,
+      "guardian_rebinds_source_identity_from_current": true,
+      "guardian_refresh_required_after_current_swap": true,
+      "runtime_update_known_good_preserved": true
     }
   },
   "invariants": {
@@ -116,8 +129,8 @@
     "base_updates_are_more_restrictive_than_app_updates": true
   },
   "next_gate": {
-    "id": "stable-health-ready-activation-transaction",
-    "description": "Connect only staged_sha == health_ready_sha to offline activate-exact, restart from the exact new current, require cold health, and atomically roll current back to the recorded previous known-good commit if health fails.",
+    "id": "stable-base-signed-update-integration",
+    "description": "Connect Stable/MVP Base kernel/initramfs/rootfs delivery to the official signed release path and existing A/B one-shot health/rollback machinery without enabling the Owner/Development Git candidate channel.",
     "implemented": false
   }
 }
