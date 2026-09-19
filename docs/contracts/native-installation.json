@@ -60,7 +60,8 @@
     "native_target_bound_plan": "tools/creator/core/native_install_target.go#PlanNativeInstallationForTarget",
     "native_target_adapter_discovery": "tools/creator/host/linux/native_targets.go#EnumerateNativeInstallTargets",
     "native_target_apply_binding": false,
-    "native_source_boot_identity_handoff": false
+    "native_source_boot_identity_handoff": true,
+    "native_target_discovery_command": "tools/creator/cmd/ordax-creator-native-targets"
   },
   "fail_closed": [
     "never-touch-physical-device-during-plan",
@@ -84,6 +85,8 @@
     "confirmation_token": "sha256-fingerprint-not-secret",
     "reenumeration_required_before_apply": true,
     "adapter_discovery_requires_positive_source_boot_device": true,
-    "unknown_source_boot_device_behavior": "fail-closed-no-target-selection"
+    "unknown_source_boot_device_behavior": "fail-closed-no-target-selection",
+    "source_boot_device_handoff": "/run/ordax-install/source-block-device",
+    "source_boot_device_handoff_owner": "bootstrap/initramfs/root/init"
   }
 }
