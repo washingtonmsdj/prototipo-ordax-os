@@ -67,7 +67,6 @@ jobs:
         run: |
           bash bootstrap/base-update/prove_dev_physical_stage.sh \
             out/base-update/dev-physical-stage-proof.json
-            out/base-update/dev-activation-arm-proof.json
 
       - name: Prove one-shot activation without ESP mutation
         run: |
@@ -170,6 +169,7 @@ jobs:
             out/base-update/signed-fat32-staging-proof.json
             out/base-update/esp-readonly-preflight-proof.json
             out/base-update/dev-physical-stage-proof.json
+            out/base-update/dev-activation-arm-proof.json
             out/base-update/dev-postboot-promotion-proof.json
             out/base-update/oneshot-activation-proof.json
           if-no-files-found: error
