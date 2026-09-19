@@ -86,6 +86,38 @@ class ReleaseProtocolContractTests(unittest.TestCase):
         self.assertNotIn("materialize(", inspect)
         self.assertNotIn("activate(", inspect)
 
+    def test_exact_activation_is_offline_and_revalidates_stored_release(self):
+        current = self.load_contract()["current"]
+        activation = current["exact_activation"]
+        self.assertEqual(
+            activation["command"],
+            "ordax-release-agent activate-exact",
+        )
+        self.assertFalse(activation["network_access_required"])
+        self.assertTrue(activation["expected_commit_required"])
+        self.assertTrue(activation["trust_anchor_required"])
+        self.assertTrue(activation["stored_signed_envelope_reverified"])
+        self.assertTrue(activation["stored_manifest_reverified"])
+        self.assertTrue(activation["stored_artifact_hash_and_size_reverified"])
+        self.assertTrue(activation["materialized_system_tree_reverified"])
+        self.assertTrue(activation["existing_current_must_be_safe_known_good_symlink"])
+        self.assertTrue(activation["atomic_current_pointer_replace"])
+        self.assertFalse(activation["latest_channel_resolved_during_activation"])
+        self.assertFalse(activation["artifact_download_performed"])
+        self.assertFalse(activation["release_materialization_performed"])
+        self.assertFalse(activation["reboot_requested"])
+        self.assertTrue(activation["health_policy_owned_by_supervisor"])
+
+        acquisition = self.read_source(ACQUISITION)
+        self.assertIn('flag.NewFlagSet("activate-exact"', acquisition)
+        exact = acquisition.split("func activateExact(", 1)[1].split("\n}", 1)[0]
+        self.assertIn("verifyMaterializedExact", exact)
+        self.assertIn("safeCurrentCommit", exact)
+        self.assertIn("activate(root, expectedCommit)", exact)
+        self.assertNotIn("fetchBytes", exact)
+        self.assertNotIn("downloadArtifact", exact)
+        self.assertNotIn("secureClient", exact)
+
     def test_breaking_release_evolution_requires_new_schema(self):
         compatibility = self.load_contract()["compatibility"]
         self.assertTrue(compatibility["published_schema_semantics_are_immutable"])
