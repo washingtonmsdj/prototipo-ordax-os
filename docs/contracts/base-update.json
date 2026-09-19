@@ -424,5 +424,35 @@
     "occurs_before_canonical_trust_enrollment": true,
     "physical_media_rewrite_required": false,
     "raw_device_write_allowed": false
+  },
+  "stable_profile": {
+    "profile": "stable-mvp",
+    "operational_git_required": false,
+    "signed_runtime_release_is_authenticity_source": true,
+    "candidate_descriptor": "system/base-update/candidate.json",
+    "candidate_descriptor_schema": "prototype-ordax.base-update-candidate/1",
+    "candidate_descriptor_is_inside_signed_system_tar": true,
+    "candidate_descriptor_binds_kernel_sha256": true,
+    "candidate_descriptor_binds_initramfs_sha256": true,
+    "asset_transport": "github-release-exact-source-commit",
+    "asset_tag_template": "ordax-stable-base-{source_commit}",
+    "asset_names": [
+      "vmlinuz",
+      "initrd.gz"
+    ],
+    "transport_tag_is_authenticity_source": false,
+    "asset_acceptance_requires_signed_descriptor_hash_match": true,
+    "source_commit_identity_must_match_signed_runtime_release": true,
+    "stable_rootfs_artifact_present": false,
+    "persistent_ordax_partition_is_root_substrate": true,
+    "development_rootfs_tar_allowed": false,
+    "development_dev_base_manifest_allowed": false,
+    "workflow": ".github/workflows/stable-base-assets.yml",
+    "source_asset_publication_implemented": true,
+    "device_asset_acquisition_implemented": false,
+    "esp_staging_connected": false,
+    "oneshot_activation_connected": false,
+    "reboot_automation_connected": false,
+    "physical_notebook_proven": false
   }
 }
