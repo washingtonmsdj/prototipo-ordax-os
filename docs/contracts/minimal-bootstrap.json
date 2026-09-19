@@ -120,7 +120,7 @@
         {
           "source_path": "bootstrap/entrypoint",
           "target_path": "/ordax/bootstrap/entrypoint",
-          "sha256": "9151b706e4444a06475968fe54db460344a85efad5af0ab0979d26082a31b9c7",
+          "sha256": "2bc4c9fe80f17a19e37376fd7a0736b396b102dba620e2de4fb3fd02e5f80bb9",
           "mode": "0755",
           "logical_owner": "bootstrap-orchestrator",
           "reason": "Prefer known-good offline current release, otherwise acquire the first signed release through bounded network/bootstrap owners"
