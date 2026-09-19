@@ -49,6 +49,20 @@ jobs:
       - name: Verify ESP bootloader candidate
         run: python boot/esp/build.py verify
 
+      - name: Build pinned bootctl proof parser
+        run: |
+          set -euo pipefail
+          ninja -C out/esp-work/systemd-build bootctl
+          mapfile -t candidates < <(find out/esp-work/systemd-build -type f -name bootctl -perm /111 -print)
+          test "${#candidates[@]}" -eq 1
+          printf '%s\n' "${candidates[0]}" > out/esp-work/pinned-bootctl-path
+
+      - name: Prove single-try entry parsing with pinned systemd
+        run: |
+          set -euo pipefail
+          BOOTCTL="$(cat out/esp-work/pinned-bootctl-path)"
+          bash boot/esp/prove_boot_counting.sh             "$BOOTCTL"             out/esp/boot-counting-proof.json
+
       - name: Upload ESP bootloader candidate
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
