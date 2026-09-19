@@ -98,6 +98,10 @@ class StableRuntimeProfileTests(unittest.TestCase):
         owner = text.split("ensure_base_update_agent() {", 1)[1].split("\n}", 1)[0]
         self.assertIn('[ "$DISTRIBUTION_PROFILE" = "owner-development" ]', owner)
         self.assertIn('[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]', owner)
+        self.assertIn(
+            "Base update owner is disabled in Stable/MVP until signed update integration is connected",
+            owner,
+        )
         self.assertIn('ORDAX_BASE_SOURCE_SHA="$SOURCE_SHA"', owner)
 
     def test_stable_base_owner_does_not_run_development_candidate_pipeline(self):
@@ -136,6 +140,11 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertFalse(stable["development_git_rescue_enabled"])
         self.assertFalse(stable["development_base_channel_enabled"])
         self.assertFalse(stable["continuous_signed_runtime_update_connected"])
+        self.assertFalse(stable["base_update_owner_active"])
+        self.assertEqual(
+            stable["base_update_owner_activation_gate"],
+            "stable-continuous-signed-update",
+        )
         self.assertEqual(CONTRACT["next_gate"]["id"], "stable-continuous-signed-update")
 
 
