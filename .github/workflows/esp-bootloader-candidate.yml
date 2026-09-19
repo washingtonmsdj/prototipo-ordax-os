@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'boot/esp/**'
+      - 'tests/test_esp_bootloader_candidate.py'
       - '.github/workflows/esp-bootloader-candidate.yml'
   pull_request:
     paths:
       - 'boot/esp/**'
+      - 'tests/test_esp_bootloader_candidate.py'
       - '.github/workflows/esp-bootloader-candidate.yml'
   workflow_dispatch:
 
@@ -42,6 +44,9 @@ jobs:
 
       - name: Validate ESP source contract
         run: python boot/esp/build.py check
+
+      - name: Regress pinned candidate provenance verification
+        run: python -m unittest tests.test_esp_bootloader_candidate -v
 
       - name: Build pinned systemd-boot candidate
         run: python boot/esp/build.py build
