@@ -190,9 +190,11 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertTrue(stable["staged_release_health_requires_known_good_restore"])
         self.assertFalse(stable["staged_release_health_changes_current"])
         self.assertFalse(stable["staged_release_health_activation_performed"])
+        self.assertTrue(stable["exact_release_activation_primitive_implemented"])
+        self.assertFalse(stable["exact_release_activation_supervisor_connected"])
         self.assertEqual(
             CONTRACT["next_gate"]["id"],
-            "stable-exact-release-activation",
+            "stable-health-ready-activation-transaction",
         )
 
 
