@@ -147,12 +147,39 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertFalse(distribution["public_runtime_depends_on_git"])
         self.assertTrue(distribution["public_updates_use_official_channels"])
 
-    def test_next_gate_is_candidate_health_before_activation(self):
+    def test_stable_candidate_health_is_complete_before_activation(self):
+        stable = CONTRACT["profiles"]["stable-mvp"]
+        self.assertTrue(stable["staged_release_health_connected"])
+        self.assertEqual(stable["staged_release_health_owner"], "system/supervisor")
+        self.assertTrue(stable["staged_release_health_runs_surface_entrypoint_only"])
+        self.assertTrue(stable["staged_release_health_requires_candidate_sha_match"])
+        self.assertTrue(stable["staged_release_health_requires_process_survival"])
+        self.assertTrue(stable["staged_release_health_requires_heartbeat"])
+        self.assertTrue(stable["staged_release_health_requires_known_good_restore"])
+        self.assertTrue(stable["staged_release_health_rejects_failed_sha"])
+        self.assertFalse(stable["staged_release_health_retests_same_failed_sha"])
+        self.assertEqual(
+            stable["staged_release_health_candidate_state_source_sha"],
+            "candidate-sha",
+        )
+        self.assertEqual(
+            stable["staged_release_health_restore_state_source_sha"],
+            "known-good-sha",
+        )
+        self.assertTrue(
+            stable["staged_release_health_ready_written_only_after_known_good_restore"]
+        )
+        self.assertFalse(stable["staged_release_health_current_pointer_changed"])
+        self.assertFalse(stable["staged_release_health_candidate_system_entrypoint_invoked"])
+        self.assertTrue(stable["staged_release_health_surface_entrypoint_invoked"])
+        self.assertFalse(stable["staged_release_health_activation_performed"])
+
+    def test_next_gate_is_exact_activation_after_health(self):
         gate = CONTRACT["next_gate"]
-        self.assertEqual(gate["id"], "stable-staged-release-health")
+        self.assertEqual(gate["id"], "stable-exact-release-activation")
         self.assertFalse(gate["implemented"])
-        self.assertIn("candidate Surface/runtime health", gate["description"])
-        self.assertIn("before any exact activation", gate["description"])
+        self.assertIn("exact health-ready signed release", gate["description"])
+        self.assertIn("previous known-good", gate["description"])
         self.assertTrue(CONTRACT["invariants"]["same_main_source_authority"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_git_client"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_source_checkout"])

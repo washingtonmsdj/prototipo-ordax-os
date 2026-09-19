@@ -52,5 +52,26 @@
     "activation_performed": false,
     "reboot_requested": false,
     "git_required": false
+  },
+  "runtime_health_gate": {
+    "profile": "stable-mvp",
+    "owner": "system/supervisor",
+    "candidate_source": "/ordax/releases/<source_commit>/system",
+    "candidate_entrypoint": "surface/entrypoint",
+    "system_entrypoint_invoked": false,
+    "source_sha_must_match_candidate": true,
+    "process_survival_required": true,
+    "surface_health_required": true,
+    "known_good_surface_restored_after_probe": true,
+    "known_good_health_required_after_restore": true,
+    "health_ready_state": "/state/ordax/stable-release-health-ready-sha",
+    "health_rejected_state": "/state/ordax/stable-release-health-rejected-sha",
+    "repeat_failed_candidate": false,
+    "current_pointer_changed": false,
+    "activation_performed": false,
+    "reboot_requested": false,
+    "candidate_update_state_source_sha": "candidate-source-commit",
+    "known_good_restore_update_state_source_sha": "current-source-commit",
+    "health_ready_written_only_after_known_good_restore": true
   }
 }

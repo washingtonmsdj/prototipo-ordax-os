@@ -98,8 +98,10 @@ class StableRuntimeProfileTests(unittest.TestCase):
             rollback,
         )
         start = text.split("start_surface() {", 1)[1].split("\n}", 1)[0]
-        self.assertIn("ORDAX_DISTRIBUTION_PROFILE=$DISTRIBUTION_PROFILE", start)
-        self.assertIn("ORDAX_SOURCE_SHA=$(current_sha)", start)
+        self.assertIn('start_surface_from_system "$SYSTEM_ROOT" "$(current_sha)"', start)
+        shared_start = text.split("start_surface_from_system() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn('ORDAX_DISTRIBUTION_PROFILE="$DISTRIBUTION_PROFILE"', shared_start)
+        self.assertIn('ORDAX_SOURCE_SHA="$surface_source_sha"', shared_start)
         self.assertIn(
             'if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then\n    rm -f "$SUPERVISOR_GUARD_FILE"',
             text,
@@ -181,9 +183,16 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertFalse(stable["signed_release_staging_activation_performed"])
         self.assertFalse(stable["signed_release_activation_connected"])
         self.assertFalse(stable["continuous_signed_runtime_update_connected"])
+        self.assertTrue(stable["staged_release_health_connected"])
+        self.assertTrue(stable["staged_release_health_requires_candidate_sha_match"])
+        self.assertTrue(stable["staged_release_health_requires_process_survival"])
+        self.assertTrue(stable["staged_release_health_requires_heartbeat"])
+        self.assertTrue(stable["staged_release_health_requires_known_good_restore"])
+        self.assertFalse(stable["staged_release_health_changes_current"])
+        self.assertFalse(stable["staged_release_health_activation_performed"])
         self.assertEqual(
             CONTRACT["next_gate"]["id"],
-            "stable-staged-release-health",
+            "stable-exact-release-activation",
         )
 
 
