@@ -320,10 +320,12 @@ Para detalhes atuais, consultar também:
 - `docs/CURRENT-STATE.md`;
 - `docs/PUBLIC-SITE.md`;
 - `docs/CREATOR-INSTALLATION.md`;
+- `docs/NATIVE-INSTALLATION.md`;
 - `docs/PHYSICAL-MEDIA.md`;
 - `docs/PROMOTION-GATES.md`;
 - `docs/contracts/base-update.json`;
 - `docs/contracts/distribution-profiles.json`;
+- `docs/contracts/native-installation.json`;
 - `docs/contracts/device-update-coverage.json`;
 - `docs/contracts/public-site.json`;
 - `docs/contracts/public-release-catalog.json`;
