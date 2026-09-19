@@ -76,7 +76,7 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertFalse(stable["base_update_owner_active"])
         self.assertEqual(
             stable["base_update_owner_activation_gate"],
-            "stable-base-signed-acquisition",
+            "stable-base-signed-update-integration",
         )
         self.assertEqual(
             stable["signed_release_discovery_primitive"],
@@ -224,7 +224,8 @@ class DistributionProfilesContractTests(unittest.TestCase):
         gate = CONTRACT["next_gate"]
         self.assertEqual(gate["id"], "stable-base-signed-acquisition")
         self.assertFalse(gate["implemented"])
-        self.assertIn("kernel/initramfs/rootfs", gate["description"])
+        self.assertIn("kernel/initramfs", gate["description"])
+        self.assertIn("rootfs.tar", gate["description"])
         self.assertTrue(CONTRACT["invariants"]["same_main_source_authority"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_git_client"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_source_checkout"])
