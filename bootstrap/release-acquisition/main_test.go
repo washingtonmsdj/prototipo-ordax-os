@@ -287,6 +287,207 @@ func TestInspectReleaseRejectsTamperedEnvelopeWithoutArtifactRequest(t *testing.
 	}
 }
 
+func TestActivateExactRevalidatesMaterializedReleaseAndPreservesPreviousCommit(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := validSystemTar(t)
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestFor(server.URL+"/system.tar", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.tar", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(artifact)
+	})
+
+	root := t.TempDir()
+	if _, err := materialize(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	previous := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	previousRoot := filepath.Join(root, "releases", previous, "system")
+	if err := os.MkdirAll(previousRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(previousRoot, "entrypoint"), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join("releases", previous), filepath.Join(root, "current")); err != nil {
+		t.Fatal(err)
+	}
+
+	receipt, err := activateExact(root, trust, pub, defaultRepo, testCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.Status != "activated-exact" || receipt.SourceCommit != testCommit {
+		t.Fatalf("unexpected exact activation receipt: %#v", receipt)
+	}
+	if receipt.PreviousCommit != previous || receipt.Idempotent {
+		t.Fatalf("exact activation lost previous known-good: %#v", receipt)
+	}
+	current, err := os.Readlink(filepath.Join(root, "current"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current != filepath.Join("releases", testCommit) {
+		t.Fatalf("exact activation selected unexpected current: %s", current)
+	}
+}
+
+func TestActivateExactIsIdempotentForAlreadyCurrentVerifiedRelease(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := validSystemTar(t)
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestFor(server.URL+"/system.tar", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.tar", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(artifact)
+	})
+
+	root := t.TempDir()
+	if _, err := materialize(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join("releases", testCommit), filepath.Join(root, "current")); err != nil {
+		t.Fatal(err)
+	}
+
+	receipt, err := activateExact(root, trust, pub, defaultRepo, testCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !receipt.Idempotent || receipt.PreviousCommit != testCommit {
+		t.Fatalf("already-current exact activation was not idempotent: %#v", receipt)
+	}
+}
+
+func TestActivateExactRejectsTamperedReleaseWithoutChangingCurrent(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := validSystemTar(t)
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestFor(server.URL+"/system.tar", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.tar", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(artifact)
+	})
+
+	root := t.TempDir()
+	if _, err := materialize(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	); err != nil {
+		t.Fatal(err)
+	}
+	previous := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	previousRoot := filepath.Join(root, "releases", previous, "system")
+	if err := os.MkdirAll(previousRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(previousRoot, "entrypoint"), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join("releases", previous), filepath.Join(root, "current")); err != nil {
+		t.Fatal(err)
+	}
+
+	tampered := filepath.Join(root, "releases", testCommit, "system", "version")
+	if err := os.WriteFile(tampered, []byte("tampered\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := activateExact(root, trust, pub, defaultRepo, testCommit); err == nil {
+		t.Fatal("tampered materialized release was activated")
+	}
+	current, err := os.Readlink(filepath.Join(root, "current"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current != filepath.Join("releases", previous) {
+		t.Fatalf("failed exact activation changed known-good current: %s", current)
+	}
+}
+
+func TestActivateExactRejectsUnsafeCurrentPointerWithoutChangingIt(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := validSystemTar(t)
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestFor(server.URL+"/system.tar", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.tar", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(artifact)
+	})
+
+	root := t.TempDir()
+	if _, err := materialize(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("/tmp/not-an-ordax-release", filepath.Join(root, "current")); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := activateExact(root, trust, pub, defaultRepo, testCommit); err == nil {
+		t.Fatal("unsafe current pointer was accepted")
+	}
+	current, err := os.Readlink(filepath.Join(root, "current"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current != "/tmp/not-an-ordax-release" {
+		t.Fatalf("unsafe current pointer was mutated after rejection: %s", current)
+	}
+}
+
 func TestInstallMaterializesBootableVerifiedRelease(t *testing.T) {
 	trust, pub, priv := testKeys(t)
 	artifact := validSystemTar(t)

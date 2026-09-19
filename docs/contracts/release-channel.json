@@ -73,5 +73,19 @@
     "candidate_update_state_source_sha": "candidate-source-commit",
     "known_good_restore_update_state_source_sha": "current-source-commit",
     "health_ready_written_only_after_known_good_restore": true
+  },
+  "runtime_activation_primitive": {
+    "profile": "stable-mvp",
+    "owner": "bootstrap/release-acquisition",
+    "command": "ordax-release-agent activate-exact",
+    "exact_expected_commit_required": true,
+    "network_required": false,
+    "latest_pointer_re_resolved": false,
+    "materialized_release_reverified": true,
+    "previous_current_commit_reported": true,
+    "atomic_current_pointer_replace": true,
+    "supervisor_health_ready_gate_connected": false,
+    "cold_health_rollback_connected": false,
+    "reboot_requested": false
   }
 }

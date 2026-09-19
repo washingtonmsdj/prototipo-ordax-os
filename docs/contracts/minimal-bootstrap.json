@@ -170,10 +170,10 @@
         {
           "source_path": "bootstrap/release-acquisition/ordax-release-agent",
           "target_path": "/ordax/bootstrap/release-acquisition/ordax-release-agent",
-          "sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+          "sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
           "mode": "0755",
           "logical_owner": "bootstrap-release-acquisition",
-          "reason": "Static Linux amd64 agent that verifies signed Stable channel metadata through inspect, materializes exact verified releases without changing /ordax/current, and persists verified release envelopes for controlled activation."
+          "reason": "Static Linux amd64 release agent with signed channel inspect, exact materialization and offline activate-exact support; activation remains policy-gated by the Stable supervisor."
         }
       ]
     },

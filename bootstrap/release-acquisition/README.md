@@ -151,3 +151,20 @@ ordax-release-agent install \
 For the prototype, `release_id` equals `source_commit`, so immutable release identity and target directory are unambiguous.
 
 See `docs/RELEASE-CHANNEL.md` for the system-wide delivery contract.
+
+
+## Exact offline activation
+
+A Stable/MVP update must not resolve `latest` again after staged health succeeds. The release agent therefore exposes an offline exact activation primitive:
+
+```text
+ordax-release-agent activate-exact \
+  --root /ordax \
+  --trust /ordax/bootstrap/trust/release-ed25519.json \
+  --repository washingtonmsdj/prototipo-ordax-os \
+  --expected-commit <40-hex-source-commit>
+```
+
+Before replacing `/ordax/current`, the command re-verifies the stored signed envelope, manifest, artifact hash/size and materialized system tree for the exact commit. It also requires the existing `current` pointer to name a safe bootable release and reports that previous commit for rollback.
+
+The command performs no network access, no artifact download, no materialization and no reboot. Health-ready policy remains owned by `system/supervisor`; merely having this command available does not authorize automatic Stable activation.

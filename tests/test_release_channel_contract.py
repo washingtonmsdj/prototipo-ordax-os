@@ -67,6 +67,24 @@ class ReleaseChannelContractTest(unittest.TestCase):
         self.assertFalse(health["activation_performed"])
         self.assertFalse(health["reboot_requested"])
 
+    def test_exact_activation_primitive_is_not_yet_supervisor_wired(self):
+        activation = CONTRACT["runtime_activation_primitive"]
+        self.assertEqual(activation["profile"], "stable-mvp")
+        self.assertEqual(activation["owner"], "bootstrap/release-acquisition")
+        self.assertEqual(
+            activation["command"],
+            "ordax-release-agent activate-exact",
+        )
+        self.assertTrue(activation["exact_expected_commit_required"])
+        self.assertFalse(activation["network_required"])
+        self.assertFalse(activation["latest_pointer_re_resolved"])
+        self.assertTrue(activation["materialized_release_reverified"])
+        self.assertTrue(activation["previous_current_commit_reported"])
+        self.assertTrue(activation["atomic_current_pointer_replace"])
+        self.assertFalse(activation["supervisor_health_ready_gate_connected"])
+        self.assertFalse(activation["cold_health_rollback_connected"])
+        self.assertFalse(activation["reboot_requested"])
+
     def test_kernel_is_compiled_in_repository_ci_not_on_device(self):
         kernel = CONTRACT["kernel"]
         self.assertFalse(kernel["compiled_on_device"])

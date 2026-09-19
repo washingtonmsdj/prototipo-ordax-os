@@ -60,7 +60,7 @@
       "signed_release_discovery_requires_trust": true,
       "signed_release_discovery_source_implemented": true,
       "signed_release_discovery_physical_agent_ready": false,
-      "signed_release_discovery_physical_agent_target_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+      "signed_release_discovery_physical_agent_target_sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
       "signed_release_discovery_physical_agent_delivery": "hash-addressed-release-agent-refresh-or-new-creator-media",
       "signed_release_discovery_asset_published": true,
       "signed_release_discovery_asset_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
@@ -88,7 +88,21 @@
       "staged_release_health_ready_written_only_after_known_good_restore": true,
       "staged_release_health_current_pointer_changed": false,
       "staged_release_health_candidate_system_entrypoint_invoked": false,
-      "staged_release_health_surface_entrypoint_invoked": true
+      "staged_release_health_surface_entrypoint_invoked": true,
+      "exact_release_activation_primitive": "ordax-release-agent activate-exact",
+      "exact_release_activation_primitive_implemented": true,
+      "exact_release_activation_network_required": false,
+      "exact_release_activation_revalidates_stored_signature": true,
+      "exact_release_activation_revalidates_materialized_tree": true,
+      "exact_release_activation_preserves_previous_commit_in_receipt": true,
+      "exact_release_activation_atomic_current_swap": true,
+      "exact_release_activation_supervisor_connected": false,
+      "signed_release_seed_media_agent_sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+      "exact_release_activation_physical_agent_target_sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+      "exact_release_activation_seed_media_includes_primitive": true,
+      "exact_release_activation_asset_published": false,
+      "exact_release_activation_asset_publish_gate": "release-agent-refresh-main-push",
+      "exact_release_activation_previous_agent_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596"
     }
   },
   "invariants": {
@@ -102,8 +116,8 @@
     "base_updates_are_more_restrictive_than_app_updates": true
   },
   "next_gate": {
-    "id": "stable-exact-release-activation",
-    "description": "Atomically activate only the exact health-ready signed release, preserving the previous known-good release for rollback; do not re-resolve latest during activation.",
+    "id": "stable-health-ready-activation-transaction",
+    "description": "Connect only staged_sha == health_ready_sha to offline activate-exact, restart from the exact new current, require cold health, and atomically roll current back to the recorded previous known-good commit if health fails.",
     "implemented": false
   }
 }

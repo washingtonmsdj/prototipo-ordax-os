@@ -100,6 +100,15 @@ type InspectReceipt struct {
 	ArtifactSize        int64  `json:"artifact_size"`
 }
 
+type ExactActivationReceipt struct {
+	Status         string `json:"status"`
+	SourceCommit   string `json:"source_commit"`
+	PreviousCommit string `json:"previous_commit"`
+	ReleasePath    string `json:"release_path"`
+	CurrentPath    string `json:"current_path"`
+	Idempotent     bool   `json:"idempotent"`
+}
+
 func strictDecode(data []byte, max int, out any) error {
 	if len(data) == 0 || len(data) > max {
 		return fmt.Errorf("document size outside allowed range: %d", len(data))
@@ -608,6 +617,131 @@ func writeSynced(path string, data []byte, mode os.FileMode) error {
 	return closeErr
 }
 
+func readBoundedRegularFile(path string, maximum int64, label string) ([]byte, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", label, err)
+	}
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Size() <= 0 || info.Size() > maximum {
+		return nil, fmt.Errorf("%s must be a bounded regular non-symlink file", label)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", label, err)
+	}
+	return data, nil
+}
+
+func safeCurrentCommit(root string) (string, error) {
+	current := filepath.Join(root, "current")
+	info, err := os.Lstat(current)
+	if err != nil {
+		return "", fmt.Errorf("current pointer: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		return "", errors.New("current exists and is not a symlink")
+	}
+	target, err := os.Readlink(current)
+	if err != nil {
+		return "", fmt.Errorf("read current pointer: %w", err)
+	}
+	if filepath.IsAbs(target) || filepath.Clean(target) != target {
+		return "", errors.New("current pointer target is not canonical")
+	}
+	prefix := "releases" + string(filepath.Separator)
+	if !strings.HasPrefix(target, prefix) {
+		return "", errors.New("current pointer is outside releases")
+	}
+	commit := strings.TrimPrefix(target, prefix)
+	if !commitPattern.MatchString(commit) || strings.Contains(commit, string(filepath.Separator)) {
+		return "", errors.New("current pointer does not name an exact release commit")
+	}
+	releasePath := filepath.Join(root, "releases", commit)
+	releaseInfo, err := os.Lstat(releasePath)
+	if err != nil {
+		return "", fmt.Errorf("current release root: %w", err)
+	}
+	if !releaseInfo.IsDir() || releaseInfo.Mode()&os.ModeSymlink != 0 {
+		return "", errors.New("current release root is not a safe directory")
+	}
+	entrypoint := filepath.Join(releasePath, "system", "entrypoint")
+	entryInfo, err := os.Lstat(entrypoint)
+	if err != nil {
+		return "", fmt.Errorf("current system entrypoint: %w", err)
+	}
+	if !entryInfo.Mode().IsRegular() || entryInfo.Mode()&os.ModeSymlink != 0 || entryInfo.Mode().Perm()&0o111 == 0 {
+		return "", errors.New("current release is not bootable")
+	}
+	return commit, nil
+}
+
+func verifyMaterializedExact(root string, trust TrustAnchor, key ed25519.PublicKey, expectedRepo, expectedCommit string) (Manifest, error) {
+	if !commitPattern.MatchString(expectedCommit) {
+		return Manifest{}, errors.New("expected_commit must be lowercase 40-hex")
+	}
+	releasePath := filepath.Join(root, "releases", expectedCommit)
+	info, err := os.Lstat(releasePath)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("materialized release root: %w", err)
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return Manifest{}, errors.New("materialized release root is not a safe directory")
+	}
+
+	envelopePath := filepath.Join(releasePath, "release-envelope.json")
+	envelope, err := readBoundedRegularFile(envelopePath, maxEnvelope, "stored release envelope")
+	if err != nil {
+		return Manifest{}, err
+	}
+	manifest, payload, err := verifyEnvelope(envelope, trust, key, expectedRepo)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("verify stored release envelope: %w", err)
+	}
+	if manifest.SourceCommit != expectedCommit {
+		return Manifest{}, fmt.Errorf(
+			"stored signed release source_commit does not match expected commit: got=%s expected=%s",
+			manifest.SourceCommit,
+			expectedCommit,
+		)
+	}
+	if err := verifyExistingRelease(releasePath, manifest, payload, envelope); err != nil {
+		return Manifest{}, fmt.Errorf("verify materialized exact release: %w", err)
+	}
+	return manifest, nil
+}
+
+func activateExact(root string, trust TrustAnchor, key ed25519.PublicKey, expectedRepo, expectedCommit string) (ExactActivationReceipt, error) {
+	manifest, err := verifyMaterializedExact(root, trust, key, expectedRepo, expectedCommit)
+	if err != nil {
+		return ExactActivationReceipt{}, err
+	}
+	previousCommit, err := safeCurrentCommit(root)
+	if err != nil {
+		return ExactActivationReceipt{}, err
+	}
+	idempotent := previousCommit == expectedCommit
+	if !idempotent {
+		if err := activate(root, expectedCommit); err != nil {
+			return ExactActivationReceipt{}, err
+		}
+		activatedCommit, err := safeCurrentCommit(root)
+		if err != nil {
+			return ExactActivationReceipt{}, err
+		}
+		if activatedCommit != expectedCommit {
+			return ExactActivationReceipt{}, errors.New("current pointer does not match exact activated commit")
+		}
+	}
+	return ExactActivationReceipt{
+		Status:         "activated-exact",
+		SourceCommit:   manifest.SourceCommit,
+		PreviousCommit: previousCommit,
+		ReleasePath:    filepath.Join(root, "releases", expectedCommit),
+		CurrentPath:    filepath.Join(root, "current"),
+		Idempotent:     idempotent,
+	}, nil
+}
+
 func activate(root, commit string) error {
 	current := filepath.Join(root, "current")
 	if info, err := os.Lstat(current); err == nil {
@@ -838,6 +972,32 @@ func inspectCommand(args []string) error {
 	return printJSON(receipt)
 }
 
+func activateExactCommand(args []string) error {
+	fs := flag.NewFlagSet("activate-exact", flag.ContinueOnError)
+	trustPath := fs.String("trust", "", "release trust anchor file")
+	root := fs.String("root", "/ordax", "OrdaX root")
+	repository := fs.String("repository", defaultRepo, "expected source repository")
+	expectedCommit := fs.String("expected-commit", "", "required exact materialized source commit")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *trustPath == "" || *expectedCommit == "" || fs.NArg() != 0 {
+		return errors.New("activate-exact requires --trust and --expected-commit")
+	}
+	if !commitPattern.MatchString(*expectedCommit) {
+		return errors.New("expected_commit must be lowercase 40-hex")
+	}
+	trust, key, err := loadTrust(*trustPath)
+	if err != nil {
+		return err
+	}
+	receipt, err := activateExact(*root, trust, key, *repository, *expectedCommit)
+	if err != nil {
+		return err
+	}
+	return printJSON(receipt)
+}
+
 func installCommand(args []string) error {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	envelopeURL := fs.String("envelope-url", "", "HTTPS URL for signed release envelope")
@@ -897,7 +1057,7 @@ func materializeCommand(args []string) error {
 
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: ordax-release-agent <verify-envelope|inspect|materialize|install> [options]")
+	fmt.Fprintln(os.Stderr, "usage: ordax-release-agent <verify-envelope|inspect|materialize|activate-exact|install> [options]")
 }
 
 func main() {
@@ -913,6 +1073,8 @@ func main() {
 		err = inspectCommand(os.Args[2:])
 	case "materialize":
 		err = materializeCommand(os.Args[2:])
+	case "activate-exact":
+		err = activateExactCommand(os.Args[2:])
 	case "install":
 		err = installCommand(os.Args[2:])
 	default:

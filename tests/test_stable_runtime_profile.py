@@ -190,9 +190,17 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertTrue(stable["staged_release_health_requires_known_good_restore"])
         self.assertFalse(stable["staged_release_health_changes_current"])
         self.assertFalse(stable["staged_release_health_activation_performed"])
+        self.assertTrue(stable["exact_release_activation_primitive_implemented"])
+        self.assertFalse(stable["exact_release_activation_supervisor_connected"])
+        self.assertTrue(stable["exact_release_activation_seed_media_includes_primitive"])
+        self.assertEqual(
+            stable["exact_release_activation_physical_agent_target_sha256"],
+            "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+        )
+        self.assertFalse(stable["exact_release_activation_asset_published"])
         self.assertEqual(
             CONTRACT["next_gate"]["id"],
-            "stable-exact-release-activation",
+            "stable-health-ready-activation-transaction",
         )
 
 
