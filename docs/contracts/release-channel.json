@@ -38,5 +38,19 @@
     "compiled_on_device": false,
     "compiled_in_repository_ci": true,
     "delivered_as_verified_artifact": true
+  },
+  "runtime_polling": {
+    "profile": "stable-mvp",
+    "owner": "system/supervisor",
+    "default_interval_seconds": 60,
+    "discovery_command": "ordax-release-agent inspect",
+    "materialization_command": "ordax-release-agent materialize",
+    "exact_expected_commit_required": true,
+    "staged_root": "/ordax/releases/<source_commit>",
+    "staged_state": "/state/ordax/staged-release-sha",
+    "current_pointer_changed": false,
+    "activation_performed": false,
+    "reboot_requested": false,
+    "git_required": false
   }
 }

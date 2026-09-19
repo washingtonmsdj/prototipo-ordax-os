@@ -210,3 +210,23 @@ The acquisition agent, channel and generated artifacts remain candidates until s
 ```text
 PHYSICAL_ARTIFACT_AUTHORIZED=NO
 ```
+
+
+## Stable runtime polling
+
+The Stable/MVP runtime reuses the shared `system/supervisor`, but it does not poll Git.
+
+Its current safe boundary is:
+
+```text
+official HTTPS channel
+ -> ordax-release-agent inspect
+ -> verify signed envelope + trust
+ -> exact source_commit
+ -> ordax-release-agent materialize --expected-commit
+ -> immutable /ordax/releases/<commit>
+ -> validate staged system tree
+ -> record staged-release-sha
+```
+
+This stage does **not** call `install`, does not retarget `/ordax/current`, does not activate a candidate, and does not reboot. Candidate health and exact activation are a separate promotion gate.

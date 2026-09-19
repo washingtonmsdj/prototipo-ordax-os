@@ -62,7 +62,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn("runtime_source_sha", heartbeat)
         self.assertNotIn("rev-parse HEAD", heartbeat)
 
-    def test_stable_supervisor_exits_update_check_before_git(self):
+    def test_stable_supervisor_stages_signed_release_before_owner_git_path(self):
         text = SUPERVISOR.read_text(encoding="utf-8")
         self.assertIn('DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}', text)
         current = text.split("current_sha() {", 1)[1].split("\n}", 1)[0]
@@ -72,8 +72,25 @@ class StableRuntimeProfileTests(unittest.TestCase):
         check = text.split("check_for_update() {", 1)[1].split("\n}", 1)[0]
         stable_guard = '[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]'
         self.assertIn(stable_guard, check)
-        self.assertIn("stable-signed-updater-not-connected", check)
+        self.assertIn('check_stable_signed_update "$current"', check)
         self.assertLess(check.index(stable_guard), check.index("ls-remote"))
+
+        channel = text.split("stable_channel_url() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn('[ ! -L "$STABLE_CHANNEL_FILE" ]', channel)
+        self.assertIn("https://*", channel)
+        stable_stage = text.split("check_stable_signed_update() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn('[ -L "$STABLE_RELEASE_AGENT" ]', stable_stage)
+        self.assertIn('[ -L "$STABLE_TRUST_FILE" ]', stable_stage)
+        self.assertIn('"$STABLE_RELEASE_AGENT" inspect', stable_stage)
+        self.assertIn('"$STABLE_RELEASE_AGENT" materialize', stable_stage)
+        self.assertIn('--expected-commit "$remote_sha"', stable_stage)
+        self.assertIn('write_state_value "$STAGED_RELEASE_FILE" "$remote_sha"', stable_stage)
+        self.assertIn("stable_release_tree_is_valid", stable_stage)
+        self.assertNotIn(" install ", stable_stage)
+        self.assertNotIn("activate", stable_stage.lower())
+        self.assertNotIn("/ordax/current", stable_stage)
+        self.assertNotIn("ls-remote", stable_stage)
+        self.assertNotIn("fetch --no-tags", stable_stage)
 
         rollback = text.split("rollback_boot_candidate() {", 1)[1].split("\n}", 1)[0]
         self.assertIn(
@@ -137,7 +154,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn("owner-development)", source)
         self.assertIn("rev-parse HEAD", source)
 
-    def test_contract_marks_inspect_source_done_but_physical_agent_pending(self):
+    def test_contract_marks_signed_polling_and_materialization_without_activation(self):
         stable = CONTRACT["profiles"]["stable-mvp"]
         self.assertTrue(stable["runtime_profile_selection_implemented"])
         self.assertFalse(stable["git_update_polling_enabled"])
@@ -152,11 +169,21 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertTrue(stable["signed_release_discovery_implemented"])
         self.assertTrue(stable["signed_release_discovery_source_implemented"])
         self.assertFalse(stable["signed_release_discovery_physical_agent_ready"])
+        self.assertTrue(stable["signed_release_discovery_asset_published"])
+        self.assertTrue(stable["signed_release_seed_media_includes_inspect"])
         self.assertFalse(stable["signed_release_discovery_downloads_artifact"])
         self.assertFalse(stable["signed_release_discovery_changes_current"])
+        self.assertTrue(stable["periodic_signed_channel_polling_connected"])
+        self.assertEqual(stable["periodic_signed_channel_default_seconds"], 60)
+        self.assertTrue(stable["signed_release_materialization_connected"])
+        self.assertTrue(stable["signed_release_materialization_exact_commit_required"])
+        self.assertFalse(stable["signed_release_staging_changes_current"])
+        self.assertFalse(stable["signed_release_staging_activation_performed"])
+        self.assertFalse(stable["signed_release_activation_connected"])
+        self.assertFalse(stable["continuous_signed_runtime_update_connected"])
         self.assertEqual(
             CONTRACT["next_gate"]["id"],
-            "stable-release-agent-physical-availability",
+            "stable-staged-release-health",
         )
 
 
