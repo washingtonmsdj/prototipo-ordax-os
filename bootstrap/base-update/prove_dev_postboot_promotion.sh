@@ -190,7 +190,7 @@ sudo fsck.vfat -n "$ESP" >/dev/null
 test ! -e "$STATE_ROOT/boot-refresh-required"
 test -s "$STATE_ROOT/base/active-slot.json"
 
-python3 - "$RESULT" "$STATE_ROOT/base/active-slot.json" "$PROOF" "$SOURCE_SHA" "$BOOT_ID" <<'PY'
+sudo python3 - "$RESULT" "$STATE_ROOT/base/active-slot.json" "$PROOF" "$SOURCE_SHA" "$BOOT_ID" <<'PY'
 import json
 import pathlib
 import sys
