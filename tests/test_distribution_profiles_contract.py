@@ -76,7 +76,7 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertFalse(stable["base_update_owner_active"])
         self.assertEqual(
             stable["base_update_owner_activation_gate"],
-            "stable-base-signed-update-integration",
+            "stable-base-signed-acquisition",
         )
         self.assertEqual(
             stable["signed_release_discovery_primitive"],
@@ -222,7 +222,7 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(stable["guardian_refresh_required_after_current_swap"])
         self.assertTrue(stable["runtime_update_known_good_preserved"])
         gate = CONTRACT["next_gate"]
-        self.assertEqual(gate["id"], "stable-base-signed-update-integration")
+        self.assertEqual(gate["id"], "stable-base-signed-acquisition")
         self.assertFalse(gate["implemented"])
         self.assertIn("kernel/initramfs/rootfs", gate["description"])
         self.assertTrue(CONTRACT["invariants"]["same_main_source_authority"])
