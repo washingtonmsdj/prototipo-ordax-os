@@ -84,8 +84,31 @@
     "materialized_release_reverified": true,
     "previous_current_commit_reported": true,
     "atomic_current_pointer_replace": true,
-    "supervisor_health_ready_gate_connected": false,
-    "cold_health_rollback_connected": false,
+    "supervisor_health_ready_gate_connected": true,
+    "cold_health_rollback_connected": true,
+    "reboot_requested": false
+  },
+  "runtime_activation_transaction": {
+    "profile": "stable-mvp",
+    "owner": "system/supervisor",
+    "staged_state": "/state/ordax/staged-release-sha",
+    "health_ready_state": "/state/ordax/stable-release-health-ready-sha",
+    "activation_guard_state": "/state/ordax/stable-release-activation-guard",
+    "staged_and_health_ready_sha_must_match": true,
+    "guard_persisted_before_current_swap": true,
+    "activation_command": "ordax-release-agent activate-exact",
+    "activation_network_required": false,
+    "activation_git_required": false,
+    "guardian_refresh_after_swap": true,
+    "cold_health_required": true,
+    "cold_health_source_sha_must_match_activated_release": true,
+    "rollback_command": "ordax-release-agent activate-exact",
+    "rollback_target": "exact-previous-commit-from-transaction",
+    "rollback_revalidates_signed_release": true,
+    "rollback_network_required": false,
+    "rollback_git_required": false,
+    "failed_release_rejected": true,
+    "known_good_preserved": true,
     "reboot_requested": false
   }
 }
