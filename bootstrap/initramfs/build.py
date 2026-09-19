@@ -119,6 +119,15 @@ def check_contract() -> dict:
         raise BuildError(f"legacy/high-level responsibility leaked into fixed initramfs: {found}")
     if "findfs LABEL=ORDAX" not in text or "/ordax/bootstrap/entrypoint" not in text:
         raise BuildError("init must hand off through the canonical ORDAX bootstrap path")
+    source_handoff = contract.get("native_install_source_handoff", {})
+    if (
+        source_handoff.get("enabled") is not True
+        or source_handoff.get("runtime_path") != "/run/ordax-install/source-block-device"
+        or source_handoff.get("physical_write_authorized") is not False
+        or "umask 077" not in text
+        or 'printf \'%s\\n\' "$ORDAX_DEVICE" >"$SOURCE_BLOCK_DEVICE_FILE"' not in text
+    ):
+        raise BuildError("initramfs Native install source-device handoff is missing or unsafe")
     rw_mount = 'mount -t ext4 -o rw,errors=remount-ro "$ORDAX_DEVICE" /ordax'
     health_call = '/sbin/ordax-grow-ext4 --check "$ORDAX_DEVICE"'
     grow_call = '/sbin/ordax-grow-ext4 "$ORDAX_DEVICE" /ordax'
