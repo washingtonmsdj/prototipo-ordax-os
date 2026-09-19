@@ -52,7 +52,7 @@ class ReleaseAgentRefreshTests(unittest.TestCase):
         self.assertEqual(artifact["target_path"], descriptor["target_path"])
         self.assertEqual(artifact["mode"], descriptor["mode"])
         self.assertFalse(minimal["physical_write_allowed"])
-        self.assertNotEqual(seed, target)
+        self.assertEqual(seed, target)
 
     def test_base_contract_does_not_create_generic_bootstrap_updater(self):
         contract = json.loads(BASE.read_text(encoding="utf-8"))
@@ -76,7 +76,12 @@ class ReleaseAgentRefreshTests(unittest.TestCase):
         self.assertTrue(refresh["refresh_target_may_advance_without_physical_media_rewrite"])
         self.assertEqual(
             refresh["current_seed_sha256"],
+            "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+        )
+        self.assertTrue(refresh["current_seed_includes_inspect"])
+        self.assertIn(
             "74a03bd9901c33b7281d529fb0d379a735d20b5ef7495e0af2f73ca2ff40c90e",
+            refresh["legacy_seed_sha256"],
         )
         self.assertEqual(
             refresh["current_refresh_target_sha256"],
