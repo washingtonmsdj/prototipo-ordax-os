@@ -23,6 +23,23 @@
       "release_materialization_performed": false,
       "current_pointer_changed": false,
       "activation_performed": false
+    },
+    "exact_activation": {
+      "command": "ordax-release-agent activate-exact",
+      "network_access_required": false,
+      "expected_commit_required": true,
+      "trust_anchor_required": true,
+      "stored_signed_envelope_reverified": true,
+      "stored_manifest_reverified": true,
+      "stored_artifact_hash_and_size_reverified": true,
+      "materialized_system_tree_reverified": true,
+      "existing_current_must_be_safe_known_good_symlink": true,
+      "atomic_current_pointer_replace": true,
+      "latest_channel_resolved_during_activation": false,
+      "artifact_download_performed": false,
+      "release_materialization_performed": false,
+      "reboot_requested": false,
+      "health_policy_owned_by_supervisor": true
     }
   },
   "compatibility": {
