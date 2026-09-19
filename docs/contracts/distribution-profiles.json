@@ -57,7 +57,11 @@
       "signed_release_discovery_implemented": true,
       "signed_release_discovery_downloads_artifact": false,
       "signed_release_discovery_changes_current": false,
-      "signed_release_discovery_requires_trust": true
+      "signed_release_discovery_requires_trust": true,
+      "signed_release_discovery_source_implemented": true,
+      "signed_release_discovery_physical_agent_ready": false,
+      "signed_release_discovery_physical_agent_target_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+      "signed_release_discovery_physical_agent_delivery": "hash-addressed-release-agent-refresh-or-new-creator-media"
     }
   },
   "invariants": {
@@ -71,8 +75,8 @@
     "base_updates_are_more_restrictive_than_app_updates": true
   },
   "next_gate": {
-    "id": "stable-signed-channel-polling",
-    "description": "Connect the shared supervisor Stable profile to ordax-release-agent inspect for periodic signed release discovery, without artifact download or activation in this gate.",
+    "id": "stable-release-agent-physical-availability",
+    "description": "Publish and deliver the hash-pinned release agent containing inspect to Stable-capable media/runtime before enabling periodic signed channel polling.",
     "implemented": false
   }
 }
