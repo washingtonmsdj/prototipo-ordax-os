@@ -108,16 +108,19 @@ O MVP público não precisa ser OrdaX 1.0.
 
 Um usuário deve conseguir:
 
-1. chegar ao site oficial;
+1. chegar ao site oficial, cuja rota `/` é a landing page pública;
 2. obter o Creator/release pública autorizada;
-3. preparar o pendrive sem terminal;
-4. inicializar um hardware oficialmente suportado;
-5. chegar à Surface;
-6. conectar à rede;
-7. usar os apps principais;
-8. atualizar por canal oficial;
-9. recuperar automaticamente de uma atualização defeituosa;
-10. entrar/criar Conta OrdaX quando o serviço real de identidade estiver habilitado.
+3. preparar o pendrive sem terminal, sem manipular ISO, partições, Git ou SHA;
+4. inicializar um hardware oficialmente suportado pelo pendrive;
+5. escolher entre **usar o OrdaX diretamente pelo USB** ou **instalar o OrdaX no SSD/NVMe/HD**;
+6. no modo USB, chegar à Surface e usar o sistema sem instalação obrigatória no disco interno;
+7. no modo Native, concluir a instalação no disco interno e depois iniciar sem depender do pendrive;
+8. conectar à rede;
+9. usar os apps principais;
+10. atualizar por canal oficial;
+11. recuperar automaticamente de uma atualização defeituosa;
+12. entrar/criar Conta OrdaX quando o serviço real de identidade estiver habilitado;
+13. após autenticação, acessar a área do usuário em rota separada da landing pública.
 
 ### Apps principais do MVP
 
@@ -140,6 +143,10 @@ Os gates abaixo são de lançamento, não uma lista de recursos de v1.0:
 - payload final verificável para mídia pública;
 - one-shot A/B e fallback suficientemente provados;
 - primeiro pendrive canônico Stable/MVP validado;
+- boot pelo USB -> escolha **Usar OrdaX** / **Instalar OrdaX**;
+- modo USB funcional sem instalação obrigatória no disco interno;
+- instalador Native funcional para SSD/NVMe/HD suportado;
+- boot Native validado após remover o pendrive;
 - boot -> Surface -> rede -> apps principais;
 - fluxo de update oficial sem Git;
 - recovery/rollback funcional;
@@ -182,7 +189,28 @@ Existem dois usos diferentes de USB.
 - conteúdo vinculado a manifest/hashes/provenance;
 - atualização posterior por canais oficiais;
 - recovery conhecido-bom preservado;
-- usuário não precisa manipular ISO, partição, Git, SHA ou terminal.
+- usuário não precisa manipular ISO, partição, Git, SHA ou terminal;
+- deve inicializar como um modo de produto utilizável, não apenas como mídia descartável de instalação;
+- deve oferecer, no fluxo suportado do MVP, as ações **Usar OrdaX** e **Instalar OrdaX**.
+
+### Fluxo público obrigatório do MVP
+
+```text
+site oficial
+ -> baixar OrdaX Creator
+ -> conectar USB
+ -> Creator baixa/seleciona release Stable autorizada
+ -> verifica assinatura/hash
+ -> prepara e verifica o USB
+ -> usuário inicializa pelo USB
+ -> escolher:
+      1. Usar OrdaX diretamente pelo USB
+      2. Instalar OrdaX no SSD/NVMe/HD
+```
+
+O modo **OrdaX USB** deve funcionar como ambiente real do produto enquanto o computador estiver inicializado pelo pendrive. A instalação no disco interno produz o modo **OrdaX Native**, consumindo o mesmo modelo de release em vez de criar outro sistema.
+
+O `OrdaX Creator` é um único produto/core. Durante o MVP ele pode ser distribuído como aplicativo standalone quando necessário; posteriormente a mesma capacidade deve ser incorporada ao **OrdaX Desktop**, sem criar um segundo gravador ou uma política paralela de mídia.
 
 O backend físico do Creator pode existir antes de sua promoção pública. **Existência de código de gravação não equivale a autorização para release pública.**
 
@@ -198,13 +226,27 @@ Ele é separado do modo de produto OrdaX Web.
 
 Objetivos do portal para o MVP:
 
-- landing page;
+- landing page pública em `/`;
 - Download/Creator;
 - login;
 - cadastro;
+- área autenticada da conta em `/conta/`;
+- entrada para o modo OrdaX Web a partir da experiência autenticada, sem substituir a landing;
 - licenças/SBOM/source compliance;
 - privacidade;
 - termos.
+
+### Regra de rotas públicas e autenticadas
+
+```text
+/            -> landing page pública do produto
+/download/   -> download / Creator / releases
+/login/      -> entrada de autenticação
+/cadastro/   -> criação de conta
+/conta/      -> área autenticada do usuário
+```
+
+A **Surface/área OrdaX do usuário não deve ocupar `/`**. A raiz é sempre a apresentação pública do produto. A área pessoal, dispositivos, sessão, preferências sincronizadas e entrada para experiências autenticadas pertencem à conta. O modo **OrdaX Web** continua sendo produto separado do portal público e deve ser alcançado a partir de uma sessão/entrada apropriada, não renderizado como homepage pública.
 
 ### Regra de comunicação pública
 
@@ -230,7 +272,12 @@ Para MVP público, o mínimo é:
 - sair;
 - recuperar acesso;
 - sessão real;
-- perfil básico.
+- perfil básico;
+- área autenticada em `/conta/`;
+- encaminhamento pós-login para a experiência autenticada, nunca para uma falsa dashboard em `/`;
+- entrada para o OrdaX Web quando o runtime Web e os contratos de sessão estiverem realmente habilitados.
+
+A rota `/conta/` pode permanecer fail-closed/indisponível enquanto identidade e sessão reais não estiverem conectadas. Ela não deve simular dados, dispositivos ou sincronização.
 
 O site está correto ao não coletar senha enquanto o serviço real de identidade não estiver conectado.
 
