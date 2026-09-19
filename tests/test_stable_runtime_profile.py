@@ -137,7 +137,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn("owner-development)", source)
         self.assertIn("rev-parse HEAD", source)
 
-    def test_contract_marks_selection_done_but_signed_channel_polling_pending(self):
+    def test_contract_marks_inspect_source_done_but_physical_agent_pending(self):
         stable = CONTRACT["profiles"]["stable-mvp"]
         self.assertTrue(stable["runtime_profile_selection_implemented"])
         self.assertFalse(stable["git_update_polling_enabled"])
@@ -150,9 +150,14 @@ class StableRuntimeProfileTests(unittest.TestCase):
             "stable-continuous-signed-update",
         )
         self.assertTrue(stable["signed_release_discovery_implemented"])
+        self.assertTrue(stable["signed_release_discovery_source_implemented"])
+        self.assertFalse(stable["signed_release_discovery_physical_agent_ready"])
         self.assertFalse(stable["signed_release_discovery_downloads_artifact"])
         self.assertFalse(stable["signed_release_discovery_changes_current"])
-        self.assertEqual(CONTRACT["next_gate"]["id"], "stable-signed-channel-polling")
+        self.assertEqual(
+            CONTRACT["next_gate"]["id"],
+            "stable-release-agent-physical-availability",
+        )
 
 
 if __name__ == "__main__":
