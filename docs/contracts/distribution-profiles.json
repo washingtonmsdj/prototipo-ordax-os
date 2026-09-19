@@ -82,7 +82,13 @@
       "staged_release_health_rejects_failed_sha": true,
       "staged_release_health_retests_same_failed_sha": false,
       "staged_release_health_changes_current": false,
-      "staged_release_health_activation_performed": false
+      "staged_release_health_activation_performed": false,
+      "staged_release_health_candidate_state_source_sha": "candidate-sha",
+      "staged_release_health_restore_state_source_sha": "known-good-sha",
+      "staged_release_health_ready_written_only_after_known_good_restore": true,
+      "staged_release_health_current_pointer_changed": false,
+      "staged_release_health_candidate_system_entrypoint_invoked": false,
+      "staged_release_health_surface_entrypoint_invoked": true
     }
   },
   "invariants": {
