@@ -16,6 +16,10 @@ BOOT_REFRESH_FILE=$STATE_DIR/boot-refresh-required
 DEV_BASE_READY_FILE=$STATE_DIR/dev-base-ready-sha
 DEV_BASE_REQUEST_FILE=$STATE_DIR/dev-base-request-sha
 DEV_BASE_FETCHING_FILE=$STATE_DIR/dev-base-fetching-sha
+DEV_BASE_STAGED_FILE=$STATE_DIR/base-update/dev-base-staged-sha
+DEV_BASE_STAGE_RESULT_FILE=$STATE_DIR/base-update/dev-base-stage-result.json
+DEV_BASE_ACTIVATION_READINESS_FILE=$STATE_DIR/base-update/dev-base-activation-readiness.json
+DEV_BASE_ACTIVATION_READINESS_SHA_FILE=$STATE_DIR/base-update/dev-base-activation-readiness-sha
 DEV_HELPERS_SHA_FILE=$STATE_DIR/dev-helpers-sha
 LAST_APPLIED_SHA_FILE=$STATE_DIR/last-applied-sha
 LAST_APPLIED_AT_FILE=$STATE_DIR/last-applied-at
@@ -643,6 +647,54 @@ clear_update_context() {
     UPDATE_ERROR=""
 }
 
+derive_base_update_progress() {
+    expected_sha=$1
+    BASE_UPDATE_PHASE=none
+    BASE_UPDATE_SHA=""
+
+    [ -s "$BOOT_REFRESH_FILE" ] || return 0
+    pending_sha=$(read_state_value "$BOOT_REFRESH_FILE")
+    [ -n "$pending_sha" ] || return 0
+    BASE_UPDATE_SHA=$pending_sha
+
+    if [ "$pending_sha" != "$expected_sha" ]; then
+        BASE_UPDATE_PHASE=waiting-candidate
+        return 0
+    fi
+
+    readiness_sha=$(read_state_value "$DEV_BASE_ACTIVATION_READINESS_SHA_FILE")
+    if [ "$readiness_sha" = "$expected_sha" ] && [ -s "$DEV_BASE_ACTIVATION_READINESS_FILE" ]; then
+        BASE_UPDATE_PHASE=activation-ready
+        return 0
+    fi
+
+    staged_sha=$(read_state_value "$DEV_BASE_STAGED_FILE")
+    if [ "$staged_sha" = "$expected_sha" ] && [ -s "$DEV_BASE_STAGE_RESULT_FILE" ]; then
+        BASE_UPDATE_PHASE=staged
+        return 0
+    fi
+
+    ready_sha=$(read_state_value "$DEV_BASE_READY_FILE")
+    if [ "$ready_sha" = "$expected_sha" ]; then
+        BASE_UPDATE_PHASE=candidate-ready
+        return 0
+    fi
+
+    fetching_sha=$(read_state_value "$DEV_BASE_FETCHING_FILE")
+    if [ "$fetching_sha" = "$expected_sha" ]; then
+        BASE_UPDATE_PHASE=candidate-fetching
+        return 0
+    fi
+
+    requested_sha=$(read_state_value "$DEV_BASE_REQUEST_FILE")
+    if [ "$requested_sha" = "$expected_sha" ]; then
+        BASE_UPDATE_PHASE=candidate-requested
+        return 0
+    fi
+
+    BASE_UPDATE_PHASE=waiting-candidate
+}
+
 write_update_state() {
     source_sha=$1
     status=$2
@@ -657,15 +709,16 @@ write_update_state() {
     staged_release_sha=$(read_state_value "$STAGED_RELEASE_FILE")
     last_apply_duration=$(read_state_value "$LAST_APPLY_DURATION_FILE")
     last_stage_duration=$(read_state_value "$LAST_STAGE_DURATION_FILE")
+    derive_base_update_progress "$source_sha"
     [ -n "$last_applied_at" ] || last_applied_at=unknown
     [ -n "$runtime_surface_sha" ] || runtime_surface_sha=$source_sha
     case "$last_apply_duration" in ''|*[!0-9]*) last_apply_duration=0 ;; esac
     case "$last_stage_duration" in ''|*[!0-9]*) last_stage_duration=0 ;; esac
     delivery_number=$(delivery_number_for_sha "$source_sha")
     temporary=$UPDATE_STATE.tmp.$
-    printf '{"sourceSha":"%s","deliveryNumber":%s,"versionNumber":%s,"runtimeSurfaceSha":"%s","targetSha":"%s","status":"%s","phase":"%s","applyMode":"%s","attemptId":"%s","bootRefreshRequired":%s,"checkedAt":"%s","lastAppliedSha":"%s","lastAppliedAt":"%s","stagedReleaseSha":"%s","lastApplyDurationSeconds":%s,"lastStageDurationSeconds":%s,"rejectedSha":"%s","lastError":"%s"}\n' \
+    printf '{"sourceSha":"%s","deliveryNumber":%s,"versionNumber":%s,"runtimeSurfaceSha":"%s","targetSha":"%s","status":"%s","phase":"%s","applyMode":"%s","attemptId":"%s","bootRefreshRequired":%s,"baseUpdatePhase":"%s","baseUpdateSha":"%s","checkedAt":"%s","lastAppliedSha":"%s","lastAppliedAt":"%s","stagedReleaseSha":"%s","lastApplyDurationSeconds":%s,"lastStageDurationSeconds":%s,"rejectedSha":"%s","lastError":"%s"}\n' \
         "$source_sha" "$delivery_number" "$delivery_number" "$runtime_surface_sha" "$UPDATE_TARGET_SHA" "$status" "$UPDATE_PHASE" "$apply_mode" "$UPDATE_ATTEMPT_ID" \
-        "$boot_refresh" "$checked_at" "$last_applied_sha" "$last_applied_at" "$staged_release_sha" "$last_apply_duration" "$last_stage_duration" "$rejected_sha" "$UPDATE_ERROR" >"$temporary"
+        "$boot_refresh" "$BASE_UPDATE_PHASE" "$BASE_UPDATE_SHA" "$checked_at" "$last_applied_sha" "$last_applied_at" "$staged_release_sha" "$last_apply_duration" "$last_stage_duration" "$rejected_sha" "$UPDATE_ERROR" >"$temporary"
     /bin/busybox mv -f "$temporary" "$UPDATE_STATE"
 }
 
