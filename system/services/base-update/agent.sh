@@ -743,11 +743,13 @@ while :; do
             >/dev/null 2>&1 || true
         discover_esp_read_only
         prepare_efivarfs_preflight_evidence
-        prepare_dev_base_candidate
-        prepare_esp_readonly_preflight
-        prepare_dev_base_physical_stage
-        prepare_dev_base_activation_readiness
-        prepare_dev_base_postboot_promotion
+        if [ "$DISTRIBUTION_PROFILE" = "owner-development" ]; then
+            prepare_dev_base_candidate
+            prepare_esp_readonly_preflight
+            prepare_dev_base_physical_stage
+            prepare_dev_base_activation_readiness
+            prepare_dev_base_postboot_promotion
+        fi
     else
         write_preflight_status "${PREPARE_BLOCKER:-physical-root-unavailable}"
     fi
