@@ -24,10 +24,41 @@ recovery() {
     exec sh
 }
 
+is_sha() {
+    value=${1:-}
+    [ "${#value}" -eq 40 ] || return 1
+    case "$value" in
+        ''|*[!0-9a-f]*) return 1 ;;
+    esac
+    return 0
+}
+
+current_release_sha() {
+    [ -L /ordax/current ] || return 1
+    target=$(/bin/busybox readlink /ordax/current 2>/dev/null || true)
+    case "$target" in
+        releases/*)
+            value=${target#releases/}
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+    case "$value" in
+        */*) return 1 ;;
+    esac
+    is_sha "$value" || return 1
+    [ -d "/ordax/releases/$value" ] || return 1
+    printf '%s' "$value"
+}
+
 boot_current() {
     [ -x "$CURRENT_ENTRYPOINT" ] || return 1
+    source_sha=$(current_release_sha) || recovery "current release identity is invalid"
     log "booting current verified release without requiring network"
-    exec "$CURRENT_ENTRYPOINT"
+    ORDAX_DISTRIBUTION_PROFILE=stable-mvp \
+    ORDAX_SOURCE_SHA="$source_sha" \
+        exec "$CURRENT_ENTRYPOINT"
 }
 
 # A known-good current release is the primary boot path. Network is not a
@@ -54,4 +85,4 @@ log "acquiring first verified release"
 
 [ -x "$CURRENT_ENTRYPOINT" ] || recovery "release activation did not create a bootable current entrypoint"
 log "first verified release activated"
-exec "$CURRENT_ENTRYPOINT"
+boot_current || recovery "verified release handoff failed"
