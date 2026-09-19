@@ -24,6 +24,10 @@ DEV_BASE_FETCHING_FILE=$HOST_STATE_ROOT/dev-base-fetching-sha
 DEV_BASE_STAGED_FILE=$HOST_STATE_ROOT/base-update/dev-base-staged-sha
 DEV_BASE_STAGE_RESULT_FILE=$HOST_STATE_ROOT/base-update/dev-base-stage-result.json
 DEV_BASE_STAGE_LOG=$HOST_STATE_ROOT/base-update/dev-physical-stage.log
+DEV_BASE_ACTIVATION_READINESS_FILE=$HOST_STATE_ROOT/base-update/dev-base-activation-readiness.json
+DEV_BASE_ACTIVATION_READINESS_SHA_FILE=$HOST_STATE_ROOT/base-update/dev-base-activation-readiness-sha
+ESP_ACTIVATION_READINESS_MOUNT_ROOT=${ORDAX_BASE_ESP_ACTIVATION_READINESS_MOUNT_ROOT:-/run/ordax-base-owner/esp-activation-readiness}
+DEV_BASE_ACTIVATION_READINESS_LOG=$HOST_STATE_ROOT/base-update/dev-activation-readiness.log
 DEV_BASE_LOG=$HOST_STATE_ROOT/base-update/dev-channel.log
 PREPARE_BLOCKER=
 LOG_PREFIX=ordax-base-update-agent
@@ -515,6 +519,73 @@ prepare_dev_base_physical_stage() {
     return 0
 }
 
+prepare_dev_base_activation_readiness() {
+    ready_sha=$(read_state_value "$DEV_BASE_READY_FILE")
+    staged_sha=$(read_state_value "$DEV_BASE_STAGED_FILE")
+    if ! is_sha "$ready_sha" || [ "$staged_sha" != "$ready_sha" ]; then
+        /bin/busybox rm -f "$DEV_BASE_ACTIVATION_READINESS_FILE" "$DEV_BASE_ACTIVATION_READINESS_SHA_FILE" >/dev/null 2>&1 || true
+        return 0
+    fi
+
+    [ -s "$DEV_BASE_STAGE_RESULT_FILE" ] || {
+        /bin/busybox rm -f "$DEV_BASE_ACTIVATION_READINESS_FILE" "$DEV_BASE_ACTIVATION_READINESS_SHA_FILE" >/dev/null 2>&1 || true
+        return 0
+    }
+
+    cached_sha=$(read_state_value "$DEV_BASE_ACTIVATION_READINESS_SHA_FILE")
+    if [ "$cached_sha" = "$ready_sha" ] && [ -s "$DEV_BASE_ACTIVATION_READINESS_FILE" ]; then
+        return 0
+    fi
+
+    helper=/srv/ordax-system/services/base-update/dev_activation_readiness.py
+    [ -n "$PHYSICAL_ROOT_SOURCE" ] &&
+    [ -n "$OWNER_STATE_CHROOT" ] &&
+    [ -n "$OWNER_BASE_ROOT_CHROOT" ] &&
+    [ -f "$RUNTIME_ROOT$helper" ] || return 0
+
+    candidate_root=$OWNER_STATE_CHROOT/base-update/dev-candidates
+    version_root=$OWNER_BASE_ROOT_CHROOT/versions
+    staged_sha_file=$OWNER_STATE_CHROOT/base-update/dev-base-staged-sha
+    stage_result_file=$OWNER_STATE_CHROOT/base-update/dev-base-stage-result.json
+    directory=${DEV_BASE_ACTIVATION_READINESS_FILE%/*}
+    /bin/busybox mkdir -p "$directory" >/dev/null 2>&1 || return 0
+    temporary=$(/bin/busybox mktemp "$directory/.dev-base-activation-readiness.XXXXXX") || return 0
+    /bin/busybox mkdir -p "${DEV_BASE_ACTIVATION_READINESS_LOG%/*}" >/dev/null 2>&1 || true
+
+    if /bin/busybox chroot "$RUNTIME_ROOT" /usr/bin/python3 "$helper" \
+        --root-source "$PHYSICAL_ROOT_SOURCE" \
+        --candidate-root "$candidate_root" \
+        --version-root "$version_root" \
+        --source-commit "$ready_sha" \
+        --staged-sha-file "$staged_sha_file" \
+        --stage-result-file "$stage_result_file" \
+        --mount-root "$ESP_ACTIVATION_READINESS_MOUNT_ROOT" \
+        >"$temporary" 2>>"$DEV_BASE_ACTIVATION_READINESS_LOG"
+    then
+        if /bin/busybox grep -Fq "\"source_commit\": \"$ready_sha\"" "$temporary" &&
+           /bin/busybox grep -Fq '"ready_for_activation_gate": true' "$temporary" &&
+           /bin/busybox grep -Fq '"activation_authorized": false' "$temporary" &&
+           /bin/busybox grep -Fq '"runtime_activation_wiring_enabled": false' "$temporary" &&
+           /bin/busybox grep -Fq '"efi_variable_written": false' "$temporary" &&
+           /bin/busybox grep -Fq '"reboot_requested": false' "$temporary"
+        then
+            /bin/busybox chmod 600 "$temporary" >/dev/null 2>&1 || true
+            if /bin/busybox mv -f "$temporary" "$DEV_BASE_ACTIVATION_READINESS_FILE"; then
+                if write_state_value "$DEV_BASE_ACTIVATION_READINESS_SHA_FILE" "$ready_sha"; then
+                    log "development Base activation readiness verified without authorization: $ready_sha"
+                    return 0
+                fi
+            fi
+        fi
+        log "development Base activation readiness result validation failed for $ready_sha"
+    else
+        log "development Base activation readiness failed for $ready_sha; current boot remains unchanged"
+    fi
+
+    /bin/busybox rm -f "$temporary" "$DEV_BASE_ACTIVATION_READINESS_FILE" "$DEV_BASE_ACTIVATION_READINESS_SHA_FILE" >/dev/null 2>&1 || true
+    return 0
+}
+
 while :; do
     if [ ! -x "$RUNTIME_ROOT/usr/bin/python3" ]; then
         write_preflight_status runtime-unavailable
@@ -545,6 +616,7 @@ while :; do
         prepare_dev_base_candidate
         prepare_esp_readonly_preflight
         prepare_dev_base_physical_stage
+        prepare_dev_base_activation_readiness
     else
         write_preflight_status "${PREPARE_BLOCKER:-physical-root-unavailable}"
     fi
