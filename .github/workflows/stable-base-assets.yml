@@ -1,0 +1,226 @@
+name: Stable Base Assets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bootstrap/kernel/**'
+      - 'bootstrap/initramfs/**'
+      - 'system/base-update/candidate.json'
+      - 'tests/test_stable_base_assets.py'
+      - '.github/workflows/stable-base-assets.yml'
+  pull_request:
+    paths:
+      - 'bootstrap/kernel/**'
+      - 'bootstrap/initramfs/**'
+      - 'system/base-update/candidate.json'
+      - 'tests/test_stable_base_assets.py'
+      - '.github/workflows/stable-base-assets.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          check-latest: false
+
+      - name: Install bounded Base build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends             gcc-13 make bc perl bison flex openssl libssl-dev libelf-dev             dwarves kmod xz-utils pkg-config musl-tools binutils bzip2
+
+      - name: Build exact-commit Stable Base boot assets
+        run: |
+          set -euo pipefail
+          python bootstrap/kernel/build.py check
+          python bootstrap/kernel/build.py build --jobs 4
+          python bootstrap/kernel/verify.py out/kernel
+          python bootstrap/initramfs/build.py check
+          python bootstrap/initramfs/build.py build --jobs 4
+          python bootstrap/initramfs/build.py verify
+
+      - name: Bind built bytes to signed-system candidate descriptor
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, pathlib, os, shutil
+
+          descriptor = json.loads(
+              pathlib.Path('system/base-update/candidate.json').read_text(encoding='utf-8')
+          )
+          if descriptor.get('$schema') != 'prototype-ordax.base-update-candidate/1':
+              raise SystemExit('unexpected Stable Base candidate descriptor schema')
+
+          kernels = list(pathlib.Path('out/kernel').glob('vmlinuz-*'))
+          if len(kernels) != 1:
+              raise SystemExit(f'expected exactly one built kernel, got {len(kernels)}')
+          kernel = kernels[0]
+          initramfs = pathlib.Path('out/initramfs/initramfs.cpio.gz')
+          if not initramfs.is_file():
+              raise SystemExit('built initramfs is missing')
+
+          def digest(path):
+              h = hashlib.sha256()
+              with path.open('rb') as handle:
+                  for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          kernel_sha = digest(kernel)
+          initramfs_sha = digest(initramfs)
+          if kernel_sha != descriptor.get('kernel_sha256'):
+              raise SystemExit(
+                  f'kernel differs from signed candidate descriptor: '
+                  f'expected={descriptor.get("kernel_sha256")} actual={kernel_sha}'
+              )
+          if initramfs_sha != descriptor.get('initramfs_sha256'):
+              raise SystemExit(
+                  f'initramfs differs from signed candidate descriptor: '
+                  f'expected={descriptor.get("initramfs_sha256")} actual={initramfs_sha}'
+              )
+
+          out = pathlib.Path('out/stable-base')
+          out.mkdir(parents=True, exist_ok=True)
+          shutil.copyfile(kernel, out / 'vmlinuz')
+          shutil.copyfile(initramfs, out / 'initrd.gz')
+          provenance = {
+              '$schema': 'prototype-ordax.stable-base-assets/1',
+              'status': 'candidate',
+              'source_commit': os.environ['GITHUB_SHA'],
+              'trust_source': 'signed-system-release-candidate-descriptor',
+              'transport_authenticity': 'sha256-from-signed-system-release',
+              'rootfs_artifact_present': False,
+              'persistent_ordax_partition_preserved': True,
+              'activation_authorized': False,
+              'reboot_requested': False,
+              'artifacts': {
+                  'vmlinuz': {'sha256': kernel_sha, 'size': kernel.stat().st_size},
+                  'initrd.gz': {'sha256': initramfs_sha, 'size': initramfs.stat().st_size},
+              },
+          }
+          (out / 'stable-base-assets.json').write_text(
+              json.dumps(provenance, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          print('STABLE_BASE_ASSETS_BOUND=YES')
+          print('KERNEL_SHA256=' + kernel_sha)
+          print('INITRAMFS_SHA256=' + initramfs_sha)
+          PY
+
+      - name: Regress Stable Base asset contract
+        run: python -m unittest tests.test_stable_base_assets -v
+
+      - name: Upload Stable Base candidate evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ordax-stable-base-${{ github.sha }}
+          path: out/stable-base/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          check-latest: false
+
+      - name: Install bounded Base build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends             gcc-13 make bc perl bison flex openssl libssl-dev libelf-dev             dwarves kmod xz-utils pkg-config musl-tools binutils bzip2
+
+      - name: Rebuild exact immutable Stable Base bytes
+        run: |
+          set -euo pipefail
+          python bootstrap/kernel/build.py check
+          python bootstrap/kernel/build.py build --jobs 4
+          python bootstrap/kernel/verify.py out/kernel
+          python bootstrap/initramfs/build.py check
+          python bootstrap/initramfs/build.py build --jobs 4
+          python bootstrap/initramfs/build.py verify
+          python - <<'PY'
+          import hashlib, json, pathlib, shutil
+          descriptor = json.loads(
+              pathlib.Path('system/base-update/candidate.json').read_text(encoding='utf-8')
+          )
+          kernels = list(pathlib.Path('out/kernel').glob('vmlinuz-*'))
+          if len(kernels) != 1:
+              raise SystemExit('expected exactly one built kernel')
+          kernel = kernels[0]
+          initramfs = pathlib.Path('out/initramfs/initramfs.cpio.gz')
+          def digest(path):
+              h = hashlib.sha256()
+              with path.open('rb') as handle:
+                  for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+                      h.update(chunk)
+              return h.hexdigest()
+          if digest(kernel) != descriptor['kernel_sha256']:
+              raise SystemExit('rebuilt kernel does not match signed descriptor')
+          if digest(initramfs) != descriptor['initramfs_sha256']:
+              raise SystemExit('rebuilt initramfs does not match signed descriptor')
+          out = pathlib.Path('out/stable-base')
+          out.mkdir(parents=True, exist_ok=True)
+          shutil.copyfile(kernel, out / 'vmlinuz')
+          shutil.copyfile(initramfs, out / 'initrd.gz')
+          PY
+
+      - name: Publish immutable exact-commit Stable Base assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repo='washingtonmsdj/prototipo-ordax-os'
+          tag="ordax-stable-base-$GITHUB_SHA"
+          out='out/stable-base'
+
+          if ! gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
+            gh release create "$tag"               --repo "$repo"               --target "$GITHUB_SHA"               --title "OrdaX Stable Base $GITHUB_SHA"               --prerelease               --notes 'Immutable Stable Base transport assets. Authenticity is not conferred by this tag: kernel/initramfs bytes are accepted only when their SHA-256 values match system/base-update/candidate.json inside the signed system release for the same source commit.'
+          fi
+
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for asset in vmlinuz initrd.gz; do
+            if gh release view "$tag" --repo "$repo" --json assets                 --jq '.assets[].name' | grep -Fxq "$asset"; then
+              gh release download "$tag" --repo "$repo" --pattern "$asset" --dir "$tmp"
+              local_hash="$(sha256sum "$out/$asset" | awk '{print $1}')"
+              remote_hash="$(sha256sum "$tmp/$asset" | awk '{print $1}')"
+              test "$local_hash" = "$remote_hash"
+              rm -f "$tmp/$asset"
+            else
+              gh release upload "$tag" "$out/$asset#$asset" --repo "$repo"
+            fi
+          done
+
+          echo "STABLE_BASE_TAG=$tag"
+          echo "STABLE_BASE_SOURCE_COMMIT=$GITHUB_SHA"
+          echo 'STABLE_BASE_TRUST=SIGNED_SYSTEM_CANDIDATE_DESCRIPTOR'
+          echo 'STABLE_BASE_ROOTFS_ARTIFACT=NO'
+          echo 'STABLE_BASE_ACTIVATION_AUTHORIZED=NO'
