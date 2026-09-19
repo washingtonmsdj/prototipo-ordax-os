@@ -41,7 +41,16 @@
     "default_entry_unchanged_before_health": true,
     "automatic_fallback": "existing-current-entry",
     "reboot_required": true,
-    "entry_id": "ordax-candidate.conf"
+    "entry_id": "ordax-candidate.conf",
+    "disposable_proof": "bootstrap/base-update/prove_oneshot_activation.sh",
+    "disposable_proof_schema": "prototype-ordax.base-update-oneshot-activation-proof/1",
+    "disposable_efivarfs_only": true,
+    "esp_must_be_read_only_during_arm": true,
+    "esp_byte_identity_must_remain_unchanged": true,
+    "only_loader_entry_oneshot_variable_may_be_written": true,
+    "real_efivarfs_proven": false,
+    "physical_notebook_proven": false,
+    "runtime_owner_activation_wiring_enabled": false
   },
   "staging": {
     "signed_manifest_required": true,

@@ -72,6 +72,26 @@ class BaseUpdateContractTests(unittest.TestCase):
         self.assertTrue(activation["default_entry_unchanged_before_health"])
         self.assertEqual(activation["automatic_fallback"], "existing-current-entry")
 
+    def test_disposable_activation_proof_is_non_physical_and_owner_disabled(self):
+        activation = CONTRACT["activation"]
+        self.assertEqual(
+            activation["disposable_proof"],
+            "bootstrap/base-update/prove_oneshot_activation.sh",
+        )
+        self.assertEqual(
+            activation["disposable_proof_schema"],
+            "prototype-ordax.base-update-oneshot-activation-proof/1",
+        )
+        self.assertTrue(activation["disposable_efivarfs_only"])
+        self.assertTrue(activation["esp_must_be_read_only_during_arm"])
+        self.assertTrue(activation["esp_byte_identity_must_remain_unchanged"])
+        self.assertTrue(
+            activation["only_loader_entry_oneshot_variable_may_be_written"]
+        )
+        self.assertFalse(activation["real_efivarfs_proven"])
+        self.assertFalse(activation["physical_notebook_proven"])
+        self.assertFalse(activation["runtime_owner_activation_wiring_enabled"])
+
     def test_promotion_requires_base_and_surface_health(self):
         health = CONTRACT["health"]
         for key in (
