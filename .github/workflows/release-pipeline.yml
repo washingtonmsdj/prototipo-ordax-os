@@ -6,6 +6,11 @@ on:
     paths:
       - 'system/**'
       - 'tools/release-bundle/**'
+      - 'tools/native-release-assembly/**'
+      - 'tools/creator/go.mod'
+      - 'tools/creator/core/native_install*.go'
+      - 'tools/creator/host/linux/**'
+      - 'tools/creator/cmd/ordax-creator-native-targets/**'
       - 'tools/release-manifest/**'
       - 'tools/release-signing/**'
       - 'bootstrap/release-acquisition/**'
@@ -15,6 +20,11 @@ on:
     paths:
       - 'system/**'
       - 'tools/release-bundle/**'
+      - 'tools/native-release-assembly/**'
+      - 'tools/creator/go.mod'
+      - 'tools/creator/core/native_install*.go'
+      - 'tools/creator/host/linux/**'
+      - 'tools/creator/cmd/ordax-creator-native-targets/**'
       - 'tools/release-manifest/**'
       - 'tools/release-signing/**'
       - 'bootstrap/release-acquisition/**'
@@ -49,23 +59,37 @@ jobs:
           (cd tools/release-signing && go test -count=1 ./... && CGO_ENABLED=0 go build -trimpath -buildvcs=false -o ../../out/release-pipeline/ordax-release-signing .)
           (cd bootstrap/release-acquisition && CGO_ENABLED=0 go build -trimpath -buildvcs=false -o ../../out/release-pipeline/ordax-release-agent .)
 
-      - name: Prove real repository system bundle
+      - name: Prove real repository Native system assembly and bundle
         run: |
           set -euo pipefail
           bundle="$PWD/out/release-pipeline/ordax-release-bundle"
-          work="$RUNNER_TEMP/real-system-bundle"
+          work="$RUNNER_TEMP/real-native-system-bundle"
+          source_a="$work/source-a"
+          source_b="$work/source-b"
           mkdir -p "$work"
-          "$bundle" --root "$PWD" --out "$work/system-a.tar"
-          "$bundle" --root "$PWD" --out "$work/system-b.tar"
+
+          python tools/native-release-assembly/build.py assemble --out "$source_a" | tee "$work/assemble-a.json"
+          python tools/native-release-assembly/build.py verify --root "$source_a" | tee "$work/verify-a.json"
+          python tools/native-release-assembly/build.py assemble --out "$source_b" | tee "$work/assemble-b.json"
+          python tools/native-release-assembly/build.py verify --root "$source_b" | tee "$work/verify-b.json"
+
+          cmp "$source_a/system/bin/ordax-native-install-targets" "$source_b/system/bin/ordax-native-install-targets"
+          cmp "$source_a/system/.ordax/native-release-tools.json" "$source_b/system/.ordax/native-release-tools.json"
+
+          "$bundle" --root "$source_a" --out "$work/system-a.tar"
+          "$bundle" --root "$source_b" --out "$work/system-b.tar"
           cmp "$work/system-a.tar" "$work/system-b.tar"
+
           python - "$work/system-a.tar" <<'PY'
-          import pathlib, sys, tarfile
+          import json, pathlib, sys, tarfile
           tar_path = pathlib.Path(sys.argv[1])
           with tarfile.open(tar_path, 'r:') as archive:
               required = {
                   'system/entrypoint': 0o755,
                   'system/surface/entrypoint': 0o755,
                   'system/surface/bin/ordax-surface': 0o755,
+                  'system/bin/ordax-native-install-targets': 0o755,
+                  'system/.ordax/native-release-tools.json': 0o644,
               }
               members = {member.name: member for member in archive.getmembers()}
               for name, mode in required.items():
@@ -73,7 +97,23 @@ jobs:
                   assert member.isfile(), name
                   assert member.mode == mode, (name, oct(member.mode))
               assert all(not member.issym() and not member.islnk() for member in members.values())
+
+              provenance = json.loads(
+                  archive.extractfile('system/.ordax/native-release-tools.json')
+                  .read()
+                  .decode('utf-8')
+              )
+              assert provenance['$schema'] == 'prototype-ordax.native-release-assembly/1'
+              assert provenance['physical_apply_authorized'] is False
+              assert len(provenance['injected_tools']) == 1
+              tool = provenance['injected_tools'][0]
+              assert tool['path'] == 'system/bin/ordax-native-install-targets'
+              assert tool['role'] == 'native-install-read-only-target-discovery'
+              assert tool['physical_apply_authorized'] is False
+          print('NATIVE_RELEASE_ASSEMBLY=PASS')
           print('REAL_SYSTEM_BUNDLE=PASS')
+          print('NATIVE_INSTALL_HELPER_SIGNING_SCOPE=SYSTEM_TAR')
+          print('NATIVE_INSTALL_PHYSICAL_APPLY_AUTHORIZED=NO')
           PY
 
       - name: Prove source to signed envelope compatibility
