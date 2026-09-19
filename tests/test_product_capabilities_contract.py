@@ -76,7 +76,7 @@ class ProductCapabilitiesContractTests(unittest.TestCase):
         usb = by_mode["usb"]
         self.assertEqual(
             set(usb["privileged_capabilities"]),
-            {"creator.native-install"},
+            {"creator.native-install", "host.raw-disk"},
         )
         self.assertEqual(
             usb["privileged_boundary"],
