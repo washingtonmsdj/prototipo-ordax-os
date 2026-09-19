@@ -174,12 +174,27 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(stable["staged_release_health_surface_entrypoint_invoked"])
         self.assertFalse(stable["staged_release_health_activation_performed"])
 
-    def test_next_gate_is_exact_activation_after_health(self):
+    def test_exact_activation_primitive_is_offline_but_not_supervisor_connected(self):
+        stable = CONTRACT["profiles"]["stable-mvp"]
+        self.assertEqual(
+            stable["exact_release_activation_primitive"],
+            "ordax-release-agent activate-exact",
+        )
+        self.assertTrue(stable["exact_release_activation_primitive_implemented"])
+        self.assertFalse(stable["exact_release_activation_network_required"])
+        self.assertTrue(stable["exact_release_activation_revalidates_stored_signature"])
+        self.assertTrue(stable["exact_release_activation_revalidates_materialized_tree"])
+        self.assertTrue(stable["exact_release_activation_preserves_previous_commit_in_receipt"])
+        self.assertTrue(stable["exact_release_activation_atomic_current_swap"])
+        self.assertFalse(stable["exact_release_activation_supervisor_connected"])
+        self.assertFalse(stable["signed_release_activation_connected"])
+
+    def test_next_gate_is_health_ready_activation_transaction(self):
         gate = CONTRACT["next_gate"]
-        self.assertEqual(gate["id"], "stable-exact-release-activation")
+        self.assertEqual(gate["id"], "stable-health-ready-activation-transaction")
         self.assertFalse(gate["implemented"])
-        self.assertIn("exact health-ready signed release", gate["description"])
-        self.assertIn("previous known-good", gate["description"])
+        self.assertIn("staged_sha == health_ready_sha", gate["description"])
+        self.assertIn("roll current back", gate["description"])
         self.assertTrue(CONTRACT["invariants"]["same_main_source_authority"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_git_client"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_source_checkout"])
