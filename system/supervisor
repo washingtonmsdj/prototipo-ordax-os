@@ -29,6 +29,8 @@ DIRTY_CHECKOUT_DIR=$STATE_DIR/dirty-checkout
 SUPERVISOR_GUARD_FILE=$STATE_DIR/pending-supervisor-update
 RELEASES_DIR=${ORDAX_RELEASES_DIR:-$STATE_DIR/releases}
 STAGED_RELEASE_FILE=$STATE_DIR/staged-release-sha
+STABLE_HEALTH_READY_FILE=$STATE_DIR/stable-release-health-ready-sha
+STABLE_HEALTH_REJECTED_FILE=$STATE_DIR/stable-release-health-rejected-sha
 LAST_APPLY_DURATION_FILE=$STATE_DIR/last-apply-duration-seconds
 LAST_STAGE_DURATION_FILE=$STATE_DIR/last-stage-duration-seconds
 UPDATE_HISTORY_FILE=$STATE_DIR/native-state/update-history.tsv
@@ -834,16 +836,25 @@ request_dev_base_candidate() {
     log "development Base candidate requested from base-update owner: $source_sha"
 }
 
-start_surface() {
-    [ -x "$SURFACE_ENTRYPOINT" ] || return 1
-    ORDAX_SYSTEM_ROOT=$SYSTEM_ROOT
-    ORDAX_DISTRIBUTION_PROFILE=$DISTRIBUTION_PROFILE
-    ORDAX_SOURCE_SHA=$(current_sha)
-    export ORDAX_SYSTEM_ROOT ORDAX_DISTRIBUTION_PROFILE ORDAX_SOURCE_SHA
-    "$SURFACE_ENTRYPOINT" &
+start_surface_from_system() {
+    surface_system_root=$1
+    surface_source_sha=$2
+    surface_entrypoint=$surface_system_root/surface/entrypoint
+
+    is_sha "$surface_source_sha" || return 1
+    [ -x "$surface_entrypoint" ] || return 1
+
+    ORDAX_SYSTEM_ROOT="$surface_system_root" \
+    ORDAX_DISTRIBUTION_PROFILE="$DISTRIBUTION_PROFILE" \
+    ORDAX_SOURCE_SHA="$surface_source_sha" \
+        "$surface_entrypoint" &
     SURFACE_PID=$!
     SURFACE_STARTED_AT=$(epoch_now)
-    log "Surface started as pid $SURFACE_PID"
+    log "Surface $surface_source_sha started as pid $SURFACE_PID"
+}
+
+start_surface() {
+    start_surface_from_system "$SYSTEM_ROOT" "$(current_sha)"
 }
 
 stop_surface() {
@@ -1196,6 +1207,76 @@ stable_release_tree_is_valid() {
     staged_release_tree_is_valid "$system_root" supervisor-restart
 }
 
+restore_current_surface_after_probe() {
+    current_sha_value=$1
+
+    clear_surface_health
+    stop_surface
+    if ! start_surface || ! surface_stays_running 4 || ! wait_for_surface_health "$current_sha_value" "$SURFACE_HEALTH_TIMEOUT"; then
+        fail_closed "Stable/MVP known-good Surface could not be restored after candidate health probe"
+    fi
+    record_runtime_surface_sha "$current_sha_value"
+    return 0
+}
+
+probe_staged_stable_release_health() {
+    current_sha_value=$1
+    candidate_sha=$2
+
+    is_sha "$current_sha_value" || return 1
+    is_sha "$candidate_sha" || return 1
+    [ "$candidate_sha" != "$current_sha_value" ] || return 1
+    stable_release_tree_is_valid "$candidate_sha" || return 1
+
+    ready_sha=$(read_state_value "$STABLE_HEALTH_READY_FILE")
+    if [ "$ready_sha" = "$candidate_sha" ]; then
+        set_update_context health-ready "$candidate_sha" "" ""
+        write_update_state "$current_sha_value" health-ready signed-release
+        return 0
+    fi
+
+    rejected_sha=$(read_state_value "$STABLE_HEALTH_REJECTED_FILE")
+    if [ "$rejected_sha" = "$candidate_sha" ]; then
+        set_update_context blocked "$candidate_sha" "" "stable-release-health-rejected"
+        write_update_state "$current_sha_value" rejected signed-release
+        return 1
+    fi
+
+    rm -f "$STABLE_HEALTH_READY_FILE"
+    set_update_context health-wait "$candidate_sha" "$(utc_now)" ""
+    write_update_state "$current_sha_value" testing signed-release
+    log "probing staged Stable/MVP Surface health without changing current: $candidate_sha"
+
+    clear_surface_health
+    stop_surface
+
+    candidate_healthy=0
+    candidate_system=$STABLE_ROOT/releases/$candidate_sha/system
+    if start_surface_from_system "$candidate_system" "$candidate_sha"; then
+        if surface_stays_running 4 && wait_for_surface_health "$candidate_sha" "$SURFACE_HEALTH_TIMEOUT"; then
+            candidate_healthy=1
+        fi
+    fi
+
+    stop_surface
+    restore_current_surface_after_probe "$current_sha_value"
+
+    if [ "$candidate_healthy" -eq 1 ]; then
+        write_state_value "$STABLE_HEALTH_READY_FILE" "$candidate_sha"
+        rm -f "$STABLE_HEALTH_REJECTED_FILE"
+        set_update_context health-ready "$candidate_sha" "" ""
+        write_update_state "$current_sha_value" health-ready signed-release
+        log "staged Stable/MVP release passed Surface health and remains inactive: $candidate_sha"
+        return 0
+    fi
+
+    write_state_value "$STABLE_HEALTH_REJECTED_FILE" "$candidate_sha"
+    set_update_context blocked "$candidate_sha" "" "stable-release-health-failed"
+    write_update_state "$current_sha_value" rejected signed-release
+    log "staged Stable/MVP release failed Surface health; known-good restored: $candidate_sha"
+    return 1
+}
+
 check_stable_signed_update() {
     current=$1
 
@@ -1242,6 +1323,10 @@ check_stable_signed_update() {
     if [ "$remote_sha" = "$current" ]; then
         staged_sha=$(read_state_value "$STAGED_RELEASE_FILE")
         [ "$staged_sha" != "$current" ] || rm -f "$STAGED_RELEASE_FILE"
+        ready_sha=$(read_state_value "$STABLE_HEALTH_READY_FILE")
+        [ "$ready_sha" != "$current" ] || rm -f "$STABLE_HEALTH_READY_FILE"
+        rejected_sha=$(read_state_value "$STABLE_HEALTH_REJECTED_FILE")
+        [ "$rejected_sha" != "$current" ] || rm -f "$STABLE_HEALTH_REJECTED_FILE"
         clear_update_context
         write_update_state "$current" running none
         return 0
@@ -1249,10 +1334,14 @@ check_stable_signed_update() {
 
     staged_sha=$(read_state_value "$STAGED_RELEASE_FILE")
     if [ "$staged_sha" = "$remote_sha" ] && stable_release_tree_is_valid "$remote_sha"; then
-        set_update_context staged "$remote_sha" "" ""
-        write_update_state "$current" staged signed-release
+        probe_staged_stable_release_health "$current" "$remote_sha" || true
         return 0
     fi
+
+    ready_sha=$(read_state_value "$STABLE_HEALTH_READY_FILE")
+    [ "$ready_sha" = "$remote_sha" ] || rm -f "$STABLE_HEALTH_READY_FILE"
+    rejected_sha=$(read_state_value "$STABLE_HEALTH_REJECTED_FILE")
+    [ "$rejected_sha" = "$remote_sha" ] || rm -f "$STABLE_HEALTH_REJECTED_FILE"
 
     attempt_id=$(utc_now)
     stage_started=$(epoch_now)
@@ -1298,6 +1387,7 @@ check_stable_signed_update() {
     set_update_context staged "$remote_sha" "$attempt_id" ""
     write_update_state "$current" staged signed-release
     log "Stable/MVP signed release staged without activation: $remote_sha"
+    probe_staged_stable_release_health "$current" "$remote_sha" || true
     return 0
 }
 
