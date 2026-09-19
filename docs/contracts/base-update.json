@@ -92,7 +92,7 @@
       "reboot_requested": false,
       "automatic_reboot_enabled": false,
       "runtime_owner_wiring_enabled": false,
-      "blocker": "runtime-owner-wiring-disabled-pending-systemd-boot-counting-gate",
+      "blocker": "physical-efivarfs-evidence-required-before-runtime-owner-arm-wiring",
       "disposable_proof": "bootstrap/base-update/prove_dev_activation_arm.sh",
       "disposable_proof_schema": "prototype-ordax.dev-base-activation-arm-proof/1",
       "disposable_efivarfs_only": true,
@@ -105,7 +105,9 @@
       "writable_efivarfs_required": true,
       "efivarfs_preflight_must_remain_non_authoritative": true,
       "efivarfs_preflight_variable_written_must_be_false": true,
-      "explicit_efi_root_required": true
+      "explicit_efi_root_required": true,
+      "boot_counting_gate_merged": true,
+      "physical_efivarfs_evidence_required": true
     },
     "efivarfs_preflight": {
       "helper": "system/services/base-update/efivarfs_preflight.py",
@@ -125,10 +127,16 @@
       "activation_authorized": false,
       "variable_written": false,
       "reboot_requested": false,
-      "runtime_owner_wiring_enabled": false,
+      "runtime_owner_wiring_enabled": true,
       "fixture_regression": "tests/test_base_update_efivarfs_preflight.py",
       "real_efivarfs_proven": false,
-      "physical_notebook_proven": false
+      "physical_notebook_proven": false,
+      "runtime_owner_evidence_only": true,
+      "evidence_state_file": "/state/ordax/base-update/efivarfs-preflight.json",
+      "evidence_log_file": "/state/ordax/base-update/efivarfs-preflight.log",
+      "evidence_failure_blocks_surface": false,
+      "evidence_failure_authorizes_activation": false,
+      "stale_success_removed_on_failure": true
     }
   },
   "staging": {
