@@ -6,6 +6,8 @@ export PATH
 
 BOOTSTRAP_PATH=/ordax/bootstrap/entrypoint
 RECOVERY_BOOTSTRAP_PATH=/ordax/bootstrap/recovery/entrypoint
+INSTALL_RUNTIME_DIR=/run/ordax-install
+SOURCE_BLOCK_DEVICE_FILE=$INSTALL_RUNTIME_DIR/source-block-device
 
 rescue() {
     echo "ordax-initramfs: entering local recovery shell: $*" >&2
@@ -25,7 +27,16 @@ esac
 ORDAX_DEVICE="$(findfs LABEL=ORDAX 2>/dev/null || true)"
 case "$ORDAX_DEVICE" in
     "") rescue "ORDAX partition not found" ;;
+    /dev/*) ;;
+    *) rescue "ORDAX partition resolved outside /dev" ;;
 esac
+
+mkdir -p "$INSTALL_RUNTIME_DIR" || rescue "cannot create Native install runtime handoff"
+chmod 700 "$INSTALL_RUNTIME_DIR" || rescue "cannot protect Native install runtime handoff"
+temporary_source=$SOURCE_BLOCK_DEVICE_FILE.tmp.$
+printf '%s\n' "$ORDAX_DEVICE" >"$temporary_source" || rescue "cannot record source boot block device"
+chmod 400 "$temporary_source" || rescue "cannot protect source boot block device"
+mv -f "$temporary_source" "$SOURCE_BLOCK_DEVICE_FILE" || rescue "cannot publish source boot block device"
 
 enter_recovery() {
     reason=$1
