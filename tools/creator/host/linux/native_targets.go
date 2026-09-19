@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -52,7 +53,7 @@ func allDigits(value string) bool {
 }
 
 func sourceParentDisk(sourceName string, wholeDisks []string) (string, error) {
-	sourceName = strings.TrimSpace(filepath.Base(sourceName))
+	sourceName = strings.TrimSpace(path.Base(sourceName))
 	if sourceName == "" || sourceName == "." || sourceName == string(filepath.Separator) {
 		return "", fmt.Errorf("source boot block device is invalid")
 	}
@@ -178,7 +179,7 @@ func EnumerateNativeInstallTargets(sysClassBlock, devRoot, sourceBootBlockDevice
 		removable, _ := readUint(filepath.Join(root, "removable"))
 		target, err := creatorcore.FinalizeNativeInstallTarget(creatorcore.NativeInstallTargetIdentity{
 			StableID:           stableID,
-			DevicePath:         filepath.Join(devRoot, name),
+			DevicePath:         path.Join(strings.ReplaceAll(devRoot, "\\", "/"), name),
 			Model:              blockModel(root),
 			Serial:             serial,
 			Transport:          transportHint(root),
