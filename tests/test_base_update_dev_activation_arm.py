@@ -22,7 +22,13 @@ class DevelopmentActivationArmBoundaryTests(unittest.TestCase):
     def test_helper_requires_explicit_efivar_path_and_never_reboots(self):
         text = HELPER.read_text(encoding="utf-8")
         self.assertIn('parser.add_argument("--efivarfs-root", type=Path, required=True)', text)
+        self.assertIn('parser.add_argument("--efi-root", type=Path, required=True)', text)
+        self.assertIn("_efivarfs.preflight(", text)
         self.assertIn("_activate.arm(", text)
+        self.assertLess(
+            text.index("_efivarfs.preflight("),
+            text.index("_activate.arm("),
+        )
         self.assertIn("_readonly.readonly_preflight(", text)
         self.assertIn('"ro,nosuid,nodev,noexec"', text)
         self.assertIn('"reboot_requested": False', text)
@@ -71,6 +77,12 @@ class DevelopmentActivationArmBoundaryTests(unittest.TestCase):
             "explicit_efivarfs_root_required",
             "only_loader_entry_oneshot_written",
             "disposable_efivarfs_only",
+            "efivarfs_preflight_required",
+            "fresh_efivarfs_preflight_immediately_before_write",
+            "writable_efivarfs_required",
+            "efivarfs_preflight_must_remain_non_authoritative",
+            "efivarfs_preflight_variable_written_must_be_false",
+            "explicit_efi_root_required",
         ):
             self.assertTrue(arm[key], key)
         self.assertFalse(arm["default_entry_changed"])
@@ -79,6 +91,14 @@ class DevelopmentActivationArmBoundaryTests(unittest.TestCase):
         self.assertFalse(arm["runtime_owner_wiring_enabled"])
         self.assertFalse(arm["real_efivarfs_proven"])
         self.assertFalse(arm["physical_notebook_proven"])
+        self.assertEqual(
+            arm["efivarfs_preflight_helper"],
+            "system/services/base-update/efivarfs_preflight.py",
+        )
+        self.assertEqual(
+            arm["efivarfs_preflight_schema"],
+            "prototype-ordax.efivarfs-preflight/1",
+        )
         self.assertEqual(
             arm["blocker"],
             "runtime-owner-wiring-disabled-pending-systemd-boot-counting-gate",
