@@ -1,0 +1,66 @@
+{
+  "$schema": "prototype-ordax.native-installation/1",
+  "status": "mvp-plan-implemented-apply-pending",
+  "mvp_required": true,
+  "source_mode": "ordax-usb",
+  "target_mode": "native-disk",
+  "distribution_profile": "stable-mvp",
+  "creator_core_is_single_policy_owner": true,
+  "layout_contract": "docs/contracts/storage-architecture.json",
+  "initial_mvp_scope": {
+    "whole_disk_install": true,
+    "install_alongside_existing_os": false,
+    "automatic_partition_shrink": false,
+    "manual_partition_editor": false,
+    "target_must_be_explicitly_selected": true,
+    "source_boot_media_must_not_be_target": true,
+    "existing_target_data_is_erased": true,
+    "explicit_destructive_confirmation_required": true
+  },
+  "target_layout": {
+    "partition_table": "gpt",
+    "partitions": [
+      "ORDAX-ESP",
+      "ORDAX-POOL"
+    ],
+    "esp_filesystem": "fat32",
+    "pool_encryption": "luks2",
+    "pool_filesystem": "btrfs",
+    "pool_fills_remaining_capacity": true
+  },
+  "release_policy": {
+    "operational_git_allowed": false,
+    "signed_authorized_release_required": true,
+    "artifact_hash_verification_required": true,
+    "known_good_required": true
+  },
+  "phases": [
+    "inspect-target",
+    "plan",
+    "confirm-exact-target",
+    "prepare-gpt",
+    "prepare-ordax-esp",
+    "prepare-luks2-ordax-pool",
+    "prepare-btrfs-subvolumes",
+    "materialize-verified-release",
+    "install-signed-boot-and-recovery-assets",
+    "verify-installation",
+    "first-boot-health",
+    "promote-known-good"
+  ],
+  "current_implementation": {
+    "native_geometry_planner": "tools/creator/core/storage_profiles.go#PlanNativeDiskTargetStorage",
+    "native_install_plan": "tools/creator/core/native_install.go#PlanNativeInstallation",
+    "non_destructive_cli": "ordax-creator plan-native --target-bytes <bytes>",
+    "physical_apply_implemented": false,
+    "physical_apply_authorized": false,
+    "first_boot_health_connected": false
+  },
+  "fail_closed": [
+    "never-touch-physical-device-during-plan",
+    "never-allow-source-usb-as-install-target",
+    "never-use-git-as-stable-install-source",
+    "never-claim-install-complete-before-readback-and-first-boot-health",
+    "never-simulate-dual-boot-or-partition-resize"
+  ]
+}
