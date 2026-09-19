@@ -3,10 +3,28 @@ set -eu
 
 WORKTREE=${ORDAX_WORKTREE:-/workspace/ordax}
 ENTRYPOINT=$WORKTREE/system/entrypoint
+GIT_BIN=${ORDAX_GIT_BIN:-/usr/bin/git}
+
+is_sha() {
+    value=${1:-}
+    [ "${#value}" -eq 40 ] || return 1
+    case "$value" in
+        ''|*[!0-9a-f]*) return 1 ;;
+    esac
+    return 0
+}
 
 [ -x "$ENTRYPOINT" ] || {
     echo "ordax-run: $ENTRYPOINT nao existe ou nao e executavel" >&2
     exit 1
 }
 
-exec "$ENTRYPOINT"
+source_sha=$("$GIT_BIN" -C "$WORKTREE" rev-parse HEAD 2>/dev/null || true)
+is_sha "$source_sha" || {
+    echo "ordax-run: checkout Owner/Development sem SHA Git valida" >&2
+    exit 1
+}
+
+ORDAX_DISTRIBUTION_PROFILE=owner-development \
+ORDAX_SOURCE_SHA="$source_sha" \
+    exec "$ENTRYPOINT"
