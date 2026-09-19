@@ -291,8 +291,12 @@
     "seed_media_agent_may_precede_refresh_target": true,
     "seed_media_agent_must_be_recognized_migration_source": true,
     "refresh_target_may_advance_without_physical_media_rewrite": true,
-    "current_seed_sha256": "74a03bd9901c33b7281d529fb0d379a735d20b5ef7495e0af2f73ca2ff40c90e",
-    "current_refresh_target_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596"
+    "current_seed_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+    "current_refresh_target_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+    "current_seed_includes_inspect": true,
+    "legacy_seed_sha256": [
+      "74a03bd9901c33b7281d529fb0d379a735d20b5ef7495e0af2f73ca2ff40c90e"
+    ]
   },
   "runtime_owner": {
     "development_host_state_root": "/state/ordax",
