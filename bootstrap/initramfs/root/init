@@ -31,12 +31,9 @@ case "$ORDAX_DEVICE" in
     *) rescue "ORDAX partition resolved outside /dev" ;;
 esac
 
+umask 077
 mkdir -p "$INSTALL_RUNTIME_DIR" || rescue "cannot create Native install runtime handoff"
-chmod 700 "$INSTALL_RUNTIME_DIR" || rescue "cannot protect Native install runtime handoff"
-temporary_source=$SOURCE_BLOCK_DEVICE_FILE.tmp.$
-printf '%s\n' "$ORDAX_DEVICE" >"$temporary_source" || rescue "cannot record source boot block device"
-chmod 400 "$temporary_source" || rescue "cannot protect source boot block device"
-mv -f "$temporary_source" "$SOURCE_BLOCK_DEVICE_FILE" || rescue "cannot publish source boot block device"
+printf '%s\n' "$ORDAX_DEVICE" >"$SOURCE_BLOCK_DEVICE_FILE" || rescue "cannot record source boot block device"
 
 enter_recovery() {
     reason=$1
