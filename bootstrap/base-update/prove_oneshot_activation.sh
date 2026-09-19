@@ -109,7 +109,7 @@ IMAGE_AFTER="$(sha256sum "$IMAGE" | awk '{print $1}')"
 test "$IMAGE_BEFORE" = "$IMAGE_AFTER"
 sudo fsck.vfat -n "$LOOP" >/dev/null
 
-python3 - "$ACTIVATE_RESULT" "$EFIVARS" "$PROOF" "$RELEASE_SHA" "$IMAGE_AFTER" <<'PY'
+sudo python3 - "$ACTIVATE_RESULT" "$EFIVARS" "$PROOF" "$RELEASE_SHA" "$IMAGE_AFTER" <<'PY'
 import json
 import pathlib
 import struct
