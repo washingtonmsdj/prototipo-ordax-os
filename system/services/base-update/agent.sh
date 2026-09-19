@@ -3,6 +3,8 @@ set -eu
 
 RUNTIME_ROOT=${ORDAX_BASE_RUNTIME_ROOT:-}
 HOST_REPO_ROOT=${ORDAX_BASE_HOST_REPO_ROOT:-}
+DISTRIBUTION_PROFILE=${ORDAX_BASE_DISTRIBUTION_PROFILE:-owner-development}
+SOURCE_SHA_HINT=${ORDAX_BASE_SOURCE_SHA:-}
 HOST_STATE_ROOT=${ORDAX_BASE_HOST_STATE_ROOT:-/state/ordax}
 INTERVAL=${ORDAX_BASE_INTERVAL_SECONDS:-30}
 MOUNTINFO_FILE=${ORDAX_BASE_MOUNTINFO_FILE:-/proc/self/mountinfo}
@@ -715,14 +717,21 @@ while :; do
         write_preflight_status repo-bind-unavailable
     elif prepare_physical_root; then
         source_sha=""
-        if [ -x /usr/bin/git ]; then
-            source_sha=$(/usr/bin/git -C "$HOST_REPO_ROOT" rev-parse HEAD 2>/dev/null || true)
-        fi
-        case "$source_sha" in
-            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*)
-                [ "${#source_sha}" -eq 40 ] || source_sha=""
+        case "$DISTRIBUTION_PROFILE" in
+            stable-mvp)
+                if is_sha "$SOURCE_SHA_HINT"; then
+                    source_sha=$SOURCE_SHA_HINT
+                fi
                 ;;
-            *) source_sha="" ;;
+            owner-development)
+                if [ -x /usr/bin/git ]; then
+                    source_sha=$(/usr/bin/git -C "$HOST_REPO_ROOT" rev-parse HEAD 2>/dev/null || true)
+                fi
+                is_sha "$source_sha" || source_sha=""
+                ;;
+            *)
+                source_sha=""
+                ;;
         esac
 
         ORDAX_BASE_SOURCE_SHA="$source_sha" \
