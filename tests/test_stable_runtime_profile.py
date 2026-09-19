@@ -83,6 +83,10 @@ class StableRuntimeProfileTests(unittest.TestCase):
         start = text.split("start_surface() {", 1)[1].split("\n}", 1)[0]
         self.assertIn("ORDAX_DISTRIBUTION_PROFILE=$DISTRIBUTION_PROFILE", start)
         self.assertIn("ORDAX_SOURCE_SHA=$(current_sha)", start)
+        self.assertIn(
+            'if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then\n    rm -f "$SUPERVISOR_GUARD_FILE"',
+            text,
+        )
 
     def test_surface_uses_release_sha_and_disables_dev_rescue_in_stable(self):
         text = SURFACE.read_text(encoding="utf-8")
