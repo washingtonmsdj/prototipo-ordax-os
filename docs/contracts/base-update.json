@@ -74,6 +74,30 @@
       "runtime_activation_wiring_enabled": false,
       "efi_variable_written": false,
       "reboot_requested": false
+    },
+    "development_runtime_arm": {
+      "helper": "system/services/base-update/dev_activation_arm.py",
+      "schema": "prototype-ordax.dev-base-activation-arm/1",
+      "exact_staged_sha_required": true,
+      "exact_readiness_sha_required": true,
+      "readiness_state_required": true,
+      "candidate_manifest_revalidated": true,
+      "versioned_rootfs_revalidated": true,
+      "live_esp_readonly_revalidation_required": true,
+      "live_candidate_hash_revalidation_required": true,
+      "esp_read_only_during_arm": true,
+      "explicit_efivarfs_root_required": true,
+      "only_loader_entry_oneshot_written": true,
+      "default_entry_changed": false,
+      "reboot_requested": false,
+      "automatic_reboot_enabled": false,
+      "runtime_owner_wiring_enabled": false,
+      "blocker": "systemd-boot-counting-proof-not-merged",
+      "disposable_proof": "bootstrap/base-update/prove_dev_activation_arm.sh",
+      "disposable_proof_schema": "prototype-ordax.dev-base-activation-arm-proof/1",
+      "disposable_efivarfs_only": true,
+      "real_efivarfs_proven": false,
+      "physical_notebook_proven": false
     }
   },
   "staging": {
