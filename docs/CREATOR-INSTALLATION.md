@@ -161,6 +161,25 @@ Git main
 
 The user's machine needs only the signed Creator application, its verified payload and normal administrator authorization for the narrow raw-device step.
 
+## Native installation path
+
+Native installation is part of the MVP product path rather than a post-MVP idea. The same Creator Core owns its policy, but Native installation uses the durable `native-disk` storage profile instead of reusing the portable-USB layout.
+
+The initial implementation is intentionally split:
+
+```text
+PlanNativeDiskTargetStorage
+ -> PlanNativeInstallation
+ -> plan-native CLI proof
+ -> exact target identity + destructive authorization
+ -> GPT / ORDAX-ESP / LUKS2 / Btrfs materialization
+ -> verified Stable release install
+ -> first-boot health
+ -> known-good promotion
+```
+
+Only the first three steps are implemented in the current branch. They touch no physical device and cannot authorize APPLY. See `docs/NATIVE-INSTALLATION.md` and `docs/contracts/native-installation.json`.
+
 ## Transition into the full Desktop product
 
 When OrdaX Desktop is ready, its button such as `Create OrdaX USB` invokes the same Core. The standalone prototype shell can then disappear without changing provisioning policy or media format.
