@@ -88,7 +88,15 @@
       "staged_release_health_ready_written_only_after_known_good_restore": true,
       "staged_release_health_current_pointer_changed": false,
       "staged_release_health_candidate_system_entrypoint_invoked": false,
-      "staged_release_health_surface_entrypoint_invoked": true
+      "staged_release_health_surface_entrypoint_invoked": true,
+      "exact_release_activation_primitive": "ordax-release-agent activate-exact",
+      "exact_release_activation_primitive_implemented": true,
+      "exact_release_activation_network_required": false,
+      "exact_release_activation_revalidates_stored_signature": true,
+      "exact_release_activation_revalidates_materialized_tree": true,
+      "exact_release_activation_preserves_previous_commit_in_receipt": true,
+      "exact_release_activation_atomic_current_swap": true,
+      "exact_release_activation_supervisor_connected": false
     }
   },
   "invariants": {
@@ -102,8 +110,8 @@
     "base_updates_are_more_restrictive_than_app_updates": true
   },
   "next_gate": {
-    "id": "stable-exact-release-activation",
-    "description": "Atomically activate only the exact health-ready signed release, preserving the previous known-good release for rollback; do not re-resolve latest during activation.",
+    "id": "stable-health-ready-activation-transaction",
+    "description": "Connect only staged_sha == health_ready_sha to offline activate-exact, restart from the exact new current, require cold health, and atomically roll current back to the recorded previous known-good commit if health fails.",
     "implemented": false
   }
 }
