@@ -149,7 +149,19 @@ class EfivarfsPreflightTests(unittest.TestCase):
         self.assertFalse(value["activation_authorized"])
         self.assertFalse(value["variable_written"])
         self.assertFalse(value["reboot_requested"])
-        self.assertFalse(value["runtime_owner_wiring_enabled"])
+        self.assertTrue(value["runtime_owner_wiring_enabled"])
+        self.assertTrue(value["runtime_owner_evidence_only"])
+        self.assertEqual(
+            value["evidence_state_file"],
+            "/state/ordax/base-update/efivarfs-preflight.json",
+        )
+        self.assertEqual(
+            value["evidence_log_file"],
+            "/state/ordax/base-update/efivarfs-preflight.log",
+        )
+        self.assertFalse(value["evidence_failure_blocks_surface"])
+        self.assertFalse(value["evidence_failure_authorizes_activation"])
+        self.assertTrue(value["stale_success_removed_on_failure"])
         self.assertFalse(value["real_efivarfs_proven"])
         self.assertFalse(value["physical_notebook_proven"])
 
