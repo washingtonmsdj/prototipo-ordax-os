@@ -1504,7 +1504,14 @@ check_stable_signed_update() {
 
     staged_sha=$(read_state_value "$STAGED_RELEASE_FILE")
     if [ "$staged_sha" = "$remote_sha" ] && stable_release_tree_is_valid "$remote_sha"; then
-        probe_staged_stable_release_health "$current" "$remote_sha" || true
+        ready_sha=$(read_state_value "$STABLE_HEALTH_READY_FILE")
+        if [ "$ready_sha" = "$remote_sha" ]; then
+            activate_health_ready_stable_release "$current" "$remote_sha" || true
+            return 0
+        fi
+        if probe_staged_stable_release_health "$current" "$remote_sha"; then
+            activate_health_ready_stable_release "$current" "$remote_sha" || true
+        fi
         return 0
     fi
 
@@ -1557,7 +1564,9 @@ check_stable_signed_update() {
     set_update_context staged "$remote_sha" "$attempt_id" ""
     write_update_state "$current" staged signed-release
     log "Stable/MVP signed release staged without activation: $remote_sha"
-    probe_staged_stable_release_health "$current" "$remote_sha" || true
+    if probe_staged_stable_release_health "$current" "$remote_sha"; then
+        activate_health_ready_stable_release "$current" "$remote_sha" || true
+    fi
     return 0
 }
 
