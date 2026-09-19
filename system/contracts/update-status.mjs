@@ -12,6 +12,16 @@ const UPDATE_PHASES = new Set([
   "error",
 ]);
 
+const BASE_UPDATE_PHASES = new Set([
+  "none",
+  "waiting-candidate",
+  "candidate-requested",
+  "candidate-fetching",
+  "candidate-ready",
+  "staged",
+  "activation-ready",
+]);
+
 function optionalNonNegativeInteger(value, fallback = 0, maximum = Number.MAX_SAFE_INTEGER) {
   if (value === undefined || value === null) return fallback;
   if (!Number.isSafeInteger(value) || value < 0 || value > maximum) {
@@ -50,6 +60,13 @@ export function validateUpdateStatusSnapshot(value) {
     0,
     1_000_000,
   );
+  const baseUpdatePhase = optionalString(
+    value.baseUpdatePhase,
+    value.bootRefreshRequired === true ? "waiting-candidate" : "none",
+  );
+  if (!BASE_UPDATE_PHASES.has(baseUpdatePhase)) {
+    throw new TypeError(`Unsupported Base update phase: ${baseUpdatePhase}`);
+  }
   return Object.freeze({
     sourceSha: value.sourceSha,
     deliveryNumber,
@@ -61,6 +78,8 @@ export function validateUpdateStatusSnapshot(value) {
     applyMode: value.applyMode,
     attemptId: optionalString(value.attemptId, ""),
     bootRefreshRequired: value.bootRefreshRequired === true,
+    baseUpdatePhase,
+    baseUpdateSha: optionalString(value.baseUpdateSha, ""),
     checkedAt: optionalString(value.checkedAt, "unknown"),
     lastAppliedSha: optionalString(value.lastAppliedSha, ""),
     lastAppliedAt: optionalString(value.lastAppliedAt, "unknown"),

@@ -29,6 +29,8 @@ function semanticFingerprint(value) {
     snapshot.applyMode,
     snapshot.attemptId,
     snapshot.bootRefreshRequired,
+    snapshot.baseUpdatePhase,
+    snapshot.baseUpdateSha,
     snapshot.lastAppliedSha,
     snapshot.lastAppliedAt,
     snapshot.lastApplyDurationSeconds,

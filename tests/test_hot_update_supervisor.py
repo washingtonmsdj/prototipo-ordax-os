@@ -518,6 +518,9 @@ class HotUpdateSupervisorContractTests(unittest.TestCase):
         self.assertIn("updateIsAlerting", controls)
         self.assertIn('"rolled-back": "Atualização revertida"', presentation)
         self.assertIn('"Atualização de base pendente"', presentation)
+        self.assertIn('"Baixando atualização de Base"', presentation)
+        self.assertIn('"Base gravada no slot inativo"', presentation)
+        self.assertIn('"Base pronta para ativação"', presentation)
         self.assertIn("updateSummaryLabel", overview)
         self.assertIn("updateAttentionMessage", overview)
         self.assertNotIn('"Reinício necessário"', overview)
@@ -583,6 +586,14 @@ class HotUpdateSupervisorContractTests(unittest.TestCase):
         self.assertIn('"targetSha":"%s"', text)
         self.assertIn('"phase":"%s"', text)
         self.assertIn('"attemptId":"%s"', text)
+        self.assertIn('"baseUpdatePhase":"%s"', text)
+        self.assertIn('"baseUpdateSha":"%s"', text)
+        self.assertIn("derive_base_update_progress()", text)
+        self.assertIn("DEV_BASE_STAGED_FILE=$STATE_DIR/base-update/dev-base-staged-sha", text)
+        self.assertIn(
+            "DEV_BASE_ACTIVATION_READINESS_SHA_FILE=$STATE_DIR/base-update/dev-base-activation-readiness-sha",
+            text,
+        )
         self.assertIn('"checkedAt":"%s"', text)
         self.assertIn('"lastAppliedSha":"%s"', text)
         self.assertIn('"lastAppliedAt":"%s"', text)
@@ -605,6 +616,10 @@ class HotUpdateSupervisorContractTests(unittest.TestCase):
     def test_update_center_surfaces_transaction_diagnostics(self):
         overview = SYSTEM_OVERVIEW.read_text(encoding="utf-8")
         self.assertIn("readableUpdatePhase", overview)
+        self.assertIn("readableBaseUpdatePhase", overview)
+        self.assertIn("baseUpdatePhase", overview)
+        self.assertIn("baseUpdateSha", overview)
+        self.assertIn('"Progresso da Base"', overview)
         self.assertIn("targetSha", overview)
         self.assertIn('"Tentativa"', overview)
         self.assertIn('"Diagnóstico"', overview)

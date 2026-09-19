@@ -54,6 +54,8 @@ class DiagnosticReportContractTests(unittest.TestCase):
         self.assertIn("correlationKey: entry.correlationKey", report)
         self.assertIn("message: redactDiagnosticText(entry.message)", report)
         self.assertIn("healthTokenPresent", report)
+        self.assertIn("baseUpdatePhase: snapshot.baseUpdatePhase", report)
+        self.assertIn("baseUpdateSha: snapshot.baseUpdateSha || null", report)
         self.assertNotIn("healthToken: snapshot.healthToken", report)
         self.assertNotIn("healthToken: value.healthToken", report)
         self.assertIn("lastError: redactDiagnosticText(snapshot.lastError)", report)

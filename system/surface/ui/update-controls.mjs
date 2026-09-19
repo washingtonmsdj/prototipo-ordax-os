@@ -1,5 +1,5 @@
 import { assertAppActivationPort } from "../../contracts/app-activation.mjs";
-import { updateIsAlerting } from "../../services/update/presentation.mjs";
+import { updateIsAlerting, updateSummaryLabel } from "../../services/update/presentation.mjs";
 
 function node(documentObject, tag, className, text) {
   const element = documentObject.createElement(tag);
@@ -36,7 +36,7 @@ export function mountUpdateControls(root, updatePort, appActivation) {
     button.textContent = alerting ? "Atualizações •" : "Atualizações";
     button.dataset.alerting = String(alerting);
     button.title = snapshot?.bootRefreshRequired
-      ? "Há uma atualização de base pendente. Abrir Sistema > Atualizações."
+      ? `${updateSummaryLabel(snapshot)}. Abrir Sistema > Atualizações.`
       : alerting
         ? "Há uma atualização que requer atenção. Abrir Sistema > Atualizações."
         : "Abrir Sistema > Atualizações";
