@@ -172,7 +172,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertFalse(stable["base_update_owner_active"])
         self.assertEqual(
             stable["base_update_owner_activation_gate"],
-            "stable-continuous-signed-update",
+            "stable-base-signed-update-integration",
         )
         self.assertTrue(stable["signed_release_discovery_implemented"])
         self.assertTrue(stable["signed_release_discovery_source_implemented"])
@@ -188,7 +188,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertFalse(stable["signed_release_staging_changes_current"])
         self.assertFalse(stable["signed_release_staging_activation_performed"])
         self.assertTrue(stable["signed_release_activation_connected"])
-        self.assertFalse(stable["continuous_signed_runtime_update_connected"])
+        self.assertTrue(stable["continuous_signed_runtime_update_connected"])
         self.assertTrue(stable["staged_release_health_connected"])
         self.assertTrue(stable["staged_release_health_requires_candidate_sha_match"])
         self.assertTrue(stable["staged_release_health_requires_process_survival"])
