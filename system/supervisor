@@ -44,6 +44,8 @@ UPDATE_LOG=$UPDATE_RUN_DIR/update.log
 HEALTH_FILE=$UPDATE_RUN_DIR/healthy-sha
 SURFACE_HEARTBEAT_FILE=$STATE_DIR/native-state/surface-heartbeat.json
 GIT_BIN=${ORDAX_GIT_BIN:-/usr/bin/git}
+DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}
+SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
 BRANCH=${ORDAX_REPO_BRANCH:-main}
 UPDATE_INTERVAL=${ORDAX_UPDATE_INTERVAL_SECONDS:-5}
 REMOTE_TIMEOUT=${ORDAX_REMOTE_TIMEOUT_SECONDS:-20}
@@ -66,6 +68,15 @@ SURFACE_STALE_RECOVERY_ARMED=1
 
 log() {
     echo "ordax-system: $*" >&2
+}
+
+is_sha() {
+    value=${1:-}
+    [ "${#value}" -eq 40 ] || return 1
+    case "$value" in
+        ''|*[!0-9a-f]*) return 1 ;;
+    esac
+    return 0
 }
 
 case "$UPDATE_INTERVAL" in
@@ -544,11 +555,30 @@ record_elapsed_seconds() {
 }
 
 current_sha() {
-    "$GIT_BIN" -C "$WORKTREE" rev-parse HEAD 2>/dev/null || printf 'unknown\n'
+    case "$DISTRIBUTION_PROFILE" in
+        stable-mvp)
+            if is_sha "$SOURCE_SHA_HINT"; then
+                printf '%s\n' "$SOURCE_SHA_HINT"
+            else
+                printf 'unknown\n'
+            fi
+            ;;
+        owner-development)
+            "$GIT_BIN" -C "$WORKTREE" rev-parse HEAD 2>/dev/null || printf 'unknown\n'
+            ;;
+        *)
+            printf 'unknown\n'
+            ;;
+    esac
 }
 
 delivery_number_for_sha() {
     source_sha=$1
+
+    if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+        printf '0'
+        return 0
+    fi
 
     if "$GIT_BIN" -C "$WORKTREE" merge-base --is-ancestor "$DELIVERY_EPOCH_SHA" "$source_sha" >/dev/null 2>&1; then
         delta=$("$GIT_BIN" -C "$WORKTREE" rev-list --first-parent --count "$DELIVERY_EPOCH_SHA..$source_sha" -- \
@@ -586,6 +616,9 @@ release_title_for_sha() {
 }
 
 refresh_release_history() {
+    if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+        return 0
+    fi
     temporary=$RELEASE_HISTORY_FILE.tmp.$
     : >"$temporary"
     for release_sha in $("$GIT_BIN" -C "$WORKTREE" rev-list --first-parent --max-count="$RELEASE_HISTORY_MAX_ENTRIES" HEAD -- \
@@ -783,7 +816,9 @@ request_dev_base_candidate() {
 start_surface() {
     [ -x "$SURFACE_ENTRYPOINT" ] || return 1
     ORDAX_SYSTEM_ROOT=$SYSTEM_ROOT
-    export ORDAX_SYSTEM_ROOT
+    ORDAX_DISTRIBUTION_PROFILE=$DISTRIBUTION_PROFILE
+    ORDAX_SOURCE_SHA=$(current_sha)
+    export ORDAX_SYSTEM_ROOT ORDAX_DISTRIBUTION_PROFILE ORDAX_SOURCE_SHA
     "$SURFACE_ENTRYPOINT" &
     SURFACE_PID=$!
     SURFACE_STARTED_AT=$(epoch_now)
@@ -981,6 +1016,8 @@ rollback_boot_candidate() {
     failed_sha=$2
     reason=$3
 
+    [ "$DISTRIBUTION_PROFILE" = "owner-development" ] || return 1
+
     [ "${#previous_sha}" -eq 40 ] 2>/dev/null || return 1
     [ "${#failed_sha}" -eq 40 ] 2>/dev/null || return 1
     case "$previous_sha$failed_sha" in
@@ -1096,6 +1133,13 @@ EOF
 
 check_for_update() {
     current=$(current_sha)
+
+    if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+        set_update_context blocked "" "" "stable-signed-updater-not-connected"
+        write_update_state "$current" running none
+        return 0
+    fi
+
     boot_rejected_sha=""
 
     if [ -s "$PINNED_FILE" ]; then
@@ -1291,15 +1335,33 @@ check_for_update() {
 trap stop_surface EXIT
 trap terminate HUP INT TERM
 
+case "$DISTRIBUTION_PROFILE" in
+    owner-development)
+        ;;
+    stable-mvp)
+        is_sha "$SOURCE_SHA_HINT" || fail_closed "Stable/MVP runtime source SHA is missing or invalid"
+        ;;
+    *)
+        fail_closed "unknown OrdaX distribution profile"
+        ;;
+esac
+
 [ -x "$SURFACE_ENTRYPOINT" ] || fail_closed "surface entrypoint is missing"
 
 initial_sha=$(current_sha)
 boot_runtime_sha=$(read_state_value "$RUNTIME_SURFACE_SHA_FILE")
+if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+    rm -f "$SUPERVISOR_GUARD_FILE" >/dev/null 2>&1 || true
+fi
 refresh_release_history
 clear_update_context
 write_update_state "$initial_sha" running initial
 clear_surface_health
-log "starting shared OrdaX Surface with Git hot-update supervisor"
+if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+    log "starting shared OrdaX Surface with Stable/MVP signed-release profile"
+else
+    log "starting shared OrdaX Surface with Owner/Development Git hot-update supervisor"
+fi
 start_surface || fail_closed "surface entrypoint could not be started"
 
 if [ -s "$SUPERVISOR_GUARD_FILE" ]; then

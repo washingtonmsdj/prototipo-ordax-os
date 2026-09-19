@@ -66,7 +66,18 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertFalse(stable["git_branch_pr_details_in_normal_ux"])
         self.assertTrue(stable["creator_is_primary_media_path"])
         self.assertFalse(stable["production_release_published"])
-        self.assertFalse(stable["runtime_profile_selection_implemented"])
+        self.assertTrue(stable["runtime_profile_selection_implemented"])
+        self.assertEqual(stable["runtime_source_identity"], "verified-release-sha")
+        self.assertFalse(stable["git_update_polling_enabled"])
+        self.assertFalse(stable["development_git_rescue_enabled"])
+        self.assertFalse(stable["development_base_channel_enabled"])
+        self.assertTrue(stable["shared_surface_health_supervision_enabled"])
+        self.assertFalse(stable["continuous_signed_runtime_update_connected"])
+        self.assertFalse(stable["base_update_owner_active"])
+        self.assertEqual(
+            stable["base_update_owner_activation_gate"],
+            "stable-continuous-signed-update",
+        )
 
     def test_stable_profile_reuses_existing_release_authorities(self):
         stable = CONTRACT["profiles"]["stable-mvp"]
@@ -98,11 +109,12 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertFalse(distribution["public_runtime_depends_on_git"])
         self.assertTrue(distribution["public_updates_use_official_channels"])
 
-    def test_next_gate_is_runtime_profile_selection_not_second_updater(self):
+    def test_next_gate_is_continuous_signed_update_not_second_updater(self):
         gate = CONTRACT["next_gate"]
-        self.assertEqual(gate["id"], "stable-runtime-profile-selection")
+        self.assertEqual(gate["id"], "stable-continuous-signed-update")
         self.assertFalse(gate["implemented"])
-        self.assertIn("select signed release acquisition", gate["description"])
+        self.assertIn("signed release acquisition protocol", gate["description"])
+        self.assertIn("without introducing Git", gate["description"])
         self.assertTrue(CONTRACT["invariants"]["same_main_source_authority"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_git_client"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_source_checkout"])

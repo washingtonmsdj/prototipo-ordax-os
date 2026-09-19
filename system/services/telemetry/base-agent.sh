@@ -23,6 +23,8 @@ POWER_LAST_REQUEST_FILE=$STATE_DIR/power/last-request
 BOOT_ID_FILE=/run/ordax-update/base-boot-id
 BASE_OWNER_STATUS_FILE=$STATE_DIR/base-update/owner-status.json
 GIT_BIN=${ORDAX_GIT_BIN:-/usr/bin/git}
+DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}
+SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
 
 mkdir -p "$TELEMETRY_DIR" "$STATE_DIR/native-state"
 chmod 700 "$TELEMETRY_DIR" "$STATE_DIR/native-state"
@@ -199,9 +201,18 @@ while :; do
     if [ -n "$endpoint" ] && [ -n "$publishable_key" ]; then
         device_root=$(ensure_device_id || true)
         source_sha=""
-        if [ -n "$device_root" ] && [ -x "$GIT_BIN" ] && [ -d "$WORKTREE/.git" ]; then
-            candidate=$("$GIT_BIN" -C "$WORKTREE" rev-parse HEAD 2>/dev/null || true)
-            is_sha "$candidate" && source_sha=$candidate
+        if [ -n "$device_root" ]; then
+            case "$DISTRIBUTION_PROFILE" in
+                stable-mvp)
+                    is_sha "$SOURCE_SHA_HINT" && source_sha=$SOURCE_SHA_HINT
+                    ;;
+                owner-development)
+                    if [ -x "$GIT_BIN" ] && [ -d "$WORKTREE/.git" ]; then
+                        candidate=$("$GIT_BIN" -C "$WORKTREE" rev-parse HEAD 2>/dev/null || true)
+                        is_sha "$candidate" && source_sha=$candidate
+                    fi
+                    ;;
+            esac
         fi
 
         update_status=$(normalize_status "$(json_field status "$UPDATE_STATE")")

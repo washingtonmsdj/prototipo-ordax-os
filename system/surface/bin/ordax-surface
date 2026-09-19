@@ -2,6 +2,8 @@
 set -eu
 
 SYSTEM_ROOT=${ORDAX_SYSTEM_ROOT:-}
+DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}
+SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
 SOURCE_SHA=unknown
 STATE_ROOT=${ORDAX_STATE_DIR:-/state/ordax}
 PERSISTENT_NATIVE_STATE=$STATE_ROOT/native-state
@@ -148,9 +150,13 @@ ensure_base_telemetry_agent() {
     base_telemetry_agent_running && return 0
 
     if [ -x /bin/setsid ]; then
-        /bin/setsid "$BASE_TELEMETRY_AGENT" >>"$BASE_TELEMETRY_LOG" 2>&1 </dev/null &
+        ORDAX_DISTRIBUTION_PROFILE="$DISTRIBUTION_PROFILE" \
+        ORDAX_SOURCE_SHA="$SOURCE_SHA" \
+            /bin/setsid "$BASE_TELEMETRY_AGENT" >>"$BASE_TELEMETRY_LOG" 2>&1 </dev/null &
     else
-        "$BASE_TELEMETRY_AGENT" >>"$BASE_TELEMETRY_LOG" 2>&1 </dev/null &
+        ORDAX_DISTRIBUTION_PROFILE="$DISTRIBUTION_PROFILE" \
+        ORDAX_SOURCE_SHA="$SOURCE_SHA" \
+            "$BASE_TELEMETRY_AGENT" >>"$BASE_TELEMETRY_LOG" 2>&1 </dev/null &
     fi
     /bin/busybox sleep 1
     base_telemetry_agent_running || {
@@ -168,14 +174,33 @@ base_update_agent_running() {
 }
 
 ensure_base_update_agent() {
+    if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+        if base_update_agent_running; then
+            pid=""
+            IFS= read -r pid <"$BASE_UPDATE_PID_FILE" || true
+            terminate_child "$pid" "development base update owner"
+            rm -f "$BASE_UPDATE_PID_FILE"
+        fi
+        echo "ordax-surface: Base update owner is disabled in Stable/MVP until signed update integration is connected" >>"$BASE_UPDATE_LOG"
+        return 0
+    fi
+
     [ -f "$BASE_UPDATE_SOURCE" ] || {
         echo "ordax-surface: base update owner source unavailable: $BASE_UPDATE_SOURCE" >>"$BASE_UPDATE_LOG"
         return 0
     }
 
     repo_root=${SYSTEM_ROOT%/system}
-    if [ -z "$repo_root" ] || [ "$repo_root" = "$SYSTEM_ROOT" ] || [ ! -d "$repo_root/.git" ]; then
-        echo "ordax-surface: repository root unavailable for base update owner" >>"$BASE_UPDATE_LOG"
+    if [ -z "$repo_root" ] || [ "$repo_root" = "$SYSTEM_ROOT" ] || [ ! -d "$repo_root" ]; then
+        echo "ordax-surface: source root unavailable for base update owner" >>"$BASE_UPDATE_LOG"
+        return 0
+    fi
+    if [ "$DISTRIBUTION_PROFILE" = "owner-development" ] && [ ! -d "$repo_root/.git" ]; then
+        echo "ordax-surface: Owner/Development Git root unavailable for base update owner" >>"$BASE_UPDATE_LOG"
+        return 0
+    fi
+    if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] && ! is_source_sha "$SOURCE_SHA"; then
+        echo "ordax-surface: Stable/MVP source identity unavailable for base update owner" >>"$BASE_UPDATE_LOG"
         return 0
     fi
 
@@ -202,10 +227,14 @@ ensure_base_update_agent() {
     if [ -x /bin/setsid ]; then
         ORDAX_BASE_RUNTIME_ROOT="$RUNTIME_ROOT" \
         ORDAX_BASE_HOST_REPO_ROOT="$repo_root" \
+        ORDAX_BASE_DISTRIBUTION_PROFILE="$DISTRIBUTION_PROFILE" \
+        ORDAX_BASE_SOURCE_SHA="$SOURCE_SHA" \
             /bin/setsid "$BASE_UPDATE_AGENT" >>"$BASE_UPDATE_LOG" 2>&1 </dev/null &
     else
         ORDAX_BASE_RUNTIME_ROOT="$RUNTIME_ROOT" \
         ORDAX_BASE_HOST_REPO_ROOT="$repo_root" \
+        ORDAX_BASE_DISTRIBUTION_PROFILE="$DISTRIBUTION_PROFILE" \
+        ORDAX_BASE_SOURCE_SHA="$SOURCE_SHA" \
             "$BASE_UPDATE_AGENT" >>"$BASE_UPDATE_LOG" 2>&1 </dev/null &
     fi
     owner_pid=$!
@@ -228,6 +257,16 @@ rescue_agent_running() {
 }
 
 ensure_rescue_agent() {
+    if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+        if rescue_agent_running; then
+            pid=""
+            IFS= read -r pid <"$RESCUE_PID_FILE" || true
+            terminate_child "$pid" "development rescue agent"
+            rm -f "$RESCUE_PID_FILE"
+        fi
+        echo "ordax-surface: development Git rescue is disabled in Stable/MVP" >>"$RESCUE_LOG"
+        return 0
+    fi
     [ -f "$RESCUE_SOURCE" ] || {
         echo "ordax-surface: rescue agent source unavailable: $RESCUE_SOURCE" >>"$RESCUE_LOG"
         return 0
@@ -695,19 +734,40 @@ ensure_shared_memory() {
     chmod 1777 /dev/shm >>"$HOST_LOG" 2>&1 || return 1
 }
 
+is_source_sha() {
+    value=${1:-}
+    [ "${#value}" -eq 40 ] || return 1
+    case "$value" in
+        ''|*[!0-9a-f]*) return 1 ;;
+    esac
+    return 0
+}
+
 configure_graphics_host() {
     repo_root=${SYSTEM_ROOT%/system}
-    if [ "$repo_root" != "$SYSTEM_ROOT" ] && [ -x /usr/bin/git ]; then
-        candidate_sha=$(/usr/bin/git -C "$repo_root" rev-parse HEAD 2>/dev/null || printf 'unknown')
-        case "$candidate_sha" in
-            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*)
-                SOURCE_SHA=$candidate_sha
-                ;;
-            *)
-                SOURCE_SHA=unknown
-                ;;
-        esac
-    fi
+    case "$DISTRIBUTION_PROFILE" in
+        stable-mvp)
+            is_source_sha "$SOURCE_SHA_HINT" || {
+                echo "ordax-surface: Stable/MVP source SHA is invalid" >>"$HOST_LOG"
+                return 1
+            }
+            SOURCE_SHA=$SOURCE_SHA_HINT
+            ;;
+        owner-development)
+            if [ "$repo_root" != "$SYSTEM_ROOT" ] && [ -x /usr/bin/git ]; then
+                candidate_sha=$(/usr/bin/git -C "$repo_root" rev-parse HEAD 2>/dev/null || printf 'unknown')
+                if is_source_sha "$candidate_sha"; then
+                    SOURCE_SHA=$candidate_sha
+                else
+                    SOURCE_SHA=unknown
+                fi
+            fi
+            ;;
+        *)
+            echo "ordax-surface: unknown distribution profile" >>"$HOST_LOG"
+            return 1
+            ;;
+    esac
     [ -f "$SYSTEM_ROOT/surface/runtime/ordax_browser_host.py" ] || return 1
     mkdir -p "$RUNTIME_ROOT/tmp/ordax-web-cache-$SOURCE_SHA" || return 1
 }
