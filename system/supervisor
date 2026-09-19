@@ -1371,6 +1371,70 @@ rollback_stable_activation() {
     exit 75
 }
 
+handle_stable_activation_guard() {
+    initial_sha_value=$1
+    [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] || return 1
+    [ -s "$STABLE_ACTIVATION_GUARD_FILE" ] || return 1
+    is_sha "$initial_sha_value" || fail_closed "Stable activation guard saw invalid current release identity"
+
+    guard_line=$(read_state_value "$STABLE_ACTIVATION_GUARD_FILE")
+    set -- $guard_line
+    guard_previous=${1:-}
+    guard_candidate=${2:-}
+    guard_attempt=${3:-}
+    guard_extra=${4:-}
+    if ! is_sha "$guard_previous" ||
+       ! is_sha "$guard_candidate" ||
+       [ "$guard_previous" = "$guard_candidate" ] ||
+       [ -z "$guard_attempt" ] ||
+       [ -n "$guard_extra" ]
+    then
+        fail_closed "Stable activation guard is malformed"
+    fi
+
+    if [ "$initial_sha_value" = "$guard_previous" ]; then
+        set_update_context health-wait "$guard_previous" "$guard_attempt" "activation-interrupted-before-swap"
+        write_update_state "$guard_previous" validating signed-release
+        if ! surface_stays_running 4 || ! wait_for_surface_health "$guard_previous" "$SURFACE_HEALTH_TIMEOUT"; then
+            fail_closed "Stable known-good did not recover after interrupted activation"
+        fi
+        rm -f "$STABLE_ACTIVATION_GUARD_FILE"
+        /bin/busybox sync
+        record_runtime_surface_sha "$guard_previous"
+        clear_update_context
+        write_update_state "$guard_previous" running signed-release
+        log "Stable activation was interrupted before current changed; known-good remains active"
+        return 0
+    fi
+
+    [ "$initial_sha_value" = "$guard_candidate" ] ||
+        fail_closed "Stable activation guard does not match current release"
+
+    set_update_context health-wait "$guard_candidate" "$guard_attempt" ""
+    write_update_state "$guard_candidate" validating signed-release
+    log "validating cold health for exact activated Stable/MVP release $guard_candidate"
+
+    if surface_stays_running 4 && wait_for_surface_health "$guard_candidate" "$SURFACE_HEALTH_TIMEOUT"; then
+        record_applied "$guard_candidate" signed-release
+        record_runtime_surface_sha "$guard_candidate"
+        rm -f \
+            "$STABLE_ACTIVATION_GUARD_FILE" \
+            "$STAGED_RELEASE_FILE" \
+            "$STABLE_HEALTH_READY_FILE" \
+            "$STABLE_HEALTH_REJECTED_FILE"
+        /bin/busybox sync
+        clear_update_context
+        write_update_state "$guard_candidate" running signed-release
+        log "Stable/MVP exact release committed after cold health: $guard_candidate"
+        return 0
+    fi
+
+    clear_surface_health
+    stop_surface
+    rollback_stable_activation "$guard_previous" "$guard_candidate" "$guard_attempt"
+    fail_closed "Stable rollback returned unexpectedly"
+}
+
 restore_current_surface_after_probe() {
     current_sha_value=$1
     candidate_sha=$2
@@ -1802,7 +1866,9 @@ else
 fi
 start_surface || fail_closed "surface entrypoint could not be started"
 
-if [ -s "$SUPERVISOR_GUARD_FILE" ]; then
+if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] && [ -s "$STABLE_ACTIVATION_GUARD_FILE" ]; then
+    handle_stable_activation_guard "$initial_sha"
+elif [ -s "$SUPERVISOR_GUARD_FILE" ]; then
     guard_line=$(read_state_value "$SUPERVISOR_GUARD_FILE")
     set -- $guard_line
     guard_previous=${1:-}
