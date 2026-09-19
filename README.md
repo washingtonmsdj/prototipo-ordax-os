@@ -167,9 +167,14 @@ Estado atual:
 ```text
 Creator CHECK=IMPLEMENTED
 Creator PLAN=FAIL_CLOSED_ENQUANTO_MANIFESTO_NAO_AUTORIZADO
-Creator APPLY=NAO_IMPLEMENTADO
-PHYSICAL_USB_WRITE=NO
+Creator NATIVE_RAW_BACKEND=IMPLEMENTED_PHYSICAL_TEST_ONLY
+Creator PHYSICAL_TEST_APPLY=IMPLEMENTED_READBACK_VERIFIED
+Creator PUBLIC_APPLY=BLOCKED
+PUBLIC_PHYSICAL_USB_WRITE=NO
+PHYSICAL_WRITE_AUTHORIZED=NO
 ```
+
+O backend Win32 de escrita RAW e o fluxo `physical-test` ja existem para prova controlada, inclusive readback/verificacao e preparacao do espaco. Isso **nao** equivale a disponibilizar `apply` no Creator publico: o binario publico continua sem o backend destrutivo e a promocao fisica permanece bloqueada ate trust, bindings e autorizacao canonica estarem fechados.
 
 ## Desenvolvimento
 
