@@ -12,6 +12,7 @@ import (
 func usage() {
 	fmt.Fprintln(os.Stderr, "usage: ordax-creator <check|verify-payload|stage-tree|plan> --manifest <path> [--payload-root <dir>] [--output-root <dir>]")
 	fmt.Fprintln(os.Stderr, "       ordax-creator prepare-image --seed <regular-file> --out <new-regular-file> --target-bytes <bytes>")
+	fmt.Fprintln(os.Stderr, "       ordax-creator plan-native --target-bytes <bytes>")
 }
 
 func loadManifest(path string) (creatorcore.Manifest, error) {
@@ -50,6 +51,31 @@ func runPrepareImage(args []string) int {
 	return 0
 }
 
+func runPlanNative(args []string) int {
+	fs := flag.NewFlagSet("plan-native", flag.ContinueOnError)
+	targetBytes := fs.Uint64("target-bytes", 0, "exact Native install target capacity in bytes; must be 512-byte aligned")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 || *targetBytes == 0 {
+		usage()
+		return 2
+	}
+
+	plan, err := creatorcore.PlanNativeInstallation(*targetBytes)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ordax-creator: native install plan failed: %v\n", err)
+		return 1
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(plan); err != nil {
+		fmt.Fprintf(os.Stderr, "ordax-creator: encode native install plan: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		usage()
@@ -59,6 +85,9 @@ func main() {
 	command := os.Args[1]
 	if command == "prepare-image" {
 		os.Exit(runPrepareImage(os.Args[2:]))
+	}
+	if command == "plan-native" {
+		os.Exit(runPlanNative(os.Args[2:]))
 	}
 
 	fs := flag.NewFlagSet(command, flag.ContinueOnError)
