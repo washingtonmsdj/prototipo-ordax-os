@@ -79,11 +79,26 @@ def check_contract() -> dict:
     ]
     if value.get("target_layout") != expected_layout:
         raise BuildError("ESP target layout is no longer minimal/canonical")
+    proof = value.get("boot_counting_proof")
+    expected_proof = {
+        "parser": "bootctl-built-from-pinned-systemd-source",
+        "candidate_filename": "ordax-candidate+01-00.conf",
+        "canonical_entry_id": "ordax-candidate.conf",
+        "tries_left": 1,
+        "tries_done": 0,
+        "default_entry": "ordax.conf",
+        "disposable_parser_proof_only": True,
+        "actual_boot_attempt_proven": False,
+        "failed_candidate_fallback_proven": False,
+    }
+    if proof != expected_proof:
+        raise BuildError("ESP boot-counting proof contract is not canonical")
     return {
         "systemd_version": value["bootloader"]["version"],
         "systemd_source_commit": value["bootloader"]["source_commit"],
         "configuration": checked,
         "target_layout": expected_layout,
+        "boot_counting_proof": proof,
     }
 
 
