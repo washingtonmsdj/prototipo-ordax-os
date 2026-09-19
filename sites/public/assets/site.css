@@ -969,3 +969,21 @@ a {
     grid-column: 2;
   }
 }
+
+
+.download-flow {
+  margin-top: 88px;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+}
+
+.download-flow .creator-steps {
+  margin-top: 54px;
+}
+
+@media (max-width: 760px) {
+  .download-flow {
+    margin-top: 64px;
+  }
+}
