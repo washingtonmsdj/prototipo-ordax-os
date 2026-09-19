@@ -67,6 +67,7 @@ jobs:
         run: |
           bash bootstrap/base-update/prove_dev_physical_stage.sh \
             out/base-update/dev-physical-stage-proof.json
+            out/base-update/dev-activation-arm-proof.json
 
       - name: Prove one-shot activation without ESP mutation
         run: |
@@ -75,6 +76,9 @@ jobs:
 
       - name: Prove healthy postboot promotion on disposable media
         run: bash bootstrap/base-update/prove_dev_postboot_promotion.sh "out/base-update/dev-postboot-promotion-proof.json"
+
+      - name: Prove exact-state development one-shot arm on disposable media
+        run: bash bootstrap/base-update/prove_dev_activation_arm.sh "out/base-update/dev-activation-arm-proof.json"
 
       - name: Run base update regressions
         run: |
@@ -85,6 +89,7 @@ jobs:
           python -m unittest tests.test_base_update_dev_stage -v
           python -m unittest tests.test_base_update_dev_physical_stage -v
           python -m unittest tests.test_base_update_activation_readiness -v
+          python -m unittest tests.test_base_update_dev_activation_arm -v
           python -m unittest tests.test_base_update_dev_postboot_promote -v
           python -m unittest tests.test_base_update_esp_discovery -v
           python -m unittest tests.test_base_update_esp_layout -v
