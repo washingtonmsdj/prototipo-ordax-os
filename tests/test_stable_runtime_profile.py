@@ -50,24 +50,29 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn("ORDAX_DISTRIBUTION_PROFILE=owner-development", text)
         self.assertIn('ORDAX_SOURCE_SHA="$source_sha"', text)
 
-    def test_guardian_uses_explicit_sha_for_stable_health(self):
+    def test_guardian_rebinds_stable_identity_from_current_release(self):
         text = ENTRYPOINT.read_text(encoding="utf-8")
         self.assertIn('DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}', text)
-        self.assertIn('SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}', text)
-        resolver = text.split("runtime_source_sha() {", 1)[1].split("\n}", 1)[0]
-        self.assertIn("stable-mvp)", resolver)
-        self.assertIn("SOURCE_SHA_HINT", resolver)
-        self.assertIn("owner-development)", resolver)
+        self.assertIn('STABLE_ROOT=${ORDAX_STABLE_ROOT:-/ordax}', text)
+        resolver = text.split("stable_current_release_sha() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn('current=$STABLE_ROOT/current', resolver)
+        self.assertIn('[ -L "$current" ]', resolver)
+        self.assertIn('releases/*)', resolver)
+        runtime = text.split("runtime_source_sha() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("stable-mvp)", runtime)
+        self.assertIn("stable_current_release_sha", runtime)
         heartbeat = text.split("write_base_update_heartbeat() {", 1)[1].split("\n}", 1)[0]
         self.assertIn("runtime_source_sha", heartbeat)
-        self.assertNotIn("rev-parse HEAD", heartbeat)
+        refresh = text.split('if [ "$supervisor_rc" -eq 75 ]; then', 1)[1].split("\n    fi", 1)[0]
+        self.assertIn("stable_current_release_sha", refresh)
+        self.assertIn("ORDAX_SOURCE_SHA=$SOURCE_SHA_HINT", refresh)
 
     def test_stable_supervisor_stages_signed_release_before_owner_git_path(self):
         text = SUPERVISOR.read_text(encoding="utf-8")
         self.assertIn('DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}', text)
         current = text.split("current_sha() {", 1)[1].split("\n}", 1)[0]
         self.assertIn("stable-mvp)", current)
-        self.assertIn("SOURCE_SHA_HINT", current)
+        self.assertIn("stable_current_release_sha", current)
 
         check = text.split("check_for_update() {", 1)[1].split("\n}", 1)[0]
         stable_guard = '[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]'
@@ -86,8 +91,9 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn('--expected-commit "$remote_sha"', stable_stage)
         self.assertIn('write_state_value "$STAGED_RELEASE_FILE" "$remote_sha"', stable_stage)
         self.assertIn("stable_release_tree_is_valid", stable_stage)
+        self.assertIn("activate_health_ready_stable_release", stable_stage)
+        self.assertIn("probe_staged_stable_release_health", stable_stage)
         self.assertNotIn(" install ", stable_stage)
-        self.assertNotIn("activate", stable_stage.lower())
         self.assertNotIn("/ordax/current", stable_stage)
         self.assertNotIn("ls-remote", stable_stage)
         self.assertNotIn("fetch --no-tags", stable_stage)
@@ -162,11 +168,11 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertFalse(stable["git_update_polling_enabled"])
         self.assertFalse(stable["development_git_rescue_enabled"])
         self.assertFalse(stable["development_base_channel_enabled"])
-        self.assertFalse(stable["continuous_signed_runtime_update_connected"])
+        self.assertTrue(stable["continuous_signed_runtime_update_connected"])
         self.assertFalse(stable["base_update_owner_active"])
         self.assertEqual(
             stable["base_update_owner_activation_gate"],
-            "stable-continuous-signed-update",
+            "stable-base-signed-update-integration",
         )
         self.assertTrue(stable["signed_release_discovery_implemented"])
         self.assertTrue(stable["signed_release_discovery_source_implemented"])
@@ -181,8 +187,8 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertTrue(stable["signed_release_materialization_exact_commit_required"])
         self.assertFalse(stable["signed_release_staging_changes_current"])
         self.assertFalse(stable["signed_release_staging_activation_performed"])
-        self.assertFalse(stable["signed_release_activation_connected"])
-        self.assertFalse(stable["continuous_signed_runtime_update_connected"])
+        self.assertTrue(stable["signed_release_activation_connected"])
+        self.assertTrue(stable["continuous_signed_runtime_update_connected"])
         self.assertTrue(stable["staged_release_health_connected"])
         self.assertTrue(stable["staged_release_health_requires_candidate_sha_match"])
         self.assertTrue(stable["staged_release_health_requires_process_survival"])
@@ -191,16 +197,23 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertFalse(stable["staged_release_health_changes_current"])
         self.assertFalse(stable["staged_release_health_activation_performed"])
         self.assertTrue(stable["exact_release_activation_primitive_implemented"])
-        self.assertFalse(stable["exact_release_activation_supervisor_connected"])
+        self.assertTrue(stable["exact_release_activation_supervisor_connected"])
         self.assertTrue(stable["exact_release_activation_seed_media_includes_primitive"])
         self.assertEqual(
             stable["exact_release_activation_physical_agent_target_sha256"],
             "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
         )
-        self.assertFalse(stable["exact_release_activation_asset_published"])
+        self.assertTrue(stable["exact_release_activation_asset_published"])
+        self.assertTrue(stable["activation_requires_staged_sha_equals_health_ready_sha"])
+        self.assertTrue(stable["activation_guard_persisted_before_current_swap"])
+        self.assertTrue(stable["activated_release_requires_cold_health"])
+        self.assertTrue(stable["activated_release_failure_rolls_back_exact_previous_commit"])
+        self.assertTrue(stable["activation_and_rollback_require_no_git"])
+        self.assertTrue(stable["activation_and_rollback_require_no_network"])
+        self.assertTrue(stable["guardian_rebinds_source_identity_from_current"])
         self.assertEqual(
             CONTRACT["next_gate"]["id"],
-            "stable-health-ready-activation-transaction",
+            "stable-base-signed-update-integration",
         )
 
 

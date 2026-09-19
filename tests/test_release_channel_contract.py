@@ -67,7 +67,7 @@ class ReleaseChannelContractTest(unittest.TestCase):
         self.assertFalse(health["activation_performed"])
         self.assertFalse(health["reboot_requested"])
 
-    def test_exact_activation_primitive_is_not_yet_supervisor_wired(self):
+    def test_exact_activation_primitive_is_supervisor_wired_after_health_ready(self):
         activation = CONTRACT["runtime_activation_primitive"]
         self.assertEqual(activation["profile"], "stable-mvp")
         self.assertEqual(activation["owner"], "bootstrap/release-acquisition")
@@ -81,9 +81,46 @@ class ReleaseChannelContractTest(unittest.TestCase):
         self.assertTrue(activation["materialized_release_reverified"])
         self.assertTrue(activation["previous_current_commit_reported"])
         self.assertTrue(activation["atomic_current_pointer_replace"])
-        self.assertFalse(activation["supervisor_health_ready_gate_connected"])
-        self.assertFalse(activation["cold_health_rollback_connected"])
+        self.assertTrue(activation["supervisor_health_ready_gate_connected"])
+        self.assertTrue(activation["cold_health_rollback_connected"])
         self.assertFalse(activation["reboot_requested"])
+
+        transaction = CONTRACT["runtime_activation_transaction"]
+        self.assertEqual(transaction["profile"], "stable-mvp")
+        self.assertEqual(transaction["owner"], "system/supervisor")
+        self.assertEqual(
+            transaction["staged_state"],
+            "/state/ordax/staged-release-sha",
+        )
+        self.assertEqual(
+            transaction["health_ready_state"],
+            "/state/ordax/stable-release-health-ready-sha",
+        )
+        self.assertEqual(
+            transaction["activation_guard_state"],
+            "/state/ordax/stable-release-activation-guard",
+        )
+        self.assertTrue(transaction["staged_and_health_ready_sha_must_match"])
+        self.assertTrue(transaction["guard_persisted_before_current_swap"])
+        self.assertEqual(
+            transaction["activation_command"],
+            "ordax-release-agent activate-exact",
+        )
+        self.assertFalse(transaction["activation_network_required"])
+        self.assertFalse(transaction["activation_git_required"])
+        self.assertTrue(transaction["guardian_refresh_after_swap"])
+        self.assertTrue(transaction["cold_health_required"])
+        self.assertTrue(transaction["cold_health_source_sha_must_match_activated_release"])
+        self.assertEqual(
+            transaction["rollback_target"],
+            "exact-previous-commit-from-transaction",
+        )
+        self.assertTrue(transaction["rollback_revalidates_signed_release"])
+        self.assertFalse(transaction["rollback_network_required"])
+        self.assertFalse(transaction["rollback_git_required"])
+        self.assertTrue(transaction["failed_release_rejected"])
+        self.assertTrue(transaction["known_good_preserved"])
+        self.assertFalse(transaction["reboot_requested"])
 
     def test_kernel_is_compiled_in_repository_ci_not_on_device(self):
         kernel = CONTRACT["kernel"]

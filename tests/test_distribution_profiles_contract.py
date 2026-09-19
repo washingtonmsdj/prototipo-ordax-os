@@ -72,11 +72,11 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertFalse(stable["development_git_rescue_enabled"])
         self.assertFalse(stable["development_base_channel_enabled"])
         self.assertTrue(stable["shared_surface_health_supervision_enabled"])
-        self.assertFalse(stable["continuous_signed_runtime_update_connected"])
+        self.assertTrue(stable["continuous_signed_runtime_update_connected"])
         self.assertFalse(stable["base_update_owner_active"])
         self.assertEqual(
             stable["base_update_owner_activation_gate"],
-            "stable-continuous-signed-update",
+            "stable-base-signed-update-integration",
         )
         self.assertEqual(
             stable["signed_release_discovery_primitive"],
@@ -108,7 +108,7 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(stable["signed_release_materialization_exact_commit_required"])
         self.assertFalse(stable["signed_release_staging_changes_current"])
         self.assertFalse(stable["signed_release_staging_activation_performed"])
-        self.assertFalse(stable["signed_release_activation_connected"])
+        self.assertTrue(stable["signed_release_activation_connected"])
 
     def test_stable_profile_reuses_existing_release_authorities(self):
         stable = CONTRACT["profiles"]["stable-mvp"]
@@ -178,7 +178,7 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(stable["staged_release_health_surface_entrypoint_invoked"])
         self.assertFalse(stable["staged_release_health_activation_performed"])
 
-    def test_exact_activation_primitive_is_offline_but_not_supervisor_connected(self):
+    def test_exact_activation_primitive_is_offline_and_supervisor_connected(self):
         stable = CONTRACT["profiles"]["stable-mvp"]
         self.assertEqual(
             stable["exact_release_activation_primitive"],
@@ -190,25 +190,41 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(stable["exact_release_activation_revalidates_materialized_tree"])
         self.assertTrue(stable["exact_release_activation_preserves_previous_commit_in_receipt"])
         self.assertTrue(stable["exact_release_activation_atomic_current_swap"])
-        self.assertFalse(stable["exact_release_activation_supervisor_connected"])
+        self.assertTrue(stable["exact_release_activation_supervisor_connected"])
         self.assertEqual(
             stable["exact_release_activation_physical_agent_target_sha256"],
             "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
         )
         self.assertTrue(stable["exact_release_activation_seed_media_includes_primitive"])
-        self.assertFalse(stable["exact_release_activation_asset_published"])
+        self.assertTrue(stable["exact_release_activation_asset_published"])
         self.assertEqual(
             stable["exact_release_activation_previous_agent_sha256"],
             "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
         )
-        self.assertFalse(stable["signed_release_activation_connected"])
+        self.assertTrue(stable["signed_release_activation_connected"])
 
-    def test_next_gate_is_health_ready_activation_transaction(self):
+    def test_activation_transaction_is_complete_and_next_gate_is_stable_base(self):
+        stable = CONTRACT["profiles"]["stable-mvp"]
+        self.assertTrue(stable["activation_requires_staged_sha_equals_health_ready_sha"])
+        self.assertEqual(
+            stable["activation_guard_state"],
+            "/state/ordax/stable-release-activation-guard",
+        )
+        self.assertTrue(stable["activation_guard_persisted_before_current_swap"])
+        self.assertTrue(stable["activation_guard_survives_process_crash"])
+        self.assertTrue(stable["activated_release_requires_cold_health"])
+        self.assertTrue(stable["activated_release_cold_health_requires_exact_sha"])
+        self.assertTrue(stable["activated_release_failure_rolls_back_exact_previous_commit"])
+        self.assertTrue(stable["rollback_revalidates_previous_signed_release"])
+        self.assertTrue(stable["activation_and_rollback_require_no_git"])
+        self.assertTrue(stable["activation_and_rollback_require_no_network"])
+        self.assertTrue(stable["guardian_rebinds_source_identity_from_current"])
+        self.assertTrue(stable["guardian_refresh_required_after_current_swap"])
+        self.assertTrue(stable["runtime_update_known_good_preserved"])
         gate = CONTRACT["next_gate"]
-        self.assertEqual(gate["id"], "stable-health-ready-activation-transaction")
+        self.assertEqual(gate["id"], "stable-base-signed-update-integration")
         self.assertFalse(gate["implemented"])
-        self.assertIn("staged_sha == health_ready_sha", gate["description"])
-        self.assertIn("roll current back", gate["description"])
+        self.assertIn("kernel/initramfs/rootfs", gate["description"])
         self.assertTrue(CONTRACT["invariants"]["same_main_source_authority"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_git_client"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_source_checkout"])
