@@ -117,6 +117,16 @@ ordax-release-agent verify-envelope \
   --trust /ordax/bootstrap/trust/release-ed25519.json
 ```
 
+Inspect the current signed channel without downloading its artifact or changing device state:
+
+```text
+ordax-release-agent inspect \
+  --envelope-url https://releases.example/ordax/stable.json \
+  --trust /ordax/bootstrap/trust/release-ed25519.json
+```
+
+`inspect` fetches only the release envelope, verifies its Ed25519 signature and strict manifest policy, and returns the signed source commit plus artifact metadata. It does **not** request `system.tar`, create a release directory or change `/ordax/current`.
+
 Acquire and verify one exact commit without activating it:
 
 ```text

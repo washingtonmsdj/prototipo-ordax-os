@@ -214,6 +214,79 @@ func TestExtractSystemArchiveRequiresBootableEntrypoint(t *testing.T) {
 	}
 }
 
+func TestInspectReleaseVerifiesChannelWithoutDownloadingArtifact(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := validSystemTar(t)
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestFor(server.URL+"/system.tar", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	artifactRequested := false
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.tar", func(w http.ResponseWriter, r *http.Request) {
+		artifactRequested = true
+		t.Fatal("inspect must not request release artifact")
+	})
+
+	receipt, err := inspectRelease(
+		server.Client(),
+		server.URL+"/release.json",
+		trust,
+		pub,
+		defaultRepo,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if artifactRequested {
+		t.Fatal("inspect downloaded artifact")
+	}
+	if receipt.Status != "verified" || receipt.SourceCommit != testCommit {
+		t.Fatalf("unexpected inspect receipt: %#v", receipt)
+	}
+	if receipt.ReleaseID != testCommit || receipt.ArtifactName != "system.tar" {
+		t.Fatalf("inspect receipt lost signed manifest identity: %#v", receipt)
+	}
+	if receipt.ArtifactURL != server.URL+"/system.tar" {
+		t.Fatalf("unexpected artifact URL: %s", receipt.ArtifactURL)
+	}
+	if receipt.ArtifactSHA256 != m.Artifacts[0].SHA256 || receipt.ArtifactSize != int64(len(artifact)) {
+		t.Fatalf("inspect receipt lost signed artifact integrity: %#v", receipt)
+	}
+}
+
+func TestInspectReleaseRejectsTamperedEnvelopeWithoutArtifactRequest(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := validSystemTar(t)
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestFor(server.URL+"/system.tar", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	envelope[len(envelope)/2] ^= 0x01
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.tar", func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("invalid inspect must not request release artifact")
+	})
+
+	if _, err := inspectRelease(
+		server.Client(),
+		server.URL+"/release.json",
+		trust,
+		pub,
+		defaultRepo,
+	); err == nil {
+		t.Fatal("tampered release envelope was inspected as valid")
+	}
+}
+
 func TestInstallMaterializesBootableVerifiedRelease(t *testing.T) {
 	trust, pub, priv := testKeys(t)
 	artifact := validSystemTar(t)

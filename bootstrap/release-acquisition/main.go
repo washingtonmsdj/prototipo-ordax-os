@@ -88,6 +88,18 @@ type MaterializeReceipt struct {
 	Idempotent   bool     `json:"idempotent"`
 }
 
+type InspectReceipt struct {
+	Status              string `json:"status"`
+	SourceCommit        string `json:"source_commit"`
+	ReleaseID           string `json:"release_id"`
+	CreatedFromCIRecipe string `json:"created_from_ci_recipe"`
+	ArtifactName        string `json:"artifact_name"`
+	ArtifactRole        string `json:"artifact_role"`
+	ArtifactURL         string `json:"artifact_url"`
+	ArtifactSHA256      string `json:"artifact_sha256"`
+	ArtifactSize        int64  `json:"artifact_size"`
+}
+
 func strictDecode(data []byte, max int, out any) error {
 	if len(data) == 0 || len(data) > max {
 		return fmt.Errorf("document size outside allowed range: %d", len(data))
@@ -627,6 +639,29 @@ func activate(root, commit string) error {
 	return syncDir(root)
 }
 
+func inspectRelease(client *http.Client, envelopeURL string, trust TrustAnchor, key ed25519.PublicKey, expectedRepo string) (InspectReceipt, error) {
+	envelope, err := fetchBytes(client, envelopeURL, maxEnvelope)
+	if err != nil {
+		return InspectReceipt{}, fmt.Errorf("fetch envelope: %w", err)
+	}
+	manifest, _, err := verifyEnvelope(envelope, trust, key, expectedRepo)
+	if err != nil {
+		return InspectReceipt{}, err
+	}
+	artifact := manifest.Artifacts[0]
+	return InspectReceipt{
+		Status:              "verified",
+		SourceCommit:        manifest.SourceCommit,
+		ReleaseID:           manifest.ReleaseID,
+		CreatedFromCIRecipe: manifest.CreatedFromCIRecipe,
+		ArtifactName:        artifact.Name,
+		ArtifactRole:        artifact.Role,
+		ArtifactURL:         artifact.URL,
+		ArtifactSHA256:      artifact.SHA256,
+		ArtifactSize:        artifact.Size,
+	}, nil
+}
+
 func materialize(client *http.Client, envelopeURL, root string, trust TrustAnchor, key ed25519.PublicKey, expectedRepo, expectedCommit string) (MaterializeReceipt, error) {
 	envelope, err := fetchBytes(client, envelopeURL, maxEnvelope)
 	if err != nil {
@@ -775,6 +810,34 @@ func verifyCommand(args []string) error {
 	return printJSON(map[string]any{"status": "verified", "source_commit": manifest.SourceCommit, "artifact_count": len(manifest.Artifacts)})
 }
 
+func inspectCommand(args []string) error {
+	fs := flag.NewFlagSet("inspect", flag.ContinueOnError)
+	envelopeURL := fs.String("envelope-url", "", "HTTPS URL for signed release envelope")
+	trustPath := fs.String("trust", "", "release trust anchor file")
+	repository := fs.String("repository", defaultRepo, "expected source repository")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *envelopeURL == "" || *trustPath == "" || fs.NArg() != 0 {
+		return errors.New("inspect requires --envelope-url and --trust")
+	}
+	trust, key, err := loadTrust(*trustPath)
+	if err != nil {
+		return err
+	}
+	receipt, err := inspectRelease(
+		secureClient(),
+		*envelopeURL,
+		trust,
+		key,
+		*repository,
+	)
+	if err != nil {
+		return err
+	}
+	return printJSON(receipt)
+}
+
 func installCommand(args []string) error {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	envelopeURL := fs.String("envelope-url", "", "HTTPS URL for signed release envelope")
@@ -834,7 +897,7 @@ func materializeCommand(args []string) error {
 
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: ordax-release-agent <verify-envelope|materialize|install> [options]")
+	fmt.Fprintln(os.Stderr, "usage: ordax-release-agent <verify-envelope|inspect|materialize|install> [options]")
 }
 
 func main() {
@@ -846,6 +909,8 @@ func main() {
 	switch os.Args[1] {
 	case "verify-envelope":
 		err = verifyCommand(os.Args[2:])
+	case "inspect":
+		err = inspectCommand(os.Args[2:])
 	case "materialize":
 		err = materializeCommand(os.Args[2:])
 	case "install":

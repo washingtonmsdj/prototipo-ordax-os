@@ -41,15 +41,18 @@ class ReleaseAgentRefreshTests(unittest.TestCase):
             ),
         )
 
-    def test_refresh_target_is_same_byte_pinned_by_minimal_bootstrap(self):
+    def test_minimal_bootstrap_seed_is_an_explicit_refresh_source(self):
         descriptor = json.loads(DESCRIPTOR.read_text(encoding="utf-8"))
         minimal = json.loads(MINIMAL.read_text(encoding="utf-8"))
         groups = {group["id"]: group for group in minimal["artifact_groups"]}
         artifact = groups["bootstrap-release-acquisition"]["artifacts"][0]
-        self.assertEqual(artifact["sha256"], descriptor["target_sha256"])
+        seed = artifact["sha256"]
+        target = descriptor["target_sha256"]
+        self.assertIn(seed, descriptor["allowed_from_sha256"] + [target])
         self.assertEqual(artifact["target_path"], descriptor["target_path"])
         self.assertEqual(artifact["mode"], descriptor["mode"])
         self.assertFalse(minimal["physical_write_allowed"])
+        self.assertEqual(seed, target)
 
     def test_base_contract_does_not_create_generic_bootstrap_updater(self):
         contract = json.loads(BASE.read_text(encoding="utf-8"))
@@ -68,6 +71,22 @@ class ReleaseAgentRefreshTests(unittest.TestCase):
         self.assertFalse(refresh["physical_media_rewrite_required"])
         self.assertFalse(refresh["raw_device_write_allowed"])
         self.assertFalse(refresh["generic_bootstrap_updater_created"])
+        self.assertTrue(refresh["seed_media_agent_may_precede_refresh_target"])
+        self.assertTrue(refresh["seed_media_agent_must_be_recognized_migration_source"])
+        self.assertTrue(refresh["refresh_target_may_advance_without_physical_media_rewrite"])
+        self.assertEqual(
+            refresh["current_seed_sha256"],
+            "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+        )
+        self.assertTrue(refresh["current_seed_includes_inspect"])
+        self.assertIn(
+            "74a03bd9901c33b7281d529fb0d379a735d20b5ef7495e0af2f73ca2ff40c90e",
+            refresh["legacy_seed_sha256"],
+        )
+        self.assertEqual(
+            refresh["current_refresh_target_sha256"],
+            "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+        )
 
     def test_publisher_never_mutably_overwrites_hash_addressed_asset(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")

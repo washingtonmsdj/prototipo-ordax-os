@@ -78,6 +78,20 @@ class DistributionProfilesContractTests(unittest.TestCase):
             stable["base_update_owner_activation_gate"],
             "stable-continuous-signed-update",
         )
+        self.assertEqual(
+            stable["signed_release_discovery_primitive"],
+            "ordax-release-agent inspect",
+        )
+        self.assertTrue(stable["signed_release_discovery_implemented"])
+        self.assertFalse(stable["signed_release_discovery_downloads_artifact"])
+        self.assertFalse(stable["signed_release_discovery_changes_current"])
+        self.assertTrue(stable["signed_release_discovery_requires_trust"])
+        self.assertTrue(stable["signed_release_discovery_source_implemented"])
+        self.assertFalse(stable["signed_release_discovery_physical_agent_ready"])
+        self.assertEqual(
+            stable["signed_release_discovery_physical_agent_target_sha256"],
+            "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+        )
 
     def test_stable_profile_reuses_existing_release_authorities(self):
         stable = CONTRACT["profiles"]["stable-mvp"]
@@ -109,12 +123,12 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertFalse(distribution["public_runtime_depends_on_git"])
         self.assertTrue(distribution["public_updates_use_official_channels"])
 
-    def test_next_gate_is_continuous_signed_update_not_second_updater(self):
+    def test_next_gate_is_physical_agent_availability_before_polling(self):
         gate = CONTRACT["next_gate"]
-        self.assertEqual(gate["id"], "stable-continuous-signed-update")
+        self.assertEqual(gate["id"], "stable-release-agent-physical-availability")
         self.assertFalse(gate["implemented"])
-        self.assertIn("signed release acquisition protocol", gate["description"])
-        self.assertIn("without introducing Git", gate["description"])
+        self.assertIn("hash-pinned release agent", gate["description"])
+        self.assertIn("before enabling periodic signed channel polling", gate["description"])
         self.assertTrue(CONTRACT["invariants"]["same_main_source_authority"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_git_client"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_source_checkout"])
