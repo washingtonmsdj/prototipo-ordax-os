@@ -150,9 +150,13 @@ ensure_base_telemetry_agent() {
     base_telemetry_agent_running && return 0
 
     if [ -x /bin/setsid ]; then
-        /bin/setsid "$BASE_TELEMETRY_AGENT" >>"$BASE_TELEMETRY_LOG" 2>&1 </dev/null &
+        ORDAX_DISTRIBUTION_PROFILE="$DISTRIBUTION_PROFILE" \
+        ORDAX_SOURCE_SHA="$SOURCE_SHA" \
+            /bin/setsid "$BASE_TELEMETRY_AGENT" >>"$BASE_TELEMETRY_LOG" 2>&1 </dev/null &
     else
-        "$BASE_TELEMETRY_AGENT" >>"$BASE_TELEMETRY_LOG" 2>&1 </dev/null &
+        ORDAX_DISTRIBUTION_PROFILE="$DISTRIBUTION_PROFILE" \
+        ORDAX_SOURCE_SHA="$SOURCE_SHA" \
+            "$BASE_TELEMETRY_AGENT" >>"$BASE_TELEMETRY_LOG" 2>&1 </dev/null &
     fi
     /bin/busybox sleep 1
     base_telemetry_agent_running || {
@@ -242,6 +246,10 @@ rescue_agent_running() {
 }
 
 ensure_rescue_agent() {
+    if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+        echo "ordax-surface: development Git rescue is disabled in Stable/MVP" >>"$RESCUE_LOG"
+        return 0
+    fi
     [ -f "$RESCUE_SOURCE" ] || {
         echo "ordax-surface: rescue agent source unavailable: $RESCUE_SOURCE" >>"$RESCUE_LOG"
         return 0
