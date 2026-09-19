@@ -4,6 +4,8 @@ Status: CANONICAL FOR PROTOTYPE
 
 ## Goal
 
+This channel is the delivery authority for the **Stable/MVP** distribution. Owner/Development may continue to use the Git-first path, but that mechanism is internal and is not the end-user update contract. The machine-readable separation lives in `docs/contracts/distribution-profiles.json`.
+
 `main` remains source authority, while an OrdaX device consumes prebuilt immutable releases without needing a compiler, source checkout, Codex or a full Git client in the pre-release bootstrap.
 
 Repository CI owns build/sign/publication. The device consumes a compact signed release envelope and immutable artifacts over HTTPS.

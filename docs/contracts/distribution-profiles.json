@@ -1,0 +1,65 @@
+{
+  "$schema": "prototype-ordax.distribution-profiles/1",
+  "status": "canonical-product-boundary",
+  "source_authority": {
+    "repository": "washingtonmsdj/prototipo-ordax-os",
+    "branch": "main",
+    "single_product_codebase": true,
+    "permanent_profile_forks_allowed": false
+  },
+  "profiles": {
+    "owner-development": {
+      "audience": "owner-development",
+      "public_distribution": false,
+      "operational_git_allowed": true,
+      "full_git_client_allowed": true,
+      "source_checkout_allowed": true,
+      "normal_update_transport": "git-main",
+      "normal_update_owner": "bootstrap/dev-base/ordax-pull",
+      "runtime_update_owner": "system/supervisor",
+      "base_candidate_transport": "immutable-exact-commit-development-channel",
+      "base_update_owner": "system/services/base-update/agent.sh",
+      "diagnostic_source_sha_visible": true,
+      "branch_pr_repository_details_allowed_in_diagnostics": true,
+      "public_release_authorization_required_for_daily_development": false,
+      "creator_workflow": ".github/workflows/creator-owner-dev-git.yml"
+    },
+    "stable-mvp": {
+      "audience": "end-user",
+      "public_distribution": true,
+      "operational_git_allowed": false,
+      "full_git_client_required": false,
+      "source_checkout_required": false,
+      "normal_update_transport": "official-signed-release-channel",
+      "normal_update_owner": "bootstrap/release-acquisition",
+      "release_channel_contract": "docs/contracts/release-channel.json",
+      "release_protocol_contract": "docs/contracts/release-protocol.json",
+      "trust_policy_contract": "docs/contracts/release-trust-policy.json",
+      "base_update_contract": "docs/contracts/base-update.json",
+      "signed_envelope_required": true,
+      "artifact_hash_and_size_required": true,
+      "known_good_preservation_required": true,
+      "base_ab_health_rollback_required": true,
+      "git_branch_pr_details_in_normal_ux": false,
+      "creator_is_primary_media_path": true,
+      "public_site_contract": "docs/contracts/public-site.json",
+      "production_release_published": false,
+      "runtime_profile_selection_implemented": false
+    }
+  },
+  "invariants": {
+    "same_main_source_authority": true,
+    "owner_git_path_must_not_be_public_update_contract": true,
+    "stable_must_not_require_git_client": true,
+    "stable_must_not_require_source_checkout": true,
+    "stable_must_fail_closed_without_release_trust": true,
+    "stable_public_download_must_fail_closed_without_authorized_release": true,
+    "component_versions_may_diverge": true,
+    "base_updates_are_more_restrictive_than_app_updates": true
+  },
+  "next_gate": {
+    "id": "stable-runtime-profile-selection",
+    "description": "Make the Stable/MVP runtime select signed release acquisition instead of the Owner Git-first supervisor path without forking product source.",
+    "implemented": false
+  }
+}

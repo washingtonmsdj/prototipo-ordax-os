@@ -276,6 +276,7 @@ Para detalhes atuais, consultar também:
 - `docs/PHYSICAL-MEDIA.md`;
 - `docs/PROMOTION-GATES.md`;
 - `docs/contracts/base-update.json`;
+- `docs/contracts/distribution-profiles.json`;
 - `docs/contracts/device-update-coverage.json`;
 - `docs/contracts/public-site.json`;
 - `docs/contracts/public-release-catalog.json`;

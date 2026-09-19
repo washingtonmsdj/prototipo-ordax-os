@@ -37,7 +37,7 @@ Antes de alterar codigo, contratos ou midia:
 13. `docs/PROMOTION-GATES.md`
 14. `docs/DECISIONS.md`
 
-Quando um snapshot de estado conflitar com texto historico, `docs/CURRENT-STATE.md` e os contratos arquiteturais canonicos vencem. Para numero/geometria de particoes, os dois contratos fisicos acima sao a autoridade final porque descrevem artefatos diferentes.
+Quando um snapshot de estado conflitar com texto historico, `docs/CURRENT-STATE.md` e os contratos arquiteturais canonicos vencem. Para a separacao Owner/Development vs Stable/MVP, `docs/contracts/distribution-profiles.json` e a autoridade machine-readable. Para numero/geometria de particoes, os dois contratos fisicos acima sao a autoridade final porque descrevem artefatos diferentes.
 
 ### Plano funcional da Surface e dos aplicativos
 
