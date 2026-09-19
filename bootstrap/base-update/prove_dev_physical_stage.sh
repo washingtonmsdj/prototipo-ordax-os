@@ -18,16 +18,19 @@ WORK="$(mktemp -d "$ROOT/out/dev-physical-stage.XXXXXX")"
 IMAGE="$WORK/disk.raw"
 ESP_MOUNT="$WORK/esp"
 STAGE_MOUNT="$WORK/stage"
+READINESS_MOUNT="$WORK/readiness"
 LABEL_ROOT="$WORK/by-label"
 CANDIDATE_ROOT="$WORK/candidates"
 VERSION_ROOT="$WORK/versions"
 FIRST_RESULT="$WORK/first.json"
 SECOND_RESULT="$WORK/second.json"
+STAGED_SHA_FILE="$WORK/staged-sha"
+READINESS_RESULT="$WORK/readiness.json"
 LOOP=""
 
 cleanup() {
   set +e
-  for mountpoint_path in "$ESP_MOUNT" "$STAGE_MOUNT"; do
+  for mountpoint_path in "$ESP_MOUNT" "$STAGE_MOUNT" "$READINESS_MOUNT"; do
     if [[ -d "$mountpoint_path" ]] && mountpoint -q "$mountpoint_path"; then
       sudo umount "$mountpoint_path" >/dev/null 2>&1 || true
     fi
@@ -39,7 +42,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$ESP_MOUNT" "$STAGE_MOUNT" "$LABEL_ROOT" "$CANDIDATE_ROOT" "$VERSION_ROOT" "$(dirname "$PROOF")"
+mkdir -p "$ESP_MOUNT" "$STAGE_MOUNT" "$READINESS_MOUNT" "$LABEL_ROOT" "$CANDIDATE_ROOT" "$VERSION_ROOT" "$(dirname "$PROOF")"
 truncate -s 96M "$IMAGE"
 
 sudo sfdisk "$IMAGE" >/dev/null <<'EOF'
@@ -177,6 +180,23 @@ mountpoint -q "$STAGE_MOUNT" && {
   exit 1
 }
 
+printf '%s\n' "$SOURCE_SHA" >"$STAGED_SHA_FILE"
+sudo python3 "$ROOT/system/services/base-update/dev_activation_readiness.py" \
+  --root-source "$ROOT_PART" \
+  --candidate-root "$CANDIDATE_ROOT" \
+  --version-root "$VERSION_ROOT" \
+  --source-commit "$SOURCE_SHA" \
+  --staged-sha-file "$STAGED_SHA_FILE" \
+  --stage-result-file "$FIRST_RESULT" \
+  --by-label-root "$LABEL_ROOT" \
+  --mount-root "$READINESS_MOUNT" \
+  >"$READINESS_RESULT"
+
+mountpoint -q "$READINESS_MOUNT" && {
+  echo "dev-physical-stage-proof: activation readiness left ESP mounted" >&2
+  exit 1
+}
+
 sudo mount -t vfat -o ro,nosuid,nodev,noexec "$ESP" "$ESP_MOUNT"
 test "$(sudo sha256sum "$ESP_MOUNT/loader/entries/ordax.conf" | awk '{print $1}')" = "$CURRENT_BEFORE"
 test "$(sudo sha256sum "$ESP_MOUNT/loader/entries/ordax-recovery.conf" | awk '{print $1}')" = "$RECOVERY_BEFORE"
@@ -211,16 +231,17 @@ IMAGE_AFTER_SECOND="$(sha256sum "$IMAGE" | awk '{print $1}')"
 test "$IMAGE_BEFORE_SECOND" = "$IMAGE_AFTER_SECOND"
 sudo fsck.vfat -n "$ESP" >/dev/null
 
-python3 - "$FIRST_RESULT" "$SECOND_RESULT" "$PROOF" "$SOURCE_SHA" "$IMAGE_AFTER_SECOND" <<'PY'
+python3 - "$FIRST_RESULT" "$SECOND_RESULT" "$READINESS_RESULT" "$PROOF" "$SOURCE_SHA" "$IMAGE_AFTER_SECOND" <<'PY'
 import json
 import pathlib
 import sys
 
 first = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 second = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
-proof_path = pathlib.Path(sys.argv[3])
-source = sys.argv[4]
-image_sha = sys.argv[5]
+readiness = json.loads(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8"))
+proof_path = pathlib.Path(sys.argv[4])
+source = sys.argv[5]
+image_sha = sys.argv[6]
 
 assert first["$schema"] == "prototype-ordax.dev-base-physical-stage/1"
 assert first["status"] == "staged"
@@ -247,6 +268,22 @@ assert second["efi_variable_written"] is False
 assert second["reboot_requested"] is False
 assert second["mount_released"] is True
 
+assert readiness["$schema"] == "prototype-ordax.dev-base-activation-readiness/1"
+assert readiness["status"] == "ready"
+assert readiness["source_commit"] == source
+assert readiness["active_slot"] == "legacy"
+assert readiness["candidate_slot"] == "b"
+assert readiness["persisted_stage_result_verified"] is True
+assert readiness["live_esp_candidate_verified"] is True
+assert readiness["live_kernel_hash_verified"] is True
+assert readiness["live_initramfs_hash_verified"] is True
+assert readiness["ready_for_activation_gate"] is True
+assert readiness["activation_authorized"] is False
+assert readiness["runtime_activation_wiring_enabled"] is False
+assert readiness["efi_variable_written"] is False
+assert readiness["reboot_requested"] is False
+assert readiness["mount_released"] is True
+
 proof = {
     "$schema": "prototype-ordax.dev-base-physical-stage-proof/1",
     "status": "pass",
@@ -264,6 +301,9 @@ proof = {
         "second_run_is_byte_idempotent": True,
         "filesystem_passes_read_only_fsck": True,
         "mount_released_after_each_run": True,
+        "activation_readiness_revalidated_live_esp": True,
+        "activation_readiness_verified_exact_candidate": True,
+        "activation_readiness_does_not_authorize_activation": True,
         "activation_not_performed": True,
         "efi_variables_not_written": True,
         "reboot_not_requested": True,
