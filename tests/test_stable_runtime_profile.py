@@ -172,7 +172,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertFalse(stable["base_update_owner_active"])
         self.assertEqual(
             stable["base_update_owner_activation_gate"],
-            "stable-base-signed-acquisition",
+            "stable-base-signed-update-integration",
         )
         self.assertTrue(stable["signed_release_discovery_implemented"])
         self.assertTrue(stable["signed_release_discovery_source_implemented"])
