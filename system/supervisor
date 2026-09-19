@@ -1229,6 +1229,148 @@ stable_release_tree_is_valid() {
     staged_release_tree_is_valid "$system_root" supervisor-restart
 }
 
+write_stable_activation_guard() {
+    previous_sha=$1
+    candidate_sha=$2
+    attempt_id=$3
+    is_sha "$previous_sha" || return 1
+    is_sha "$candidate_sha" || return 1
+    [ "$previous_sha" != "$candidate_sha" ] || return 1
+    [ -n "$attempt_id" ] || return 1
+
+    temporary=$STABLE_ACTIVATION_GUARD_FILE.tmp.$
+    printf '%s %s %s\n' "$previous_sha" "$candidate_sha" "$attempt_id" >"$temporary"
+    chmod 600 "$temporary"
+    /bin/busybox mv -f "$temporary" "$STABLE_ACTIVATION_GUARD_FILE"
+    /bin/busybox sync
+}
+
+stable_activate_exact_to() {
+    expected_sha=$1
+    receipt=$2
+
+    is_sha "$expected_sha" || return 1
+    rm -f "$receipt"
+    /bin/busybox timeout -k 5 "$STABLE_ACTIVATION_TIMEOUT" \
+        "$STABLE_RELEASE_AGENT" activate-exact \
+        --trust "$STABLE_TRUST_FILE" \
+        --root "$STABLE_ROOT" \
+        --repository washingtonmsdj/prototipo-ordax-os \
+        --expected-commit "$expected_sha" \
+        >"$receipt" 2>>"$UPDATE_LOG"
+}
+
+activate_health_ready_stable_release() {
+    previous_sha=$1
+    candidate_sha=$2
+
+    is_sha "$previous_sha" || return 1
+    is_sha "$candidate_sha" || return 1
+    [ "$previous_sha" != "$candidate_sha" ] || return 1
+
+    staged_sha=$(read_state_value "$STAGED_RELEASE_FILE")
+    ready_sha=$(read_state_value "$STABLE_HEALTH_READY_FILE")
+    rejected_sha=$(read_state_value "$STABLE_HEALTH_REJECTED_FILE")
+    [ "$staged_sha" = "$candidate_sha" ] || return 1
+    [ "$ready_sha" = "$candidate_sha" ] || return 1
+    [ "$rejected_sha" != "$candidate_sha" ] || return 1
+    stable_release_tree_is_valid "$candidate_sha" || return 1
+    [ "$(stable_current_release_sha 2>/dev/null || true)" = "$previous_sha" ] || return 1
+
+    attempt_id=$(utc_now)
+    write_stable_activation_guard "$previous_sha" "$candidate_sha" "$attempt_id" || {
+        set_update_context error "$candidate_sha" "$attempt_id" "stable-release-activation-guard-failed"
+        write_update_state "$previous_sha" activation-error signed-release
+        return 1
+    }
+
+    set_update_context activating "$candidate_sha" "$attempt_id" ""
+    write_update_state "$previous_sha" activating signed-release
+    log "activating exact health-ready Stable/MVP release: $previous_sha -> $candidate_sha"
+
+    activation_ok=0
+    if stable_activate_exact_to "$candidate_sha" "$STABLE_ACTIVATION_RECEIPT"; then
+        activation_ok=1
+    fi
+
+    active_sha=$(stable_current_release_sha 2>/dev/null || true)
+    if [ "$active_sha" = "$previous_sha" ]; then
+        rm -f "$STABLE_ACTIVATION_RECEIPT" "$STABLE_ACTIVATION_GUARD_FILE"
+        /bin/busybox sync
+        set_update_context error "$candidate_sha" "$attempt_id" "stable-release-activation-failed-before-swap"
+        write_update_state "$previous_sha" activation-error signed-release
+        log "exact Stable activation failed before current changed; known-good remains active"
+        return 1
+    fi
+
+    if [ "$active_sha" != "$candidate_sha" ]; then
+        fail_closed "Stable activation left current in an unexpected state"
+    fi
+
+    if [ "$activation_ok" -eq 1 ]; then
+        activation_status=$(stable_receipt_string "$STABLE_ACTIVATION_RECEIPT" status || true)
+        activation_sha=$(stable_receipt_string "$STABLE_ACTIVATION_RECEIPT" source_commit || true)
+        activation_previous=$(stable_receipt_string "$STABLE_ACTIVATION_RECEIPT" previous_commit || true)
+        if [ "$activation_status" != "activated-exact" ] ||
+           [ "$activation_sha" != "$candidate_sha" ] ||
+           [ "$activation_previous" != "$previous_sha" ]
+        then
+            log "Stable activation receipt was inconsistent after exact current swap; transaction guard will arbitrate cold health"
+        fi
+    else
+        log "Stable activation command ended ambiguously after current swap; transaction guard will arbitrate cold health"
+    fi
+    rm -f "$STABLE_ACTIVATION_RECEIPT"
+
+    set_update_context restart-required "$candidate_sha" "$attempt_id" ""
+    write_update_state "$candidate_sha" activated signed-release
+    clear_surface_health
+    stop_surface
+    record_runtime_surface_sha "$candidate_sha"
+    log "Stable current now points to $candidate_sha; requesting guardian refresh for cold health"
+    trap - EXIT HUP INT TERM
+    exit 75
+}
+
+rollback_stable_activation() {
+    previous_sha=$1
+    failed_sha=$2
+    attempt_id=$3
+
+    is_sha "$previous_sha" || return 1
+    is_sha "$failed_sha" || return 1
+    [ "$previous_sha" != "$failed_sha" ] || return 1
+    [ "$(stable_current_release_sha 2>/dev/null || true)" = "$failed_sha" ] || return 1
+
+    set_update_context rollback "$failed_sha" "$attempt_id" "stable-release-cold-health-failed"
+    write_update_state "$failed_sha" rolling-back signed-release
+    rm -f "$STABLE_ROLLBACK_RECEIPT"
+
+    if ! stable_activate_exact_to "$previous_sha" "$STABLE_ROLLBACK_RECEIPT"; then
+        fail_closed "Stable rollback could not restore the previous signed release"
+    fi
+
+    rollback_status=$(stable_receipt_string "$STABLE_ROLLBACK_RECEIPT" status || true)
+    rollback_sha=$(stable_receipt_string "$STABLE_ROLLBACK_RECEIPT" source_commit || true)
+    rollback_previous=$(stable_receipt_string "$STABLE_ROLLBACK_RECEIPT" previous_commit || true)
+    rm -f "$STABLE_ROLLBACK_RECEIPT"
+    if [ "$rollback_status" != "activated-exact" ] ||
+       [ "$rollback_sha" != "$previous_sha" ] ||
+       [ "$rollback_previous" != "$failed_sha" ] ||
+       [ "$(stable_current_release_sha 2>/dev/null || true)" != "$previous_sha" ]
+    then
+        fail_closed "Stable rollback receipt or current pointer is inconsistent"
+    fi
+
+    write_state_value "$STABLE_HEALTH_REJECTED_FILE" "$failed_sha"
+    rm -f "$STABLE_HEALTH_READY_FILE" "$STABLE_ACTIVATION_GUARD_FILE"
+    /bin/busybox sync
+    write_update_state "$previous_sha" rolled-back signed-release
+    log "Stable/MVP cold health failed for $failed_sha; exact known-good $previous_sha restored"
+    trap - EXIT HUP INT TERM
+    exit 75
+}
+
 restore_current_surface_after_probe() {
     current_sha_value=$1
     candidate_sha=$2
