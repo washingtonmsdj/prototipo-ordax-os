@@ -27,6 +27,16 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertTrue(contract["separate_from_product_web_mode"])
         self.assertEqual(contract["source_root"], "sites/public")
         self.assertEqual(contract["build_recipe"], "tools/public-site/build.py")
+        distribution = contract["product_distribution"]
+        self.assertEqual(distribution["public_profile"], "stable-mvp")
+        self.assertFalse(distribution["owner_development_profile_public"])
+        self.assertFalse(distribution["public_runtime_depends_on_git"])
+        self.assertTrue(distribution["public_updates_use_official_channels"])
+        self.assertFalse(distribution["landing_may_explain_git_operations"])
+        self.assertFalse(
+            distribution["landing_may_expose_branch_pr_commit_as_normal_ux"]
+        )
+        self.assertTrue(distribution["creator_is_primary_public_media_path"])
 
     def test_identity_fails_closed_and_downloads_use_generated_catalog(self):
         config = json.loads((SITE / "config" / "public-site.json").read_text(encoding="utf-8"))
@@ -99,6 +109,14 @@ class PublicSiteContractTests(unittest.TestCase):
             self.assertIn(f'href="{href}"', landing)
         self.assertIn("Protótipo em desenvolvimento", landing)
         self.assertIn("Downloads públicos aparecem somente", landing)
+        self.assertIn("Stable/MVP", landing)
+        self.assertIn("OrdaX Creator", landing)
+        self.assertIn("Arquivos", landing)
+        self.assertIn("Notas", landing)
+        self.assertIn("Internet", landing)
+        self.assertIn("Atualizações", landing)
+        self.assertNotIn("git pull", landing.lower())
+        self.assertNotIn("pull request", landing.lower())
 
 
 if __name__ == "__main__":
