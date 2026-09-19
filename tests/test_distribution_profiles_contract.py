@@ -88,10 +88,23 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(stable["signed_release_discovery_requires_trust"])
         self.assertTrue(stable["signed_release_discovery_source_implemented"])
         self.assertFalse(stable["signed_release_discovery_physical_agent_ready"])
+        self.assertTrue(stable["signed_release_discovery_asset_published"])
+        self.assertEqual(
+            stable["signed_release_discovery_asset_sha256"],
+            "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+        )
+        self.assertTrue(stable["signed_release_seed_media_includes_inspect"])
         self.assertEqual(
             stable["signed_release_discovery_physical_agent_target_sha256"],
             "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
         )
+        self.assertTrue(stable["periodic_signed_channel_polling_connected"])
+        self.assertEqual(stable["periodic_signed_channel_default_seconds"], 60)
+        self.assertTrue(stable["signed_release_materialization_connected"])
+        self.assertTrue(stable["signed_release_materialization_exact_commit_required"])
+        self.assertFalse(stable["signed_release_staging_changes_current"])
+        self.assertFalse(stable["signed_release_staging_activation_performed"])
+        self.assertFalse(stable["signed_release_activation_connected"])
 
     def test_stable_profile_reuses_existing_release_authorities(self):
         stable = CONTRACT["profiles"]["stable-mvp"]
@@ -123,12 +136,12 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertFalse(distribution["public_runtime_depends_on_git"])
         self.assertTrue(distribution["public_updates_use_official_channels"])
 
-    def test_next_gate_is_physical_agent_availability_before_polling(self):
+    def test_next_gate_is_candidate_health_before_activation(self):
         gate = CONTRACT["next_gate"]
-        self.assertEqual(gate["id"], "stable-release-agent-physical-availability")
+        self.assertEqual(gate["id"], "stable-staged-release-health")
         self.assertFalse(gate["implemented"])
-        self.assertIn("hash-pinned release agent", gate["description"])
-        self.assertIn("before enabling periodic signed channel polling", gate["description"])
+        self.assertIn("candidate Surface/runtime health", gate["description"])
+        self.assertIn("before any exact activation", gate["description"])
         self.assertTrue(CONTRACT["invariants"]["same_main_source_authority"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_git_client"])
         self.assertTrue(CONTRACT["invariants"]["stable_must_not_require_source_checkout"])
