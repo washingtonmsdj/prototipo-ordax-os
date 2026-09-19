@@ -247,6 +247,12 @@ rescue_agent_running() {
 
 ensure_rescue_agent() {
     if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+        if rescue_agent_running; then
+            pid=""
+            IFS= read -r pid <"$RESCUE_PID_FILE" || true
+            terminate_child "$pid" "development rescue agent"
+            rm -f "$RESCUE_PID_FILE"
+        fi
         echo "ordax-surface: development Git rescue is disabled in Stable/MVP" >>"$RESCUE_LOG"
         return 0
     fi
