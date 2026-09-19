@@ -12,7 +12,13 @@ class UpdateStatusCopyTests(unittest.TestCase):
         overview = SYSTEM_OVERVIEW.read_text(encoding="utf-8")
         self.assertIn('"Atualização de base pendente"', presentation)
         self.assertIn("Reiniciar manualmente agora não conclui esta atualização", presentation)
+        self.assertIn("A ativação automática ainda não está habilitada", presentation)
+        self.assertIn("reiniciar manualmente não força a aplicação", presentation)
         self.assertIn("Base pendente de ativação", presentation)
+        self.assertNotIn(
+            "o OrdaX fará a ativação e solicitará o reinício automaticamente",
+            presentation,
+        )
         self.assertIn("updateSummaryLabel(updateSnapshot)", overview)
         self.assertIn("updateBootLabel(updateSnapshot)", overview)
         self.assertNotIn('"Reinício necessário"', overview)
