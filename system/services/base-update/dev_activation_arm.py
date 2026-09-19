@@ -362,16 +362,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root-source", type=Path, required=True)
     parser.add_argument("--mount-root", type=Path, required=True)
-    parser.add_argument(
-        "--efivarfs-root",
-        type=Path,
-        default=Path("/sys/firmware/efi/efivars"),
-    )
-    parser.add_argument(
-        "--efi-root",
-        type=Path,
-        default=Path("/sys/firmware/efi"),
-    )
+    parser.add_argument("--efivarfs-root", type=Path, required=True)
+    parser.add_argument("--efi-root", type=Path, required=True)
     parser.add_argument(
         "--efivarfs-mountinfo",
         type=Path,
