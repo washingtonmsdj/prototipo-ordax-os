@@ -115,7 +115,15 @@
       "activation_and_rollback_require_no_network": true,
       "guardian_rebinds_source_identity_from_current": true,
       "guardian_refresh_required_after_current_swap": true,
-      "runtime_update_known_good_preserved": true
+      "runtime_update_known_good_preserved": true,
+      "stable_base_profile": "kernel-initramfs-plus-persistent-ordax",
+      "stable_base_rootfs_tar_used": false,
+      "stable_base_asset_publication_implemented": true,
+      "stable_base_asset_transport": "ordax-stable-base-<source_commit>",
+      "stable_base_transport_authenticity_source": "signed-system-base-candidate-descriptor",
+      "stable_base_device_acquisition_connected": false,
+      "stable_base_esp_staging_connected": false,
+      "stable_base_activation_connected": false
     }
   },
   "invariants": {
@@ -129,8 +137,8 @@
     "base_updates_are_more_restrictive_than_app_updates": true
   },
   "next_gate": {
-    "id": "stable-base-signed-update-integration",
-    "description": "Connect Stable/MVP Base kernel/initramfs/rootfs delivery to the official signed release path and existing A/B one-shot health/rollback machinery without enabling the Owner/Development Git candidate channel.",
+    "id": "stable-base-signed-acquisition",
+    "description": "Acquire exact-commit Stable kernel/initramfs transport assets only after revalidating the signed system release candidate descriptor, without Git, ESP writes, activation, reboot, or development rootfs.tar.",
     "implemented": false
   }
 }
