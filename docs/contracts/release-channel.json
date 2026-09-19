@@ -69,6 +69,9 @@
     "repeat_failed_candidate": false,
     "current_pointer_changed": false,
     "activation_performed": false,
-    "reboot_requested": false
+    "reboot_requested": false,
+    "candidate_update_state_source_sha": "candidate-source-commit",
+    "known_good_restore_update_state_source_sha": "current-source-commit",
+    "health_ready_written_only_after_known_good_restore": true
   }
 }
