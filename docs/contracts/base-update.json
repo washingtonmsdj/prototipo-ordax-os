@@ -50,7 +50,31 @@
     "only_loader_entry_oneshot_variable_may_be_written": true,
     "real_efivarfs_proven": false,
     "physical_notebook_proven": false,
-    "runtime_owner_activation_wiring_enabled": false
+    "runtime_owner_activation_wiring_enabled": false,
+    "readiness": {
+      "helper": "system/services/base-update/dev_activation_readiness.py",
+      "schema": "prototype-ordax.dev-base-activation-readiness/1",
+      "exact_ready_sha_required": true,
+      "exact_staged_sha_required": true,
+      "persisted_stage_result_required": true,
+      "candidate_manifest_revalidated": true,
+      "versioned_rootfs_revalidated": true,
+      "live_esp_readonly_revalidation_required": true,
+      "live_candidate_sha_required": true,
+      "live_inactive_slot_required": true,
+      "live_kernel_hash_required": true,
+      "live_initramfs_hash_required": true,
+      "mount_released_before_return": true,
+      "owner_readiness_wiring_enabled": true,
+      "readiness_state_file": "/state/ordax/base-update/dev-base-activation-readiness.json",
+      "readiness_sha_file": "/state/ordax/base-update/dev-base-activation-readiness-sha",
+      "readiness_failure_blocks_surface": false,
+      "readiness_failure_changes_current_boot": false,
+      "readiness_authorizes_activation": false,
+      "runtime_activation_wiring_enabled": false,
+      "efi_variable_written": false,
+      "reboot_requested": false
+    }
   },
   "staging": {
     "signed_manifest_required": true,
