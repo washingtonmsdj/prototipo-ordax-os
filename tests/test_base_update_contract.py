@@ -121,6 +121,52 @@ class BaseUpdateContractTests(unittest.TestCase):
         self.assertTrue(promotion["atomic_replace_required"])
         self.assertTrue(promotion["previous_slot_preserved"])
 
+    def test_development_postboot_promotion_is_health_gated_and_non_rebooting(self):
+        promotion = CONTRACT["promotion"]
+        self.assertEqual(
+            promotion["development_postboot_helper"],
+            "system/services/base-update/dev_postboot_promote.py",
+        )
+        self.assertEqual(
+            promotion["development_postboot_schema"],
+            "prototype-ordax.dev-base-postboot-promotion/1",
+        )
+        for key in (
+            "runtime_owner_postboot_wiring_enabled",
+            "candidate_boot_cmdline_required",
+            "matching_staged_sha_required",
+            "matching_activation_readiness_sha_required",
+            "base_heartbeat_same_boot_required",
+            "surface_health_same_release_required",
+            "surface_heartbeat_same_boot_required",
+            "live_esp_readonly_preflight_before_rw",
+            "live_candidate_entry_required",
+            "live_candidate_slot_required",
+            "rw_mount_only_after_health_passes",
+            "previous_slot_derived_from_known_good_layout",
+            "legacy_previous_slot_is_a",
+            "postflight_readonly_validation_required",
+            "normal_boot_is_noop",
+        ):
+            self.assertTrue(promotion[key], key)
+        self.assertFalse(promotion["promotion_failure_blocks_surface"])
+        self.assertFalse(promotion["promotion_failure_changes_current_boot"])
+        self.assertFalse(promotion["reboot_requested_by_promotion_owner"])
+        self.assertFalse(promotion["efi_variable_written_by_promotion_owner"])
+        self.assertFalse(promotion["physical_notebook_postboot_promotion_proven"])
+        self.assertEqual(
+            promotion["promoted_sha_state_file"],
+            "/state/ordax/base-update/dev-base-promoted-sha",
+        )
+        self.assertEqual(
+            promotion["promotion_result_state_file"],
+            "/state/ordax/base-update/dev-base-promotion-result.json",
+        )
+        self.assertEqual(
+            promotion["disposable_development_postboot_proof"],
+            "bootstrap/base-update/prove_dev_postboot_promotion.sh",
+        )
+
     def test_failure_never_overwrites_current_kernel_in_place(self):
         failure = CONTRACT["failure"]
         self.assertTrue(failure["current_entry_remains_unchanged"])
