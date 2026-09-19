@@ -28,6 +28,10 @@ DEV_BASE_ACTIVATION_READINESS_FILE=$HOST_STATE_ROOT/base-update/dev-base-activat
 DEV_BASE_ACTIVATION_READINESS_SHA_FILE=$HOST_STATE_ROOT/base-update/dev-base-activation-readiness-sha
 ESP_ACTIVATION_READINESS_MOUNT_ROOT=${ORDAX_BASE_ESP_ACTIVATION_READINESS_MOUNT_ROOT:-/run/ordax-base-owner/esp-activation-readiness}
 DEV_BASE_ACTIVATION_READINESS_LOG=$HOST_STATE_ROOT/base-update/dev-activation-readiness.log
+DEV_BASE_PROMOTED_FILE=$HOST_STATE_ROOT/base-update/dev-base-promoted-sha
+DEV_BASE_PROMOTION_RESULT_FILE=$HOST_STATE_ROOT/base-update/dev-base-promotion-result.json
+DEV_BASE_PROMOTION_LOG=$HOST_STATE_ROOT/base-update/dev-postboot-promotion.log
+ESP_PROMOTION_MOUNT_ROOT=${ORDAX_BASE_ESP_PROMOTION_MOUNT_ROOT:-/run/ordax-base-owner/esp-promotion}
 DEV_BASE_LOG=$HOST_STATE_ROOT/base-update/dev-channel.log
 PREPARE_BLOCKER=
 LOG_PREFIX=ordax-base-update-agent
@@ -586,6 +590,80 @@ prepare_dev_base_activation_readiness() {
     return 0
 }
 
+prepare_dev_base_postboot_promotion() {
+    staged_sha=$(read_state_value "$DEV_BASE_STAGED_FILE")
+    readiness_sha=$(read_state_value "$DEV_BASE_ACTIVATION_READINESS_SHA_FILE")
+    if ! is_sha "$staged_sha" || [ "$readiness_sha" != "$staged_sha" ]; then
+        return 0
+    fi
+    [ -s "$DEV_BASE_ACTIVATION_READINESS_FILE" ] || return 0
+
+    /bin/busybox grep -q 'ordax.base_candidate=' /proc/cmdline 2>/dev/null || return 0
+    /bin/busybox grep -q 'ordax.base_slot=' /proc/cmdline 2>/dev/null || return 0
+    is_sha "$source_sha" || return 0
+
+    promoted_sha=$(read_state_value "$DEV_BASE_PROMOTED_FILE")
+    if [ "$promoted_sha" = "$staged_sha" ] && [ -s "$DEV_BASE_PROMOTION_RESULT_FILE" ]; then
+        return 0
+    fi
+
+    helper=/srv/ordax-system/services/base-update/dev_postboot_promote.py
+    [ -n "$PHYSICAL_ROOT_SOURCE" ] &&
+    [ -n "$OWNER_STATE_CHROOT" ] &&
+    [ -f "$RUNTIME_ROOT$helper" ] || return 0
+
+    base_heartbeat=$OWNER_STATE_CHROOT/base-update/base-heartbeat.json
+    surface_heartbeat=$OWNER_STATE_CHROOT/native-state/surface-heartbeat.json
+    [ -s "$base_heartbeat" ] &&
+    [ -s "$surface_heartbeat" ] &&
+    [ -s "$RUNTIME_ROOT/run/ordax-update/base-boot-id" ] &&
+    [ -s "$RUNTIME_ROOT/run/ordax-update/healthy-sha" ] || return 0
+
+    directory=${DEV_BASE_PROMOTION_RESULT_FILE%/*}
+    /bin/busybox mkdir -p "$directory" >/dev/null 2>&1 || return 0
+    temporary=$(/bin/busybox mktemp "$directory/.dev-base-promotion.XXXXXX") || return 0
+    /bin/busybox mkdir -p "${DEV_BASE_PROMOTION_LOG%/*}" >/dev/null 2>&1 || true
+
+    if /bin/busybox chroot "$RUNTIME_ROOT" /usr/bin/python3 "$helper" \
+        --root-source "$PHYSICAL_ROOT_SOURCE" \
+        --esp-mount-root "$ESP_PROMOTION_MOUNT_ROOT" \
+        --state-root "$OWNER_STATE_CHROOT" \
+        --cmdline /proc/cmdline \
+        --boot-id /run/ordax-update/base-boot-id \
+        --base-heartbeat "$base_heartbeat" \
+        --surface-heartbeat "$surface_heartbeat" \
+        --healthy-sha /run/ordax-update/healthy-sha \
+        --source-sha "$source_sha" \
+        --expected-release-sha "$staged_sha" \
+        >"$temporary" 2>>"$DEV_BASE_PROMOTION_LOG"
+    then
+        if /bin/busybox grep -Fq "\"source_commit\": \"$staged_sha\"" "$temporary" &&
+           /bin/busybox grep -Fq '"status": "promoted"' "$temporary" &&
+           /bin/busybox grep -Fq '"health_verified": true' "$temporary" &&
+           /bin/busybox grep -Fq '"postflight_verified": true' "$temporary" &&
+           /bin/busybox grep -Fq '"reboot_requested": false' "$temporary" &&
+           /bin/busybox grep -Fq '"efi_variable_written": false' "$temporary"
+        then
+            /bin/busybox chmod 600 "$temporary" >/dev/null 2>&1 || true
+            if /bin/busybox mv -f "$temporary" "$DEV_BASE_PROMOTION_RESULT_FILE"; then
+                if write_state_value "$DEV_BASE_PROMOTED_FILE" "$staged_sha"; then
+                    log "development Base healthy candidate promoted: $staged_sha"
+                    return 0
+                fi
+            fi
+        fi
+        log "development Base promotion result validation failed for $staged_sha"
+    else
+        rc=$?
+        if [ "$rc" -ne 2 ]; then
+            log "development Base postboot promotion not ready for $staged_sha; current boot remains unchanged"
+        fi
+    fi
+
+    /bin/busybox rm -f "$temporary" >/dev/null 2>&1 || true
+    return 0
+}
+
 while :; do
     if [ ! -x "$RUNTIME_ROOT/usr/bin/python3" ]; then
         write_preflight_status runtime-unavailable
@@ -617,6 +695,7 @@ while :; do
         prepare_esp_readonly_preflight
         prepare_dev_base_physical_stage
         prepare_dev_base_activation_readiness
+        prepare_dev_base_postboot_promotion
     else
         write_preflight_status "${PREPARE_BLOCKER:-physical-root-unavailable}"
     fi
