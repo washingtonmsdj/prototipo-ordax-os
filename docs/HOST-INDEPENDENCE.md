@@ -40,7 +40,7 @@ Responsibilities:
 4. create the canonical two-partition layout;
 5. materialize the bootstrap and selected release;
 6. verify writes;
-7. optionally prepare native SSD/HD installation;
+7. prepare the MVP Native SSD/NVMe/HD installation path when that mode is selected;
 8. never depend on WSL or a user-installed Linux environment.
 
 Different host builds may use different OS APIs internally, but they expose the same behavior and consume the same contracts.
