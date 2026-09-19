@@ -51,13 +51,18 @@
         "bootstrap/recovery"
       ],
       "development_delivery": "exact-commit-development-base-rootfs-candidate",
-      "activation": "versioned-selector-implemented-a-b-staging-pending",
+      "activation": "versioned-selector-plus-automatic-inactive-slot-staging-health-gated-promotion",
       "candidate_delivery_implemented": true,
       "activation_implemented": false,
       "usb_rewrite_required": false,
       "reboot_required": true,
-      "health_gate": "selector-is-slot-coupled; eventual slot promotion remains base-plus-surface-health-gated",
-      "selector_implemented": true
+      "health_gate": "candidate boot is promoted only after matching base heartbeat + Surface health + Surface heartbeat + boot id",
+      "selector_implemented": true,
+      "physical_staging_implemented": true,
+      "activation_readiness_implemented": true,
+      "postboot_promotion_implemented": true,
+      "runtime_one_shot_activation_wiring_implemented": false,
+      "current_activation_gap": "runtime LoaderEntryOneShot arming/reboot handoff remains disabled pending boot-counting/fallback gates"
     },
     {
       "id": "kernel-and-initramfs",
@@ -68,7 +73,11 @@
       "development_delivery": "exact-commit-development-base-candidate",
       "activation": "inactive-base-slot-next-boot",
       "usb_rewrite_required": false,
-      "reboot_required": true
+      "reboot_required": true,
+      "physical_staging_implemented": true,
+      "activation_readiness_implemented": true,
+      "runtime_one_shot_activation_wiring_implemented": false,
+      "postboot_promotion_implemented": true
     },
     {
       "id": "boot-selection-metadata",
@@ -76,10 +85,13 @@
         "bootstrap/base-update",
         "boot/esp/loader"
       ],
-      "development_delivery": "base-update-promotion",
-      "activation": "atomic-versioned-boot-entry",
+      "development_delivery": "staged-candidate-plus-health-gated-postboot-promotion",
+      "activation": "one-shot-selection-proofed-runtime-arming-pending",
       "usb_rewrite_required": false,
-      "reboot_required": true
+      "reboot_required": true,
+      "staging_implemented": true,
+      "postboot_promotion_implemented": true,
+      "runtime_one_shot_activation_wiring_implemented": false
     },
     {
       "id": "uefi-fallback-loader",
@@ -128,7 +140,7 @@
     "app_update_blocked_by_gap": false
   },
   "development_rootfs_activation": {
-    "status": "selector-and-materialization-implemented-a-b-staging-pending",
+    "status": "selector-materialization-staging-readiness-and-postboot-promotion-implemented-runtime-one-shot-arming-pending",
     "artifact": "rootfs.tar",
     "candidate_owner": "system/services/base-update/agent.sh + system/services/base-update/dev_channel.py",
     "selector_owner": "bootstrap/dev-base/ordax-dev-init",
@@ -144,13 +156,26 @@
       "/sys",
       "/dev"
     ],
-    "selection_policy": "candidate rootfs runs only on the matching one-shot A/B candidate boot",
-    "promotion_policy": "the slot becomes normal only through the existing base heartbeat + Surface health promotion gate",
-    "fallback_policy": "a failed candidate never becomes the normal slot; missing legacy mapping keeps the seed development Base",
-    "next_gate": "authorized exact-commit development candidate staging into the inactive A/B boot slot, followed by disposable and physical broken-candidate fallback proof",
+    "selection_policy": "versioned rootfs is selected only when a candidate boot supplies the matching exact commit and A/B slot",
+    "promotion_policy": "the candidate becomes current only when cmdline, base heartbeat, checkout SHA, Surface health, Surface heartbeat and boot id all agree",
+    "fallback_policy": "an unpromoted/failed candidate never replaces the known-good current entry; exact systemd-boot one-try fallback and physical-notebook behavior remain separate gates",
+    "next_gate": "merge the pinned systemd boot-counting proof, then wire LoaderEntryOneShot/reboot to the runtime owner and prove failed-candidate fallback before physical notebook activation",
     "request_owner": "system/supervisor writes exact SHA request only",
     "python_runtime": "replaceable native Surface runtime; Python is not required in the development bootstrap Base",
     "seed_root_resolution": "strip terminal /versions/<commit> from the live root mount subpath before resolving shared state/version storage",
-    "current_limit": "dev-base-ready-sha is not yet consumed by an ESP staging/one-shot activation owner"
+    "current_limit": "staging/readiness/promotion are live in the owner, but runtime one-shot activation and reboot handoff remain intentionally disabled",
+    "staging_owner": "system/services/base-update/agent.sh + system/services/base-update/dev_physical_stage.py",
+    "readiness_owner": "system/services/base-update/agent.sh + system/services/base-update/dev_activation_readiness.py",
+    "promotion_owner": "system/services/base-update/agent.sh + system/services/base-update/dev_postboot_promote.py + bootstrap/base-update/promote.py",
+    "automatic_inactive_slot_staging": true,
+    "activation_readiness_implemented": true,
+    "postboot_health_promotion_implemented": true,
+    "runtime_one_shot_activation_wiring_implemented": false,
+    "staging_state": "/state/ordax/base-update/dev-base-staged-sha",
+    "readiness_state": "/state/ordax/base-update/dev-base-activation-readiness-sha",
+    "promotion_state": "/state/ordax/base-update/dev-base-promoted-sha",
+    "disposable_physical_staging_proven": true,
+    "disposable_postboot_promotion_proven": true,
+    "physical_notebook_activation_proven": false
   }
 }
