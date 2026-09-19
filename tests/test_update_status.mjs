@@ -39,6 +39,8 @@ test("update status contract normalizes optional fields", () => {
     applyMode: "initial",
   });
   assert.equal(snapshot.bootRefreshRequired, false);
+  assert.equal(snapshot.baseUpdatePhase, "none");
+  assert.equal(snapshot.baseUpdateSha, "");
   assert.equal(snapshot.deliveryNumber, 0);
   assert.equal(snapshot.versionNumber, 0);
   assert.equal(snapshot.lastApplyDurationSeconds, 0);
@@ -94,6 +96,42 @@ test("update status preserves transaction context", () => {
   assert.equal(snapshot.phase, "health-wait");
   assert.equal(snapshot.attemptId, "2026-09-18T09:10:00Z");
   assert.equal(snapshot.lastError, "health-check-pending");
+});
+
+test("update status preserves explicit Base pipeline progress", () => {
+  const snapshot = validateUpdateStatusSnapshot({
+    sourceSha: "0123456789012345678901234567890123456789",
+    status: "running",
+    applyMode: "none",
+    bootRefreshRequired: true,
+    baseUpdatePhase: "activation-ready",
+    baseUpdateSha: "abcdef0123456789abcdef0123456789abcdef01",
+  });
+  assert.equal(snapshot.baseUpdatePhase, "activation-ready");
+  assert.equal(snapshot.baseUpdateSha, "abcdef0123456789abcdef0123456789abcdef01");
+});
+
+test("boot refresh without a new Base phase remains backward compatible", () => {
+  const snapshot = validateUpdateStatusSnapshot({
+    sourceSha: "0123456789012345678901234567890123456789",
+    status: "running",
+    applyMode: "none",
+    bootRefreshRequired: true,
+  });
+  assert.equal(snapshot.baseUpdatePhase, "waiting-candidate");
+});
+
+test("update status rejects unknown Base pipeline phase", () => {
+  assert.throws(
+    () => validateUpdateStatusSnapshot({
+      sourceSha: "0123456789012345678901234567890123456789",
+      status: "running",
+      applyMode: "none",
+      bootRefreshRequired: true,
+      baseUpdatePhase: "mystery-base-phase",
+    }),
+    TypeError,
+  );
 });
 
 test("update status rejects unknown transaction phase", () => {
