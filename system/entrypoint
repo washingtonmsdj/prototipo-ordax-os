@@ -11,6 +11,7 @@ WORKTREE=${ORDAX_WORKTREE:-/workspace/ordax}
 GIT_BIN=${ORDAX_GIT_BIN:-/usr/bin/git}
 DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}
 SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
+STABLE_ROOT=${ORDAX_STABLE_ROOT:-/ordax}
 BASE_UPDATE_STATE_DIR=${ORDAX_BASE_UPDATE_STATE_DIR:-/state/ordax/base-update}
 BASE_HEARTBEAT_FILE=$BASE_UPDATE_STATE_DIR/base-heartbeat.json
 BASE_BOOT_ID_FILE=$UPDATE_RUN_DIR/base-boot-id
@@ -83,11 +84,27 @@ is_sha() {
     esac
 }
 
+stable_current_release_sha() {
+    current=$STABLE_ROOT/current
+    [ -L "$current" ] || return 1
+    target=$(/bin/busybox readlink "$current" 2>/dev/null || true)
+    case "$target" in
+        releases/*) value=${target#releases/} ;;
+        *) return 1 ;;
+    esac
+    case "$value" in
+        */*) return 1 ;;
+    esac
+    is_sha "$value" || return 1
+    [ -d "$STABLE_ROOT/releases/$value" ] || return 1
+    [ -x "$STABLE_ROOT/releases/$value/system/entrypoint" ] || return 1
+    printf '%s' "$value"
+}
+
 runtime_source_sha() {
     case "$DISTRIBUTION_PROFILE" in
         stable-mvp)
-            is_sha "$SOURCE_SHA_HINT" || return 1
-            printf '%s' "$SOURCE_SHA_HINT"
+            stable_current_release_sha
             ;;
         owner-development)
             value=$("$GIT_BIN" -C "$WORKTREE" rev-parse HEAD 2>/dev/null || true)
@@ -238,7 +255,10 @@ case "$DISTRIBUTION_PROFILE" in
     owner-development)
         ;;
     stable-mvp)
-        is_sha "$SOURCE_SHA_HINT" || fail_closed "Stable/MVP runtime source SHA is missing or invalid"
+        SOURCE_SHA_HINT=$(stable_current_release_sha) || fail_closed "Stable/MVP current release identity is missing or invalid"
+        SYSTEM_ROOT=$STABLE_ROOT/current/system
+        SYSTEM_ENTRYPOINT=$SYSTEM_ROOT/entrypoint
+        SUPERVISOR=$SYSTEM_ROOT/supervisor
         ;;
     *)
         fail_closed "unknown OrdaX distribution profile"
@@ -297,6 +317,14 @@ while :; do
 
     if [ "$supervisor_rc" -eq 75 ]; then
         log "supervisor requested guardian refresh"
+        if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+            SOURCE_SHA_HINT=$(stable_current_release_sha) || fail_closed "Stable/MVP current release identity could not be refreshed"
+            ORDAX_SOURCE_SHA=$SOURCE_SHA_HINT
+            export ORDAX_SOURCE_SHA
+            SYSTEM_ROOT=$STABLE_ROOT/current/system
+            SYSTEM_ENTRYPOINT=$SYSTEM_ROOT/entrypoint
+            SUPERVISOR=$SYSTEM_ROOT/supervisor
+        fi
         trap - EXIT HUP INT TERM
         exec "$SYSTEM_ENTRYPOINT"
     fi
