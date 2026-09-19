@@ -6,6 +6,10 @@ Clean-room experimental para validar uma arquitetura OrdaX OS simples, reproduzi
 >
 > Este repositorio nao substitui `washingtonmsdj/novo-ordax-os` enquanto os gates de `docs/PROMOTION-GATES.md` nao forem aprovados.
 
+## MVP e canais de produto
+
+O alvo de lançamento, a divisão **Owner/Development vs Stable/MVP**, o modelo de atualização sem Git para usuário final e os gates mínimos de produto estão documentados em [MVP.md](MVP.md). Leia esse arquivo antes de trabalhar em pendrive público, Creator, releases, site, conta ou lançamento.
+
 ## Plano funcional da interface
 
 O [PLANO-FUNCIONAL-SURFACE-E-APPS.md](PLANO-FUNCIONAL-SURFACE-E-APPS.md), na raiz, detalha a area de trabalho e os apps **Arquivos, Ajustes, Conta e Sistema**: cada subsecao, conteudo, comportamento, recursos existentes, lacunas e ordem de implementacao. IAs e desenvolvedores devem le-lo junto das instrucoes de `AGENTS.md` antes de trabalhar nessas interfaces. O plano e uma proposta; revalide seu inventario contra a `main` atual e preserve os contratos canonicos.
