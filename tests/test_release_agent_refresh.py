@@ -76,16 +76,21 @@ class ReleaseAgentRefreshTests(unittest.TestCase):
         self.assertTrue(refresh["refresh_target_may_advance_without_physical_media_rewrite"])
         self.assertEqual(
             refresh["current_seed_sha256"],
-            "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+            "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
         )
         self.assertTrue(refresh["current_seed_includes_inspect"])
         self.assertIn(
             "74a03bd9901c33b7281d529fb0d379a735d20b5ef7495e0af2f73ca2ff40c90e",
             refresh["legacy_seed_sha256"],
         )
+        self.assertIn(
+            "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+            refresh["legacy_seed_sha256"],
+        )
+        self.assertTrue(refresh["current_seed_includes_activate_exact"])
         self.assertEqual(
             refresh["current_refresh_target_sha256"],
-            "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+            "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
         )
 
     def test_publisher_never_mutably_overwrites_hash_addressed_asset(self):
