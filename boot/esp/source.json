@@ -34,5 +34,16 @@
   "build": {
     "canonical_entrypoint": "boot/esp/build.py",
     "physical_artifact_authorized": false
+  },
+  "boot_counting_proof": {
+    "parser": "bootctl-built-from-pinned-systemd-source",
+    "candidate_filename": "ordax-candidate+01-00.conf",
+    "canonical_entry_id": "ordax-candidate.conf",
+    "tries_left": 1,
+    "tries_done": 0,
+    "default_entry": "ordax.conf",
+    "disposable_parser_proof_only": true,
+    "actual_boot_attempt_proven": false,
+    "failed_candidate_fallback_proven": false
   }
 }
