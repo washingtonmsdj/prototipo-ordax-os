@@ -75,7 +75,12 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn('check_stable_signed_update "$current"', check)
         self.assertLess(check.index(stable_guard), check.index("ls-remote"))
 
+        channel = text.split("stable_channel_url() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn('[ ! -L "$STABLE_CHANNEL_FILE" ]', channel)
+        self.assertIn("https://*", channel)
         stable_stage = text.split("check_stable_signed_update() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn('[ -L "$STABLE_RELEASE_AGENT" ]', stable_stage)
+        self.assertIn('[ -L "$STABLE_TRUST_FILE" ]', stable_stage)
         self.assertIn('"$STABLE_RELEASE_AGENT" inspect', stable_stage)
         self.assertIn('"$STABLE_RELEASE_AGENT" materialize', stable_stage)
         self.assertIn('--expected-commit "$remote_sha"', stable_stage)
