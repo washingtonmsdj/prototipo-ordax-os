@@ -107,6 +107,11 @@
       "security_boundary": "explicit-privileged-capability"
     },
     {
+      "id": "creator.native-install",
+      "owner": "system/adapters/native",
+      "security_boundary": "native-installer-only-explicit-destructive-authorization"
+    },
+    {
       "id": "host.raw-disk",
       "owner": "tools/creator/host",
       "security_boundary": "destructive-explicit-authorization"
@@ -143,7 +148,8 @@
         "host.raw-disk",
         "system.release-activation",
         "system.recovery",
-        "system.boot-control"
+        "system.boot-control",
+        "creator.native-install"
       ]
     },
     {
@@ -162,7 +168,8 @@
         "host.raw-disk",
         "system.release-activation",
         "system.recovery",
-        "system.boot-control"
+        "system.boot-control",
+        "creator.native-install"
       ]
     },
     {
@@ -183,7 +190,8 @@
       "forbidden_capabilities": [
         "system.release-activation",
         "system.recovery",
-        "system.boot-control"
+        "system.boot-control",
+        "creator.native-install"
       ]
     },
     {
@@ -204,8 +212,11 @@
         "system.recovery",
         "system.boot-control"
       ],
-      "privileged_capabilities": [],
-      "forbidden_capabilities": []
+      "privileged_capabilities": [
+        "creator.native-install"
+      ],
+      "forbidden_capabilities": [],
+      "privileged_boundary": "native-installer-only-explicit-user-authorization"
     },
     {
       "id": "native-disk",
@@ -226,7 +237,9 @@
         "system.boot-control"
       ],
       "privileged_capabilities": [],
-      "forbidden_capabilities": []
+      "forbidden_capabilities": [
+        "creator.native-install"
+      ]
     }
   ],
   "extension_rules": [
