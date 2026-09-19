@@ -45,6 +45,10 @@ def _load(path: Path, name: str):
 _channel = _load(HERE / "dev_channel.py", "ordax_dev_activation_arm_channel")
 _readonly = _load(HERE / "esp_readonly.py", "ordax_dev_activation_arm_esp")
 _layout = _load(HERE / "esp_layout.py", "ordax_dev_activation_arm_layout")
+_efivarfs = _load(
+    HERE / "efivarfs_preflight.py",
+    "ordax_dev_activation_arm_efivarfs",
+)
 _activate = _load(
     SOURCE_ROOT / "bootstrap/base-update/activate.py",
     "ordax_dev_activation_arm_activate",
@@ -141,6 +145,8 @@ def arm_ready_candidate(
     root_source: Path,
     mount_root: Path,
     efivarfs_root: Path,
+    efi_root: Path,
+    efivarfs_mountinfo: Path,
     candidate_root: Path,
     version_root: Path,
     source_commit: str,
@@ -267,6 +273,31 @@ def arm_ready_candidate(
             )
 
         try:
+            efivarfs = _efivarfs.preflight(
+                efivarfs_root=efivarfs_root,
+                efi_root=efi_root,
+                mountinfo=efivarfs_mountinfo,
+            )
+        except _efivarfs.EfivarfsPreflightError as exc:
+            raise DevelopmentActivationArmError(str(exc)) from exc
+        if efivarfs.get("status") != "valid":
+            raise DevelopmentActivationArmError(
+                "efivarfs preflight did not return valid evidence"
+            )
+        if efivarfs.get("writable_mount") is not True:
+            raise DevelopmentActivationArmError(
+                "efivarfs preflight did not prove writable mount"
+            )
+        if efivarfs.get("write_authorized") is not False:
+            raise DevelopmentActivationArmError(
+                "efivarfs preflight unexpectedly authorizes writes"
+            )
+        if efivarfs.get("variable_written") is not False:
+            raise DevelopmentActivationArmError(
+                "efivarfs preflight unexpectedly wrote a variable"
+            )
+
+        try:
             armed = _activate.arm(
                 mount_root,
                 efivarfs_root,
@@ -314,6 +345,9 @@ def arm_ready_candidate(
         "live_esp_revalidated": True,
         "live_kernel_hash_revalidated": True,
         "live_initramfs_hash_revalidated": True,
+        "efivarfs_preflight_verified": True,
+        "efivarfs_writable_mount_verified": True,
+        "efivarfs_preflight_authorized_write": False,
         "esp_mounted_read_only": True,
         "mount_released": True,
         "default_entry_changed": False,
@@ -329,6 +363,12 @@ def main() -> int:
     parser.add_argument("--root-source", type=Path, required=True)
     parser.add_argument("--mount-root", type=Path, required=True)
     parser.add_argument("--efivarfs-root", type=Path, required=True)
+    parser.add_argument("--efi-root", type=Path, required=True)
+    parser.add_argument(
+        "--efivarfs-mountinfo",
+        type=Path,
+        default=Path("/proc/self/mountinfo"),
+    )
     parser.add_argument("--candidate-root", type=Path, required=True)
     parser.add_argument("--version-root", type=Path, required=True)
     parser.add_argument("--source-commit", required=True)
@@ -358,6 +398,8 @@ def main() -> int:
             root_source=args.root_source,
             mount_root=args.mount_root,
             efivarfs_root=args.efivarfs_root,
+            efi_root=args.efi_root,
+            efivarfs_mountinfo=args.efivarfs_mountinfo,
             candidate_root=args.candidate_root,
             version_root=args.version_root,
             source_commit=args.source_commit,

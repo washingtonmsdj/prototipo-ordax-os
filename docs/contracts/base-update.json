@@ -97,7 +97,15 @@
       "disposable_proof_schema": "prototype-ordax.dev-base-activation-arm-proof/1",
       "disposable_efivarfs_only": true,
       "real_efivarfs_proven": false,
-      "physical_notebook_proven": false
+      "physical_notebook_proven": false,
+      "efivarfs_preflight_required": true,
+      "efivarfs_preflight_helper": "system/services/base-update/efivarfs_preflight.py",
+      "efivarfs_preflight_schema": "prototype-ordax.efivarfs-preflight/1",
+      "fresh_efivarfs_preflight_immediately_before_write": true,
+      "writable_efivarfs_required": true,
+      "efivarfs_preflight_must_remain_non_authoritative": true,
+      "efivarfs_preflight_variable_written_must_be_false": true,
+      "explicit_efi_root_required": true
     },
     "efivarfs_preflight": {
       "helper": "system/services/base-update/efivarfs_preflight.py",

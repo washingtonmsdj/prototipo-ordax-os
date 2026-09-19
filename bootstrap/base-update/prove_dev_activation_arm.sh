@@ -23,7 +23,9 @@ ARM_MOUNT="$WORK/arm"
 LABEL_ROOT="$WORK/by-label"
 CANDIDATE_ROOT="$WORK/candidates"
 VERSION_ROOT="$WORK/versions"
-EFIVARS="$WORK/efivars"
+EFI_ROOT="$WORK/sys/firmware/efi"
+EFIVARS="$EFI_ROOT/efivars"
+EFIVAR_MOUNTINFO="$WORK/efivarfs-mountinfo"
 STAGE_RESULT="$WORK/stage-result.json"
 STAGED_SHA_FILE="$WORK/staged-sha"
 READINESS_SHA_FILE="$WORK/readiness-sha"
@@ -159,6 +161,7 @@ for relative in (
 PY
 
 ln -s "$ESP" "$LABEL_ROOT/ORDAX-ESP"
+printf '42 31 0:41 / %s rw,nosuid,nodev - efivarfs efivarfs rw\n' "$EFIVARS" >"$EFIVAR_MOUNTINFO"
 
 sudo python3 "$ROOT/system/services/base-update/dev_physical_stage.py"   --repo-root "$ROOT"   --root-source "$ROOT_PART"   --candidate-root "$CANDIDATE_ROOT"   --version-root "$VERSION_ROOT"   --source-commit "$SOURCE_SHA"   --by-label-root "$LABEL_ROOT"   --mount-root "$STAGE_MOUNT"   >"$STAGE_RESULT"
 
@@ -177,7 +180,7 @@ done
 
 IMAGE_BEFORE_ARM="$(sha256sum "$IMAGE" | awk '{print $1}')"
 
-sudo python3 "$ROOT/system/services/base-update/dev_activation_arm.py"   --root-source "$ROOT_PART"   --mount-root "$ARM_MOUNT"   --efivarfs-root "$EFIVARS"   --candidate-root "$CANDIDATE_ROOT"   --version-root "$VERSION_ROOT"   --source-commit "$SOURCE_SHA"   --staged-sha-file "$STAGED_SHA_FILE"   --readiness-sha-file "$READINESS_SHA_FILE"   --readiness-file "$READINESS_RESULT"   --by-label-root "$LABEL_ROOT"   >"$ARM_RESULT"
+sudo python3 "$ROOT/system/services/base-update/dev_activation_arm.py"   --root-source "$ROOT_PART"   --mount-root "$ARM_MOUNT"   --efivarfs-root "$EFIVARS"   --efi-root "$EFI_ROOT"   --efivarfs-mountinfo "$EFIVAR_MOUNTINFO"   --candidate-root "$CANDIDATE_ROOT"   --version-root "$VERSION_ROOT"   --source-commit "$SOURCE_SHA"   --staged-sha-file "$STAGED_SHA_FILE"   --readiness-sha-file "$READINESS_SHA_FILE"   --readiness-file "$READINESS_RESULT"   --by-label-root "$LABEL_ROOT"   >"$ARM_RESULT"
 
 mountpoint -q "$ARM_MOUNT" && {
   echo "dev-activation-arm-proof: arm helper left ESP mounted" >&2
@@ -214,6 +217,9 @@ assert result["versioned_rootfs_revalidated"] is True
 assert result["live_esp_revalidated"] is True
 assert result["live_kernel_hash_revalidated"] is True
 assert result["live_initramfs_hash_revalidated"] is True
+assert result["efivarfs_preflight_verified"] is True
+assert result["efivarfs_writable_mount_verified"] is True
+assert result["efivarfs_preflight_authorized_write"] is False
 assert result["esp_mounted_read_only"] is True
 assert result["mount_released"] is True
 assert result["default_entry_changed"] is False
@@ -243,6 +249,8 @@ proof = {
         "versioned_rootfs_revalidated": True,
         "live_esp_revalidated": True,
         "live_candidate_hashes_revalidated": True,
+        "efivarfs_preflight_verified_before_write": True,
+        "efivarfs_preflight_remains_non_authoritative": True,
         "esp_read_only_during_arm": True,
         "esp_byte_identical_before_after_arm": True,
         "only_loader_entry_oneshot_written": True,
