@@ -126,6 +126,17 @@ class DistributionProfilesContractTests(unittest.TestCase):
         )
         self.assertFalse(RELEASE_CHANNEL["device_pre_release"]["full_git_client_required"])
         self.assertFalse(RELEASE_CHANNEL["device_pre_release"]["source_checkout_required"])
+        polling = RELEASE_CHANNEL["runtime_polling"]
+        self.assertEqual(polling["profile"], "stable-mvp")
+        self.assertEqual(polling["owner"], "system/supervisor")
+        self.assertEqual(polling["default_interval_seconds"], 60)
+        self.assertEqual(polling["discovery_command"], "ordax-release-agent inspect")
+        self.assertEqual(polling["materialization_command"], "ordax-release-agent materialize")
+        self.assertTrue(polling["exact_expected_commit_required"])
+        self.assertFalse(polling["current_pointer_changed"])
+        self.assertFalse(polling["activation_performed"])
+        self.assertFalse(polling["reboot_requested"])
+        self.assertFalse(polling["git_required"])
 
     def test_public_site_is_stable_only(self):
         stable = CONTRACT["profiles"]["stable-mvp"]
