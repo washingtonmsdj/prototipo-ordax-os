@@ -31,6 +31,8 @@ function summarizeUpdate(value) {
     phase: snapshot.phase,
     applyMode: snapshot.applyMode,
     bootRefreshRequired: snapshot.bootRefreshRequired,
+    baseUpdatePhase: snapshot.baseUpdatePhase,
+    baseUpdateSha: snapshot.baseUpdateSha || null,
     checkedAt: snapshot.checkedAt,
     lastAppliedSha: snapshot.lastAppliedSha || null,
     lastAppliedAt: snapshot.lastAppliedAt,
