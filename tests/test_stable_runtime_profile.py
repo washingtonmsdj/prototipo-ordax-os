@@ -172,7 +172,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertFalse(stable["base_update_owner_active"])
         self.assertEqual(
             stable["base_update_owner_activation_gate"],
-            "stable-base-signed-update-integration",
+            "stable-base-signed-acquisition",
         )
         self.assertTrue(stable["signed_release_discovery_implemented"])
         self.assertTrue(stable["signed_release_discovery_source_implemented"])
@@ -213,7 +213,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertTrue(stable["guardian_rebinds_source_identity_from_current"])
         self.assertEqual(
             CONTRACT["next_gate"]["id"],
-            "stable-base-signed-update-integration",
+            "stable-base-signed-acquisition",
         )
 
 
