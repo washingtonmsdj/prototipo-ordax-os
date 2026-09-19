@@ -273,9 +273,10 @@
     "initial_supported_migration": {
       "from_sha256": [
         "9d76eec25ba07c436b21aa59ea88b5c972e531ebd8ec345cf10aa590fb8122f4",
-        "19f36d913321d9f073717f335b52d6850856cca6c98fa4dec4136738b6ff35e0"
+        "19f36d913321d9f073717f335b52d6850856cca6c98fa4dec4136738b6ff35e0",
+        "74a03bd9901c33b7281d529fb0d379a735d20b5ef7495e0af2f73ca2ff40c90e"
       ],
-      "to_sha256": "74a03bd9901c33b7281d529fb0d379a735d20b5ef7495e0af2f73ca2ff40c90e"
+      "to_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596"
     },
     "unknown_installed_hash": "block",
     "replacement": "same-directory-temp-fsync-atomic-replace",
@@ -286,7 +287,12 @@
     "absent_agent_enrollment": true,
     "absent_agent_enrollment_requires_explicit_descriptor_gate": true,
     "existing_unknown_hash_still_blocks": true,
-    "target_persists_verified_envelope": true
+    "target_persists_verified_envelope": true,
+    "seed_media_agent_may_precede_refresh_target": true,
+    "seed_media_agent_must_be_recognized_migration_source": true,
+    "refresh_target_may_advance_without_physical_media_rewrite": true,
+    "current_seed_sha256": "74a03bd9901c33b7281d529fb0d379a735d20b5ef7495e0af2f73ca2ff40c90e",
+    "current_refresh_target_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596"
   },
   "runtime_owner": {
     "development_host_state_root": "/state/ordax",
