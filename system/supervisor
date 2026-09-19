@@ -1350,6 +1350,9 @@ esac
 
 initial_sha=$(current_sha)
 boot_runtime_sha=$(read_state_value "$RUNTIME_SURFACE_SHA_FILE")
+if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+    rm -f "$SUPERVISOR_GUARD_FILE" >/dev/null 2>&1 || true
+fi
 refresh_release_history
 clear_update_context
 write_update_state "$initial_sha" running initial
