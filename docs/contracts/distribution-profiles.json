@@ -97,7 +97,7 @@
       "exact_release_activation_preserves_previous_commit_in_receipt": true,
       "exact_release_activation_atomic_current_swap": true,
       "exact_release_activation_supervisor_connected": true,
-      "signed_release_seed_media_agent_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+      "signed_release_seed_media_agent_sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
       "exact_release_activation_physical_agent_target_sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
       "exact_release_activation_seed_media_includes_primitive": true,
       "exact_release_activation_asset_published": true,
@@ -144,13 +144,15 @@
       "stable_base_physical_boot_connected": false,
       "stable_base_alpine_hash_pinned": false,
       "stable_base_apk_versions_pinned": false,
-      "portable_v2_release_agent_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+      "portable_v2_release_agent_sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
       "portable_v2_release_agent_supports_offline_exact_verification": true,
-      "portable_v3_release_agent_seed_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+      "portable_v3_release_agent_seed_sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
       "portable_v3_release_agent_target_sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
-      "portable_v3_release_agent_seed_requires_hash_addressed_refresh": true,
       "portable_v3_release_agent_supports_content_addressed_runtime": true,
-      "portable_v3_release_agent_activation_connected": false
+      "portable_v3_release_agent_activation_connected": false,
+      "portable_v3_release_agent_previous_seed_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+      "portable_v3_existing_previous_seed_requires_hash_addressed_refresh": true,
+      "portable_v3_new_media_includes_capable_agent": true
     }
   },
   "invariants": {
