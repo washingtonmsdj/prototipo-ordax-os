@@ -126,6 +126,36 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(f"// {relative}\n", encoding="utf-8")
 
+    def _comparison_report(
+        self,
+        *,
+        boot_id="boot-secret",
+        source_digest="a" * 64,
+        updater_digest="b" * 64,
+        runtime_matches=True,
+        fail_count=0,
+        label="sample",
+    ):
+        return {
+            "schema": proof.SCHEMA,
+            "captured_at": "2026-09-20T12:00:00Z",
+            "label": label,
+            "boot_id": boot_id,
+            "source": {
+                "files": {
+                    relative: {"size": index + 1, "sha256": source_digest}
+                    for index, relative in enumerate(proof.REQUIRED_SOURCE_FILES)
+                }
+            },
+            "observed": {
+                "update_status": {
+                    "source_identity_sha256": updater_digest,
+                    "runtime_surface_matches_source": runtime_matches,
+                }
+            },
+            "summary": {"pass": 10, "warn": 0, "fail": fail_count},
+        }
+
     def test_collect_probes_read_only_mvp_runtime_without_leaking_names(self):
         server = ThreadingHTTPServer(("127.0.0.1", 0), SmokeHandler)
         SmokeHandler.expected_authority = f"127.0.0.1:{server.server_port}"
@@ -227,6 +257,52 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
         bad_duration = dict(payload, lastApplyDurationSeconds=3601)
         with self.assertRaises(ValueError):
             proof.validate_update_status(bad_duration)
+
+    def test_compare_accepts_only_same_clean_boot_source_and_updater_identity(self):
+        baseline = self._comparison_report(label="baseline")
+        after = self._comparison_report(label="after")
+        comparison = proof.compare_reports(baseline, after, "comparison")
+        self.assertEqual(comparison["schema"], proof.COMPARE_SCHEMA)
+        self.assertEqual(comparison["summary"]["fail"], 0, comparison["checks"])
+        serialized = json.dumps(comparison)
+        self.assertNotIn("boot-secret", serialized)
+        self.assertNotIn("a" * 64, serialized)
+        self.assertNotIn("b" * 64, serialized)
+
+        different_boot = self._comparison_report(boot_id="other-boot", label="after")
+        self.assertGreater(proof.compare_reports(baseline, different_boot)["summary"]["fail"], 0)
+
+        different_source = self._comparison_report(label="after")
+        source_path = proof.REQUIRED_SOURCE_FILES[0]
+        different_source["source"]["files"][source_path]["sha256"] = "c" * 64
+        self.assertGreater(proof.compare_reports(baseline, different_source)["summary"]["fail"], 0)
+
+        different_updater = self._comparison_report(updater_digest="d" * 64, label="after")
+        self.assertGreater(proof.compare_reports(baseline, different_updater)["summary"]["fail"], 0)
+
+        stale_surface = self._comparison_report(runtime_matches=False, label="after")
+        self.assertGreater(proof.compare_reports(baseline, stale_surface)["summary"]["fail"], 0)
+
+        failed_after = self._comparison_report(fail_count=1, label="after")
+        self.assertGreater(proof.compare_reports(baseline, failed_after)["summary"]["fail"], 0)
+
+    def test_load_report_is_bounded_and_requires_current_schema(self):
+        report = self._comparison_report()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            valid = root / "valid.json"
+            valid.write_text(json.dumps(report), encoding="utf-8")
+            self.assertEqual(proof.load_report(valid)["schema"], proof.SCHEMA)
+
+            wrong = root / "wrong.json"
+            wrong.write_text(json.dumps({**report, "schema": "wrong/1"}), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                proof.load_report(wrong)
+
+            oversized = root / "oversized.json"
+            oversized.write_bytes(b"{" + b" " * proof.MAX_REPORT + b"}")
+            with self.assertRaises(ValueError):
+                proof.load_report(oversized)
 
     def test_source_snapshot_hashes_required_modules(self):
         with tempfile.TemporaryDirectory() as directory:
