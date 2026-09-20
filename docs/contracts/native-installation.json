@@ -73,7 +73,21 @@
     },
     "native_read_only_broker": "system/surface/runtime/native_install_broker.sh",
     "native_read_only_loopback_api": "/__ordax/native/native-install-targets",
-    "native_surface_target_port": "system/adapters/native/native-install-targets.mjs"
+    "native_surface_target_port": "system/adapters/native/native-install-targets.mjs",
+    "native_boot_kernel_prerequisites": {
+      "kernel": "shared-canonical-kernel",
+      "built_in": [
+        "CONFIG_BLK_DEV_DM=y",
+        "CONFIG_DM_CRYPT=y",
+        "CONFIG_CRYPTO_AES=y",
+        "CONFIG_CRYPTO_XTS=y",
+        "CONFIG_BTRFS_FS=y",
+        "CONFIG_BTRFS_FS_POSIX_ACL=y"
+      ],
+      "implemented": true,
+      "separate_native_kernel": false
+    },
+    "native_boot_initramfs": false
   },
   "fail_closed": [
     "never-touch-physical-device-during-plan",
