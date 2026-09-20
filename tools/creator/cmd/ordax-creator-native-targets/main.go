@@ -28,7 +28,9 @@ func readSourceBootDevice(path string) (string, error) {
 }
 
 func main() {
-	sourceFile := flag.String("source-device-file", "/run/ordax-install/source-block-device", "protected initramfs handoff with current OrdaX source block device")
+	sourceFile := flag.String("source-device-file", "", "optional explicit /dev source override for bounded tests/recovery only")
+	mountinfo := flag.String("mountinfo", "/proc/self/mountinfo", "Linux mountinfo used to identify current OrdaX source block device")
+	sourceMountpoint := flag.String("source-mountpoint", "/ordax", "current mounted OrdaX release/bootstrap filesystem")
 	sysClassBlock := flag.String("sys-class-block", "/sys/class/block", "Linux sysfs block class root")
 	devRoot := flag.String("dev-root", "/dev", "Linux block device root")
 	confirm := flag.String("confirm", "", "re-enumerate and bind a previously selected Native target token")
@@ -38,7 +40,13 @@ func main() {
 		os.Exit(2)
 	}
 
-	sourceDevice, err := readSourceBootDevice(*sourceFile)
+	var sourceDevice string
+	var err error
+	if strings.TrimSpace(*sourceFile) != "" {
+		sourceDevice, err = readSourceBootDevice(*sourceFile)
+	} else {
+		sourceDevice, err = linuxadapter.DiscoverMountedBlockDevice(*mountinfo, *sourceMountpoint)
+	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ordax-creator-native-targets:", err)
 		os.Exit(1)
