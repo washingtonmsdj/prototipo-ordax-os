@@ -1,0 +1,94 @@
+{
+  "$schema": "prototype-ordax.native-qemu-boot-proof/1",
+  "status": "defined-execution-pending",
+  "scope": "disposable-uefi-to-native-bootstrap-handoff",
+  "ci_only": true,
+  "end_user_qemu_requirement": false,
+  "physical_target_device_paths_allowed": false,
+  "host_loop_devices_allowed": true,
+  "physical_write_authorized": false,
+  "physical_native_boot_proven": false,
+  "production_release_handoff_proven": false,
+  "expected_product_mode": "native-disk",
+  "expected_state_dir": "/var/lib/ordax",
+  "expected_user_home": "/var/home",
+  "expected_subvolumes": [
+    "ordax-state",
+    "ordax-home",
+    "ordax-apps",
+    "ordax-containers",
+    "ordax-snapshots"
+  ],
+  "artifact_binding": {
+    "native_esp_proof_schema": "prototype-ordax.native-esp-proof-result/1",
+    "exact_source_commit_required": true,
+    "bootloader_hash_must_match_esp_proof": true,
+    "kernel_hash_must_match_esp_proof": true,
+    "initramfs_hash_must_match_esp_proof": true,
+    "rendered_pool_uuid_must_match_luks2_partition": true
+  },
+  "guest_disk": {
+    "partition_table": "gpt",
+    "esp": {
+      "name": "ORDAX-ESP",
+      "filesystem": "fat32",
+      "type_guid": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
+      "size_bytes": 1073741824
+    },
+    "pool": {
+      "name": "ORDAX-POOL",
+      "encryption": "luks2",
+      "filesystem": "btrfs",
+      "type_guid": "ca7d7ccb-63ed-4c53-861c-1742536059cc"
+    },
+    "real_hardware": false
+  },
+  "unlock": {
+    "mechanism": "interactive-virtual-ps2-keyboard",
+    "passphrase_generated_at_runtime": true,
+    "passphrase_in_repository": false,
+    "passphrase_in_kernel_cmdline": false,
+    "passphrase_in_esp": false,
+    "passphrase_in_initramfs": false,
+    "passphrase_in_proof_metadata": false,
+    "ephemeral_key_file_destroyed_before_vm_boot": true
+  },
+  "qemu": {
+    "machine": "pc",
+    "acceleration": "tcg",
+    "network": "disabled",
+    "firmware": "ovmf",
+    "disk_transport": "piix-ide",
+    "serial_success_channel": "ttyS0",
+    "monitor": "private-unix-hmp"
+  },
+  "proof_requirements": [
+    "native-esp-proof-is-pass-and-bound-to-exact-source",
+    "qemu-disk-is-new-regular-sparse-file",
+    "guest-gpt-has-esp-and-luks-pool-only",
+    "esp-contains-exact-verified-boot-artifacts-and-rendered-entries",
+    "luks2-partition-uuid-equals-rendered-entry-uuid",
+    "ephemeral-unlock-file-destroyed-before-qemu-launch",
+    "unlock-secret-enters-only-through-virtual-keyboard",
+    "native-initramfs-validates-product-mode-and-required-subvolumes",
+    "normal-boot-mounts-persistent-subvolumes-read-write",
+    "bootstrap-handoff-path-executes-proof-sentinel",
+    "serial-success-marker-is-observed",
+    "qemu-network-is-disabled",
+    "guest-disk-and-ovmf-vars-are-destroyed-before-success",
+    "physical-target-device-is-never-opened"
+  ],
+  "proof_owner": "tools/creator/proof/native_qemu_boot.py",
+  "workflow_owner": ".github/workflows/native-esp-candidate.yml",
+  "proof_output": "out/native-qemu-proof/proof.json",
+  "forbidden_claims": [
+    "production-stable-release-boot-proven",
+    "physical-native-boot-proven",
+    "physical-apply-authorized",
+    "qemu-required-for-end-users"
+  ],
+  "product_scope": "post-mvp-foundation",
+  "mvp_blocker": false,
+  "mvp_user_facing": false,
+  "foundation_retained": true
+}

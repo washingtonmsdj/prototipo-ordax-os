@@ -22,7 +22,8 @@
     "release-acquisition",
     "release-trust",
     "release-channel",
-    "recovery-maintenance"
+    "recovery-maintenance",
+    "product-mode-identity"
   ],
   "optional_after_first_release": [
     "stable-device-identity",
@@ -87,10 +88,10 @@
         {
           "source_path": "bootstrap/kernel/vmlinuz-6.6.52",
           "target_path": "/ordax/vmlinuz",
-          "sha256": "e080323be390b2e921ed34286794cbce18642b653fc6790ae308f61720c90ba1",
+          "sha256": "43652d59b476e5c1db159ddd39b99bec40cc7e7f1d8879be393ac87534233ee0",
           "mode": "0644",
           "logical_owner": "kernel",
-          "reason": "Clean Linux 6.6.52 candidate with built-in first-acquisition Ethernet and USB-tether paths"
+          "reason": "Shared Linux 6.6.52 candidate with built-in portable USB v2 exFAT/EROFS/loop/OverlayFS prerequisites plus retained post-MVP Native dm-crypt/AES-XTS/Btrfs prerequisites"
         }
       ]
     },
@@ -103,10 +104,10 @@
         {
           "source_path": "bootstrap/initramfs/initramfs.cpio.gz",
           "target_path": "/ordax/initrd.gz",
-          "sha256": "0ab029ce888dca00f8cb7415cf8c2bcee066f41ac7953d9c46f6b8206e6b2f37",
+          "sha256": "11ea01da99a7c1002f218abe6112908cb458ddac1d602b624c2bb5780653dc16",
           "mode": "0644",
           "logical_owner": "initramfs",
-          "reason": "Fixed clean-room capsule that checks ORDAX ext4 health before writable boot, mounts errored filesystems read-only for recovery, grows healthy ext4 only during normal boot, and hands off to /ordax/bootstrap/entrypoint"
+          "reason": "Fixed clean-room capsule with legacy physical boot unchanged plus isolated portable-v2 helpers, exact current/known-good selection, loop/exFAT/FAT-volume-ID primitives, BusyBox mount security-flag parsing, POSIX test/[ support and fail-closed candidate PID1 support"
         }
       ]
     },
@@ -120,10 +121,10 @@
         {
           "source_path": "bootstrap/entrypoint",
           "target_path": "/ordax/bootstrap/entrypoint",
-          "sha256": "2bc4c9fe80f17a19e37376fd7a0736b396b102dba620e2de4fb3fd02e5f80bb9",
+          "sha256": "b8f1410cddc3e4102b4e45e49318ed8d0258d63d93eec064201bb1692ce5645a",
           "mode": "0755",
           "logical_owner": "bootstrap-orchestrator",
-          "reason": "Prefer known-good offline current release, otherwise acquire the first signed release through bounded network/bootstrap owners"
+          "reason": "Prefer known-good offline current release, bind explicit USB/native-disk product mode, otherwise acquire the first signed release through bounded network/bootstrap owners"
         }
       ]
     },
@@ -170,10 +171,10 @@
         {
           "source_path": "bootstrap/release-acquisition/ordax-release-agent",
           "target_path": "/ordax/bootstrap/release-acquisition/ordax-release-agent",
-          "sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+          "sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
           "mode": "0755",
           "logical_owner": "bootstrap-release-acquisition",
-          "reason": "Static Linux amd64 release agent with signed channel inspect, exact materialization and offline activate-exact support; activation remains policy-gated by the Stable supervisor."
+          "reason": "Static Linux amd64 release agent with immutable v1 support plus signed portable manifest v2 inspect/materialize-portable/verify-portable-exact support; activation remains separately gated"
         }
       ]
     },
@@ -199,6 +200,23 @@
           "mode": "0644",
           "logical_owner": "bootstrap-release-channel",
           "reason": "Stable HTTPS pointer to the latest published signed release envelope on GitHub Releases; signature verification remains authoritative"
+        }
+      ]
+    },
+    {
+      "id": "bootstrap-product-mode",
+      "partition": "ORDAX",
+      "target_root": "/ordax/bootstrap/config",
+      "source_owner": "bootstrap/config",
+      "resolved": true,
+      "artifacts": [
+        {
+          "source_path": "bootstrap/config/product-mode",
+          "target_path": "/ordax/bootstrap/config/product-mode",
+          "sha256": "bd40397fe8fdda8c4f9d447f5db0a83a8c69a415be74ff1f78e0fb06654c32d1",
+          "mode": "0644",
+          "logical_owner": "bootstrap-product-mode",
+          "reason": "Explicit execution-mode identity; prepared USB carries usb and a future Native installation must materialize native-disk on the installed target"
         }
       ]
     },

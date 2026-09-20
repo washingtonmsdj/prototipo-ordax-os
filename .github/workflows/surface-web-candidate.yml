@@ -13,6 +13,7 @@ on:
       - 'system/contracts/surface-host.mjs'
       - 'system/contracts/network-status.mjs'
       - 'system/contracts/network-management.mjs'
+      - 'system/contracts/native-install-targets.mjs'
       - 'system/contracts/preference-store.mjs'
       - 'system/contracts/preference-runtime.mjs'
       - 'system/contracts/sync-runtime.mjs'
@@ -114,6 +115,8 @@ on:
       - 'tests/test_network_status.mjs'
       - 'tests/test_network_management.mjs'
       - 'tests/test_network_management_runtime.mjs'
+      - 'tests/test_native_install_targets.mjs'
+      - 'tests/test_native_install_runtime.py'
       - 'tests/test_client_diagnostics.mjs'
       - 'tests/test_diagnostic_*.mjs'
       - 'tests/test_diagnostic_*.py'
@@ -131,6 +134,7 @@ on:
       - 'system/contracts/surface-host.mjs'
       - 'system/contracts/network-status.mjs'
       - 'system/contracts/network-management.mjs'
+      - 'system/contracts/native-install-targets.mjs'
       - 'system/contracts/preference-store.mjs'
       - 'system/contracts/preference-runtime.mjs'
       - 'system/contracts/sync-runtime.mjs'
@@ -232,6 +236,8 @@ on:
       - 'tests/test_network_status.mjs'
       - 'tests/test_network_management.mjs'
       - 'tests/test_network_management_runtime.mjs'
+      - 'tests/test_native_install_targets.mjs'
+      - 'tests/test_native_install_runtime.py'
       - 'tests/test_client_diagnostics.mjs'
       - 'tests/test_diagnostic_*.mjs'
       - 'tests/test_diagnostic_*.py'
@@ -318,6 +324,7 @@ jobs:
           node --test tests/test_network_status.mjs
           node --test tests/test_network_management.mjs
           node --test tests/test_network_management_runtime.mjs
+          node --test tests/test_native_install_targets.mjs
           node --test tests/test_client_diagnostics.mjs
           node --test tests/test_diagnostic_*.mjs
           node --test tests/test_sync_*.mjs
@@ -344,6 +351,7 @@ jobs:
           python -m unittest tests.test_internet_history_contract -v
           python -m unittest tests.test_native_host_module_integrity -v
           python -m unittest tests.test_native_request_boundary -v
+          python -m unittest tests.test_native_install_runtime -v
           python -m unittest tests.test_system_runtime_contract -v
           python -m unittest tests.test_third_party_inventory -v
 

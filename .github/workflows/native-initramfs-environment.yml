@@ -1,0 +1,110 @@
+name: Native Initramfs Environment Observation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/contracts/native-initramfs-build-environment.json'
+      - 'docs/contracts/kernel-build-environment.json'
+      - 'bootstrap/native-initramfs/**'
+      - '.github/workflows/native-initramfs-environment.yml'
+  pull_request:
+    paths:
+      - 'docs/contracts/native-initramfs-build-environment.json'
+      - 'docs/contracts/kernel-build-environment.json'
+      - 'bootstrap/native-initramfs/**'
+      - '.github/workflows/native-initramfs-environment.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Resolve immutable environment
+        id: env
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pathlib
+          value = json.loads(pathlib.Path('docs/contracts/native-initramfs-build-environment.json').read_text())
+          image = value['base_image']['repository'] + '@' + value['base_image']['manifest_digest']
+          print('image=' + image)
+          print('snapshot=' + value['apt']['snapshot_id'])
+          print('packages=' + ' '.join(value['apt']['top_level_packages']))
+          PY
+
+      - name: Pull base image by digest
+        env:
+          IMAGE: ${{ steps.env.outputs.image }}
+        run: |
+          set -euo pipefail
+          docker pull "$IMAGE"
+          expected="${IMAGE##*@}"
+          docker image inspect --format '{{json .RepoDigests}}' "$IMAGE" | grep -Fq "@$expected"
+
+      - name: Observe exact snapshot package and runtime closure
+        env:
+          IMAGE: ${{ steps.env.outputs.image }}
+          SNAPSHOT_ID: ${{ steps.env.outputs.snapshot }}
+          PACKAGES: ${{ steps.env.outputs.packages }}
+        run: |
+          set -euo pipefail
+          rm -rf out/native-initramfs-environment
+          mkdir -p out/native-initramfs-environment
+          docker run --rm \
+            -e SNAPSHOT_ID="$SNAPSHOT_ID" \
+            -e PACKAGES="$PACKAGES" \
+            -e IMAGE="$IMAGE" \
+            -e HOST_UID="$(id -u)" \
+            -e HOST_GID="$(id -g)" \
+            -v "$PWD:/repo" \
+            -w /repo \
+            "$IMAGE" \
+            bash -lc '
+              set -euo pipefail
+              export DEBIAN_FRONTEND=noninteractive
+              test -s /usr/share/keyrings/ubuntu-archive-keyring.gpg
+              rm -f /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources
+              snapshot_uri="https://snapshot.ubuntu.com/ubuntu/$SNAPSHOT_ID"
+              printf "%s\n" \
+                "Types: deb" \
+                "URIs: $snapshot_uri" \
+                "Suites: noble noble-updates noble-backports noble-security" \
+                "Components: main universe restricted multiverse" \
+                "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" \
+                > /etc/apt/sources.list.d/ordax.sources
+
+              printf "%s\n" \
+                "Acquire::https::snapshot.ubuntu.com::Verify-Peer \"false\";" \
+                > /etc/apt/apt.conf.d/49ordax-ca-bootstrap
+              apt-get update --error-on=any
+              apt-get install -y --no-install-recommends ca-certificates
+              rm -f /etc/apt/apt.conf.d/49ordax-ca-bootstrap
+
+              apt-get update --error-on=any
+              apt-get install -y --no-install-recommends $PACKAGES
+
+              python3 bootstrap/native-initramfs/observe_environment.py \
+                docs/contracts/native-initramfs-build-environment.json \
+                --out /repo/out/native-initramfs-environment \
+                --base-image "$IMAGE" \
+                --snapshot-id "$SNAPSHOT_ID"
+
+              chown -R "$HOST_UID:$HOST_GID" /repo/out/native-initramfs-environment
+            '
+
+      - name: Upload environment observation
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: native-initramfs-environment-${{ github.sha }}
+          path: out/native-initramfs-environment/
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,260 @@
+{
+  "$schema": "prototype-ordax.portable-bootstrap-v2/1",
+  "status": "candidate-contract-not-physically-promoted",
+  "product_scope": "stable-mvp-usb-only",
+  "storage_profile": "portable-usb-v2",
+  "storage_contract": "docs/contracts/portable-usb-v2.json",
+  "boot_handoff_contract": "docs/contracts/portable-boot-handoff.json",
+  "release_protocol_contract": "docs/contracts/release-protocol.json",
+  "release_trust_policy_contract": "docs/contracts/release-trust-policy.json",
+  "physical_write_authorized": false,
+  "physical_boot_proven": false,
+  "secure_boot_claimed": false,
+  "partitions": [
+    {
+      "name": "ORDAX-ESP",
+      "filesystem": "fat32",
+      "role": "uefi-and-minimal-bootstrap-substrate",
+      "normal_runtime_mount": "read-only"
+    },
+    {
+      "name": "ORDAX-DATA",
+      "filesystem": "exfat",
+      "role": "immutable-releases-persistent-state-container-and-user-data"
+    }
+  ],
+  "first_boot": {
+    "network_required": false,
+    "offline_capable_required": true,
+    "creator_must_preseed_verified_release": true,
+    "release_schema": "prototype-ordax.release-manifest/2",
+    "release_artifact": "system.erofs",
+    "release_bundle_layout": ".ordax/releases/<source_commit>/{system.erofs,release-manifest.json,release-envelope.json}",
+    "persistent_state_image": ".ordax/state/persistent-state.img",
+    "initial_current_equals_known_good": true,
+    "initial_candidate_absent": true,
+    "initial_transaction_absent": true,
+    "boot_must_reverify_exact_release_offline": true,
+    "fallback_must_not_require_network": true
+  },
+  "esp_substrate": {
+    "system_or_apps_preinstalled": false,
+    "complete_product_release_on_esp": false,
+    "allowed_classes": [
+      "uefi-loader",
+      "loader-configuration",
+      "kernel",
+      "initramfs",
+      "minimal-bootstrap-capsule",
+      "local-recovery-metadata"
+    ],
+    "forbidden_classes": [
+      "surface-runtime",
+      "normal-apps",
+      "user-home",
+      "user-files",
+      "git-checkout",
+      "build-toolchain",
+      "publisher-private-key"
+    ],
+    "bootstrap_capsule": {
+      "target_path": "/ordax/bootstrap/bootstrap.erofs",
+      "filesystem": "erofs",
+      "read_only": true,
+      "purpose": "small versioned bootstrap support outside the fixed initramfs",
+      "may_contain": [
+        "release-agent",
+        "release-channel-config",
+        "minimal-network-tools",
+        "ca-certificates",
+        "recovery-entrypoint"
+      ],
+      "must_not_contain": [
+        "publisher-private-key",
+        "surface-runtime",
+        "normal-apps",
+        "complete-source-checkout"
+      ],
+      "hash_pin_required_before_pid1_use": true,
+      "hash_pin_owner": "initramfs-build-provenance",
+      "implemented": false,
+      "contract": "docs/contracts/portable-bootstrap-capsule.json",
+      "candidate_builder_implemented": true,
+      "deterministic_proof_implemented": true,
+      "esp_materialization_implemented": false,
+      "initramfs_hash_pin_implemented": true,
+      "pid1_verified_mount_implemented": false,
+      "initramfs_hash_pin_builder_support": true,
+      "initramfs_hash_pin_disposable_proof_implemented": true,
+      "initramfs_hash_pin_candidate_only": true,
+      "initramfs_hash_pin_default_candidate_build_enabled": false,
+      "pid1_hash_enforcement_implemented": false,
+      "hash_verification_primitive_implemented": true,
+      "read_only_mount_helper_implemented": true,
+      "hash_verification_helper_installed": true,
+      "hash_verification_helper_path": "/sbin/ordax-portable-capsule-verify",
+      "hash_verification_helper_fixed_paths": true,
+      "hash_verification_helper_provenance_recorded": true,
+      "hash_verification_helper_mounts_capsule": false,
+      "hash_verification_helper_pid1_connected": false
+    }
+  },
+  "release_trust": {
+    "canonical_public_anchor_required": true,
+    "canonical_public_anchor_currently_pinned": false,
+    "publisher_private_key_on_media": false,
+    "trust_anchor_must_not_be_selected_from_ordax_data": true,
+    "trust_anchor_must_be_bootstrap_owned": true,
+    "runtime_tamper_resistance_without_secure_boot_claimed": false,
+    "note": "Release signing protects the release protocol; hardware-rooted boot-chain integrity is not claimed until Secure Boot or an equivalent measured/verified boot boundary is implemented."
+  },
+  "creator": {
+    "same_creator_core_required": true,
+    "portable_storage_planner": "PlanPortableTargetStorage",
+    "preseed_release_before_success": true,
+    "preseed_persistent_state_before_success": true,
+    "post_write_readback_required": true,
+    "internal_disk_write_allowed": false,
+    "native_install_exposed": false,
+    "physical_apply_enabled": false
+  },
+  "boot_sequence_target": [
+    "uefi-load-from-ORDAX-ESP",
+    "kernel-initramfs",
+    "mount-ORDAX-ESP-read-only",
+    "verify-and-mount-bootstrap-capsule",
+    "mount-ORDAX-DATA-exfat",
+    "attach-and-mount-persistent-state-ext4",
+    "read-current-or-known-good-from-ext4",
+    "reverify-selected-release-envelope-manifest-hash-and-erofs-offline",
+    "verify-stable-base-against-initramfs-owned-pin",
+    "mount-stable-base-erofs-read-only-and-compose-base-overlay-with-ext4-upper-work",
+    "mount-selected-system-erofs-read-only",
+    "bind-verified-system-subtree-read-only",
+    "switch-root-into-stable-base-overlay",
+    "launch-ordax-stable-init-with-portable-v2-identity"
+  ],
+  "migration": {
+    "transitional_minimal_bootstrap_contract_unchanged": true,
+    "transitional_three_partition_writer_unchanged": true,
+    "portable_v2_writer_migration_implemented": false,
+    "portable_v2_pid1_integration_implemented": false,
+    "public_physical_promotion_allowed": false,
+    "portable_v2_pid1_candidate_installed": true
+  },
+  "initramfs_helpers": {
+    "portable_state_reader": {
+      "path": "/sbin/ordax-portable-state",
+      "installed": true,
+      "read_only": true,
+      "pid1_connected": false,
+      "operations": [
+        "read-slot",
+        "resolve",
+        "select"
+      ],
+      "selection_order": [
+        "current",
+        "known-good"
+      ],
+      "selects_materialized_release_shape": true,
+      "verifies_signature": false,
+      "candidate_is_boot_authority": false,
+      "resolves_exact_boot_slots": [
+        "current",
+        "known-good"
+      ],
+      "resolve_candidate_allowed": false,
+      "resolve_verifies_signature": false
+    },
+    "portable_mount_helper": {
+      "path": "/sbin/ordax-portable-mount",
+      "installed": true,
+      "mounts_state_ext4": true,
+      "mounts_release_erofs_read_only": true,
+      "selects_release": false,
+      "verifies_signature": false,
+      "writes_activation_state": false,
+      "pid1_connected": false,
+      "mounts_bootstrap_capsule_erofs_read_only": true,
+      "checks_bootstrap_capsule_payload_shape": true,
+      "verifies_capsule_hash": false,
+      "capsule_hash_verification_owner": "busybox-sha256sum-against-initramfs-pin",
+      "composes_stable_base_overlayfs": true,
+      "system_runtime_view": "read-only-bind",
+      "system_persistent_overlay": false
+    },
+    "portable_candidate_pid1": {
+      "path": "/sbin/ordax-portable-init",
+      "installed": true,
+      "default_init": false,
+      "invocation_for_disposable_proof": "rdinit=/sbin/ordax-portable-init",
+      "physical_boot_entry_implemented": false,
+      "current_then_known_good": true,
+      "exact_signed_release_verification": true,
+      "candidate_boot_authority": false,
+      "network_required": false,
+      "switches_root_to": "stable-base-overlay",
+      "physical_boot_authorized": false
+    }
+  },
+  "stable_base": {
+    "contract": "bootstrap/stable-base/source.json",
+    "artifact_name": "stable-base.erofs",
+    "target_path": ".ordax/base/stable-base.erofs",
+    "candidate_builder_implemented": true,
+    "complete_minimal_os_userspace": true,
+    "git_client_embedded": false,
+    "product_system_tree_embedded": false,
+    "physical_materialization_implemented": false,
+    "initramfs_base_handoff_implemented": false,
+    "signed_update_integration_implemented": false,
+    "qemu_boot_proven": false,
+    "physical_boot_proven": false,
+    "alpine_archive_sha256_pinned": true,
+    "apk_package_versions_pinned": true,
+    "apk_package_lock_count": 40,
+    "apk_install_policy": "full-transitive-lock-exact-version-specs",
+    "pinning_evidence_commit": "daf33badda46b82b1d4e3faafcf040ca8dca479c",
+    "initramfs_hash_pin_builder_support": true,
+    "initramfs_hash_pin_implemented": true,
+    "initramfs_hash_pin_candidate_only": true,
+    "initramfs_hash_pin_default_candidate_build_enabled": false,
+    "expected_runtime_path": "/ordax-data/.ordax/base/stable-base.erofs",
+    "hash_verification_helper_installed": true,
+    "hash_verification_helper_path": "/sbin/ordax-portable-base-verify",
+    "hash_verification_helper_fixed_paths": true,
+    "hash_verification_helper_pid1_connected": false,
+    "pid1_hash_enforcement_implemented": false
+  },
+  "pinned_initramfs_composition_proof": {
+    "contract": "docs/contracts/portable-v2-pinned-initramfs-proof.json",
+    "workflow_implemented": true,
+    "proof_passed_on_current_head": false,
+    "capsule_and_stable_base_real_artifacts_required": true,
+    "tamper_rejection_required": true,
+    "pid1_default_changed": false,
+    "physical_boot_connected": false,
+    "public_physical_promotion_allowed": false
+  },
+  "qemu_direct_kernel_proof": {
+    "contract": "docs/contracts/portable-v2-qemu-boot-proof.json",
+    "workflow_implemented": true,
+    "proof_passed_on_current_head": false,
+    "direct_kernel_only": true,
+    "uefi_boot_proven": false,
+    "physical_boot_proven": false,
+    "public_physical_promotion_allowed": false
+  },
+  "qemu_uefi_proof": {
+    "contract": "docs/contracts/portable-v2-uefi-boot-proof.json",
+    "workflow_implemented": true,
+    "proof_passed_on_current_head": false,
+    "pinned_systemd_boot_required": true,
+    "dedicated_portable_loader_entry": true,
+    "non_secure_boot_ovmf_only": true,
+    "secure_boot_proven": false,
+    "physical_boot_proven": false,
+    "public_physical_promotion_allowed": false
+  }
+}

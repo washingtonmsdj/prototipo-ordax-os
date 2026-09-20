@@ -139,9 +139,12 @@ class FoundationContractTest(unittest.TestCase):
     def test_one_account_syncs_safe_state_across_modes(self):
         sync = self.contract["account_sync"]
         self.assertTrue(sync["single_identity_across_all_modes"])
-        self.assertTrue(sync["core_cross_device_sync_available_to_all_accounts"])
+        self.assertFalse(sync["core_cross_device_sync_available_to_all_accounts"])
+        self.assertFalse(sync["cross_device_sync_implemented_in_mvp"])
+        self.assertTrue(sync["cross_device_sync_architecture_prepared"])
         self.assertFalse(sync["account_access_may_be_blocked_by_plan"])
-        self.assertTrue(sync["plan_entitlements_may_expand_sync"])
+        self.assertFalse(sync["plan_entitlements_may_expand_sync"])
+        self.assertTrue(sync["future_entitlements_may_expand_service_capacity"])
         self.assertTrue(sync["offline_first_clients_allowed"])
         self.assertTrue(sync["encrypted_transport_required"])
         self.assertTrue(sync["server_side_authorization_required"])
@@ -152,15 +155,19 @@ class FoundationContractTest(unittest.TestCase):
         self.assertIn("device-private-keys", sync["never_sync_categories"])
         self.assertIn("machine-identity-secrets", sync["never_sync_categories"])
 
-    def test_plans_expand_entitlements_without_fragmenting_identity(self):
+    def test_commercial_policy_is_deferred_without_fragmenting_identity(self):
         plans = self.contract["plans"]
+        self.assertFalse(plans["billing_implemented"])
         self.assertFalse(plans["pricing_defined"])
+        self.assertFalse(plans["commercial_tiers_defined"])
+        self.assertFalse(plans["commercial_device_limit_defined"])
+        self.assertFalse(plans["second_device_fee_policy_defined"])
         self.assertFalse(plans["identity_is_plan_gated"])
-        self.assertFalse(plans["basic_cross_device_sync_is_plan_gated"])
-        self.assertTrue(plans["entitlements_are_server_authoritative"])
-        self.assertIn("cloud-storage-quota", plans["paid_tiers_may_expand"])
-        self.assertIn("sync-history-retention", plans["paid_tiers_may_expand"])
-        self.assertIn("device-backup", plans["paid_tiers_may_expand"])
+        self.assertTrue(plans["entitlement_architecture_prepared"])
+        self.assertTrue(plans["future_entitlements_are_server_authoritative"])
+        self.assertIn("synchronization", plans["future_value_categories"])
+        self.assertIn("cloud-storage", plans["future_value_categories"])
+        self.assertIn("backup-restore", plans["future_value_categories"])
 
     def test_surface_has_one_source_for_every_product_mode(self):
         surface = self.contract["surface"]

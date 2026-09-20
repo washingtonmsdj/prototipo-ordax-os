@@ -16,11 +16,11 @@ Native
 
 The account owns identity, entitlements and synchronized user state. A device owns only device-local state and secrets.
 
-## Baseline sync
+## Cross-device continuity — future architecture
 
-Basic cross-device continuity is part of the account model and is not reserved for a paid tier.
+Cross-device synchronization is **not an active MVP capability**. Web, Mobile, synchronization, backup and continuity may be communicated only as **Em breve** until real services exist.
 
-Baseline sync may include:
+The architecture remains prepared for future synchronized state such as:
 
 - appearance and theme;
 - preferences;
@@ -28,7 +28,7 @@ Baseline sync may include:
 - app-state metadata that is safe to move between devices;
 - explicitly selected cloud-backed user content.
 
-A user should be able to start on Web, continue on a phone, open Desktop later and finally boot OrdaX without creating a new identity or manually rebuilding basic preferences.
+The long-term target is that one identity can continue safely across supported experiences without account silos. This is a future service objective, not an MVP availability claim.
 
 ## Never-sync boundary
 
@@ -76,28 +76,14 @@ Synchronization requires:
 
 Platform biometric APIs may protect local session access, but biometrics do not replace canonical account authentication or server authorization.
 
-## Plans are entitlements, not separate products
+## Monetization architecture — commercial policy deferred
 
-Pricing and commercial names are intentionally deferred. The foundation defines only entitlement behavior.
+No billing, price table, commercial tier name or device-count paywall is defined for the MVP.
 
-Suggested product structure:
+The account/domain architecture keeps an entitlement boundary so future services can be authorized server-side without fragmenting identity. Potential value-bearing categories include synchronization capacity/history, cloud storage, backup/restore, PC/Web/Mobile continuity, collaboration, premium compute/features and enhanced recovery/support.
 
-```text
-Core account
-  -> identity on every supported mode
-  -> basic cross-device sync
-  -> modest cloud quota
+The direction is to charge for **ecosystem value and service capacity**, not to impose an arbitrary fee merely because a user connects a second device.
 
-Expanded plan(s)
-  -> larger cloud quota
-  -> longer sync/version history
-  -> device backup/restore
-  -> advanced collaboration
-  -> premium AI compute/features
-  -> enhanced recovery/support
-```
-
-This can later become Free / Plus / Pro / Family / Business or another commercial structure without changing the account architecture.
 
 ## Downgrade safety
 
@@ -105,11 +91,11 @@ A plan downgrade must not silently delete user data. If the stored amount exceed
 
 Exact retention and grace-period policy is a later commercial decision, but destructive surprise is forbidden.
 
-## Device limits
+## Devices
 
-Device-count limits, if ever introduced, are an entitlement policy rather than a new identity system. Revoking one device must not invalidate the account on all other devices.
+The MVP defines **no commercial device-count limit**.
 
-A device registry should distinguish sessions/devices and support remote sign-out without synchronizing device-private keys.
+A future device registry exists for session security, revocation, continuity and device management. It distinguishes devices/sessions without synchronizing device-private keys. Any future commercial limit requires a separate explicit decision; charging merely for a second device is not the current direction.
 
 ## Data ownership and portability
 

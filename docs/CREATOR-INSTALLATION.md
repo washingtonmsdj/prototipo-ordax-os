@@ -161,6 +161,24 @@ Git main
 
 The user's machine needs only the signed Creator application, its verified payload and normal administrator authorization for the narrow raw-device step.
 
+## Native installation foundation — post-MVP
+
+The public MVP Creator prepares **removable OrdaX USB media only**. It does not install OrdaX to an internal SSD/NVMe/HDD and does not expose dual boot, resize or a partition editor.
+
+The same Creator Core already contains non-destructive Native planning and supporting architecture:
+
+```text
+PlanNativeDiskTargetStorage
+ -> PlanNativeInstallation
+ -> target identity/revalidation
+ -> Native storage / boot proofs
+```
+
+Those foundations are intentionally retained for a post-MVP activation. They must not be deleted or reimplemented as a second installer. Stable/MVP keeps the Native install capability disabled and does not authorize internal-disk APPLY.
+
+When Native is deliberately promoted after the MVP, it must continue through the same Creator Core, signed release trust, exact-target identity, destructive authorization and hardware-validation gates documented in `docs/NATIVE-INSTALLATION.md` and `docs/contracts/native-installation.json`.
+
+
 ## Transition into the full Desktop product
 
 When OrdaX Desktop is ready, its button such as `Create OrdaX USB` invokes the same Core. The standalone prototype shell can then disappear without changing provisioning policy or media format.

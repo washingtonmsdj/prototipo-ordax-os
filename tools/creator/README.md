@@ -4,7 +4,7 @@
 
 The permanent end-user experience belongs inside OrdaX Desktop, but the prototype may publish a small `ordax-creator.exe` shell before the complete Desktop UI exists. Both must use the same Creator Core; a second flasher policy implementation is forbidden.
 
-Goal: prepare USB media and, later, native SSD/HD installation without requiring Codex, WSL, QEMU or a kernel toolchain on the user's machine.
+Goal: prepare verified **USB media for the public MVP** without requiring Codex, WSL, QEMU or a kernel toolchain on the user's machine. Native SSD/NVMe/HDD work is retained as a post-MVP foundation and is not a public MVP capability.
 
 ```text
 tools/creator/
@@ -89,6 +89,22 @@ The proof verifies:
 
 `.github/workflows/creator-disposable-media.yml` routes its input through the Creator Core `stage-tree` first, then runs the GPT/filesystem proof. CI publishes only `proof.json`; the RAW is ephemeral and deleted.
 
+## MVP durable USB migration boundary
+
+The existing three-partition prepared-media path (`ORDAX-ESP + ORDAX + ORDAX-DATA`) is retained only as an Owner/Development hardware-validation bridge. Its contract is `docs/contracts/physical-prepared-media.json`, and it must not be promoted as the Stable/MVP final layout.
+
+The public MVP target is `docs/contracts/portable-usb-v2.json`:
+
+```text
+ORDAX-ESP   FAT32
+ORDAX-DATA  exFAT
+  .ordax/base/stable-base.erofs
+  .ordax/releases/<commit>/system.erofs
+  .ordax/state/persistent-state.img
+```
+
+The Creator Core already owns the v2 geometry through `PlanPortableTargetStorage`. Physical v2 apply remains disabled until the prepared-media proof, UEFI/QEMU gate, canonical trust and physical USB gates all pass.
+
 ## Release bootstrap inputs
 
 The release-channel pointer is now canonical and hash-bound in the minimal-bootstrap manifest:
@@ -128,6 +144,19 @@ EXPLICIT_OWNER_AUTHORIZATION_FIRST_USB=RECORDED
 CANONICAL_RELEASE_TRUST=PENDING
 AUTHORIZED_PHYSICAL_CANDIDATE=PENDING_CANONICAL_TRUST
 PHYSICAL_USB_WRITE=BLOCKED_UNTIL_PROMOTION_GATES_PASS
+NATIVE_INSTALL_GEOMETRY_PLAN=IMPLEMENTED
+NATIVE_INSTALL_PLAN=IMPLEMENTED_NON_DESTRUCTIVE
+NATIVE_INSTALL_TARGET_IDENTITY_BINDING=IMPLEMENTED_CORE
+NATIVE_INSTALL_TARGET_ADAPTER_DISCOVERY=IMPLEMENTED_READ_ONLY
+NATIVE_INSTALL_SOURCE_BOOT_MOUNT_DISCOVERY=IMPLEMENTED
+NATIVE_INSTALL_PRODUCT_MODE_IDENTITY=IMPLEMENTED
+NATIVE_INSTALL_READ_ONLY_BROKER=IMPLEMENTED
+NATIVE_INSTALL_SURFACE_DISCOVERY_PORT=IMPLEMENTED
+NATIVE_INSTALL_PHYSICAL_APPLY=PENDING
+NATIVE_INSTALL_FIRST_BOOT_HEALTH=PENDING
+MVP_NATIVE_INSTALL_CAPABILITY=DISABLED
+MVP_INTERNAL_DISK_WRITE=FORBIDDEN
+NATIVE_INSTALL_FOUNDATION_PHASE=POST_MVP
 ```
 
 The development `OrdaX-Creator.exe` is intentionally useful for the graphical workflow, automatic development updates and safe USB discovery, but it cannot acquire a raw writer because its physical trust binding is unresolved. This separation prevents an ordinary development build from becoming destructive by accident.
@@ -162,3 +191,12 @@ ordax-creator stage-tree \
 ```
 
 See `docs/CREATOR-INSTALLATION.md`, `docs/PHYSICAL-MEDIA.md`, `docs/RELEASE-TRUST-CEREMONY.md` and `docs/PROMOTION-GATES.md`.
+
+## Native installation foundation — post-MVP
+
+The durable Native target geometry, target-identity binding, boot assets and non-destructive planners remain implemented and covered by engineering proofs.
+
+`ordax-creator plan-native` and related Native commands belong to the **engineering CLI/proof surface**, not to the public Stable/MVP Creator experience. The official MVP Creator UI prepares removable OrdaX USB media only and must not advertise or authorize internal-disk installation.
+
+Native code remains in the same Creator Core so a later product promotion can activate it deliberately without creating a second installer or divergent storage policy.
+

@@ -344,7 +344,12 @@ class NativeUserFilesTests(unittest.TestCase):
     def test_native_runtime_keeps_user_data_separate_from_device_state(self):
         launcher = SURFACE_LAUNCHER.read_text(encoding="utf-8")
         self.assertIn('PERSISTENT_NATIVE_STATE=$STATE_ROOT/native-state', launcher)
-        self.assertIn('PERSISTENT_USER_HOME=$STATE_ROOT/home', launcher)
+        self.assertIn('PERSISTENT_USER_HOME=${ORDAX_USER_HOME:-$STATE_ROOT/home}', launcher)
+        self.assertIn('PERSISTENT_NATIVE_STATE=$STATE_ROOT/native-state', launcher)
+        self.assertNotEqual(
+            'PERSISTENT_USER_HOME=${ORDAX_USER_HOME:-$STATE_ROOT/home}',
+            'PERSISTENT_NATIVE_STATE=$STATE_ROOT/native-state',
+        )
         self.assertIn('$RUNTIME_ROOT/var/lib/ordax-user', launcher)
         self.assertIn('--user-root /var/lib/ordax-user', launcher)
         self.assertIn('mount -o bind "$PERSISTENT_USER_HOME"', launcher)

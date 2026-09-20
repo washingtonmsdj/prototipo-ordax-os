@@ -42,6 +42,8 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn("releases/*)", text)
         self.assertIn("ORDAX_DISTRIBUTION_PROFILE=stable-mvp", text)
         self.assertIn('ORDAX_SOURCE_SHA="$source_sha"', text)
+        self.assertIn('ORDAX_PRODUCT_MODE="$mode"', text)
+        self.assertIn('PRODUCT_MODE_FILE=/ordax/bootstrap/config/product-mode', text)
         self.assertIn('boot_current || recovery "verified release handoff failed"', text)
 
     def test_owner_handoff_binds_git_head_to_owner_profile(self):
@@ -49,30 +51,46 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn('"$GIT_BIN" -C "$WORKTREE" rev-parse HEAD', text)
         self.assertIn("ORDAX_DISTRIBUTION_PROFILE=owner-development", text)
         self.assertIn('ORDAX_SOURCE_SHA="$source_sha"', text)
+        self.assertIn("ORDAX_PRODUCT_MODE=usb", text)
 
     def test_guardian_rebinds_stable_identity_from_current_release(self):
         text = ENTRYPOINT.read_text(encoding="utf-8")
         self.assertIn('DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}', text)
         self.assertIn('STABLE_ROOT=${ORDAX_STABLE_ROOT:-/ordax}', text)
+        self.assertIn('PRODUCT_MODE=${ORDAX_PRODUCT_MODE:-}', text)
+        self.assertIn('fail_closed "OrdaX product mode identity is missing or invalid"', text)
+        self.assertIn("export ORDAX_PRODUCT_MODE", text)
         resolver = text.split("stable_current_release_sha() {", 1)[1].split("\n}", 1)[0]
         self.assertIn('current=$STABLE_ROOT/current', resolver)
         self.assertIn('[ -L "$current" ]', resolver)
         self.assertIn('releases/*)', resolver)
+        stable_runtime = text.split("stable_release_identity_sha() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("legacy-tree)", stable_runtime)
+        self.assertIn("stable_current_release_sha", stable_runtime)
+        self.assertIn("portable-v2)", stable_runtime)
+        self.assertIn("portable_stable_source_sha", stable_runtime)
         runtime = text.split("runtime_source_sha() {", 1)[1].split("\n}", 1)[0]
         self.assertIn("stable-mvp)", runtime)
-        self.assertIn("stable_current_release_sha", runtime)
+        self.assertIn("stable_release_identity_sha", runtime)
         heartbeat = text.split("write_base_update_heartbeat() {", 1)[1].split("\n}", 1)[0]
         self.assertIn("runtime_source_sha", heartbeat)
         refresh = text.split('if [ "$supervisor_rc" -eq 75 ]; then', 1)[1].split("\n    fi", 1)[0]
+        self.assertIn("legacy-tree)", refresh)
         self.assertIn("stable_current_release_sha", refresh)
         self.assertIn("ORDAX_SOURCE_SHA=$SOURCE_SHA_HINT", refresh)
+        self.assertIn("portable-v2)", refresh)
+        self.assertIn("portable-v2 guardian refresh is blocked", refresh)
 
     def test_stable_supervisor_stages_signed_release_before_owner_git_path(self):
         text = SUPERVISOR.read_text(encoding="utf-8")
         self.assertIn('DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}', text)
         current = text.split("current_sha() {", 1)[1].split("\n}", 1)[0]
         self.assertIn("stable-mvp)", current)
-        self.assertIn("stable_current_release_sha", current)
+        self.assertIn("stable_release_identity_sha", current)
+        layout = text.split("stable_release_identity_sha() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("legacy-tree)", layout)
+        self.assertIn("stable_current_release_sha", layout)
+        self.assertIn("portable-v2)", layout)
 
         check = text.split("check_for_update() {", 1)[1].split("\n}", 1)[0]
         stable_guard = '[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]'
@@ -107,6 +125,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn('start_surface_from_system "$SYSTEM_ROOT" "$(current_sha)"', start)
         shared_start = text.split("start_surface_from_system() {", 1)[1].split("\n}", 1)[0]
         self.assertIn('ORDAX_DISTRIBUTION_PROFILE="$DISTRIBUTION_PROFILE"', shared_start)
+        self.assertIn('ORDAX_PRODUCT_MODE="$PRODUCT_MODE"', shared_start)
         self.assertIn('ORDAX_SOURCE_SHA="$surface_source_sha"', shared_start)
         self.assertIn(
             'if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then\n    rm -f "$SUPERVISOR_GUARD_FILE"',
@@ -119,6 +138,19 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn("stable-mvp)", configure)
         self.assertIn("SOURCE_SHA=$SOURCE_SHA_HINT", configure)
         self.assertIn("owner-development)", configure)
+        self.assertIn('PRODUCT_MODE=${ORDAX_PRODUCT_MODE:-}', text)
+        self.assertIn('--product-mode "$PRODUCT_MODE"', text)
+        self.assertIn('--distribution-profile "$DISTRIBUTION_PROFILE"', text)
+        self.assertIn('--native-install-capability "$NATIVE_INSTALL_CAPABILITY"', text)
+        self.assertIn('[ "$PRODUCT_MODE" = "usb" ] || return 0', text)
+        self.assertIn(
+            '[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] && NATIVE_INSTALL_CAPABILITY=disabled',
+            text,
+        )
+        self.assertIn(
+            '[ "$DISTRIBUTION_PROFILE" = "owner-development" ] || return 0',
+            text,
+        )
 
         rescue = text.split("ensure_rescue_agent() {", 1)[1].split("\n}", 1)[0]
         self.assertIn('[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]', rescue)
@@ -164,7 +196,20 @@ class StableRuntimeProfileTests(unittest.TestCase):
 
     def test_contract_marks_signed_polling_and_materialization_without_activation(self):
         stable = CONTRACT["profiles"]["stable-mvp"]
+        self.assertEqual(stable["mvp_execution_mode"], "usb-only")
+        self.assertFalse(stable["native_install_capability_enabled"])
+        self.assertFalse(stable["internal_disk_destructive_write_allowed"])
         self.assertTrue(stable["runtime_profile_selection_implemented"])
+        self.assertEqual(stable["runtime_layout_default"], "legacy-tree")
+        self.assertEqual(stable["runtime_layouts_supported"], ["legacy-tree", "portable-v2"])
+        self.assertTrue(stable["portable_v2_runtime_layout_support_implemented"])
+        self.assertEqual(
+            stable["portable_v2_runtime_identity_source"],
+            "verified-boot-handoff-source-sha",
+        )
+        self.assertFalse(stable["portable_v2_legacy_current_symlink_required"])
+        self.assertFalse(stable["portable_v2_update_activation_connected"])
+        self.assertFalse(stable["portable_v2_guardian_refresh_via_legacy_swap_allowed"])
         self.assertFalse(stable["git_update_polling_enabled"])
         self.assertFalse(stable["development_git_rescue_enabled"])
         self.assertFalse(stable["development_base_channel_enabled"])
@@ -201,7 +246,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertTrue(stable["exact_release_activation_seed_media_includes_primitive"])
         self.assertEqual(
             stable["exact_release_activation_physical_agent_target_sha256"],
-            "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+            "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
         )
         self.assertTrue(stable["exact_release_activation_asset_published"])
         self.assertTrue(stable["activation_requires_staged_sha_equals_health_ready_sha"])

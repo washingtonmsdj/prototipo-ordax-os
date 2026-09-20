@@ -50,6 +50,7 @@ POWER_STATUS_PATH = "/__ordax/native/power-status"
 NETWORK_STATUS_PATH = "/__ordax/native/network-status"
 NETWORK_MANAGEMENT_PATH = "/__ordax/native/network-management"
 UPDATE_HISTORY_PATH = "/__ordax/native/update-history"
+NATIVE_INSTALL_TARGETS_PATH = "/__ordax/native/native-install-targets"
 UPDATE_STATE_FILE = "/run/ordax-update/state.json"
 HEALTH_STATE_FILE = "/run/ordax-update/healthy-sha"
 PREFERENCES_FILE = "/var/lib/ordax/preferences.json"
@@ -66,12 +67,15 @@ RESCUE_STATUS_FILE = "/var/lib/ordax/rescue-status.json"
 BOOT_ID_FILE = "/run/ordax-update/base-boot-id"
 TOKEN_HEADER = "X-OrdaX-Power-Token"
 NETWORK_TOKEN_HEADER = "X-OrdaX-Network-Token"
+NATIVE_INSTALL_TOKEN_HEADER = "X-OrdaX-Native-Install-Token"
 DIAGNOSTIC_TOKEN_HEADER = "X-OrdaX-Diagnostic-Token"
 HEALTH_TOKEN_HEADER = "X-OrdaX-Health-Token"
 MAX_CONTROL_BODY = 512
 MAX_NETWORK_ACTION_BODY = 1024
 MAX_NETWORK_SCAN_BYTES = 512 * 1024
 MAX_NETWORKS = 32
+MAX_NATIVE_INSTALL_SNAPSHOT_BYTES = 256 * 1024
+MAX_NATIVE_INSTALL_TARGETS = 64
 MAX_SURFACE_HEARTBEAT_BODY = 512
 MAX_CLIENT_DIAGNOSTIC_BODY = 512
 MAX_PREFERENCE_BODY = 8192
@@ -1210,6 +1214,167 @@ def queue_network_broker_request(
             pass
 
 
+def native_install_broker_paths(session_dir: str) -> dict[str, str]:
+    return {
+        "control": os.path.join(session_dir, "native-install-control"),
+        "request": os.path.join(session_dir, "native-install-request"),
+        "response": os.path.join(session_dir, "native-install-response"),
+        "snapshot": os.path.join(session_dir, "native-install-targets.json"),
+    }
+
+
+def native_install_broker_available(paths: dict[str, str]) -> bool:
+    try:
+        metadata = os.stat(paths["control"])
+    except OSError:
+        return False
+    return (
+        stat.S_ISFIFO(metadata.st_mode)
+        and metadata.st_uid == os.geteuid()
+        and stat.S_IMODE(metadata.st_mode) == 0o600
+        and os.access(paths["control"], os.W_OK)
+    )
+
+
+def sanitize_native_install_snapshot(payload: object) -> dict:
+    if (
+        not isinstance(payload, dict)
+        or payload.get("$schema") != "prototype-ordax.creator-native-targets/1"
+        or payload.get("mode") != "read-only-native-install-target-discovery"
+        or payload.get("physical_write") is not False
+    ):
+        raise ValueError("invalid Native install discovery envelope")
+    targets = payload.get("targets")
+    if not isinstance(targets, list) or len(targets) > MAX_NATIVE_INSTALL_TARGETS:
+        raise ValueError("invalid Native install target set")
+
+    sanitized = []
+    seen_tokens = set()
+    for target in targets:
+        if not isinstance(target, dict):
+            raise ValueError("invalid Native install target")
+        token = target.get("confirmation_token")
+        physical_bytes = target.get("physical_bytes")
+        logical_sector_bytes = target.get("logical_sector_bytes")
+        model = target.get("model", "")
+        transport = target.get("transport", "")
+        removable = target.get("removable")
+        read_only = target.get("read_only")
+        source_boot_media = target.get("source_boot_media")
+        eligible = target.get("eligible")
+        if (
+            not isinstance(token, str)
+            or re.fullmatch(r"[0-9a-f]{64}", token) is None
+            or token in seen_tokens
+            or isinstance(physical_bytes, bool)
+            or not isinstance(physical_bytes, int)
+            or physical_bytes <= 0
+            or physical_bytes > 1 << 60
+            or logical_sector_bytes != 512
+            or not isinstance(model, str)
+            or len(model) > 200
+            or any(ord(character) < 32 for character in model)
+            or not isinstance(transport, str)
+            or len(transport) > 32
+            or any(ord(character) < 32 for character in transport)
+            or not isinstance(removable, bool)
+            or not isinstance(read_only, bool)
+            or not isinstance(source_boot_media, bool)
+            or not isinstance(eligible, bool)
+            or eligible != (not read_only and not source_boot_media)
+        ):
+            raise ValueError("invalid Native install target fields")
+        seen_tokens.add(token)
+        sanitized.append(
+            {
+                "targetId": token,
+                "confirmationToken": token,
+                "model": model,
+                "transport": transport,
+                "physicalBytes": physical_bytes,
+                "removable": removable,
+                "readOnly": read_only,
+                "sourceBootMedia": source_boot_media,
+                "eligible": eligible,
+            }
+        )
+    return {
+        "schema": "ordax.native-install-targets/1",
+        "physicalWriteAllowed": False,
+        "targets": sanitized,
+    }
+
+
+def read_native_install_snapshot(path: str) -> dict:
+    raw = _read_bounded_bytes(path, MAX_NATIVE_INSTALL_SNAPSHOT_BYTES)
+    if not raw:
+        raise ValueError("Native install broker snapshot is unavailable")
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("Native install broker snapshot is invalid") from exc
+    return sanitize_native_install_snapshot(payload)
+
+
+def queue_native_install_broker_request(
+    paths: dict[str, str],
+    *,
+    timeout_seconds: float = 6.0,
+) -> dict:
+    if not native_install_broker_available(paths):
+        raise FileNotFoundError("Native install broker unavailable")
+    request_id = secrets.token_hex(12)
+    temporary = f'{paths["request"]}.tmp.{os.getpid()}.{threading.get_ident()}'
+    with open(temporary, "w", encoding="ascii") as handle:
+        os.fchmod(handle.fileno(), 0o600)
+        handle.write(f"{request_id}\nlist\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, paths["request"])
+    try:
+        try:
+            os.unlink(paths["response"])
+        except FileNotFoundError:
+            pass
+        descriptor = os.open(
+            paths["control"],
+            os.O_WRONLY
+            | getattr(os, "O_NONBLOCK", 0)
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
+        )
+        try:
+            metadata = os.fstat(descriptor)
+            if (
+                not stat.S_ISFIFO(metadata.st_mode)
+                or metadata.st_uid != os.geteuid()
+                or stat.S_IMODE(metadata.st_mode) != 0o600
+            ):
+                raise PermissionError("Native install broker boundary is not private")
+            if os.write(descriptor, b"request\n") != len(b"request\n"):
+                raise OSError("short write to Native install broker")
+        finally:
+            os.close(descriptor)
+
+        deadline = time.monotonic() + timeout_seconds
+        while time.monotonic() < deadline:
+            response = read_small_text(paths["response"], 512)
+            if response:
+                fields = response.split("\t")
+                if len(fields) == 3 and fields[0] == request_id:
+                    _, outcome, detail = fields
+                    if outcome == "ok":
+                        return read_native_install_snapshot(paths["snapshot"])
+                    raise RuntimeError(detail or "native-install-discovery-failed")
+            time.sleep(0.05)
+        raise TimeoutError("Native install broker response timed out")
+    finally:
+        try:
+            os.unlink(paths["request"])
+        except FileNotFoundError:
+            pass
+
+
 def _bounded_history_lines(path: str, max_entries: int) -> list[str]:
     try:
         with open(path, "rb") as handle:
@@ -2084,6 +2249,9 @@ class NativeHostServer(ThreadingHTTPServer):
         user_root: str,
         power_request_path: str,
         network_session_dir: str,
+        product_mode: str | None = None,
+        distribution_profile: str = "owner-development",
+        native_install_capability: str = "disabled",
     ):
         super().__init__(server_address, handler_class)
         self.power_token = secrets.token_urlsafe(32)
@@ -2094,7 +2262,29 @@ class NativeHostServer(ThreadingHTTPServer):
         self.supported_actions = supported_power_actions(power_request_path)
         self.network_paths = network_broker_paths(network_session_dir)
         self.network_lock = threading.Lock()
+        self.native_install_paths = native_install_broker_paths(network_session_dir)
+        self.native_install_lock = threading.Lock()
         self.user_root = user_root
+        self.product_mode = product_mode if product_mode in {"usb", "native-disk"} else None
+        self.distribution_profile = (
+            distribution_profile
+            if distribution_profile in {"owner-development", "stable-mvp"}
+            else "unknown"
+        )
+        self.native_install_capability = (
+            native_install_capability
+            if native_install_capability in {"disabled", "post-mvp-preview"}
+            else "disabled"
+        )
+        self.native_install_available = (
+            self.distribution_profile == "owner-development"
+            and self.native_install_capability == "post-mvp-preview"
+            and self.product_mode == "usb"
+            and native_install_broker_available(self.native_install_paths)
+        )
+        self.native_install_token = (
+            secrets.token_urlsafe(32) if self.native_install_available else ""
+        )
 
 
 class NativeHostHandler(SimpleHTTPRequestHandler):
@@ -2178,7 +2368,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if not self._request_is_trusted():
             return
         parsed_path = urlsplit(self.path).path
-        if parsed_path in {SESSION_PATH, FILES_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
+        if parsed_path in {SESSION_PATH, FILES_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
         if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH} and self.client_address[0] != "127.0.0.1":
@@ -2225,6 +2415,26 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                     )
             except (FileNotFoundError, PermissionError, TimeoutError, OSError, RuntimeError, ValueError) as exc:
                 print(f"ordax-native-host: network management status unavailable: {exc}", file=sys.stderr, flush=True)
+                self._empty(503)
+                return
+            self._write_json(200, snapshot)
+            return
+        if parsed_path == NATIVE_INSTALL_TARGETS_PATH:
+            if self.server.product_mode != "usb" or not self.server.native_install_available:
+                self._empty(404)
+                return
+            supplied_token = self.headers.get(NATIVE_INSTALL_TOKEN_HEADER, "")
+            if not hmac.compare_digest(supplied_token, self.server.native_install_token):
+                self._empty(403)
+                return
+            try:
+                with self.server.native_install_lock:
+                    snapshot = queue_native_install_broker_request(
+                        self.server.native_install_paths,
+                        timeout_seconds=6.0,
+                    )
+            except (FileNotFoundError, PermissionError, TimeoutError, OSError, RuntimeError, ValueError) as exc:
+                print(f"ordax-native-host: Native install discovery unavailable: {exc}", file=sys.stderr, flush=True)
                 self._empty(503)
                 return
             self._write_json(200, snapshot)
@@ -2341,6 +2551,9 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                     "token": self.server.power_token,
                     "networkToken": self.server.network_token,
                     "diagnosticToken": self.server.diagnostic_token,
+                    "productMode": self.server.product_mode,
+                    "nativeInstallAvailable": self.server.native_install_available,
+                    "nativeInstallToken": self.server.native_install_token,
                     "supportedActions": list(self.server.supported_actions),
                 },
             )
@@ -2774,6 +2987,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--user-root", default="/var/lib/ordax-user")
     parser.add_argument("--power-request", default=DEFAULT_POWER_REQUEST_PATH)
     parser.add_argument("--network-session-dir", default=DEFAULT_NETWORK_SESSION_DIR)
+    parser.add_argument("--product-mode", required=True, choices=("usb", "native-disk"))
+    parser.add_argument(
+        "--distribution-profile",
+        default="owner-development",
+        choices=("owner-development", "stable-mvp"),
+    )
+    parser.add_argument(
+        "--native-install-capability",
+        default="disabled",
+        choices=("disabled", "post-mvp-preview"),
+    )
     parser.add_argument("--telemetry-config", default="")
     return parser.parse_args()
 
@@ -2808,6 +3032,9 @@ def main() -> int:
         user_root=args.user_root,
         power_request_path=args.power_request,
         network_session_dir=args.network_session_dir,
+        product_mode=args.product_mode,
+        distribution_profile=args.distribution_profile,
+        native_install_capability=args.native_install_capability,
     )
     telemetry_started = start_telemetry_heartbeat(args.telemetry_config)
     print(

@@ -1,0 +1,301 @@
+name: Native ESP Candidate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'boot/esp/**'
+      - 'boot/native/**'
+      - 'bootstrap/kernel/**'
+      - 'bootstrap/native-initramfs/**'
+      - 'docs/contracts/native-esp.json'
+      - 'docs/contracts/native-esp-proof.json'
+      - 'docs/contracts/native-qemu-boot-proof.json'
+      - 'docs/contracts/native-initramfs-build-environment.json'
+      - 'docs/contracts/storage-architecture.json'
+      - 'tools/creator/core/native_boot_entries.go'
+      - 'tools/creator/cmd/ordax-creator/**'
+      - 'tools/creator/proof/native_esp.py'
+      - 'tools/creator/proof/native_qemu_boot.py'
+      - '.github/workflows/native-esp-candidate.yml'
+  pull_request:
+    paths:
+      - 'boot/esp/**'
+      - 'boot/native/**'
+      - 'bootstrap/kernel/**'
+      - 'bootstrap/native-initramfs/**'
+      - 'docs/contracts/native-esp.json'
+      - 'docs/contracts/native-esp-proof.json'
+      - 'docs/contracts/native-qemu-boot-proof.json'
+      - 'docs/contracts/native-initramfs-build-environment.json'
+      - 'docs/contracts/storage-architecture.json'
+      - 'tools/creator/core/native_boot_entries.go'
+      - 'tools/creator/cmd/ordax-creator/**'
+      - 'tools/creator/proof/native_esp.py'
+      - 'tools/creator/proof/native_qemu_boot.py'
+      - '.github/workflows/native-esp-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-esp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+          cache: false
+
+      - name: Install bounded build and FAT32 proof dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-13 make bc perl bison flex openssl libssl-dev libelf-dev \
+            dwarves kmod xz-utils pkg-config \
+            meson ninja-build gcc binutils gperf \
+            libcap-dev libmount-dev libblkid-dev liblz4-dev libzstd-dev \
+            liblzma-dev libpcre2-dev \
+            dosfstools mtools cryptsetup util-linux \
+            gdisk btrfs-progs qemu-system-x86 ovmf
+          python -m pip install --disable-pip-version-check --no-cache-dir \
+            jinja2 pyelftools
+
+      - name: Test Creator Native boot rendering
+        run: |
+          set -euo pipefail
+          cd tools/creator
+          go test -count=1 ./core ./cmd/ordax-creator
+
+      - name: Build and verify pinned systemd-boot candidate
+        run: |
+          set -euo pipefail
+          python boot/esp/build.py build \
+            --work-dir out/native-esp-bootloader-work \
+            --out-dir out/native-esp-bootloader
+          python boot/esp/build.py verify \
+            --out-dir out/native-esp-bootloader
+
+      - name: Build and verify exact-source shared kernel
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          python bootstrap/kernel/build.py build \
+            --jobs 4 \
+            --work-dir out/native-esp-kernel-work \
+            --out-dir out/native-esp-kernel
+          python bootstrap/kernel/verify.py out/native-esp-kernel
+
+      - name: Resolve locked Native initramfs environment
+        id: initramfs-env
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pathlib
+          value = json.loads(pathlib.Path('docs/contracts/native-initramfs-build-environment.json').read_text())
+          image = value['base_image']['repository'] + '@' + value['base_image']['manifest_digest']
+          print('image=' + image)
+          print('snapshot=' + value['apt']['snapshot_id'])
+          print('packages=' + ' '.join(value['apt']['top_level_packages']))
+          PY
+
+      - name: Build and verify exact-source Native initramfs
+        env:
+          IMAGE: ${{ steps.initramfs-env.outputs.image }}
+          SNAPSHOT_ID: ${{ steps.initramfs-env.outputs.snapshot }}
+          PACKAGES: ${{ steps.initramfs-env.outputs.packages }}
+          EXACT_SOURCE: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          docker pull "$IMAGE"
+          expected="${IMAGE##*@}"
+          docker image inspect --format '{{json .RepoDigests}}' "$IMAGE" | grep -Fq "@$expected"
+          rm -rf out/native-esp-initramfs
+          mkdir -p out/native-esp-initramfs
+          docker run --rm \
+            -e GITHUB_SHA="$EXACT_SOURCE" \
+            -e ORDAX_BASE_IMAGE="$IMAGE" \
+            -e ORDAX_APT_SNAPSHOT_ID="$SNAPSHOT_ID" \
+            -e SNAPSHOT_ID="$SNAPSHOT_ID" \
+            -e PACKAGES="$PACKAGES" \
+            -e HOST_UID="$(id -u)" \
+            -e HOST_GID="$(id -g)" \
+            -v "$PWD:/repo" \
+            -w /repo \
+            "$IMAGE" \
+            bash -lc '
+              set -euo pipefail
+              export DEBIAN_FRONTEND=noninteractive
+              test -s /usr/share/keyrings/ubuntu-archive-keyring.gpg
+              rm -f /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources
+              snapshot_uri="https://snapshot.ubuntu.com/ubuntu/$SNAPSHOT_ID"
+              printf "%s\n" \
+                "Types: deb" \
+                "URIs: $snapshot_uri" \
+                "Suites: noble noble-updates noble-backports noble-security" \
+                "Components: main universe restricted multiverse" \
+                "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" \
+                > /etc/apt/sources.list.d/ordax.sources
+
+              printf "%s\n" \
+                "Acquire::https::snapshot.ubuntu.com::Verify-Peer \"false\";" \
+                > /etc/apt/apt.conf.d/49ordax-ca-bootstrap
+              apt-get update --error-on=any
+              apt-get install -y --no-install-recommends ca-certificates
+              rm -f /etc/apt/apt.conf.d/49ordax-ca-bootstrap
+
+              apt-get update --error-on=any
+              apt-get install -y --no-install-recommends $PACKAGES
+
+              rm -rf /tmp/native-esp-initramfs
+              python3 bootstrap/native-initramfs/build.py build \
+                --out-dir /tmp/native-esp-initramfs
+              python3 bootstrap/native-initramfs/build.py verify \
+                --out-dir /tmp/native-esp-initramfs
+              cp -a /tmp/native-esp-initramfs/. /repo/out/native-esp-initramfs/
+              chown -R "$HOST_UID:$HOST_GID" /repo/out/native-esp-initramfs
+            '
+
+      - name: Create disposable real LUKS2 identity and render Native entries
+        id: pool
+        run: |
+          set -euo pipefail
+          pool="$RUNNER_TEMP/native-esp-pool.luks2"
+          key="$RUNNER_TEMP/native-esp-pool.key"
+          rm -f "$pool" "$key"
+          truncate -s 67108864 "$pool"
+          head -c 64 /dev/urandom > "$key"
+          chmod 600 "$key"
+          sudo cryptsetup luksFormat \
+            --type luks2 \
+            --batch-mode \
+            --pbkdf pbkdf2 \
+            --key-file "$key" \
+            "$pool"
+          pool_uuid="$(sudo cryptsetup luksUUID "$pool" | tr 'A-F' 'a-f')"
+          rm -f "$key"
+          test ! -e "$key"
+          echo "uuid=$pool_uuid" >> "$GITHUB_OUTPUT"
+
+          rm -rf out/native-boot-rendered
+          (
+            cd tools/creator
+            go run ./cmd/ordax-creator render-native-boot \
+              --pool-uuid "$pool_uuid" \
+              --normal-template ../../boot/native/loader/ordax-native.conf.in \
+              --recovery-template ../../boot/native/loader/ordax-native-recovery.conf.in \
+              --out-dir ../../out/native-boot-rendered
+          )
+
+      - name: Materialize and read back disposable Native ESP
+        run: |
+          set -euo pipefail
+          rm -rf out/native-esp-proof
+          mkdir -p out/native-esp-proof
+          python3 tools/creator/proof/native_esp.py \
+            --repository . \
+            --contract docs/contracts/native-esp.json \
+            --proof-contract docs/contracts/native-esp-proof.json \
+            --storage-contract docs/contracts/storage-architecture.json \
+            --bootloader out/native-esp-bootloader/systemd-bootx64.efi \
+            --bootloader-provenance out/native-esp-bootloader/bootloader-provenance.json \
+            --kernel out/native-esp-kernel/vmlinuz-6.6.52 \
+            --kernel-provenance out/native-esp-kernel/kernel-provenance.json \
+            --initramfs out/native-esp-initramfs/native-initramfs.cpio.gz \
+            --initramfs-provenance out/native-esp-initramfs/native-initramfs-provenance.json \
+            --rendered-root out/native-boot-rendered \
+            --pool-container "$RUNNER_TEMP/native-esp-pool.luks2" \
+            --pool-uuid "${{ steps.pool.outputs.uuid }}" \
+            --source-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --out out/native-esp-proof/proof.json
+
+          python3 - <<'PY'
+          import json, pathlib
+          proof = json.loads(pathlib.Path('out/native-esp-proof/proof.json').read_text())
+          assert proof['status'] == 'pass'
+          assert proof['physical_device_touched'] is False
+          assert proof['physical_write_authorized'] is False
+          assert proof['qemu_uefi_boot_proven'] is False
+          assert proof['physical_native_boot_proven'] is False
+          assert proof['esp']['retained'] is False
+          assert all(proof['checks'].values())
+          print('NATIVE_ESP_DISPOSABLE_PROOF=PASS')
+          print('NATIVE_ESP_QEMU_UEFI_BOOT_PROVEN=NO')
+          print('NATIVE_ESP_PHYSICAL_WRITE_AUTHORIZED=NO')
+          PY
+
+      - name: Prove Native UEFI and PID1 handoff on disposable QEMU disk
+        run: |
+          set -euo pipefail
+          rm -rf out/native-qemu-proof
+          mkdir -p out/native-qemu-proof
+          sudo -E python3 tools/creator/proof/native_qemu_boot.py \
+            --esp-proof out/native-esp-proof/proof.json \
+            --bootloader out/native-esp-bootloader/systemd-bootx64.efi \
+            --kernel out/native-esp-kernel/vmlinuz-6.6.52 \
+            --initramfs out/native-esp-initramfs/native-initramfs.cpio.gz \
+            --loader-conf boot/native/loader/loader.conf \
+            --rendered-root out/native-boot-rendered \
+            --pool-uuid "${{ steps.pool.outputs.uuid }}" \
+            --source-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --out out/native-qemu-proof/proof.json
+          sudo chown -R "$(id -u):$(id -g)" out/native-qemu-proof
+
+          python3 - <<'PY'
+          import json, pathlib
+          proof = json.loads(pathlib.Path('out/native-qemu-proof/proof.json').read_text())
+          assert proof['status'] == 'pass'
+          assert proof['qemu_uefi_boot_proven'] is True
+          assert proof['pid1_kernel_cmdline_path_proven'] is True
+          assert proof['bootstrap_handoff_path_proven'] is True
+          assert proof['production_stable_release_boot_proven'] is False
+          assert proof['physical_native_boot_proven'] is False
+          assert proof['physical_target_device_touched'] is False
+          assert proof['physical_write_authorized'] is False
+          assert proof['qemu_required_for_end_users'] is False
+          assert proof['guest_disk']['retained'] is False
+          assert all(proof['checks'].values())
+          print('NATIVE_QEMU_UEFI_BOOT_PROOF=PASS')
+          print('NATIVE_PRODUCTION_RELEASE_BOOT_PROVEN=NO')
+          print('NATIVE_PHYSICAL_BOOT_PROVEN=NO')
+          print('NATIVE_PHYSICAL_WRITE_AUTHORIZED=NO')
+          PY
+
+      - name: Destroy disposable LUKS2 identity bytes and secrets
+        if: always()
+        run: |
+          set -euo pipefail
+          rm -f "$RUNNER_TEMP/native-esp-pool.key"
+          rm -f "$RUNNER_TEMP/native-esp-pool.luks2"
+          test ! -e "$RUNNER_TEMP/native-esp-pool.key"
+          test ! -e "$RUNNER_TEMP/native-esp-pool.luks2"
+          find out/native-esp-proof -maxdepth 1 -type f -name '*.img' -print -quit | grep -q . && exit 1 || true
+          echo 'NATIVE_ESP_LUKS_KEY_RETAINED=NO'
+          echo 'NATIVE_ESP_POOL_CONTAINER_RETAINED=NO'
+          echo 'NATIVE_ESP_IMAGE_RETAINED=NO'
+
+      - name: Upload Native ESP proof metadata only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: native-esp-proof-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            out/native-esp-proof/proof.json
+            out/native-qemu-proof/proof.json
+          if-no-files-found: error
+          retention-days: 14

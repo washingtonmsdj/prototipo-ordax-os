@@ -2,10 +2,12 @@
 
 Status: CI PROOF ONLY — NOT A PRODUCTION RELEASE OR PHYSICAL AUTHORIZATION
 
-The release pipeline is intentionally split into small owners with independent validation:
+The release pipeline is intentionally split into small owners with independent validation. The Native assembly step is a build-time composition owner, not a new runtime channel:
 
 ```text
-system source
+shared system source + Native release helper source
+ -> tools/native-release-assembly
+ -> staged Native system/
  -> tools/release-bundle
  -> system.tar
  -> tools/release-manifest
@@ -16,6 +18,20 @@ system source
  -> verified transactional materialization
  -> atomic current activation
 ```
+
+## Native release assembly
+
+The shared product source remains `system/`. Native-only prebuilt executables that are required by the USB/Native capability boundary are injected into a temporary staged `system/` tree by `tools/native-release-assembly/build.py` before bundling.
+
+For the MVP installer this currently adds exactly one binary:
+
+```text
+system/bin/ordax-native-install-targets
+```
+
+Its source remains under the shared Creator Core/Linux adapter. CI cross-compiles it as a static `linux/amd64` binary, records SHA-256/size/mode/source package/source commit in `system/.ordax/native-release-tools.json`, and then the ordinary deterministic bundler includes those bytes in `system.tar`.
+
+There is no separate helper download channel and no compilation on the user's device. Because the helper is inside `system.tar`, it is covered by the same release manifest hash and Ed25519 envelope as the rest of the Native system release. Its current role is read-only discovery/target-plan binding; physical APPLY remains unauthorized.
 
 ## CI integration proof
 

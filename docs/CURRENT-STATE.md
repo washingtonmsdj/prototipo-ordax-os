@@ -4,6 +4,21 @@ Status date: 2026-09-20
 
 This is the canonical handoff snapshot. Architecture/contracts win if another document conflicts with it. Detailed historical evidence remains under `docs/evidence/`; this file records the current boundary without treating CI proof, development-hardware proof and product-release authorization as interchangeable. Values that mirror structured source — including product/app versions, component release modes and physical-media geometry — are regression-checked against their owners so this snapshot cannot silently drift from the implementation.
 
+## MVP scope decision — USB only
+
+```text
+MVP_PUBLIC_EXECUTION_MODE=USB_ONLY
+MVP_NATIVE_INSTALLATION_AVAILABLE=NO
+MVP_INTERNAL_DISK_DESTRUCTIVE_WRITE=NO
+NATIVE_FOUNDATION_RETAINED_FOR_POST_MVP=YES
+MVP_BILLING_IMPLEMENTED=NO
+MVP_PRICING_DEFINED=NO
+MVP_COMMERCIAL_DEVICE_LIMIT_DEFINED=NO
+WEB_MOBILE_SYNC_PUBLIC_STATUS=COMING_SOON_ONLY
+```
+
+Native contracts, Creator Core, LUKS2/Btrfs work, Native initramfs, ESP and disposable proofs remain valid engineering foundation, but they do not block or appear as user-facing MVP functionality.
+
 ## Repository
 
 ```text
@@ -85,6 +100,7 @@ GRAPHICAL_SURFACE_COMPLETE=NO
 CANONICAL_SYSTEM_RUNTIME_COMPLETE=NO
 ```
 
+
 The first formal human product version is **OrdaX Prototype v0.1.0**. Product version, Entrega, Git SHA and component/app versions are separate identities: v0.1.0 identifies the prototype product milestone, Entrega identifies the notebook-facing delivery sequence, the SHA remains the exact technical build identity, and each component may evolve its own SemVer. First-party apps on the `0.x` line are **Beta**; `1.0.0` remains reserved for the first stable release of each app. Internet is currently `0.3.0 Beta` and Notes is `0.4.0 Beta`, both using `git-app` in Owner/Development. Arquivos, Ajustes, Conta and Sistema are `0.1.0 Beta` and remain `bundled`. A component having its own version does not mean it already has a production-independent update channel: `git-app` is a development delivery mode, while production-independent activation remains gated behind the signed `component-slot` path with pending health, promotion and rollback. Product v1.0 remains reserved for the stable product rather than being inferred from prototype maturity, component versions or delivery count.
 
 `system/` is the shared product source. The native development path is physically proven through `system/entrypoint (guardian) -> system/supervisor -> system/surface/entrypoint -> system/surface/bin/ordax-surface`; repository CI also proves that the actual `system/` tree can be bundled deterministically as `system.tar`.
@@ -152,7 +168,7 @@ GitHub Actions remains the current build/proof executor; repository recipes are 
 
 ## Physical architecture
 
-The capacity-independent bootstrap seed and the final USB prepared by Creator are different artifacts and must never be collapsed into one partition count:
+The capacity-independent bootstrap seed and the current transitional USB prepared by Creator are different artifacts and must not be collapsed into one partition count:
 
 ```text
 BOOTSTRAP_SEED_PARTITIONS=2
@@ -169,7 +185,48 @@ LEGACY_ORDAX_PLATFORM_PARTITION=FORBIDDEN
 LEGACY_ORDAX_HOME_PARTITION=FORBIDDEN
 ```
 
-`docs/contracts/physical-media.json` is authoritative for the two-partition capacity-independent seed (`ORDAX-ESP` + `ORDAX`). `docs/contracts/physical-prepared-media.json` is authoritative for the final target USB after Creator preparation (`ORDAX-ESP` + bounded `ORDAX` + target-capacity-specific `ORDAX-DATA`). These counts describe different artifacts and are not contradictory. The canonical release layout inside the system side remains `/ordax/bootstrap`, `/ordax/releases/<commit>`, `/ordax/current`, `/ordax/state` and `/ordax/home` where applicable to the current release architecture.
+`docs/contracts/physical-media.json` is authoritative for the two-partition capacity-independent seed (`ORDAX-ESP` + `ORDAX`). `docs/contracts/physical-prepared-media.json` is authoritative for the current **transitional Owner/Development** prepared USB (`ORDAX-ESP` + bounded `ORDAX` + target-capacity-specific `ORDAX-DATA`). These counts describe different validation artifacts and are not the final Stable/MVP layout. The legacy/transitional release tree remains validation-only and must not become the public MVP default.
+
+The durable MVP target is portable USB v2:
+
+```text
+ORDAX-ESP   FAT32
+ORDAX-DATA  exFAT
+  -> .ordax/base/stable-base.erofs
+  -> .ordax/releases/<commit>/system.erofs
+  -> .ordax/state/persistent-state.img   # ext4-in-file
+```
+
+Mutable activation authority (`current`, `known-good`, `candidate`) lives inside the ext4 persistent-state image, never as a mutable exFAT symlink/pointer. The product release is a signed `release-manifest/2` EROFS image; the Stable Base is a separate immutable minimal OS EROFS. The fixed initramfs contains candidate helpers for exact release selection, EROFS/ext4/OverlayFS handoff, capsule/Base SHA-256 verification and a non-default portable PID1.
+
+```text
+PORTABLE_USB_V2_STORAGE_PROOF=PASS_CI_DISPOSABLE
+PORTABLE_RELEASE_EROFS_REPRODUCIBLE=PASS_CI
+PORTABLE_RELEASE_MANIFEST_V2_SIGN_VERIFY=PASS_CI
+PORTABLE_RELEASE_OFFLINE_EXACT_VERIFY=PASS_CI
+PORTABLE_MOUNT_HANDOFF_PROOF=PASS_CI_DISPOSABLE
+PORTABLE_BOOTSTRAP_CAPSULE_REPRODUCIBLE=PASS_CI
+PORTABLE_INITRAMFS_HELPERS=PASS_CI
+PORTABLE_SURFACE_RUNTIME_APK_LOCK=PASS_CI_253_EXACT_PACKAGES
+PORTABLE_SURFACE_RUNTIME_EROFS_REPRODUCIBLE=PASS_CI
+PORTABLE_SURFACE_RUNTIME_EROFS_SHA256=170d306b38cfdbadba47a7548a6757a920ceaedea98697270aaa8ca4f4d8d038
+PORTABLE_SURFACE_RUNTIME_BOOT_CONNECTED=NO
+PORTABLE_STABLE_FIRST_SURFACE_OFFLINE_PROVEN=NO
+PORTABLE_PINNED_INITRAMFS_COMPOSITION=PASS_CI
+PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PASS_CI
+PORTABLE_QEMU_UEFI_BOOT=PASS_CI_OVMF_NON_SECURE_BOOT
+PORTABLE_QEMU_NETWORK_REQUIRED=NO
+PORTABLE_QEMU_PHYSICAL_TARGET_TOUCHED=NO
+PORTABLE_QEMU_SECURE_BOOT=NO
+PORTABLE_PHYSICAL_USB_BOOT=NO
+PORTABLE_V2_PUBLIC_WRITER_ENABLED=NO
+```
+
+The offline Stable/MVP graphical runtime is now a separate candidate EROFS artifact with a full 253-package Alpine lock and repeat-digest proof. It deliberately excludes generated machine identity and Fontconfig caches from signed bytes. The artifact is **not yet connected to the Portable v2 boot/runtime handoff** and therefore does not yet prove that a fresh Stable USB reaches the Surface with networking disabled.
+
+Portable v2 itself has now crossed the CI boot-handoff gate with the final two-partition layout: the direct-kernel QEMU proof and the UEFI/OVMF + systemd-boot proof both reached `ORDAX_PORTABLE_V2_HANDOFF=VERIFIED` and `ORDAX_STABLE_INIT_HANDOFF=VERIFIED`, selected the exact `current` slot/source identity, ran with QEMU networking disabled, destroyed disposable guest state afterward and did not touch a physical target device. The UEFI proof uses non-Secure-Boot OVMF; **Secure Boot and physical USB boot remain unproven**.
+
+CI proof remains distinct from physical boot evidence and does not authorize the public writer.
 
 ## Minimal bootstrap and canonical release path
 
@@ -299,14 +356,14 @@ BROADER_HARDWARE_COVERAGE=PENDING_FINAL
 
 ## Current priorities
 
-1. prioritize the Stable/MVP **system** update path: official non-Git acquisition, signed verification, staging, controlled activation, health, promotion and rollback without coupling ordinary app changes to a full system reboot;
-2. keep the current first-party apps useful and coherent as Beta components, focusing app work on correctness, regression coverage and genuine MVP gaps instead of rebuilding Arquivos/Sistema behavior that already exists; move an app toward production-independent packaging only when the signed `component-slot` path is actually ready to prove it;
-3. continue hardening staged/transactional Owner/Development Git-first activation beyond the proven guardian, rescue, telemetry and candidate-preflight layers, while keeping it explicitly separate from the Stable/MVP public update channel;
-4. complete integrated Surface physical validation when the source-controlled harness is integrated and executed on the notebook; do not convert CI or an unexecuted runbook into physical PASS;
+1. prioritize the Stable/MVP **USB system path**: finish Portable v2 boot, canonical trust, offline graphical runtime, official non-Git acquisition, signed verification, staging, controlled activation, health, promotion and rollback without coupling ordinary app changes to a full system reboot;
+2. keep the current first-party apps useful and coherent as Beta components, focusing app work on correctness, regression coverage and genuine MVP gaps; move an app toward production-independent packaging only when the signed `component-slot` path is actually ready to prove it;
+3. continue hardening staged/transactional Owner/Development Git-first activation while keeping it explicitly separate from the Stable/MVP public update channel;
+4. complete integrated Surface physical validation only after the source-controlled Portable v2/runtime path is ready; do not convert CI or an unexecuted runbook into physical PASS;
 5. continue account/cloud preference and workspace continuity through neutral contracts without claiming remote transport before an authenticated provider exists;
-6. in parallel, when the repository owner is ready for the separate trust ceremony, generate the canonical Ed25519 prototype release key outside Git, make the required encrypted offline backup and commit only the matching public trust anchor;
-7. after canonical trust and byte-complete canonical media proof close, keep the tagged native raw writer gated until an explicit public apply boundary and exact-target authorization are deliberately introduced;
-8. leave suspend/resume, audio, acceleration-quality, long-run and broader-hardware exercises for the final physical-validation phase unless a feature specifically depends on them sooner.
+6. complete the canonical Ed25519 release-trust ceremony only with the provenance-bound toolkit from a canonical `main` push, keeping private signing material outside Git/CI/chat;
+7. keep all physical writers fail-closed until canonical trust, byte-complete media proof, exact target authorization and physical USB validation close;
+8. leave suspend/resume, audio, acceleration-quality, long-run and broader-hardware exercises for final physical validation unless an MVP gate depends on them sooner.
 
 ## Autonomous recovery and observation boundary
 
@@ -331,7 +388,7 @@ The temporary Supabase project is an operational relay, not product authority. I
 
 ## Canonical documentation freshness
 
-The Foundation regression suite compares this snapshot against structured owners for product version, first-party app versions/release modes and bootstrap/prepared-media geometry. A source change that makes those values stale must fail CI until the canonical snapshot and nomenclature contract are updated in the same change. This guardrail does not make prose self-updating; it makes known high-risk drift detectable and establishes the rule that canonical documentation is part of the change, not cleanup after it.
+The Foundation regression suite compares this snapshot against structured owners for product version, first-party app versions/release modes and seed/transitional-media geometry. A source change that makes those values stale must fail CI until the canonical snapshot and nomenclature contract are updated in the same change. Portable v2 remains governed separately by `docs/contracts/portable-usb-v2.json`; transitional geometry must never be mistaken for the final public MVP target.
 
 ## Handoff rule
 

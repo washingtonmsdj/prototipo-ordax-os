@@ -19,6 +19,10 @@ fail_closed() {
 }
 
 [ -n "${ORDAX_SYSTEM_ROOT:-}" ] || fail_closed "system root contract is missing"
+case "${ORDAX_PRODUCT_MODE:-}" in
+    usb|native-disk) ;;
+    *) fail_closed "product mode identity is missing or invalid" ;;
+esac
 [ -x "$SURFACE_RUNTIME" ] || fail_closed "surface runtime is missing"
 
 ORDAX_SURFACE_MODE=native-auto

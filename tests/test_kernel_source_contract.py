@@ -47,6 +47,15 @@ class KernelSourceContractTest(unittest.TestCase):
     def test_required_resolved_selectors_use_linux_6_6_names(self):
         for required in (
             "CONFIG_EFI_STUB=y",
+            "CONFIG_EFI_PARTITION=y",
+            "CONFIG_ATA=y",
+            "CONFIG_ATA_PIIX=y",
+            "CONFIG_SATA_AHCI=y",
+            "CONFIG_BLK_DEV_NVME=y",
+            "CONFIG_SCSI=y",
+            "CONFIG_BLK_DEV_SD=y",
+            "CONFIG_USB_STORAGE=y",
+            "CONFIG_USB_UAS=y",
             "CONFIG_SYSFB_SIMPLEFB=y",
             "CONFIG_FW_LOADER=y",
             "CONFIG_WLAN_VENDOR_MEDIATEK=y",
@@ -54,8 +63,68 @@ class KernelSourceContractTest(unittest.TestCase):
             "CONFIG_IWLWIFI=m",
             "CONFIG_EXT4_FS=y",
             "CONFIG_VFAT_FS=y",
+            "CONFIG_BLK_DEV_LOOP=y",
+            "CONFIG_EXFAT_FS=y",
+            "CONFIG_EROFS_FS=y",
+            "CONFIG_EROFS_FS_ZIP=y",
+            "CONFIG_OVERLAY_FS=y",
+            "CONFIG_BLK_DEV_DM=y",
+            "CONFIG_DM_CRYPT=y",
+            "CONFIG_CRYPTO_AES=y",
+            "CONFIG_CRYPTO_XTS=y",
+            "CONFIG_BTRFS_FS=y",
+            "CONFIG_BTRFS_FS_POSIX_ACL=y",
         ):
             self.assertIn(required, FRAGMENT)
+
+    def test_kernel_candidate_binds_checkout_and_provenance_to_exact_pr_head(self):
+        workflow = (ROOT / ".github/workflows/kernel-candidate.yml").read_text(
+            encoding="utf-8"
+        )
+        identity = "${{ github.event.pull_request.head.sha || github.sha }}"
+        self.assertIn(f"ref: {identity}", workflow)
+        self.assertIn(f"ORDAX_SOURCE_COMMIT: {identity}", workflow)
+        self.assertNotIn(f"GITHUB_SHA: {identity}", workflow)
+        self.assertIn(f"ordax-kernel-{identity}", workflow)
+
+        builder = (ROOT / "bootstrap/kernel/build.py").read_text(encoding="utf-8")
+        self.assertIn('os.environ.get("ORDAX_SOURCE_COMMIT"', builder)
+        self.assertIn("reserved GITHUB_SHA is not provenance authority", builder)
+        self.assertIn('[git, "rev-parse", "HEAD"]', builder)
+        self.assertNotIn('os.environ.get("GITHUB_SHA")', builder)
+
+    def test_kernel_builder_can_verify_detached_head_without_git_binary(self):
+        builder = (ROOT / "bootstrap/kernel/build.py").read_text(encoding="utf-8")
+        self.assertIn("def repository_head_without_git(root: Path)", builder)
+        self.assertIn('head_path = gitdir / "HEAD"', builder)
+        self.assertIn('git = shutil.which("git")', builder)
+        self.assertIn("actual = repository_head_without_git(ROOT)", builder)
+
+    def test_every_kernel_build_workflow_binds_exact_source_identity(self):
+        identity = "${{ github.event.pull_request.head.sha || github.sha }}"
+        workflow_root = ROOT / ".github/workflows"
+        offenders = []
+        workflows = sorted(workflow_root.glob("*.yml")) + sorted(workflow_root.glob("*.yaml"))
+        for path in workflows:
+            text = path.read_text(encoding="utf-8")
+            if "bootstrap/kernel/build.py build" not in text:
+                continue
+            if f"ref: {identity}" not in text:
+                offenders.append(f"{path.name}:missing-exact-checkout")
+            if f"ORDAX_SOURCE_COMMIT: {identity}" not in text:
+                offenders.append(f"{path.name}:missing-source-identity")
+        self.assertEqual(offenders, [])
+
+    def test_portable_usb_v2_filesystems_are_builtin_before_release_handoff(self):
+        for selector in (
+            "CONFIG_BLK_DEV_LOOP=y",
+            "CONFIG_EXFAT_FS=y",
+            "CONFIG_EROFS_FS=y",
+            "CONFIG_EROFS_FS_ZIP=y",
+            "CONFIG_OVERLAY_FS=y",
+            "CONFIG_EXT4_FS=y",
+        ):
+            self.assertIn(selector + "\n", FRAGMENT, selector)
 
     def test_environment_is_pinned_but_physical_use_remains_fail_closed(self):
         self.assertTrue(SOURCE["build"]["pinned_environment_resolved"])

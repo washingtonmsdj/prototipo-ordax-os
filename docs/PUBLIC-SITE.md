@@ -31,15 +31,27 @@ Keeping the portal in the monorepo does not make it part of the operating-system
 
 ## Route ownership
 
-- `/`: public landing page.
+- `/`: public landing page. It must never become the authenticated OrdaX workspace.
 - `/download/`: public release discovery and verified download links.
 - `/login/`: sign-in entry point.
 - `/cadastro/`: account-creation entry point.
+- `/conta/`: authenticated user area. Until real identity/session integration is enabled, it remains fail-closed and must not simulate user data.
 - `/licencas/`: release-specific license, SBOM and source-compliance entry point.
 - `/privacidade/`: privacy-readiness page; not a final policy while account activation is blocked.
 - `/termos/`: terms-readiness page; not final terms while account activation is blocked.
 
-Future routes such as support, docs, legal and account management may be added here only when they have a real owner and service contract.
+The public landing and the authenticated product experience are deliberately separate:
+
+```text
+/               -> public product landing
+/login/         -> authentication entry
+/conta/         -> authenticated account area
+OrdaX Web       -> product runtime reached from an appropriate authenticated/product entry point
+```
+
+The OrdaX Web Surface must not be mounted over `/`. The account area may expose profile, devices, session, synchronized preferences and product-entry actions only when their backing services are real. OrdaX Web remains a separate product mode from the marketing portal even when the account links to it.
+
+Future routes such as support, docs and additional legal surfaces may be added here only when they have a real owner and service contract.
 
 ## Identity boundary
 
@@ -107,7 +119,9 @@ The portal shares OrdaX brand language, not the desktop shell implementation:
 
 It must not copy the Surface desktop markup or make the marketing site look like a fake operating-system screenshot.
 
-Public copy should explain user-facing product behavior: Creator, apps, official updates, rollback/recovery and account availability. Do not use the landing page to explain Owner/Development Git operations.
+Public copy should explain user-facing product behavior: Creator, **USB execution**, apps, official updates, rollback/recovery and account availability. The MVP must not advertise internal-disk installation as available. Native installation may be described only as a future/post-MVP direction. Web, Mobile, synchronization, backup and cross-device continuity may appear only as **Em breve** while unavailable. Do not use the landing page to explain Owner/Development Git operations.
+
+No public page may invent prices, billing, commercial tier names or device-count limits before those policies exist.
 
 ## Build
 

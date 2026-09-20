@@ -1,0 +1,51 @@
+{
+  "$schema": "prototype-ordax.creator-portable-media-plan/1",
+  "status": "core-policy-and-disposable-materializer-implemented",
+  "product_scope": "stable-mvp-usb-only",
+  "core_owner": "tools/creator/core/portable_media.go",
+  "cli_command": "ordax-creator plan-portable-media",
+  "geometry_owner": "tools/creator/core/storage_profiles.go#PlanPortableTargetStorage",
+  "binding_schema": "prototype-ordax.portable-media-bindings/1",
+  "plan_schema": "prototype-ordax.portable-media-plan/1",
+  "artifact_count": 13,
+  "partitions": [
+    "ORDAX-ESP",
+    "ORDAX-DATA"
+  ],
+  "source_commit_exact": true,
+  "sha256_required_per_artifact": true,
+  "size_required_per_artifact": true,
+  "physical_write_authorized": false,
+  "physical_device_paths_allowed": false,
+  "disposable_materializer_implemented": true,
+  "physical_writer_v2_implemented": false,
+  "public_mvp_default_enabled": false,
+  "disposable_materializer": "tools/creator/proof/portable_prepared_media.py",
+  "disposable_materializer_physical_device_allowed": false,
+  "disposable_materializer_readback_verification": true,
+  "disposable_materializer_workflow": ".github/workflows/portable-usb-v2-proof.yml",
+  "disposable_materializer_workflow_implemented": true,
+  "disposable_materializer_proof_passed_on_current_head": false,
+  "application_planner": {
+    "implemented": true,
+    "owner": "tools/creator/core/portable_media.go#PlanPortableApplication",
+    "cli_command": "ordax-creator plan-portable-application",
+    "schema": "prototype-ordax.portable-application-plan/1",
+    "consumes_exact_media_plan": true,
+    "canonical_media_plan_sha256_bound": true,
+    "host_neutral": true,
+    "physical_device_bound": false,
+    "physical_write_authorized": false,
+    "public_promotion_allowed": false,
+    "whole_disk_raw_image_required": false,
+    "ordered_phases": [
+      "write-exact-two-partition-gpt",
+      "format-ORDAX-ESP-fat32",
+      "format-ORDAX-DATA-exfat",
+      "materialize-13-exact-artifacts",
+      "flush-and-sync",
+      "readback-sha256-and-size-for-13-artifacts",
+      "verify-gpt-filesystems-labels-and-capacity"
+    ]
+  }
+}

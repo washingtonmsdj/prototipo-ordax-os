@@ -65,7 +65,10 @@
     "new_release_schema_requires_generator_support": true,
     "new_release_schema_requires_acquisition_agent_support": true,
     "new_release_schema_requires_cross_component_regression": true,
-    "new_trust_transition_requires_explicit_protocol": true
+    "new_trust_transition_requires_explicit_protocol": true,
+    "portable_usb_v2_erofs_requires_new_manifest_schema": true,
+    "portable_usb_v2_candidate_must_not_mutate_manifest_v1": true,
+    "portable_usb_v2_candidate_contract": "docs/contracts/portable-release-image.json"
   },
   "owners": {
     "generator": "tools/release-manifest",
@@ -80,5 +83,37 @@
     "support old and new schemas side by side during an explicit migration window when required",
     "prefer a verified full release fallback while delta delivery remains optional",
     "remove old protocol support only through a recorded migration decision with compatibility evidence"
-  ]
+  ],
+  "portable_v2": {
+    "manifest_schema": "prototype-ordax.release-manifest/2",
+    "envelope_schema": "prototype-ordax.release-envelope/1",
+    "trust_schema": "prototype-ordax.release-trust/1",
+    "release_addressing": "source-commit",
+    "product_mode": "usb",
+    "storage_profile": "portable-usb-v2",
+    "runtime_format": "erofs",
+    "artifact_count": 1,
+    "artifact_name": "system.erofs",
+    "artifact_role": "system-image",
+    "generator_support": true,
+    "signer_support": true,
+    "envelope_verifier_support": true,
+    "acquisition_agent_support": true,
+    "materialization_support": true,
+    "activation_support": false,
+    "boot_handoff_support": false,
+    "production_publication_allowed": false,
+    "channel_inspection_support": true,
+    "materialization_command": "ordax-release-agent materialize-portable",
+    "materialization_root": "/ordax-data/.ordax",
+    "materialization_layout": ".ordax/releases/<source_commit>/{system.erofs,release-manifest.json,release-envelope.json}",
+    "materialization_atomic_directory_rename": true,
+    "erofs_superblock_checked_before_persisted_release_promotion": true,
+    "current_symlink_created": false,
+    "offline_exact_verification_support": true,
+    "offline_exact_verification_command": "ordax-release-agent verify-portable-exact",
+    "offline_exact_verification_network_access": false,
+    "offline_exact_verification_mutates_release": false,
+    "offline_exact_verification_activation_performed": false
+  }
 }

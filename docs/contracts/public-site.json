@@ -12,7 +12,8 @@
     "register": "/cadastro/",
     "licenses": "/licencas/",
     "privacy": "/privacidade/",
-    "terms": "/termos/"
+    "terms": "/termos/",
+    "account": "/conta/"
   },
   "runtime_dependencies": {
     "remote_javascript": false,
@@ -61,6 +62,47 @@
     "public_updates_use_official_channels": true,
     "landing_may_explain_git_operations": false,
     "landing_may_expose_branch_pr_commit_as_normal_ux": false,
-    "creator_is_primary_public_media_path": true
+    "creator_is_primary_public_media_path": true,
+    "landing_is_public_product_surface": true,
+    "authenticated_workspace_may_replace_landing": false
+  },
+  "account_area": {
+    "route": "/conta/",
+    "requires_authenticated_session": true,
+    "fail_closed_until_identity_ready": true,
+    "may_simulate_user_data": false,
+    "public_root_may_render_authenticated_workspace": false,
+    "ordax_web_is_separate_product_mode": true,
+    "ordax_web_entry_is_reached_from_authenticated_product_experience": true
+  },
+  "mvp_scope": {
+    "execution_mode": "usb-only",
+    "native_installation_available": false,
+    "internal_disk_write_available": false,
+    "dual_boot_available": false,
+    "partition_resize_available": false,
+    "native_installation_future_phase": "post-mvp"
+  },
+  "future_experiences": {
+    "web": "coming-soon",
+    "mobile": "coming-soon",
+    "synchronization": "coming-soon",
+    "backup": "coming-soon",
+    "cross_device_continuity": "coming-soon"
+  },
+  "commerce": {
+    "billing_implemented": false,
+    "pricing_published": false,
+    "commercial_tiers_defined": false,
+    "commercial_device_limit_defined": false,
+    "second_device_fee_policy_defined": false,
+    "entitlement_architecture_prepared": true,
+    "future_value_model": [
+      "synchronization",
+      "backup",
+      "cross-device-continuity",
+      "cloud-storage",
+      "services"
+    ]
   }
 }

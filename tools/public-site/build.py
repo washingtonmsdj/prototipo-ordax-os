@@ -43,6 +43,7 @@ REQUIRED_FILES = (
     "download/index.html",
     "login/index.html",
     "cadastro/index.html",
+    "conta/index.html",
     "licencas/index.html",
     "privacidade/index.html",
     "termos/index.html",
@@ -198,7 +199,7 @@ def build_bundle(out_dir: Path, source_commit: str, root: Path = SOURCE) -> dict
             "build_recipe": "tools/public-site/build.py",
             "remote_runtime_dependencies": False,
             "framework_runtime_dependency": False,
-            "routes": ["/", "/download/", "/login/", "/cadastro/", "/licencas/", "/privacidade/", "/termos/"],
+            "routes": ["/", "/download/", "/login/", "/cadastro/", "/conta/", "/licencas/", "/privacidade/", "/termos/"],
             "public_release_catalog": {
                 "path": "/" + PUBLIC_CATALOG_RELATIVE.as_posix(),
                 "status": catalog["status"],

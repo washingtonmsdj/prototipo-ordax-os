@@ -63,6 +63,7 @@ class ProductCapabilitiesContractTests(unittest.TestCase):
             forbidden = set(by_mode[mode_id]["forbidden_capabilities"])
             self.assertIn("host.raw-disk", forbidden)
             self.assertIn("creator.usb-media", forbidden)
+            self.assertIn("creator.native-install", forbidden)
             self.assertEqual(by_mode[mode_id]["privileged_capabilities"], [])
         desktop = by_mode["desktop"]
         self.assertEqual(
@@ -70,6 +71,21 @@ class ProductCapabilitiesContractTests(unittest.TestCase):
             {"creator.usb-media", "host.raw-disk"},
         )
         self.assertEqual(desktop["privileged_boundary"], "creator-only-explicit-user-authorization")
+        self.assertIn("creator.native-install", desktop["forbidden_capabilities"])
+
+        usb = by_mode["usb"]
+        self.assertEqual(
+            set(usb["privileged_capabilities"]),
+            {"creator.native-install", "host.raw-disk"},
+        )
+        self.assertEqual(
+            usb["privileged_boundary"],
+            "native-installer-only-explicit-user-authorization",
+        )
+        self.assertNotIn("creator.native-install", usb["baseline_capabilities"])
+
+        native_disk = by_mode["native-disk"]
+        self.assertIn("creator.native-install", native_disk["forbidden_capabilities"])
 
     def test_extension_policy_is_additive_and_versioned(self):
         contract = self.load(CAPABILITIES)

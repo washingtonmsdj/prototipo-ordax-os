@@ -74,5 +74,11 @@
     "package_versions_pinned": true,
     "repeat_build_digest_match": true,
     "promotable_to_physical": true
+  },
+  "artifact_digest_policy": {
+    "current_source_or_config_may_change_artifact_bytes": true,
+    "historical_reference_artifacts_are_environment_observation_only": true,
+    "promotion_requires_same_current_source_repeat_build_match": true,
+    "historical_artifact_digest_is_not_a_permanent_current_build_oracle": true
   }
 }

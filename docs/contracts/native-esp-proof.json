@@ -1,0 +1,55 @@
+{
+  "$schema": "prototype-ordax.native-esp-proof/1",
+  "status": "defined-execution-pending",
+  "native_esp_contract": "docs/contracts/native-esp.json",
+  "storage_contract": "docs/contracts/storage-architecture.json",
+  "creator_policy_owner": "tools/creator/core/native_boot_entries.go",
+  "creator_render_command": "ordax-creator render-native-boot",
+  "physical_device_paths_allowed": false,
+  "physical_write_authorized": false,
+  "qemu_uefi_boot_proven": false,
+  "physical_native_boot_proven": false,
+  "pool_identity": {
+    "source": "disposable-real-luks2-header",
+    "must_match_rendered_entries": true,
+    "secret_material_retained": false
+  },
+  "fat32_image": {
+    "label": "ORDAX-ESP",
+    "size_policy_source": "profiles.native-disk.physical_layout[0].size_policy.minimum_bytes",
+    "regular_sparse_file_only": true,
+    "destroy_before_success": true
+  },
+  "artifact_requirements": {
+    "bootloader_provenance": "prototype-ordax.esp-bootloader-provenance/1",
+    "kernel_provenance": "prototype-ordax.kernel-provenance/1",
+    "initramfs_provenance": "prototype-ordax.native-initramfs-provenance/1",
+    "exact_ordax_source_commit_required_for_kernel": true,
+    "exact_ordax_source_commit_required_for_initramfs": true,
+    "physical_authorization_must_be_false": true
+  },
+  "proof_requirements": [
+    "source-configuration-hashes-match-native-esp-contract",
+    "bootloader-bytes-match-provenance",
+    "kernel-bytes-match-exact-source-provenance",
+    "initramfs-bytes-match-exact-source-provenance",
+    "creator-core-renders-normal-and-recovery-entries",
+    "rendered-pool-uuid-equals-real-disposable-luks2-uuid",
+    "fat32-label-is-ordax-esp",
+    "target-layout-exactly-native-esp-layout",
+    "every-materialized-file-read-back-by-sha256",
+    "portable-usb-entry-names-absent",
+    "luks-key-destroyed-before-proof",
+    "fat32-image-and-luks-container-destroyed-before-upload",
+    "metadata-only-upload"
+  ],
+  "proof_owner": "tools/creator/proof/native_esp.py",
+  "workflow_owner": ".github/workflows/native-esp-candidate.yml",
+  "proof_output": "out/native-esp-proof/proof.json",
+  "forbidden_claims": [
+    "qemu-uefi-boot-proven",
+    "pid1-kernel-cmdline-path-proven",
+    "physical-native-boot-proven",
+    "physical-apply-authorized"
+  ]
+}

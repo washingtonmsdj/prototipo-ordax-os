@@ -1,0 +1,129 @@
+name: Stable MVP Base Candidate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bootstrap/base/**'
+      - 'bootstrap/stable-base/**'
+      - 'bootstrap/kernel/**'
+      - 'platform/compliance/declared-inputs.json'
+      - 'docs/contracts/distribution-profiles.json'
+      - 'docs/contracts/portable-bootstrap-v2.json'
+      - 'tests/test_stable_base_contract.py'
+      - 'tests/test_third_party_inventory.py'
+      - '.github/workflows/stable-base-candidate.yml'
+  pull_request:
+    paths:
+      - 'bootstrap/base/**'
+      - 'bootstrap/stable-base/**'
+      - 'bootstrap/kernel/**'
+      - 'platform/compliance/declared-inputs.json'
+      - 'docs/contracts/distribution-profiles.json'
+      - 'docs/contracts/portable-bootstrap-v2.json'
+      - 'tests/test_stable_base_contract.py'
+      - 'tests/test_third_party_inventory.py'
+      - '.github/workflows/stable-base-candidate.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  stable-base:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          check-latest: false
+
+      - name: Install kernel and Stable Base build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-13 make bc perl bison flex openssl libssl-dev libelf-dev \
+            dwarves kmod xz-utils pkg-config musl-tools binutils bzip2 \
+            e2fsprogs util-linux proot erofs-utils
+          proot --version
+          command -v mkfs.erofs
+          command -v fsck.erofs
+
+      - name: Validate Stable Base contracts
+        run: |
+          set -euo pipefail
+          python bootstrap/stable-base/build.py check
+          python -m unittest \
+            tests.test_stable_base_contract \
+            tests.test_third_party_inventory -v
+
+      - name: Build exact kernel modules
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          python bootstrap/kernel/build.py check
+          python bootstrap/kernel/build.py build --jobs 4
+          python bootstrap/kernel/verify.py out/kernel
+          test -s out/kernel/kernel-modules-6.6.52.tar
+
+      - name: Build and verify Stable Base candidate
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          sudo -E env ORDAX_SOURCE_COMMIT="$ORDAX_SOURCE_COMMIT" \
+            python bootstrap/stable-base/build.py build \
+              --kernel-modules out/kernel/kernel-modules-6.6.52.tar \
+              --out-dir out/stable-base \
+              --cache-dir "$RUNNER_TEMP/stable-base-cache" \
+              | tee "$RUNNER_TEMP/stable-base-build.log"
+          sudo chown -R "$(id -u):$(id -g)" out/stable-base
+          python bootstrap/stable-base/build.py verify --out-dir out/stable-base
+
+          python - <<'PY'
+          import json, pathlib
+          p = json.loads(pathlib.Path('out/stable-base/provenance.json').read_text())
+          assert p['status'] == 'candidate-not-promotable'
+          assert p['git_client_preseeded'] is False
+          assert p['source_checkout_preseeded'] is False
+          assert p['development_helpers_preseeded'] is False
+          assert p['physical_artifact_authorized'] is False
+          assert p['signed_update_integration_implemented'] is False
+          assert p['qemu_boot_proven'] is False
+          assert p['physical_boot_proven'] is False
+          assert p['alpine_archive_sha256_pinned_in_contract'] is True
+          assert p['apk_package_versions_pinned'] is True
+          assert p['apk_package_lock_matches_contract'] is True
+          assert p['exact_package_spec_count'] == p['installed_package_count']
+          print('STABLE_BASE_CANDIDATE=PASS')
+          print('STABLE_BASE_GIT=NO')
+          print('STABLE_BASE_ALPINE_PINNED=YES')
+          print('STABLE_BASE_APK_LOCKED=YES')
+          print('STABLE_BASE_PHYSICAL_AUTHORIZED=NO')
+          print('PINNED_ALPINE_SHA256=' + p['alpine_archive_sha256'])
+          PY
+
+      - name: Upload candidate and provenance for review only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: stable-mvp-base-candidate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            out/stable-base/stable-base.erofs
+            out/stable-base/provenance.json
+            out/stable-base/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7

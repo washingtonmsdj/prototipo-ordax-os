@@ -16,7 +16,10 @@
       "version": "6.6.52",
       "archive_url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.6.52.tar.xz",
       "archive_sha256": "1591ab348399d4aa53121158525056a69c8cf0fe0e90935b0095e9a58e37b4b8",
-      "delivery_scope": ["usb", "native"],
+      "delivery_scope": [
+        "usb",
+        "native"
+      ],
       "license": {
         "status": "unresolved-in-this-inventory",
         "spdx": null
@@ -25,7 +28,7 @@
     {
       "id": "alpine-development-base",
       "kind": "base-rootfs-and-selected-packages",
-      "source_authority": "bootstrap/dev-base/_build_core.py",
+      "source_authority": "bootstrap/base/alpine_core.py",
       "version": "3.22.5",
       "branch": "v3.22",
       "arch": "x86_64",
@@ -42,8 +45,43 @@
         "linux-firmware-mediatek",
         "linux-firmware-ath9k_htc"
       ],
-      "build_only_packages": ["zstd"],
-      "delivery_scope": ["owner-development-usb-base"],
+      "build_only_packages": [
+        "zstd"
+      ],
+      "delivery_scope": [
+        "owner-development-usb-base"
+      ],
+      "license": {
+        "status": "unresolved-in-this-inventory",
+        "spdx": null
+      }
+    },
+    {
+      "id": "alpine-stable-mvp-base",
+      "kind": "base-rootfs-and-selected-packages",
+      "source_authority": "bootstrap/stable-base/source.json",
+      "version": "3.22.5",
+      "branch": "v3.22",
+      "arch": "x86_64",
+      "packages": [
+        "ca-certificates",
+        "kmod",
+        "iproute2",
+        "iw",
+        "wpa_supplicant",
+        "zstd",
+        "linux-firmware-other",
+        "linux-firmware-rtlwifi",
+        "linux-firmware-mediatek",
+        "linux-firmware-ath9k_htc"
+      ],
+      "build_only_packages": [
+        "zstd"
+      ],
+      "delivery_scope": [
+        "stable-mvp-usb-base-candidate"
+      ],
+      "promotion_status": "blocked-until-source-and-package-locks",
       "license": {
         "status": "unresolved-in-this-inventory",
         "spdx": null
@@ -72,7 +110,9 @@
         "eudev",
         "libinput-udev"
       ],
-      "delivery_scope": ["native-surface-runtime"],
+      "delivery_scope": [
+        "native-surface-runtime"
+      ],
       "license": {
         "status": "unresolved-in-this-inventory",
         "spdx": null

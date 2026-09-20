@@ -24,9 +24,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - name: Checkout
+      - name: Checkout exact source commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Set up Python for contract validation
@@ -68,12 +69,13 @@ jobs:
           IMAGE: ${{ steps.env.outputs.image }}
           SNAPSHOT_ID: ${{ steps.env.outputs.snapshot }}
           PACKAGES: ${{ steps.env.outputs.packages }}
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          rm -rf out/kernel-pinned out/kernel-work-pinned out/kernel-pinned-observation
+          rm -rf out/kernel-pinned out/kernel-work-pinned out/kernel-pinned-repeat out/kernel-work-pinned-repeat out/kernel-pinned-observation
           mkdir -p out/kernel-pinned-observation
           docker run --rm \
-            -e GITHUB_SHA="$GITHUB_SHA" \
+            -e ORDAX_SOURCE_COMMIT="$ORDAX_SOURCE_COMMIT" \
             -e BASE_IMAGE="$IMAGE" \
             -e SNAPSHOT_ID="$SNAPSHOT_ID" \
             -e PACKAGES="$PACKAGES" \
@@ -128,7 +130,20 @@ jobs:
               python3 bootstrap/kernel/build.py check
               python3 bootstrap/kernel/build.py build --jobs 4 --work-dir out/kernel-work-pinned --out-dir out/kernel-pinned
               python3 bootstrap/kernel/verify.py out/kernel-pinned
-              chown -R "$HOST_UID:$HOST_GID" /repo/out/kernel-pinned /repo/out/kernel-work-pinned /repo/out/kernel-pinned-observation
+
+              # A historical artifact hash cannot remain the oracle after a
+              # legitimate kernel source/config change. Rebuild the same head
+              # from a clean work tree in the exact pinned environment and
+              # compare those two current-source results instead.
+              python3 bootstrap/kernel/build.py build --jobs 4 --work-dir out/kernel-work-pinned-repeat --out-dir out/kernel-pinned-repeat
+              python3 bootstrap/kernel/verify.py out/kernel-pinned-repeat
+
+              chown -R "$HOST_UID:$HOST_GID" \
+                /repo/out/kernel-pinned \
+                /repo/out/kernel-work-pinned \
+                /repo/out/kernel-pinned-repeat \
+                /repo/out/kernel-work-pinned-repeat \
+                /repo/out/kernel-pinned-observation
             '
 
       - name: Verify repeatability against pinned observation
@@ -136,6 +151,7 @@ jobs:
           python bootstrap/kernel/verify_reproducibility.py \
             docs/contracts/kernel-build-environment.json \
             out/kernel-pinned \
+            --repeat-artifact-dir out/kernel-pinned-repeat \
             --ca-bundle-sha-file out/kernel-pinned-observation/ca-bundle.sha256 \
             --out out/kernel-pinned-observation/reproducibility-verification.json
 
@@ -143,6 +159,7 @@ jobs:
         env:
           IMAGE: ${{ steps.env.outputs.image }}
           SNAPSHOT_ID: ${{ steps.env.outputs.snapshot }}
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           python - <<'PY'
           import hashlib, json, os, pathlib
@@ -173,7 +190,7 @@ jobs:
           data = {
               '$schema': 'prototype-ordax.kernel-build-environment-observation/1',
               'status': 'repeat-proof-pass',
-              'source_commit': os.environ['GITHUB_SHA'],
+              'source_commit': os.environ['ORDAX_SOURCE_COMMIT'],
               'base_image': os.environ['IMAGE'],
               'apt_snapshot_id': os.environ['SNAPSHOT_ID'],
               'package_versions': dict(sorted(versions.items())),
@@ -191,7 +208,7 @@ jobs:
       - name: Upload proof and kernel candidate
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: ordax-kernel-pinned-proof-${{ github.sha }}
+          name: ordax-kernel-pinned-proof-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             out/kernel-pinned/
             out/kernel-pinned-observation/

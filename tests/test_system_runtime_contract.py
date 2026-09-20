@@ -79,6 +79,13 @@ class SystemRuntimeContractTests(unittest.TestCase):
         for forbidden in ("curl ", "wget ", "udhcpc", "ssh ", "exec sh"):
             self.assertNotIn(forbidden, text)
 
+    def test_native_surface_accepts_native_disk_user_home_subvolume_override(self):
+        text = SURFACE_RUNTIME.read_text(encoding="utf-8")
+        self.assertIn('STATE_ROOT=${ORDAX_STATE_DIR:-/state/ordax}', text)
+        self.assertIn('PERSISTENT_USER_HOME=${ORDAX_USER_HOME:-$STATE_ROOT/home}', text)
+        self.assertIn('mkdir -p "$SESSION_DIR" "$PERSISTENT_NATIVE_STATE" "$PERSISTENT_USER_HOME"', text)
+        self.assertIn('"$RUNTIME_ROOT/var/lib/ordax-user"', text)
+
     def test_native_surface_reuses_shared_surface_through_native_composition(self):
         text = SURFACE_RUNTIME.read_text(encoding="utf-8")
         native_main = (NATIVE_COMPOSITION / "main.mjs").read_text(encoding="utf-8")

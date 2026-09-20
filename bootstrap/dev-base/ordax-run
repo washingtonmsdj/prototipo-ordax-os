@@ -26,5 +26,6 @@ is_sha "$source_sha" || {
 }
 
 ORDAX_DISTRIBUTION_PROFILE=owner-development \
+ORDAX_PRODUCT_MODE=usb \
 ORDAX_SOURCE_SHA="$source_sha" \
     exec "$ENTRYPOINT"

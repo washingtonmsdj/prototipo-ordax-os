@@ -9,6 +9,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "docs" / "contracts" / "minimal-bootstrap.json"
 ENTRYPOINT_PATH = ROOT / "bootstrap" / "entrypoint"
+PRODUCT_MODE_PATH = ROOT / "bootstrap" / "config" / "product-mode"
 
 
 class MinimalBootstrapContractTest(unittest.TestCase):
@@ -100,6 +101,26 @@ class MinimalBootstrapContractTest(unittest.TestCase):
         self.assertEqual(artifact["mode"], "0755")
         digest = hashlib.sha256(ENTRYPOINT_PATH.read_bytes()).hexdigest()
         self.assertEqual(artifact["sha256"], digest)
+
+    def test_product_mode_is_explicit_hash_pinned_usb_identity(self):
+        groups = {group["id"]: group for group in self.manifest["artifact_groups"]}
+        mode_group = groups["bootstrap-product-mode"]
+        self.assertTrue(mode_group["resolved"])
+        self.assertEqual(mode_group["target_root"], "/ordax/bootstrap/config")
+        self.assertEqual(len(mode_group["artifacts"]), 1)
+        artifact = mode_group["artifacts"][0]
+        self.assertEqual(artifact["source_path"], "bootstrap/config/product-mode")
+        self.assertEqual(artifact["target_path"], "/ordax/bootstrap/config/product-mode")
+        self.assertEqual(artifact["mode"], "0644")
+        self.assertEqual(PRODUCT_MODE_PATH.read_text(encoding="utf-8"), "usb\n")
+        self.assertEqual(
+            artifact["sha256"],
+            hashlib.sha256(PRODUCT_MODE_PATH.read_bytes()).hexdigest(),
+        )
+        self.assertIn("product-mode-identity", self.manifest["required_capabilities_before_first_release"])
+        self.assertIn('PRODUCT_MODE_FILE=/ordax/bootstrap/config/product-mode', self.entrypoint)
+        self.assertIn('usb|native-disk)', self.entrypoint)
+        self.assertIn('ORDAX_PRODUCT_MODE="$mode"', self.entrypoint)
 
     def test_entrypoint_is_offline_first_and_https_fail_closed(self):
         self.assertIn("/ordax/current/system/entrypoint", self.entrypoint)

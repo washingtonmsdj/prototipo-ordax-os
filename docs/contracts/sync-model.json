@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.sync-model/1",
-  "status": "canonical-prototype-contract",
+  "status": "future-sync-architecture-mvp-service-unavailable",
   "authority": {
     "domain_owner": "system/services/sync",
     "platform_integration_owner": "system/adapters",
@@ -91,12 +91,18 @@
     "known_local_data_must_not_be_destroyed_only_because_transport_is_unavailable": true
   },
   "plans_and_quota": {
-    "basic_cross_device_sync_is_plan_gated": false,
-    "plan_may_expand_quota": true,
-    "plan_may_expand_history": true,
+    "billing_implemented": false,
+    "pricing_defined": false,
+    "commercial_tiers_defined": false,
+    "commercial_device_limit_defined": false,
+    "second_device_fee_policy_defined": false,
+    "entitlement_architecture_prepared": true,
+    "future_entitlements_are_server_authoritative": true,
+    "future_plan_may_expand_storage": true,
+    "future_plan_may_expand_history": true,
+    "future_plan_may_expand_backup": true,
     "downgrade_may_silently_delete_data": false,
-    "over_quota_state_may_block_new_uploads": true,
-    "entitlements_are_server_authoritative": true
+    "over_quota_state_may_block_new_uploads": true
   },
   "compatibility": {
     "data_class_ids_are_stable": true,
@@ -107,5 +113,11 @@
     "removing_syncable_data_class_requires_explicit_migration": true,
     "backend_provider_change_requires_client_migration": false,
     "platform_adapter_change_may_change_domain_sync_semantics": false
+  },
+  "mvp_availability": {
+    "synchronization_available": false,
+    "web_continuity_available": false,
+    "mobile_continuity_available": false,
+    "public_copy": "coming-soon-only"
   }
 }

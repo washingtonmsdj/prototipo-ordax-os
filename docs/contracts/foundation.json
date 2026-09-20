@@ -159,9 +159,9 @@
   },
   "account_sync": {
     "single_identity_across_all_modes": true,
-    "core_cross_device_sync_available_to_all_accounts": true,
+    "core_cross_device_sync_available_to_all_accounts": false,
     "account_access_may_be_blocked_by_plan": false,
-    "plan_entitlements_may_expand_sync": true,
+    "plan_entitlements_may_expand_sync": false,
     "offline_first_clients_allowed": true,
     "encrypted_transport_required": true,
     "server_side_authorization_required": true,
@@ -180,20 +180,28 @@
       "hardware-drivers",
       "raw-disk-state",
       "ephemeral-cache"
-    ]
+    ],
+    "cross_device_sync_implemented_in_mvp": false,
+    "cross_device_sync_architecture_prepared": true,
+    "future_entitlements_may_expand_service_capacity": true
   },
   "plans": {
+    "billing_implemented": false,
     "pricing_defined": false,
+    "commercial_tiers_defined": false,
+    "commercial_device_limit_defined": false,
+    "second_device_fee_policy_defined": false,
     "identity_is_plan_gated": false,
-    "basic_cross_device_sync_is_plan_gated": false,
-    "entitlements_are_server_authoritative": true,
-    "paid_tiers_may_expand": [
-      "cloud-storage-quota",
-      "sync-history-retention",
-      "device-backup",
-      "advanced-collaboration",
-      "premium-ai-compute",
-      "priority-recovery"
+    "entitlement_architecture_prepared": true,
+    "future_entitlements_are_server_authoritative": true,
+    "future_value_categories": [
+      "synchronization",
+      "cloud-storage",
+      "backup-restore",
+      "cross-device-continuity",
+      "collaboration",
+      "premium-compute",
+      "recovery-support"
     ]
   },
   "surface": {

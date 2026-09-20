@@ -15,7 +15,9 @@ The profiles share the same source authority (`main`) and the same principle: or
 
 ## Physical layout model
 
-### Capacity-independent bootstrap seed
+Three contracts coexist during migration and must not be confused.
+
+### Capacity-independent bootstrap seed — transitional source artifact
 
 ```text
 ORDAX-ESP
@@ -24,9 +26,9 @@ ORDAX
 
 Exactly two seed partitions.
 
-The seed is capacity-independent and is the object described by `docs/contracts/physical-media.json`.
+The seed is capacity-independent and remains the source object described by `docs/contracts/physical-media.json`. It is retained while the existing boot chain is proven; it is **not** the durable MVP product layout.
 
-### Final USB prepared by the Creator
+### Current physical owner/development proof — transitional
 
 ```text
 ORDAX-ESP
@@ -36,9 +38,33 @@ ORDAX-DATA
 
 Exactly three prepared-target partitions.
 
-`ORDAX-DATA` is created by the Creator after target capacity is known. It is exFAT portable user-data space and is therefore intentionally absent from the signed/capacity-independent seed. Exact geometry and size policy live in `docs/contracts/physical-prepared-media.json`.
+This is governed by `docs/contracts/physical-prepared-media.json` and remains useful for current real-hardware validation. It must not be promoted as the long-term Stable/MVP storage architecture.
 
-This does **not** introduce a separate HOME partition. `/ordax/home` remains a logical path in `ORDAX`.
+### Durable Stable/MVP USB target — v2
+
+The durable product bootstrap is governed separately by `docs/contracts/portable-bootstrap-v2.json`. Unlike the transitional network-first seed, the **MVP product USB is offline-capable on first boot**: the Creator must already place one signed/verified `system.erofs` release on `ORDAX-DATA` and initialize the ext4 state image so `current` and `known-good` point to that exact release.
+
+This does not preinstall the full product on the ESP. `ORDAX-ESP` remains boot/bootstrap-only. The product release stays under `ORDAX-DATA/.ordax/releases/`.
+
+
+```text
+ORDAX-ESP   FAT32
+ORDAX-DATA  exFAT
+```
+
+Exactly two physical product partitions. There is no fixed physical `ORDAX` system partition.
+
+```text
+ORDAX-DATA/
+├─ user files...
+└─ .ordax/
+   ├─ releases/<version>.erofs
+   └─ state/persistent-state.img   # ext4 inside
+```
+
+The Creator Core geometry is `PlanPortableTargetStorage`. The storage contract is `docs/contracts/portable-usb-v2.json`, backed by `docs/contracts/storage-architecture.json`.
+
+The v2 storage proof is intentionally non-destructive. The physical writer must remain on the transitional profile until v2 storage, kernel prerequisites, boot/initramfs handoff, recovery and physical-write planning have passed their independent gates.
 
 ## Bootstrap seed payload
 
@@ -142,11 +168,16 @@ A valid local checkout may boot when the network is unavailable. A rollback is s
 
 ## Canonical signed-release first boot
 
+### Current transitional path
+
+This remains network-first and exists for the current hardware proof. It is not the final Stable/MVP first-boot UX.
+
 ```text
 UEFI
  -> kernel/initramfs
+ -> mount ORDAX ext4
  -> minimal bootstrap
- -> network
+ -> network when no known-good release exists
  -> acquire release envelope/artifacts over HTTPS
  -> verify integrity/authenticity
  -> materialize /ordax/releases/<commit>
@@ -154,7 +185,28 @@ UEFI
  -> launch OrdaX
 ```
 
-Remote access is not needed for this path.
+### Durable portable-v2 target
+
+The final MVP path removes the physical `ORDAX` partition. The future v2 initramfs handoff must instead:
+
+```text
+UEFI
+ -> kernel/initramfs with exFAT + EROFS + loop + ext4 + OverlayFS built in
+ -> mount ORDAX-DATA
+ -> resolve verified current/known-good release image
+ -> attach immutable EROFS release
+ -> attach Linux-native ext4 persistent-state image
+ -> compose writable runtime without using exFAT as OverlayFS upper
+ -> launch verified OrdaX release
+```
+
+Activation metadata for the durable USB is intentionally **not** stored as a symlink or mutable pointer directly on exFAT. The fixed ext4 persistent-state image owns `current`, `known-good`, `candidate` and the activation transaction. This keeps Linux activation/rollback state on a Linux-native filesystem with atomic replacement and fsync semantics, while exFAT remains a byte store for immutable releases and user-visible files.
+
+The repository now also has a disposable **mount-handoff proof** for this graph. It re-verifies a signed portable release offline, mounts the real EROFS system tree read-only, mounts the ext4 persistent-state image, composes an OverlayFS runtime system view and proves persistent writes do not mutate EROFS.
+
+That still does **not** mean the v2 boot handoff is implemented. The current fixed initramfs does not yet contain the required `losetup` capability or portable handoff helper, and release selection/known-good fallback metadata has not yet been connected. Until those boot/recovery gates are green, the current transitional boot path remains the hardware validation path.
+
+Remote access is not needed for either Stable/MVP path.
 
 ## After acquisition
 
@@ -225,7 +277,10 @@ Canonical public release acquisition remains blocked until the user-controlled r
 ```text
 GIT_MAIN_IS_SOURCE_AUTHORITY=YES
 BOOTSTRAP_SEED_PARTITIONS=2
-PREPARED_USB_PARTITIONS=3
+TRANSITIONAL_PREPARED_USB_PARTITIONS=3
+MVP_TARGET_PREPARED_USB_PARTITIONS=2
+MVP_TARGET_PORTABLE_LAYOUT=ORDAX-ESP+ORDAX-DATA
+MVP_TARGET_BOOT_HANDOFF_IMPLEMENTED=NO
 SEPARATE_HOME_PARTITION=NO
 REMOTE_CONTROL_PRESEEDED=NO
 SSH_PRESEEDED=NO
@@ -236,3 +291,62 @@ REFLASH_FOR_NORMAL_SYSTEM_CHANGES=NO
 ```
 
 If a future requirement proves that device identity, Remote Core or Control Plane is necessary, it must be introduced deliberately through an architectural decision rather than added preemptively.
+
+
+### Portable v2 bootstrap capsule candidate
+
+The durable USB now has a deterministic bootstrap-capsule candidate at `/ordax/bootstrap/bootstrap.erofs`.
+
+The capsule is deliberately small: the static release agent, local recovery entrypoint and official release-channel pointer. It excludes Surface, normal apps, user data, Git, build tools and every private signing key. The canonical public release trust anchor remains a separate bootstrap-owned object.
+
+CI builds the EROFS capsule twice from normalized tar metadata and requires byte-identical output plus EROFS integrity verification. This proves the candidate format only. The capsule is **not yet materialized into the physical ESP**, its hash is not yet pinned inside the fixed initramfs, and PID1 does not mount or execute it. Those remain independent promotion gates.
+
+
+### Portable-v2 candidate PID1
+
+The fixed initramfs now carries an isolated candidate orchestrator at `/sbin/ordax-portable-init`. It is **not** the default `/init`, and no physical systemd-boot entry points to it.
+
+The candidate path is intended only for disposable boot proof through `rdinit=/sbin/ordax-portable-init`. It mounts the ESP read-only, verifies the bootstrap capsule against the initramfs-owned hash, mounts `ORDAX-DATA`, verifies the pinned Stable Base, attaches the ext4 state image, and then evaluates boot slots in this order:
+
+```text
+current
+ -> exact signed offline verification
+ -> if invalid: known-good
+ -> exact signed offline verification
+ -> candidate is never boot authority
+```
+
+Only after a release passes exact signature/hash verification does the candidate compose the Stable Base overlay, bind the verified `system/` subtree read-only, move all required mounts under the new root and invoke `switch_root` into `ordax-stable-init`.
+
+This does not claim a bootable MVP yet. Canonical public trust is still not pinned, the candidate has no physical boot entry, QEMU end-to-end proof is still pending, and the transitional `/init` remains the actual physical boot path.
+
+
+### Pinned portable-v2 initramfs composition proof
+
+Before any portable-v2 QEMU or physical boot promotion, CI must prove that one **real bootstrap capsule** and one **real Stable Base** built from the exact source head are both cryptographically pinned into the same deterministic initramfs candidate.
+
+The proof builds the capsule from the exact static release agent, builds the Stable Base from exact-source kernel modules, passes both EROFS artifacts into `bootstrap/initramfs/build.py`, and verifies that the resulting provenance and in-archive SHA-256 check files match the real bytes.
+
+The two fixed-path verification helpers are then exercised in an isolated initramfs root: exact artifacts must pass and single-byte-tampered copies must fail. This proof does not change the default `/init`, does not promote `ordax-portable-init`, does not boot QEMU and does not authorize physical media. Those remain later gates.
+
+
+### Portable v2 direct-kernel QEMU gate
+
+After the exact-artifact pin composition gate, the next disposable boot proof uses QEMU with the exact OrdaX kernel plus the pinned initramfs candidate and a sparse regular guest disk containing the **final two-partition layout**:
+
+```text
+ORDAX-ESP  FAT32
+ORDAX-DATA exFAT
+```
+
+The disk contains the verified bootstrap capsule and bootstrap-owned CI trust on the ESP, plus the real Stable Base, ext4 persistent-state image and one signed `release-manifest/2` EROFS product release on ORDAX-DATA. The ext4 state owns `current` and `known-good`.
+
+This gate invokes the candidate PID1 explicitly with `rdinit=/sbin/ordax-portable-init`, disables guest networking and requires both the portable PID1 handoff marker and the Stable Base handoff marker. It proves the durable runtime chain without silently changing the default boot path.
+
+This is deliberately **not yet a UEFI proof**. systemd-boot/OVMF, a public physical boot entry and real USB hardware remain later gates.
+
+### Portable v2 UEFI/QEMU gate
+
+After the direct-kernel candidate proof, the same disposable final-layout disk is staged with the pinned `systemd-boot` candidate at the standard fallback path `EFI/BOOT/BOOTX64.EFI`, the exact kernel/initramfs and dedicated portable-v2 loader entries. QEMU then boots it through non-Secure-Boot OVMF with networking disabled.
+
+This gate proves the UEFI firmware -> systemd-boot -> exact kernel/initramfs -> portable PID1 -> Stable Base chain only when its workflow passes. It does **not** prove Secure Boot, physical USB boot or public promotion. The physical Creator writer remains blocked.

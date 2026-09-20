@@ -60,7 +60,7 @@
       "signed_release_discovery_requires_trust": true,
       "signed_release_discovery_source_implemented": true,
       "signed_release_discovery_physical_agent_ready": false,
-      "signed_release_discovery_physical_agent_target_sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+      "signed_release_discovery_physical_agent_target_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
       "signed_release_discovery_physical_agent_delivery": "hash-addressed-release-agent-refresh-or-new-creator-media",
       "signed_release_discovery_asset_published": true,
       "signed_release_discovery_asset_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
@@ -97,8 +97,8 @@
       "exact_release_activation_preserves_previous_commit_in_receipt": true,
       "exact_release_activation_atomic_current_swap": true,
       "exact_release_activation_supervisor_connected": true,
-      "signed_release_seed_media_agent_sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
-      "exact_release_activation_physical_agent_target_sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+      "signed_release_seed_media_agent_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+      "exact_release_activation_physical_agent_target_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
       "exact_release_activation_seed_media_includes_primitive": true,
       "exact_release_activation_asset_published": true,
       "exact_release_activation_asset_publish_gate": "release-agent-refresh-main-push",
@@ -115,7 +115,37 @@
       "activation_and_rollback_require_no_network": true,
       "guardian_rebinds_source_identity_from_current": true,
       "guardian_refresh_required_after_current_swap": true,
-      "runtime_update_known_good_preserved": true
+      "runtime_update_known_good_preserved": true,
+      "mvp_execution_mode": "usb-only",
+      "native_install_capability_enabled": false,
+      "internal_disk_destructive_write_allowed": false,
+      "dual_boot_available": false,
+      "automatic_partition_resize_available": false,
+      "manual_partition_editor_available": false,
+      "native_install_foundation_retained": true,
+      "native_install_activation_phase": "post-mvp",
+      "runtime_layout_default": "legacy-tree",
+      "runtime_layouts_supported": [
+        "legacy-tree",
+        "portable-v2"
+      ],
+      "portable_v2_runtime_layout_support_implemented": true,
+      "portable_v2_runtime_identity_source": "verified-boot-handoff-source-sha",
+      "portable_v2_legacy_current_symlink_required": false,
+      "portable_v2_initial_surface_runtime_supported": true,
+      "portable_v2_update_activation_connected": false,
+      "portable_v2_guardian_refresh_via_legacy_swap_allowed": false,
+      "portable_v2_activation_state_owner": "ext4-persistent-state-image",
+      "portable_v2_physical_boot_connected": false,
+      "stable_base_candidate_contract": "bootstrap/stable-base/source.json",
+      "stable_base_candidate_implemented": true,
+      "stable_base_git_client_embedded": false,
+      "stable_base_source_checkout_embedded": false,
+      "stable_base_physical_boot_connected": false,
+      "stable_base_alpine_hash_pinned": false,
+      "stable_base_apk_versions_pinned": false,
+      "portable_v2_release_agent_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+      "portable_v2_release_agent_supports_offline_exact_verification": true
     }
   },
   "invariants": {
@@ -126,11 +156,16 @@
     "stable_must_fail_closed_without_release_trust": true,
     "stable_public_download_must_fail_closed_without_authorized_release": true,
     "component_versions_may_diverge": true,
-    "base_updates_are_more_restrictive_than_app_updates": true
+    "base_updates_are_more_restrictive_than_app_updates": true,
+    "stable_mvp_public_execution_is_usb_only": true,
+    "stable_mvp_must_not_expose_native_installation": true,
+    "stable_mvp_must_not_write_internal_disk": true,
+    "stable_runtime_layout_must_be_explicit": true,
+    "portable_v2_must_not_reuse_legacy_current_symlink": true
   },
   "next_gate": {
     "id": "stable-base-signed-update-integration",
-    "description": "Connect Stable/MVP Base kernel/initramfs/rootfs delivery to the official signed release path and existing A/B one-shot health/rollback machinery without enabling the Owner/Development Git candidate channel.",
+    "description": "Promote the Stable/MVP Base only after its Alpine source digest and exact APK package set are pinned, then connect signed kernel/initramfs/rootfs delivery to the existing A/B health/rollback machinery without enabling the Owner/Development Git candidate channel.",
     "implemented": false
   }
 }

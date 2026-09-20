@@ -1,0 +1,170 @@
+name: Native Initramfs Candidate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bootstrap/native-initramfs/**'
+      - 'docs/contracts/native-boot.json'
+      - 'docs/contracts/native-initramfs-build-environment.json'
+      - 'docs/contracts/native-initramfs-runtime-proof.json'
+      - '.github/workflows/native-initramfs-candidate.yml'
+  pull_request:
+    paths:
+      - 'bootstrap/native-initramfs/**'
+      - 'docs/contracts/native-boot.json'
+      - 'docs/contracts/native-initramfs-build-environment.json'
+      - 'docs/contracts/native-initramfs-runtime-proof.json'
+      - '.github/workflows/native-initramfs-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Resolve immutable environment
+        id: env
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pathlib
+          value = json.loads(pathlib.Path('docs/contracts/native-initramfs-build-environment.json').read_text())
+          image = value['base_image']['repository'] + '@' + value['base_image']['manifest_digest']
+          print('image=' + image)
+          print('snapshot=' + value['apt']['snapshot_id'])
+          print('packages=' + ' '.join(value['apt']['top_level_packages']))
+          PY
+
+      - name: Pull base image by digest
+        env:
+          IMAGE: ${{ steps.env.outputs.image }}
+        run: |
+          set -euo pipefail
+          docker pull "$IMAGE"
+          expected="${IMAGE##*@}"
+          docker image inspect --format '{{json .RepoDigests}}' "$IMAGE" | grep -Fq "@$expected"
+
+      - name: Build and verify locked Native initramfs
+        env:
+          IMAGE: ${{ steps.env.outputs.image }}
+          SNAPSHOT_ID: ${{ steps.env.outputs.snapshot }}
+          PACKAGES: ${{ steps.env.outputs.packages }}
+        run: |
+          set -euo pipefail
+          rm -rf out/native-initramfs
+          mkdir -p out/native-initramfs
+          docker run --rm \
+            -e GITHUB_SHA="${{ github.event.pull_request.head.sha || github.sha }}" \
+            -e ORDAX_BASE_IMAGE="$IMAGE" \
+            -e ORDAX_APT_SNAPSHOT_ID="$SNAPSHOT_ID" \
+            -e SNAPSHOT_ID="$SNAPSHOT_ID" \
+            -e PACKAGES="$PACKAGES" \
+            -e HOST_UID="$(id -u)" \
+            -e HOST_GID="$(id -g)" \
+            -v "$PWD:/repo" \
+            -w /repo \
+            "$IMAGE" \
+            bash -lc '
+              set -euo pipefail
+              export DEBIAN_FRONTEND=noninteractive
+              test -s /usr/share/keyrings/ubuntu-archive-keyring.gpg
+              rm -f /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources
+              snapshot_uri="https://snapshot.ubuntu.com/ubuntu/$SNAPSHOT_ID"
+              printf "%s\n" \
+                "Types: deb" \
+                "URIs: $snapshot_uri" \
+                "Suites: noble noble-updates noble-backports noble-security" \
+                "Components: main universe restricted multiverse" \
+                "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" \
+                > /etc/apt/sources.list.d/ordax.sources
+
+              printf "%s\n" \
+                "Acquire::https::snapshot.ubuntu.com::Verify-Peer \"false\";" \
+                > /etc/apt/apt.conf.d/49ordax-ca-bootstrap
+              apt-get update --error-on=any
+              apt-get install -y --no-install-recommends ca-certificates
+              rm -f /etc/apt/apt.conf.d/49ordax-ca-bootstrap
+
+              apt-get update --error-on=any
+              apt-get install -y --no-install-recommends $PACKAGES
+
+              python3 bootstrap/native-initramfs/build.py check
+              rm -rf /tmp/ordax-native-initramfs-out
+              python3 bootstrap/native-initramfs/build.py build \
+                --out-dir /tmp/ordax-native-initramfs-out
+              python3 bootstrap/native-initramfs/build.py verify \
+                --out-dir /tmp/ordax-native-initramfs-out
+
+              cp -a /tmp/ordax-native-initramfs-out/. /repo/out/native-initramfs/
+              chown -R "$HOST_UID:$HOST_GID" /repo/out/native-initramfs
+            '
+
+      - name: Install disposable runtime proof harness
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            btrfs-progs \
+            cpio \
+            cryptsetup \
+            util-linux
+
+      - name: Prove packaged LUKS2 and Btrfs runtime on disposable container
+        run: |
+          set -euo pipefail
+          rm -rf out/native-initramfs-runtime-proof
+          mkdir -p out/native-initramfs-runtime-proof
+          sudo unshare --mount --propagation private --fork \
+            python3 bootstrap/native-initramfs/prove_runtime.py \
+              --candidate out/native-initramfs/native-initramfs.cpio.gz \
+              --provenance out/native-initramfs/native-initramfs-provenance.json \
+              --out out/native-initramfs-runtime-proof/proof.json
+          sudo chown -R "$(id -u):$(id -g)" out/native-initramfs-runtime-proof
+          python3 - <<'PY'
+          import json, pathlib
+          proof = json.loads(pathlib.Path('out/native-initramfs-runtime-proof/proof.json').read_text())
+          assert proof['status'] == 'pass'
+          assert proof['physical_device_touched'] is False
+          assert proof['physical_write_authorized'] is False
+          assert proof['qemu_uefi_boot_proven'] is False
+          assert proof['pid1_kernel_cmdline_boot_proven'] is False
+          assert all(proof['checks'].values())
+          print('NATIVE_INITRAMFS_RUNTIME_PROOF=PASS')
+          print('NATIVE_INITRAMFS_BOOT_PROVEN=NO')
+          PY
+
+      - name: Assert candidate remains non-physical
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib
+          root = pathlib.Path('out/native-initramfs')
+          provenance = json.loads((root / 'native-initramfs-provenance.json').read_text())
+          assert provenance['$schema'] == 'prototype-ordax.native-initramfs-provenance/1'
+          assert provenance['status'] == 'candidate'
+          assert provenance['product_mode'] == 'native-disk'
+          assert provenance['physical_artifact_authorized'] is False
+          assert provenance['artifact']['name'] == 'native-initramfs.cpio.gz'
+          assert provenance['artifact']['size'] > 0
+          print('NATIVE_INITRAMFS_CANDIDATE=PASS')
+          print('NATIVE_INITRAMFS_PHYSICAL_AUTHORIZED=NO')
+          PY
+
+      - name: Upload Native initramfs candidate
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: native-initramfs-candidate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            out/native-initramfs/
+            out/native-initramfs-runtime-proof/proof.json
+          if-no-files-found: error
+          retention-days: 14

@@ -125,6 +125,26 @@ Creator Core
 
 CI proof never authorizes a physical write by itself.
 
+## 4. Portable USB v2 disposable proof
+
+The durable portable profile now has its own **non-destructive storage proof contract** at `docs/contracts/portable-usb-v2.json`.
+
+The proof target is:
+
+```text
+regular sparse RAW file
+ -> GPT
+    -> ORDAX-ESP   FAT32  512 MiB
+    -> ORDAX-DATA  exFAT  remaining usable capacity
+       -> .ordax/releases/proof-system.erofs
+       -> .ordax/state/persistent-state.img   # ext4 image
+       -> ordinary user-visible files
+```
+
+The proof uses the same `PlanPortableTargetStorage` Creator Core geometry, creates real FAT32/exFAT filesystems, a real EROFS release image and a real ext4 persistent-state image, then re-mounts the data partition read-only and re-verifies the contained bytes.
+
+This proof **does not replace the current physical writer yet**. The transitional three-partition media stays active for hardware validation until the portable-v2 boot/initramfs path and physical-write plan pass their own gates. CI may use host loop devices over the disposable RAW file; it must never accept a physical target device.
+
 ## Physical-write safety
 
 Every destructive path must continue to:

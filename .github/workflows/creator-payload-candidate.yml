@@ -43,10 +43,13 @@ jobs:
   creator-payload:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    env:
+      ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Set up Python
@@ -81,6 +84,8 @@ jobs:
           python boot/esp/build.py verify
 
       - name: Build and verify kernel candidate
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           python bootstrap/kernel/build.py check

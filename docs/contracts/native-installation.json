@@ -1,0 +1,182 @@
+{
+  "$schema": "prototype-ordax.native-installation/1",
+  "status": "post-mvp-foundation-preserved-mvp-disabled",
+  "mvp_required": false,
+  "source_mode": "ordax-usb",
+  "target_mode": "native-disk",
+  "distribution_profile": "stable-mvp",
+  "creator_core_is_single_policy_owner": true,
+  "layout_contract": "docs/contracts/storage-architecture.json",
+  "target_layout": {
+    "partition_table": "gpt",
+    "partitions": [
+      "ORDAX-ESP",
+      "ORDAX-POOL"
+    ],
+    "esp_filesystem": "fat32",
+    "pool_encryption": "luks2",
+    "pool_filesystem": "btrfs",
+    "pool_fills_remaining_capacity": true
+  },
+  "release_policy": {
+    "operational_git_allowed": false,
+    "signed_authorized_release_required": true,
+    "artifact_hash_verification_required": true,
+    "known_good_required": true
+  },
+  "phases": [
+    "inspect-target",
+    "plan",
+    "confirm-exact-target",
+    "prepare-gpt",
+    "prepare-ordax-esp",
+    "prepare-luks2-ordax-pool",
+    "prepare-btrfs-subvolumes",
+    "materialize-native-product-mode",
+    "materialize-verified-release",
+    "install-signed-boot-and-recovery-assets",
+    "verify-installation",
+    "first-boot-health",
+    "promote-known-good"
+  ],
+  "current_implementation": {
+    "native_geometry_planner": "tools/creator/core/storage_profiles.go#PlanNativeDiskTargetStorage",
+    "native_install_plan": "tools/creator/core/native_install.go#PlanNativeInstallation",
+    "non_destructive_cli": "ordax-creator plan-native --target-bytes <bytes>",
+    "physical_apply_implemented": false,
+    "physical_apply_authorized": false,
+    "first_boot_health_connected": false,
+    "native_target_identity_binding": "tools/creator/core/native_install_target.go#FinalizeNativeInstallTarget",
+    "native_target_confirmation": "tools/creator/core/native_install_target.go#MatchConfirmedNativeInstallTarget",
+    "native_target_bound_plan": "tools/creator/core/native_install_target.go#PlanNativeInstallationForTarget",
+    "native_target_adapter_discovery": "tools/creator/host/linux/native_targets.go#EnumerateNativeInstallTargets",
+    "native_target_apply_binding": false,
+    "native_source_boot_identity_handoff": false,
+    "native_target_discovery_command": "tools/creator/cmd/ordax-creator-native-targets",
+    "native_source_boot_mount_discovery": "tools/creator/host/linux/source_mount.go#DiscoverMountedBlockDevice",
+    "native_product_mode_identity": {
+      "source": "bootstrap/config/product-mode",
+      "usb_value": "usb",
+      "installed_value": "native-disk",
+      "runtime_handoff": "ORDAX_PRODUCT_MODE",
+      "implemented": true
+    },
+    "native_read_only_broker": "system/surface/runtime/native_install_broker.sh",
+    "native_read_only_loopback_api": "/__ordax/native/native-install-targets",
+    "native_surface_target_port": "system/adapters/native/native-install-targets.mjs",
+    "native_boot_kernel_prerequisites": {
+      "kernel": "shared-canonical-kernel",
+      "built_in": [
+        "CONFIG_EFI_PARTITION=y",
+        "CONFIG_ATA=y",
+        "CONFIG_ATA_PIIX=y",
+        "CONFIG_SATA_AHCI=y",
+        "CONFIG_BLK_DEV_NVME=y",
+        "CONFIG_SCSI=y",
+        "CONFIG_BLK_DEV_SD=y",
+        "CONFIG_USB_STORAGE=y",
+        "CONFIG_USB_UAS=y",
+        "CONFIG_BLK_DEV_DM=y",
+        "CONFIG_DM_CRYPT=y",
+        "CONFIG_CRYPTO_AES=y",
+        "CONFIG_CRYPTO_XTS=y",
+        "CONFIG_BTRFS_FS=y",
+        "CONFIG_BTRFS_FS_POSIX_ACL=y"
+      ],
+      "implemented": true,
+      "separate_native_kernel": false,
+      "ci_resolved_config_proven": true,
+      "exact_source_candidate_provenance": false,
+      "root_device_driver_must_be_built_in": true,
+      "initramfs_kernel_modules_required": false
+    },
+    "native_boot_initramfs": {
+      "source_owner": "bootstrap/native-initramfs",
+      "environment_lock": "docs/contracts/native-initramfs-build-environment.json",
+      "environment_observation_complete": true,
+      "candidate_builder_implemented": true,
+      "candidate_artifact_proven": true,
+      "packaged_luks2_btrfs_runtime_proven": true,
+      "pid1_kernel_cmdline_boot_proven": false,
+      "qemu_uefi_boot_proven": false,
+      "physical_write_authorized": false
+    },
+    "disposable_storage_materialization_proof": {
+      "implemented": true,
+      "workflow": ".github/workflows/native-disposable-storage-proof.yml",
+      "physical_device_touched": false,
+      "bootable_proven": false,
+      "physical_write_authorized": false
+    },
+    "mvp_runtime_policy": {
+      "stable_mvp_native_install_capability": "disabled",
+      "stable_mvp_broker_started": false,
+      "stable_mvp_session_token_exposed": false,
+      "stable_mvp_internal_disk_apply_allowed": false,
+      "owner_development_post_mvp_preview_requires_explicit_opt_in": true
+    }
+  },
+  "fail_closed": [
+    "mvp-never-exposes-native-install-capability",
+    "mvp-never-writes-internal-disk",
+    "never-touch-physical-device-during-plan",
+    "never-allow-source-usb-as-install-target",
+    "never-use-git-as-stable-install-source",
+    "never-claim-install-complete-before-readback-and-first-boot-health",
+    "never-simulate-dual-boot-or-partition-resize",
+    "never-authorize-a-target-whose-identity-changed-after-selection",
+    "never-enable-native-installer-when-product-mode-is-native-disk",
+    "never-complete-install-with-target-product-mode-still-usb"
+  ],
+  "target_identity": {
+    "owner": "tools/creator/core/native_install_target.go",
+    "stable_identity_required": true,
+    "current_device_path_bound": true,
+    "capacity_bound": true,
+    "logical_sector_bytes_supported": [
+      512
+    ],
+    "source_boot_media_forbidden": true,
+    "read_only_target_forbidden": true,
+    "transport_is_not_selection_authority": true,
+    "confirmation_token": "sha256-fingerprint-not-secret",
+    "reenumeration_required_before_apply": true,
+    "adapter_discovery_requires_positive_source_boot_device": true,
+    "unknown_source_boot_device_behavior": "fail-closed-no-target-selection",
+    "source_boot_device_resolution": {
+      "authority": "mounted-/ordax-filesystem",
+      "mountinfo": "/proc/self/mountinfo",
+      "mountpoint": "/ordax",
+      "requires_absolute_dev_source": true,
+      "ambiguous_or_missing_behavior": "fail-closed-no-target-selection",
+      "fixed_initramfs_change_required": false
+    }
+  },
+  "target_bootstrap": {
+    "product_mode_path": "/ordax/bootstrap/config/product-mode",
+    "source_media_value": "usb",
+    "installed_target_value": "native-disk",
+    "same_signed_system_release": true,
+    "target_value_must_be_verified_before_first_boot": true
+  },
+  "mvp_availability": {
+    "available": false,
+    "advertised": false,
+    "capability_exposed": false,
+    "target_discovery_exposed": false,
+    "internal_disk_write_allowed": false,
+    "destructive_operations_allowed": false,
+    "activation_phase": "post-mvp",
+    "foundation_retained": true
+  },
+  "post_mvp_activation_scope": {
+    "whole_disk_install": true,
+    "install_alongside_existing_os": false,
+    "automatic_partition_shrink": false,
+    "manual_partition_editor": false,
+    "target_must_be_explicitly_selected": true,
+    "source_boot_media_must_not_be_target": true,
+    "existing_target_data_is_erased": true,
+    "explicit_destructive_confirmation_required": true
+  }
+}

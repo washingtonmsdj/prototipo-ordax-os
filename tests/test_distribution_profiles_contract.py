@@ -96,11 +96,11 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(stable["signed_release_seed_media_includes_inspect"])
         self.assertEqual(
             stable["signed_release_discovery_physical_agent_target_sha256"],
-            "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+            "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
         )
         self.assertEqual(
             stable["signed_release_seed_media_agent_sha256"],
-            "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+            "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
         )
         self.assertTrue(stable["periodic_signed_channel_polling_connected"])
         self.assertEqual(stable["periodic_signed_channel_default_seconds"], 60)
@@ -193,7 +193,7 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(stable["exact_release_activation_supervisor_connected"])
         self.assertEqual(
             stable["exact_release_activation_physical_agent_target_sha256"],
-            "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+            "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
         )
         self.assertTrue(stable["exact_release_activation_seed_media_includes_primitive"])
         self.assertTrue(stable["exact_release_activation_asset_published"])

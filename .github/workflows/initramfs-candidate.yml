@@ -14,6 +14,10 @@ on:
       - ".github/workflows/initramfs-candidate.yml"
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
@@ -35,7 +39,7 @@ jobs:
       - name: Install initramfs build and runtime-proof dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends make musl-tools binutils bzip2 e2fsprogs util-linux
+          sudo apt-get install -y --no-install-recommends make musl-tools binutils bzip2 e2fsprogs erofs-utils util-linux
 
       - name: Validate initramfs source contract
         run: python bootstrap/initramfs/build.py check
@@ -44,10 +48,137 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_initramfs_source_contract.py' -v
 
       - name: Build deterministic initramfs candidate
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python bootstrap/initramfs/build.py build --jobs 4
 
       - name: Verify initramfs candidate
         run: python bootstrap/initramfs/build.py verify
+
+      - name: Prove isolated portable mount helper on disposable images
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-mount-helper"
+          mkdir -p \
+            "$work/system-source/system" \
+            "$work/base-source/sbin" \
+            "$work/state-mount" \
+            "$work/base-mount" \
+            "$work/root-mount" \
+            "$work/release-mount" \
+            "$work/system-mount"
+          printf '#!/bin/sh\nexit 0\n' > "$work/system-source/system/entrypoint"
+          chmod 0755 "$work/system-source/system/entrypoint"
+          printf '#!/bin/sh\nexit 0\n' > "$work/base-source/sbin/ordax-stable-init"
+          chmod 0755 "$work/base-source/sbin/ordax-stable-init"
+          mkfs.erofs -T 0 -U 00000000-0000-0000-0000-000000000001 \
+            -L ORDAX-SYSTEM "$work/system.erofs" "$work/system-source"
+          mkfs.erofs -T 0 -U 00000000-0000-0000-0000-000000000002 \
+            -L ORDAX-BASE "$work/stable-base.erofs" "$work/base-source"
+
+          truncate -s 67108864 "$work/state.img"
+          mkfs.ext4 -q -F -L ORDAX-STATE "$work/state.img"
+          debugfs -w -R 'mkdir /ordax' "$work/state.img"
+          debugfs -w -R 'mkdir /ordax/base' "$work/state.img"
+          debugfs -w -R 'mkdir /ordax/base/upper' "$work/state.img"
+          debugfs -w -R 'mkdir /ordax/base/work' "$work/state.img"
+          debugfs -w -R 'mkdir /ordax/portable-release' "$work/state.img"
+
+          helper="$PWD/out/initramfs-work/ordax-portable-mount"
+          test -x "$helper"
+          sudo "$helper" mount-state "$work/state.img" "$work/state-mount"
+          sudo "$helper" mount-base \
+            "$work/stable-base.erofs" \
+            "$work/state-mount" \
+            "$work/base-mount" \
+            "$work/root-mount"
+          sudo "$helper" mount-system \
+            "$work/system.erofs" \
+            "$work/release-mount" \
+            "$work/system-mount"
+
+          test -x "$work/root-mount/sbin/ordax-stable-init"
+          printf 'persistent-base\n' | sudo tee "$work/root-mount/.ordax-base-proof" >/dev/null
+          sync
+          test -f "$work/state-mount/ordax/base/upper/.ordax-base-proof"
+          test ! -e "$work/base-mount/.ordax-base-proof"
+
+          test -x "$work/system-mount/entrypoint"
+          sudo sh -n "$work/system-mount/entrypoint"
+          if printf 'forbidden\n' | sudo tee "$work/system-mount/.ordax-system-write-proof" >/dev/null 2>&1; then
+            echo 'immutable system mount unexpectedly accepted a write' >&2
+            exit 1
+          fi
+          test ! -e "$work/release-mount/system/.ordax-system-write-proof"
+
+          sudo umount "$work/system-mount"
+          sudo umount "$work/release-mount"
+          sudo umount "$work/root-mount"
+          sudo umount "$work/base-mount"
+          sudo umount "$work/state-mount"
+          echo 'PORTABLE_MOUNT_HELPER_RUNTIME_PROOF=PASS'
+          echo 'PORTABLE_BASE_OVERLAY=PASS'
+          echo 'PORTABLE_SYSTEM_IMMUTABLE=PASS'
+          echo 'PID1_CONNECTED=NO'
+          echo 'PHYSICAL_DEVICE_TOUCHED=NO'
+
+      - name: Prove portable current and known-good selection helper
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-selector"
+          helper="$PWD/out/initramfs-work/ordax-portable-state"
+          current="1111111111111111111111111111111111111111"
+          known="2222222222222222222222222222222222222222"
+          candidate="3333333333333333333333333333333333333333"
+          state="$work/state"
+          portable="$work/portable"
+          mkdir -p "$state/ordax/portable-release" "$portable/releases"
+          printf '%s\n' "$current" > "$state/ordax/portable-release/current"
+          printf '%s\n' "$known" > "$state/ordax/portable-release/known-good"
+          printf '%s\n' "$candidate" > "$state/ordax/portable-release/candidate"
+
+          materialize_fixture() {
+            commit="$1"
+            dir="$portable/releases/$commit"
+            mkdir -p "$dir"
+            cp "$RUNNER_TEMP/portable-mount-helper/system.erofs" "$dir/system.erofs"
+            printf '{}\n' > "$dir/release-manifest.json"
+            printf '{}\n' > "$dir/release-envelope.json"
+          }
+
+          materialize_fixture "$known"
+          test "$("$helper" resolve "$state" "$portable" known-good)" = "$known"
+          if "$helper" resolve "$state" "$portable" candidate; then
+            echo 'candidate incorrectly resolved as boot slot' >&2
+            exit 1
+          fi
+          selection="$("$helper" select "$state" "$portable")"
+          test "$selection" = "known-good $known"
+
+          materialize_fixture "$current"
+          selection="$("$helper" select "$state" "$portable")"
+          test "$selection" = "current $current"
+
+          rm -rf "$portable/releases/$current"
+          ln -s "$portable/releases/$known" "$portable/releases/$current"
+          selection="$("$helper" select "$state" "$portable")"
+          test "$selection" = "known-good $known"
+          rm "$portable/releases/$current"
+
+          rm -rf "$portable/releases/$known"
+          materialize_fixture "$candidate"
+          if "$helper" select "$state" "$portable"; then
+            echo 'candidate incorrectly became boot authority' >&2
+            exit 1
+          fi
+
+          test "$("$helper" "$state" candidate)" = "$candidate"
+          echo 'PORTABLE_RELEASE_SELECTION=PASS'
+          echo 'CURRENT_FALLBACK_TO_KNOWN_GOOD=PASS'
+          echo 'KNOWN_GOOD_EXACT_RESOLUTION=PASS'
+          echo 'CANDIDATE_BOOT_AUTHORITY=NO'
+          echo 'SIGNATURE_VERIFICATION_DELEGATED_TO_RELEASE_AGENT=YES'
+          echo 'PID1_CONNECTED=NO'
 
       - name: Prove ext4 online growth and read-only refusal
         run: |

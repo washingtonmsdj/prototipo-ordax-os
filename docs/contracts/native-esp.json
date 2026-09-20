@@ -1,0 +1,68 @@
+{
+  "$schema": "prototype-ordax.native-esp/1",
+  "status": "candidate-proof-defined-execution-pending",
+  "physical_write_authorized": false,
+  "bootloader": {
+    "shared_source_contract": "boot/esp/source.json",
+    "implementation": "systemd-boot",
+    "duplicate_bootloader_policy_implementation": false
+  },
+  "configuration": {
+    "loader_conf": {
+      "source": "boot/native/loader/loader.conf",
+      "sha256": "2764e8e43b791407ccfa3abae5fd9d2334c1a3d66735a0b9c5bf4fc448a00309",
+      "target": "loader/loader.conf"
+    },
+    "normal_entry_template": {
+      "source": "boot/native/loader/ordax-native.conf.in",
+      "sha256": "5ba95c0563a969125941c206e8c2ae79b02ac67c5149969413f09008c3b8bd51",
+      "target": "loader/entries/ordax-native.conf",
+      "placeholder": "@ORDAX_POOL_UUID@"
+    },
+    "recovery_entry_template": {
+      "source": "boot/native/loader/ordax-native-recovery.conf.in",
+      "sha256": "7d302fe3e273009c336751a87fe4b4b78d45e3069e39c3d109c506e9b5f5c0d5",
+      "target": "loader/entries/ordax-native-recovery.conf",
+      "placeholder": "@ORDAX_POOL_UUID@"
+    }
+  },
+  "target_layout": [
+    "EFI/BOOT/BOOTX64.EFI",
+    "loader/loader.conf",
+    "loader/entries/ordax-native.conf",
+    "loader/entries/ordax-native-recovery.conf",
+    "ordax/vmlinuz",
+    "ordax/native-initrd.gz"
+  ],
+  "artifact_sources": {
+    "bootloader": "verified-systemd-boot-candidate-from-boot/esp/build.py",
+    "kernel": "verified-shared-kernel-candidate",
+    "initramfs": "verified-native-initramfs-candidate"
+  },
+  "identity": {
+    "pool_uuid_format": "lowercase-hex-8-4-4-4-12",
+    "pool_uuid_is_secret": false,
+    "pool_uuid_must_equal_materialized_luks2_uuid": true,
+    "placeholder_must_appear_exactly_once_per_entry": true
+  },
+  "forbidden": [
+    "luks-passphrase",
+    "luks-key-file",
+    "operational-git",
+    "network-acquisition",
+    "installer-apply-authorization",
+    "portable-usb-entry-reuse"
+  ],
+  "proof": {
+    "entry-rendering": "pending-ci",
+    "artifact-byte-verification": "pending-ci",
+    "fat32-disposable-materialization": "pending-ci",
+    "qemu-uefi-boot": "pending",
+    "physical-native-boot": "pending",
+    "disposable_esp_contract": "docs/contracts/native-esp-proof.json"
+  },
+  "product_scope": "post-mvp-foundation",
+  "mvp_blocker": false,
+  "mvp_user_facing": false,
+  "foundation_retained": true
+}

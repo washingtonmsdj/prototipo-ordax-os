@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""Regress the portable-v2 direct-kernel QEMU proof boundary."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+CONTRACT = json.loads(
+    (ROOT / "docs/contracts/portable-v2-qemu-boot-proof.json").read_text(
+        encoding="utf-8"
+    )
+)
+SCRIPT = ROOT / "bootstrap/portable-v2/qemu_boot.py"
+INITRAMFS_BUILD = ROOT / "bootstrap/initramfs/build.py"
+INITRAMFS_SOURCE = ROOT / "bootstrap/initramfs/source.json"
+WORKFLOW = (
+    ROOT / ".github/workflows/portable-v2-qemu-boot-proof.yml"
+).read_text(encoding="utf-8")
+
+
+class PortableV2QEMUBootProofTests(unittest.TestCase):
+    def test_contract_does_not_overclaim_uefi_or_physical_boot(self):
+        self.assertEqual(
+            CONTRACT["$schema"],
+            "prototype-ordax.portable-v2-qemu-boot-proof/1",
+        )
+        self.assertEqual(CONTRACT["boot_mode"], "direct-kernel-candidate-only")
+        self.assertFalse(CONTRACT["uefi_boot_proven"])
+        self.assertFalse(CONTRACT["qemu_direct_kernel_boot_proven"])
+        self.assertFalse(CONTRACT["physical_boot_proven"])
+        self.assertFalse(CONTRACT["physical_write_authorized"])
+        self.assertFalse(CONTRACT["physical_target_device_touched"])
+
+    def test_harness_uses_final_two_partition_layout_and_candidate_rdinit(self):
+        text = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("--change-name=1:ORDAX-ESP", text)
+        self.assertIn("--change-name=2:ORDAX-DATA", text)
+        self.assertIn("rdinit=/sbin/ordax-portable-init", text)
+        self.assertIn("if=ide,index=0", text)
+        self.assertNotIn("if=virtio", text)
+        self.assertIn('"system.erofs"', text)
+        self.assertIn('"base/stable-base.erofs"', text)
+        self.assertIn('"state/persistent-state.img"', text)
+        self.assertIn('"ordax/bootstrap/trust/release-ed25519.json"', text)
+
+    def test_harness_requires_both_handoff_markers_and_disables_network(self):
+        text = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("ORDAX_PORTABLE_V2_HANDOFF=VERIFIED", text)
+        self.assertIn("ORDAX_STABLE_INIT_HANDOFF=VERIFIED", text)
+        self.assertIn("ORDAX_PORTABLE_V2_SLOT=current", text)
+        self.assertIn("ORDAX_PORTABLE_V2_SOURCE_SHA=", text)
+        self.assertIn("ORDAX_STABLE_INIT_SOURCE_SHA=", text)
+        self.assertIn('"-net", "none"', text)
+        self.assertIn('"qemu_direct_kernel_boot_proven": True', text)
+        self.assertIn('"qemu_uefi_boot_proven": False', text)
+        self.assertIn('"physical_usb_boot_proven": False', text)
+
+
+    def test_initramfs_mount_understands_security_flags_before_vfat_handoff(self):
+        build = INITRAMFS_BUILD.read_text(encoding="utf-8")
+        source = json.loads(INITRAMFS_SOURCE.read_text(encoding="utf-8"))
+        self.assertIn('"CONFIG_FEATURE_MOUNT_FLAGS": "y"', build)
+        self.assertIn('"CONFIG_FEATURE_VOLUMEID_FAT": "y"', build)
+        self.assertTrue(source["portable_v2_prerequisites"]["mount_security_flags"])
+        self.assertEqual(
+            source["portable_v2_prerequisites"]["mount_security_flags_busybox_selector"],
+            "CONFIG_FEATURE_MOUNT_FLAGS=y",
+        )
+
+
+    def test_initramfs_has_posix_test_and_bracket_for_candidate_pid1(self):
+        build = INITRAMFS_BUILD.read_text(encoding="utf-8")
+        source = json.loads(INITRAMFS_SOURCE.read_text(encoding="utf-8"))
+        for selector in (
+            '"CONFIG_TEST": "y"',
+            '"CONFIG_TEST1": "y"',
+            '"CONFIG_FEATURE_TEST_64": "y"',
+        ):
+            self.assertIn(selector, build)
+        self.assertIn('"test"', build)
+        self.assertIn('"["', build)
+        prereq = source["portable_v2_prerequisites"]
+        self.assertTrue(prereq["posix_test_applet"])
+        self.assertTrue(prereq["posix_bracket_applet"])
+        self.assertTrue(prereq["test_64_bit_comparisons"])
+        self.assertEqual(
+            prereq["posix_test_busybox_selectors"],
+            [
+                "CONFIG_TEST=y",
+                "CONFIG_TEST1=y",
+                "CONFIG_FEATURE_TEST_64=y",
+            ],
+        )
+
+    def test_workflow_builds_signed_release_real_base_capsule_and_pinned_initramfs(self):
+        for marker in (
+            "bootstrap/kernel/build.py build",
+            "bootstrap/stable-base/build.py build",
+            "bootstrap/portable-v2/capsule/build.py build",
+            "tools/portable-release-image/build.py build",
+            "--manifest-schema 2",
+            "release-signing",
+            "--portable-bootstrap-capsule",
+            "--portable-stable-base",
+            "bootstrap/portable-v2/qemu_boot.py",
+        ):
+            self.assertIn(marker, WORKFLOW)
+        direct = SCRIPT.read_text(encoding="utf-8")
+        self.assertNotIn("OVMF", direct)
+        self.assertIn("Boot portable-v2 candidate PID1 in QEMU", WORKFLOW)
+        self.assertIn("Build pinned systemd-boot for portable UEFI proof", WORKFLOW)
+        self.assertIn("Boot same portable-v2 disk through OVMF and systemd-boot", WORKFLOW)
+        self.assertIn("bootstrap/portable-v2/uefi_boot.py", WORKFLOW)
+        self.assertNotIn("/dev/sd", WORKFLOW)
+        self.assertNotIn("PhysicalDrive", WORKFLOW)
+
+
+if __name__ == "__main__":
+    unittest.main()

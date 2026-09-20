@@ -1,0 +1,212 @@
+name: Portable USB v2 Mount Handoff Proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'system/**'
+      - 'bootstrap/portable-v2/**'
+      - 'bootstrap/release-acquisition/**'
+      - 'tools/release-bundle/**'
+      - 'tools/portable-release-image/**'
+      - 'tools/release-manifest/**'
+      - 'tools/release-signing/**'
+      - 'docs/contracts/portable-boot-handoff.json'
+      - 'docs/contracts/portable-release-image.json'
+      - 'docs/contracts/portable-usb-v2.json'
+      - 'docs/contracts/release-protocol.json'
+      - 'docs/contracts/storage-architecture.json'
+      - 'docs/MINIMAL-USB-BOOTSTRAP.md'
+      - 'tests/test_portable_boot_handoff_contract.py'
+      - '.github/workflows/portable-boot-handoff-proof.yml'
+  pull_request:
+    paths:
+      - 'system/**'
+      - 'bootstrap/portable-v2/**'
+      - 'bootstrap/release-acquisition/**'
+      - 'tools/release-bundle/**'
+      - 'tools/portable-release-image/**'
+      - 'tools/release-manifest/**'
+      - 'tools/release-signing/**'
+      - 'docs/contracts/portable-boot-handoff.json'
+      - 'docs/contracts/portable-release-image.json'
+      - 'docs/contracts/portable-usb-v2.json'
+      - 'docs/contracts/release-protocol.json'
+      - 'docs/contracts/storage-architecture.json'
+      - 'docs/MINIMAL-USB-BOOTSTRAP.md'
+      - 'tests/test_portable_boot_handoff_contract.py'
+      - '.github/workflows/portable-boot-handoff-proof.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  mount-handoff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+          cache: false
+
+      - name: Install disposable mount proof tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends erofs-utils e2fsprogs util-linux
+          command -v mkfs.erofs
+          command -v fsck.erofs
+          command -v mkfs.ext4
+          command -v debugfs
+          command -v losetup
+          command -v mount
+
+      - name: Validate handoff contract
+        run: |
+          set -euo pipefail
+          python -m unittest tests.test_portable_boot_handoff_contract -v
+
+      - name: Build real portable release image and protocol tools
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-handoff"
+          mkdir -p "$work/bin" "$work/release"
+          (
+            cd tools/release-bundle
+            CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$work/bin/release-bundle" .
+          )
+          (
+            cd tools/release-manifest
+            CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$work/bin/release-manifest" .
+          )
+          (
+            cd tools/release-signing
+            CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$work/bin/release-signing" .
+          )
+          (
+            cd bootstrap/release-acquisition
+            go test -count=1 ./...
+            CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$work/bin/release-agent" .
+          )
+
+          "$work/bin/release-bundle" \
+            --root "$PWD" \
+            --out "$work/system.tar"
+          python tools/portable-release-image/build.py build \
+            --tar "$work/system.tar" \
+            --out "$work/system.erofs" \
+            > "$work/release-image.json"
+
+      - name: Create signed exact portable release directory
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-handoff"
+          commit="${{ github.event.pull_request.head.sha || github.sha }}"
+          portable="$work/ordax-data/.ordax"
+          release="$portable/releases/$commit"
+          mkdir -p "$release"
+
+          "$work/bin/release-manifest" \
+            --manifest-schema 2 \
+            --artifact "$work/system.erofs" \
+            --source-commit "$commit" \
+            --artifact-url "https://example.invalid/releases/$commit/system.erofs" \
+            --out "$release/release-manifest.json"
+
+          "$work/bin/release-signing" generate-key \
+            --private-key "$work/private.pem" \
+            --trust "$work/release-trust.json" \
+            --key-id ci-portable-handoff
+          "$work/bin/release-signing" sign \
+            --manifest "$release/release-manifest.json" \
+            --private-key "$work/private.pem" \
+            --trust "$work/release-trust.json" \
+            --key-id ci-portable-handoff \
+            --out "$release/release-envelope.json"
+          cp "$work/system.erofs" "$release/system.erofs"
+          "$work/bin/release-agent" verify-portable-exact \
+            --trust "$work/release-trust.json" \
+            --root "$portable" \
+            --expected-commit "$commit" \
+            > "$work/exact-verify.json"
+
+          rm -f "$work/private.pem"
+          test ! -e "$work/private.pem"
+
+      - name: Create Linux-native persistent-state image
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-handoff"
+          truncate -s 268435456 "$work/persistent-state.img"
+          mkfs.ext4 -q -F -L ORDAX-STATE "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /ordax' "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /ordax/base' "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /ordax/base/upper' "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /ordax/base/work' "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /ordax/portable-release' "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /ordax/runtime' "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /home' "$work/persistent-state.img"
+          e2fsck -fn "$work/persistent-state.img"
+
+      - name: Prove exact EROFS plus ext4 OverlayFS handoff
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-handoff"
+          commit="${{ github.event.pull_request.head.sha || github.sha }}"
+          sudo -E python3 bootstrap/portable-v2/proof.py \
+            --release-agent "$work/bin/release-agent" \
+            --trust "$work/release-trust.json" \
+            --portable-root "$work/ordax-data/.ordax" \
+            --state-image "$work/persistent-state.img" \
+            --source-commit "$commit" \
+            --out "$work/handoff-proof.json"
+
+          sudo chown "$(id -u):$(id -g)" "$work/handoff-proof.json"
+          python - "$work/handoff-proof.json" <<'PY'
+          import json, pathlib, sys
+          proof = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert proof['status'] == 'pass'
+          assert proof['release_verified_exact_offline'] is True
+          assert proof['release_mount_read_only'] is True
+          assert proof['state_filesystem'] == 'ext4'
+          assert proof['runtime_system_view'] == 'read-only-bind'
+          assert proof['persistent_write_survived_remount'] is True
+          assert proof['erofs_unchanged_after_runtime_write'] is True
+          assert proof['legacy_current_pointer_created'] is False
+          assert proof['physical_device_touched'] is False
+          assert proof['physical_boot_connected'] is False
+          assert proof['bootable_proven'] is False
+          print('PORTABLE_V2_MOUNT_HANDOFF=PASS')
+          print('PHYSICAL_BOOT_CONNECTED=NO')
+          print('BOOTABLE_PROVEN=NO')
+          PY
+
+      - name: Upload proof metadata only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: portable-v2-mount-handoff-proof-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ${{ runner.temp }}/portable-handoff/handoff-proof.json
+            ${{ runner.temp }}/portable-handoff/exact-verify.json
+            ${{ runner.temp }}/portable-handoff/release-image.json
+          if-no-files-found: error
+          retention-days: 14
