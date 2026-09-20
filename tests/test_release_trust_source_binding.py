@@ -55,3 +55,18 @@ def test_trust_ceremony_still_requires_local_private_custody():
     assert "READY_TO_PIN_PUBLIC_ANCHOR=NO" in INITIALIZER
     assert "Assert-PrivateOutsideToolkit $PrimaryPrivateKeyPath" in FINALIZER
     assert "Assert-PrivateOutsideToolkit $RecoveredPrivateKeyPath" in FINALIZER
+
+
+def test_canonical_trust_rejects_pr_and_manual_toolkits():
+    assert "'source_repository': os.environ['GITHUB_REPOSITORY']" in TOOLKIT
+    assert "'source_ref': os.environ['GITHUB_REF']" in TOOLKIT
+    assert "'source_event': os.environ['GITHUB_EVENT_NAME']" in TOOLKIT
+    assert "'canonical_trust_ceremony_eligible': (" in TOOLKIT
+    assert "os.environ['GITHUB_EVENT_NAME'] == 'push'" in TOOLKIT
+    assert "os.environ['GITHUB_REF'] == 'refs/heads/main'" in TOOLKIT
+    for source in (INITIALIZER, FINALIZER):
+        assert "$ToolkitProvenance.source_repository -ne 'washingtonmsdj/prototipo-ordax-os'" in source
+        assert "$ToolkitProvenance.source_event -ne 'push'" in source
+        assert "$ToolkitProvenance.source_ref -ne 'refs/heads/main'" in source
+        assert "$ToolkitProvenance.canonical_trust_ceremony_eligible -ne $true" in source
+        assert "Canonical trust ceremony requires a toolkit produced by a push of the canonical main branch." in source
