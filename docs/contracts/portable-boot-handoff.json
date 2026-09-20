@@ -53,7 +53,16 @@
     "system_erofs_contains_shared_product_system_tree": true,
     "minimal_os_base_remains_separate": true,
     "switch_root_to_system_erofs_allowed": false,
-    "direct_exec_of_system_entrypoint_requires_portable_runtime_layout_support": true
+    "direct_exec_of_system_entrypoint_requires_portable_runtime_layout_support": true,
+    "stable_runtime_layout": "portable-v2",
+    "stable_runtime_layout_support_implemented": true,
+    "stable_runtime_layout_owner": "system/entrypoint+system/supervisor",
+    "verified_source_identity_env": "ORDAX_SOURCE_SHA",
+    "runtime_layout_env": "ORDAX_STABLE_LAYOUT",
+    "legacy_current_symlink_required": false,
+    "portable_update_activation_connected": false,
+    "portable_guardian_refresh_connected": false,
+    "initial_surface_runtime_supported": true
   },
   "initramfs_integration_requirements": {
     "busybox_losetup_applet_required": true,

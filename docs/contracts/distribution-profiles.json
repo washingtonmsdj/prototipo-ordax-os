@@ -123,7 +123,20 @@
       "automatic_partition_resize_available": false,
       "manual_partition_editor_available": false,
       "native_install_foundation_retained": true,
-      "native_install_activation_phase": "post-mvp"
+      "native_install_activation_phase": "post-mvp",
+      "runtime_layout_default": "legacy-tree",
+      "runtime_layouts_supported": [
+        "legacy-tree",
+        "portable-v2"
+      ],
+      "portable_v2_runtime_layout_support_implemented": true,
+      "portable_v2_runtime_identity_source": "verified-boot-handoff-source-sha",
+      "portable_v2_legacy_current_symlink_required": false,
+      "portable_v2_initial_surface_runtime_supported": true,
+      "portable_v2_update_activation_connected": false,
+      "portable_v2_guardian_refresh_via_legacy_swap_allowed": false,
+      "portable_v2_activation_state_owner": "ext4-persistent-state-image",
+      "portable_v2_physical_boot_connected": false
     }
   },
   "invariants": {
@@ -137,7 +150,9 @@
     "base_updates_are_more_restrictive_than_app_updates": true,
     "stable_mvp_public_execution_is_usb_only": true,
     "stable_mvp_must_not_expose_native_installation": true,
-    "stable_mvp_must_not_write_internal_disk": true
+    "stable_mvp_must_not_write_internal_disk": true,
+    "stable_runtime_layout_must_be_explicit": true,
+    "portable_v2_must_not_reuse_legacy_current_symlink": true
   },
   "next_gate": {
     "id": "stable-base-signed-update-integration",

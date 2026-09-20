@@ -51,6 +51,7 @@ DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}
 PRODUCT_MODE=${ORDAX_PRODUCT_MODE:-}
 SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
 STABLE_ROOT=${ORDAX_STABLE_ROOT:-/ordax}
+STABLE_LAYOUT=${ORDAX_STABLE_LAYOUT:-legacy-tree}
 STABLE_RELEASE_AGENT=${ORDAX_STABLE_RELEASE_AGENT:-$STABLE_ROOT/bootstrap/release-acquisition/ordax-release-agent}
 STABLE_TRUST_FILE=${ORDAX_STABLE_TRUST_FILE:-$STABLE_ROOT/bootstrap/trust/release-ed25519.json}
 STABLE_CHANNEL_FILE=${ORDAX_STABLE_CHANNEL_FILE:-$STABLE_ROOT/bootstrap/config/release-envelope-url}
@@ -604,10 +605,32 @@ stable_current_release_sha() {
     printf '%s\n' "$value"
 }
 
+portable_stable_source_sha() {
+    [ "$PRODUCT_MODE" = "usb" ] || return 1
+    is_sha "$SOURCE_SHA_HINT" || return 1
+    [ -x "$SYSTEM_ENTRYPOINT" ] || return 1
+    [ -f "$SUPERVISOR_SCRIPT" ] || return 1
+    printf '%s\n' "$SOURCE_SHA_HINT"
+}
+
+stable_runtime_source_sha() {
+    case "$STABLE_LAYOUT" in
+        legacy-tree)
+            stable_current_release_sha
+            ;;
+        portable-v2)
+            portable_stable_source_sha
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 current_sha() {
     case "$DISTRIBUTION_PROFILE" in
         stable-mvp)
-            stable_current_release_sha 2>/dev/null || printf 'unknown\n'
+            stable_runtime_source_sha 2>/dev/null || printf 'unknown\n'
             ;;
         owner-development)
             "$GIT_BIN" -C "$WORKTREE" rev-parse HEAD 2>/dev/null || printf 'unknown\n'
@@ -1640,7 +1663,18 @@ check_for_update() {
     current=$(current_sha)
 
     if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
-        check_stable_signed_update "$current"
+        case "$STABLE_LAYOUT" in
+            legacy-tree)
+                check_stable_signed_update "$current"
+                ;;
+            portable-v2)
+                set_update_context blocked "$current" "" "portable-v2-activation-not-connected"
+                write_update_state "$current" disabled signed-release-v2
+                ;;
+            *)
+                fail_closed "unknown Stable/MVP runtime layout during update check"
+                ;;
+        esac
         return 0
     fi
 
@@ -1852,6 +1886,17 @@ case "$DISTRIBUTION_PROFILE" in
         ;;
     stable-mvp)
         is_sha "$SOURCE_SHA_HINT" || fail_closed "Stable/MVP runtime source SHA is missing or invalid"
+        case "$STABLE_LAYOUT" in
+            legacy-tree)
+                ;;
+            portable-v2)
+                [ "$PRODUCT_MODE" = "usb" ] || fail_closed "portable-v2 Stable layout is USB-only"
+                portable_stable_source_sha >/dev/null || fail_closed "portable-v2 mounted system tree does not match verified source identity"
+                ;;
+            *)
+                fail_closed "unknown Stable/MVP runtime layout"
+                ;;
+        esac
         ;;
     *)
         fail_closed "unknown OrdaX distribution profile"

@@ -30,16 +30,25 @@ class StableReleaseActivationTransactionTests(unittest.TestCase):
         self.assertIn('releases/*)', resolver)
         self.assertIn('[ -x "$STABLE_ROOT/releases/$value/system/entrypoint" ]', resolver)
 
+        stable_runtime = function_body(text, "stable_runtime_source_sha")
+        self.assertIn("legacy-tree)", stable_runtime)
+        self.assertIn("stable_current_release_sha", stable_runtime)
+        self.assertIn("portable-v2)", stable_runtime)
+        self.assertIn("portable_stable_source_sha", stable_runtime)
+
         runtime = function_body(text, "runtime_source_sha")
-        self.assertIn("stable_current_release_sha", runtime)
+        self.assertIn("stable_runtime_source_sha", runtime)
 
         refresh = text.split('if [ "$supervisor_rc" -eq 75 ]; then', 1)[1].split(
             "\n    fi",
             1,
         )[0]
+        self.assertIn("legacy-tree)", refresh)
         self.assertIn("stable_current_release_sha", refresh)
         self.assertIn("ORDAX_SOURCE_SHA=$SOURCE_SHA_HINT", refresh)
         self.assertIn("SYSTEM_ROOT=$STABLE_ROOT/current/system", refresh)
+        self.assertIn("portable-v2)", refresh)
+        self.assertIn("portable-v2 guardian refresh is blocked", refresh)
         self.assertIn('exec "$SYSTEM_ENTRYPOINT"', refresh)
 
     def test_stable_current_sha_tracks_symlink_not_inherited_hint(self):
@@ -47,9 +56,37 @@ class StableReleaseActivationTransactionTests(unittest.TestCase):
         resolver = function_body(text, "stable_current_release_sha")
         self.assertIn("current=$STABLE_ROOT/current", resolver)
         current = function_body(text, "current_sha")
-        self.assertIn("stable_current_release_sha", current)
-        stable_case = current.split("stable-mvp)", 1)[1].split(";;", 1)[0]
-        self.assertNotIn("SOURCE_SHA_HINT", stable_case)
+        self.assertIn("stable_runtime_source_sha", current)
+
+        stable_runtime = function_body(text, "stable_runtime_source_sha")
+        legacy_case = stable_runtime.split("legacy-tree)", 1)[1].split(";;", 1)[0]
+        portable_case = stable_runtime.split("portable-v2)", 1)[1].split(";;", 1)[0]
+        self.assertIn("stable_current_release_sha", legacy_case)
+        self.assertNotIn("SOURCE_SHA_HINT", legacy_case)
+        self.assertIn("portable_stable_source_sha", portable_case)
+
+    def test_portable_v2_identity_is_verified_boot_hint_not_legacy_symlink(self):
+        for path in (ENTRYPOINT, SUPERVISOR):
+            text = path.read_text(encoding="utf-8")
+            self.assertIn('STABLE_LAYOUT=${ORDAX_STABLE_LAYOUT:-legacy-tree}'.replace("\\", ""), text)
+            portable = function_body(text, "portable_stable_source_sha")
+            self.assertIn('[ "$PRODUCT_MODE" = "usb" ]', portable)
+            self.assertIn('is_sha "$SOURCE_SHA_HINT"', portable)
+            self.assertNotIn("$STABLE_ROOT/current", portable)
+            self.assertNotIn("readlink", portable)
+
+        guardian = ENTRYPOINT.read_text(encoding="utf-8")
+        stable_profile = guardian.split("stable-mvp)", 1)[1].split("\n    *)", 1)[0]
+        self.assertIn("portable-v2)", stable_profile)
+        self.assertIn("portable_stable_source_sha", stable_profile)
+        self.assertNotIn("SYSTEM_ROOT=$STABLE_ROOT/current/system", stable_profile.split("portable-v2)", 1)[1])
+
+        supervisor = SUPERVISOR.read_text(encoding="utf-8")
+        update = function_body(supervisor, "check_for_update")
+        portable_update = update.split("portable-v2)", 1)[1].split(";;", 1)[0]
+        self.assertIn("portable-v2-activation-not-connected", portable_update)
+        self.assertNotIn("check_stable_signed_update", portable_update)
+        self.assertNotIn("activate-exact", portable_update)
 
     def test_guard_is_persisted_before_exact_activation(self):
         text = SUPERVISOR.read_text(encoding="utf-8")
