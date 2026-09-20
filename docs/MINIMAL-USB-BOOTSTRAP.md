@@ -291,3 +291,12 @@ REFLASH_FOR_NORMAL_SYSTEM_CHANGES=NO
 ```
 
 If a future requirement proves that device identity, Remote Core or Control Plane is necessary, it must be introduced deliberately through an architectural decision rather than added preemptively.
+
+
+### Portable v2 bootstrap capsule candidate
+
+The durable USB now has a deterministic bootstrap-capsule candidate at `/ordax/bootstrap/bootstrap.erofs`.
+
+The capsule is deliberately small: the static release agent, local recovery entrypoint and official release-channel pointer. It excludes Surface, normal apps, user data, Git, build tools and every private signing key. The canonical public release trust anchor remains a separate bootstrap-owned object.
+
+CI builds the EROFS capsule twice from normalized tar metadata and requires byte-identical output plus EROFS integrity verification. This proves the candidate format only. The capsule is **not yet materialized into the physical ESP**, its hash is not yet pinned inside the fixed initramfs, and PID1 does not mount or execute it. Those remain independent promotion gates.

@@ -1,0 +1,86 @@
+{
+  "$schema": "prototype-ordax.portable-bootstrap-capsule/1",
+  "status": "candidate-proof-only",
+  "product_scope": "stable-mvp-usb-only",
+  "target_path_on_esp": "/ordax/bootstrap/bootstrap.erofs",
+  "filesystem": "erofs",
+  "filesystem_label": "ORDAX-BOOTSTRAP",
+  "compression": "lz4",
+  "read_only": true,
+  "deterministic": true,
+  "physical_write_authorized": false,
+  "physical_boot_connected": false,
+  "pid1_verified_mount_connected": false,
+  "canonical_trust_embedded": false,
+  "publisher_private_key_embedded": false,
+  "first_boot_network_required": false,
+  "builder": {
+    "path": "bootstrap/portable-v2/capsule/build.py",
+    "source_mode": "normalized-tar-to-erofs",
+    "fixed_timestamp": 0,
+    "filesystem_uuid_policy": "uuidv5-fixed-namespace-over-normalized-tar-sha256",
+    "all_files_owned_by_root": true,
+    "byte_reproducible_required": true
+  },
+  "payload": [
+    {
+      "source": "bootstrap/release-acquisition/ordax-release-agent",
+      "target": "bootstrap/release-acquisition/ordax-release-agent",
+      "mode": "0755",
+      "required": true,
+      "purpose": "offline exact release verification and future signed-channel acquisition"
+    },
+    {
+      "source": "bootstrap/recovery/entrypoint",
+      "target": "bootstrap/recovery/entrypoint",
+      "mode": "0755",
+      "required": true,
+      "purpose": "local recovery entrypoint"
+    },
+    {
+      "source": "bootstrap/config/release-envelope-url",
+      "target": "bootstrap/config/release-envelope-url",
+      "mode": "0644",
+      "required": true,
+      "purpose": "official release-channel pointer for post-boot update acquisition"
+    }
+  ],
+  "explicitly_excluded": [
+    "publisher-private-key",
+    "release-private-key",
+    "surface-runtime",
+    "normal-apps",
+    "user-data",
+    "git-checkout",
+    "build-toolchain",
+    "ssh-service",
+    "remote-control-plane",
+    "complete-product-release"
+  ],
+  "trust_boundary": {
+    "canonical_public_anchor_required_for_real_boot": true,
+    "canonical_public_anchor_location": "/ordax/bootstrap/trust/release-ed25519.json",
+    "anchor_is_outside_capsule": true,
+    "capsule_hash_must_be_pinned_by_fixed_initramfs_before_pid1_use": true,
+    "capsule_hash_pin_implemented": false,
+    "canonical_public_anchor_currently_pinned": false
+  },
+  "proof": {
+    "workflow": ".github/workflows/portable-bootstrap-capsule.yml",
+    "build_twice_and_compare_bytes": true,
+    "verify_erofs_integrity": true,
+    "verify_filesystem_identity": true,
+    "verify_payload_manifest": true,
+    "verify_no_private_key_material": true,
+    "publish_as_physical_boot_artifact": false
+  },
+  "promotion_gates": [
+    "canonical-public-release-trust-pinned",
+    "capsule-hash-pinned-inside-fixed-initramfs",
+    "pid1-verified-capsule-mount",
+    "portable-release-selection-current-known-good",
+    "exact-offline-release-reverification",
+    "portable-v2-qemu-boot-proof",
+    "physical-usb-boot-proof"
+  ]
+}

@@ -1,0 +1,137 @@
+name: Portable Bootstrap Capsule Candidate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bootstrap/portable-v2/capsule/**'
+      - 'bootstrap/release-acquisition/**'
+      - 'bootstrap/recovery/entrypoint'
+      - 'bootstrap/config/release-envelope-url'
+      - 'docs/contracts/portable-bootstrap-capsule.json'
+      - 'docs/contracts/portable-bootstrap-v2.json'
+      - 'docs/contracts/portable-boot-handoff.json'
+      - 'docs/MINIMAL-USB-BOOTSTRAP.md'
+      - 'tests/test_portable_bootstrap_capsule_contract.py'
+      - '.github/workflows/portable-bootstrap-capsule.yml'
+  pull_request:
+    paths:
+      - 'bootstrap/portable-v2/capsule/**'
+      - 'bootstrap/release-acquisition/**'
+      - 'bootstrap/recovery/entrypoint'
+      - 'bootstrap/config/release-envelope-url'
+      - 'docs/contracts/portable-bootstrap-capsule.json'
+      - 'docs/contracts/portable-bootstrap-v2.json'
+      - 'docs/contracts/portable-boot-handoff.json'
+      - 'docs/MINIMAL-USB-BOOTSTRAP.md'
+      - 'tests/test_portable_bootstrap_capsule_contract.py'
+      - '.github/workflows/portable-bootstrap-capsule.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capsule:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+          cache: false
+
+      - name: Install EROFS proof tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends erofs-utils util-linux
+          command -v mkfs.erofs
+          command -v fsck.erofs
+          command -v blkid
+
+      - name: Build static release agent
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-capsule"
+          mkdir -p "$work/bin" "$work/a" "$work/b" "$work/metadata"
+          (
+            cd bootstrap/release-acquisition
+            go test -count=1 ./...
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+              go build -trimpath -buildvcs=false -ldflags='-s -w' \
+              -o "$work/bin/ordax-release-agent" .
+          )
+          test -s "$work/bin/ordax-release-agent"
+
+      - name: Validate capsule contract
+        run: |
+          set -euo pipefail
+          python -m unittest tests.test_portable_bootstrap_capsule_contract -v
+
+      - name: Build capsule twice and require identical bytes
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-capsule"
+          python bootstrap/portable-v2/capsule/build.py build \
+            --release-agent "$work/bin/ordax-release-agent" \
+            --out "$work/a/bootstrap.erofs" \
+            > "$work/a/result.json"
+          python bootstrap/portable-v2/capsule/build.py build \
+            --release-agent "$work/bin/ordax-release-agent" \
+            --out "$work/b/bootstrap.erofs" \
+            > "$work/b/result.json"
+
+          cmp "$work/a/bootstrap.erofs" "$work/b/bootstrap.erofs"
+          python bootstrap/portable-v2/capsule/build.py verify \
+            --release-agent "$work/bin/ordax-release-agent" \
+            --image "$work/a/bootstrap.erofs" \
+            > "$work/verify.json"
+
+          python - "$work/a/result.json" "$work/b/result.json" "$work/verify.json" <<'PY'
+          import json, pathlib, sys
+          first, second, verified = [
+              json.loads(pathlib.Path(path).read_text(encoding='utf-8'))
+              for path in sys.argv[1:]
+          ]
+          assert first['image_sha256'] == second['image_sha256']
+          assert first['image_size'] == second['image_size']
+          assert first['uuid'] == second['uuid']
+          assert first['physical_write_authorized'] is False
+          assert first['physical_boot_connected'] is False
+          assert first['pid1_verified_mount_connected'] is False
+          assert first['canonical_trust_embedded'] is False
+          assert first['publisher_private_key_embedded'] is False
+          assert verified['image_sha256'] == first['image_sha256']
+          assert verified['payload_entry_count'] == 3
+          print('PORTABLE_BOOTSTRAP_CAPSULE_REPRODUCIBLE=PASS')
+          print('CANONICAL_TRUST_EMBEDDED=NO')
+          print('PRIVATE_KEY_EMBEDDED=NO')
+          print('PID1_CONNECTED=NO')
+          print('PHYSICAL_BOOT_CONNECTED=NO')
+          PY
+
+          cp "$work/a/result.json" "$work/metadata/build.json"
+          cp "$work/verify.json" "$work/metadata/verify.json"
+          sha256sum "$work/a/bootstrap.erofs" > "$work/metadata/SHA256SUMS"
+
+      - name: Upload proof metadata only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: portable-bootstrap-capsule-proof-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/portable-capsule/metadata/
+          if-no-files-found: error
+          retention-days: 14

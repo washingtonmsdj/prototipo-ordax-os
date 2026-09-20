@@ -77,7 +77,13 @@
       ],
       "hash_pin_required_before_pid1_use": true,
       "hash_pin_owner": "initramfs-build-provenance",
-      "implemented": false
+      "implemented": false,
+      "contract": "docs/contracts/portable-bootstrap-capsule.json",
+      "candidate_builder_implemented": true,
+      "deterministic_proof_implemented": true,
+      "esp_materialization_implemented": false,
+      "initramfs_hash_pin_implemented": false,
+      "pid1_verified_mount_implemented": false
     }
   },
   "release_trust": {
