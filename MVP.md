@@ -179,8 +179,9 @@ site oficial
  -> conectar USB
  -> Creator seleciona release Stable autorizada
  -> verifica assinatura/hash
+ -> pré-materializa a release verificada e o conhecido-bom no USB
  -> prepara e verifica o USB
- -> usuário inicializa pelo USB
+ -> usuário inicializa pelo USB sem depender da internet para o primeiro boot
  -> usa o OrdaX diretamente pelo pendrive
 ```
 
@@ -266,6 +267,9 @@ Native permanece em trilha técnica pós-MVP, sem bloquear a sequência.
 - `docs/NATIVE-INSTALLATION.md`;
 - `docs/PHYSICAL-MEDIA.md`;
 - `docs/contracts/distribution-profiles.json`;
+- `docs/contracts/portable-bootstrap-v2.json`;
+- `docs/contracts/portable-usb-v2.json`;
+- `docs/contracts/portable-boot-handoff.json`;
 - `docs/contracts/native-installation.json`;
 - `docs/contracts/public-site.json`;
 - `docs/contracts/foundation.json`;

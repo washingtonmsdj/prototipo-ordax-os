@@ -42,6 +42,11 @@ This is governed by `docs/contracts/physical-prepared-media.json` and remains us
 
 ### Durable Stable/MVP USB target — v2
 
+The durable product bootstrap is governed separately by `docs/contracts/portable-bootstrap-v2.json`. Unlike the transitional network-first seed, the **MVP product USB is offline-capable on first boot**: the Creator must already place one signed/verified `system.erofs` release on `ORDAX-DATA` and initialize the ext4 state image so `current` and `known-good` point to that exact release.
+
+This does not preinstall the full product on the ESP. `ORDAX-ESP` remains boot/bootstrap-only. The product release stays under `ORDAX-DATA/.ordax/releases/`.
+
+
 ```text
 ORDAX-ESP   FAT32
 ORDAX-DATA  exFAT
@@ -164,6 +169,8 @@ A valid local checkout may boot when the network is unavailable. A rollback is s
 ## Canonical signed-release first boot
 
 ### Current transitional path
+
+This remains network-first and exists for the current hardware proof. It is not the final Stable/MVP first-boot UX.
 
 ```text
 UEFI

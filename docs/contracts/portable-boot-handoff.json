@@ -62,7 +62,10 @@
     "legacy_current_symlink_required": false,
     "portable_update_activation_connected": false,
     "portable_guardian_refresh_connected": false,
-    "initial_surface_runtime_supported": true
+    "initial_surface_runtime_supported": true,
+    "first_boot_network_required": false,
+    "creator_preseeded_release_required": true,
+    "bootstrap_capsule_verified_mount_implemented": false
   },
   "initramfs_integration_requirements": {
     "busybox_losetup_applet_required": true,
@@ -121,5 +124,6 @@
     "attach-selected-system-erofs-read-only",
     "compose-overlay-system-view-with-ext4-upper-work",
     "launch-shared-system-entrypoint"
-  ]
+  ],
+  "portable_bootstrap_contract": "docs/contracts/portable-bootstrap-v2.json"
 }

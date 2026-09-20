@@ -121,5 +121,13 @@
     "proof_still_reverifies_real_exfat": true
   },
   "mount_handoff_proof_contract": "docs/contracts/portable-boot-handoff.json",
-  "disposable_mount_handoff_proof_implemented": true
+  "disposable_mount_handoff_proof_implemented": true,
+  "portable_bootstrap_contract": "docs/contracts/portable-bootstrap-v2.json",
+  "first_boot_target": {
+    "offline_capable": true,
+    "creator_preseeded_signed_release": true,
+    "current_equals_known_good": true,
+    "network_required": false,
+    "pid1_integration_implemented": false
+  }
 }

@@ -1,0 +1,122 @@
+{
+  "$schema": "prototype-ordax.portable-bootstrap-v2/1",
+  "status": "candidate-contract-not-physically-promoted",
+  "product_scope": "stable-mvp-usb-only",
+  "storage_profile": "portable-usb-v2",
+  "storage_contract": "docs/contracts/portable-usb-v2.json",
+  "boot_handoff_contract": "docs/contracts/portable-boot-handoff.json",
+  "release_protocol_contract": "docs/contracts/release-protocol.json",
+  "release_trust_policy_contract": "docs/contracts/release-trust-policy.json",
+  "physical_write_authorized": false,
+  "physical_boot_proven": false,
+  "secure_boot_claimed": false,
+  "partitions": [
+    {
+      "name": "ORDAX-ESP",
+      "filesystem": "fat32",
+      "role": "uefi-and-minimal-bootstrap-substrate",
+      "normal_runtime_mount": "read-only"
+    },
+    {
+      "name": "ORDAX-DATA",
+      "filesystem": "exfat",
+      "role": "immutable-releases-persistent-state-container-and-user-data"
+    }
+  ],
+  "first_boot": {
+    "network_required": false,
+    "offline_capable_required": true,
+    "creator_must_preseed_verified_release": true,
+    "release_schema": "prototype-ordax.release-manifest/2",
+    "release_artifact": "system.erofs",
+    "release_bundle_layout": ".ordax/releases/<source_commit>/{system.erofs,release-manifest.json,release-envelope.json}",
+    "persistent_state_image": ".ordax/state/persistent-state.img",
+    "initial_current_equals_known_good": true,
+    "initial_candidate_absent": true,
+    "initial_transaction_absent": true,
+    "boot_must_reverify_exact_release_offline": true,
+    "fallback_must_not_require_network": true
+  },
+  "esp_substrate": {
+    "system_or_apps_preinstalled": false,
+    "complete_product_release_on_esp": false,
+    "allowed_classes": [
+      "uefi-loader",
+      "loader-configuration",
+      "kernel",
+      "initramfs",
+      "minimal-bootstrap-capsule",
+      "local-recovery-metadata"
+    ],
+    "forbidden_classes": [
+      "surface-runtime",
+      "normal-apps",
+      "user-home",
+      "user-files",
+      "git-checkout",
+      "build-toolchain",
+      "publisher-private-key"
+    ],
+    "bootstrap_capsule": {
+      "target_path": "/ordax/bootstrap/bootstrap.erofs",
+      "filesystem": "erofs",
+      "read_only": true,
+      "purpose": "small versioned bootstrap support outside the fixed initramfs",
+      "may_contain": [
+        "release-agent",
+        "release-channel-config",
+        "minimal-network-tools",
+        "ca-certificates",
+        "recovery-entrypoint"
+      ],
+      "must_not_contain": [
+        "publisher-private-key",
+        "surface-runtime",
+        "normal-apps",
+        "complete-source-checkout"
+      ],
+      "hash_pin_required_before_pid1_use": true,
+      "hash_pin_owner": "initramfs-build-provenance",
+      "implemented": false
+    }
+  },
+  "release_trust": {
+    "canonical_public_anchor_required": true,
+    "canonical_public_anchor_currently_pinned": false,
+    "publisher_private_key_on_media": false,
+    "trust_anchor_must_not_be_selected_from_ordax_data": true,
+    "trust_anchor_must_be_bootstrap_owned": true,
+    "runtime_tamper_resistance_without_secure_boot_claimed": false,
+    "note": "Release signing protects the release protocol; hardware-rooted boot-chain integrity is not claimed until Secure Boot or an equivalent measured/verified boot boundary is implemented."
+  },
+  "creator": {
+    "same_creator_core_required": true,
+    "portable_storage_planner": "PlanPortableTargetStorage",
+    "preseed_release_before_success": true,
+    "preseed_persistent_state_before_success": true,
+    "post_write_readback_required": true,
+    "internal_disk_write_allowed": false,
+    "native_install_exposed": false,
+    "physical_apply_enabled": false
+  },
+  "boot_sequence_target": [
+    "uefi-load-from-ORDAX-ESP",
+    "kernel-initramfs",
+    "mount-ORDAX-ESP-read-only",
+    "verify-and-mount-bootstrap-capsule",
+    "mount-ORDAX-DATA-exfat",
+    "attach-and-mount-persistent-state-ext4",
+    "read-current-or-known-good-from-ext4",
+    "reverify-selected-release-envelope-manifest-hash-and-erofs-offline",
+    "mount-selected-system-erofs-read-only",
+    "compose-system-overlay-with-ext4-upper-work",
+    "launch-system-entrypoint-with-stable-mvp-usb-portable-v2-identity"
+  ],
+  "migration": {
+    "transitional_minimal_bootstrap_contract_unchanged": true,
+    "transitional_three_partition_writer_unchanged": true,
+    "portable_v2_writer_migration_implemented": false,
+    "portable_v2_pid1_integration_implemented": false,
+    "public_physical_promotion_allowed": false
+  }
+}
