@@ -100,19 +100,24 @@ class DistributionProfilesContractTests(unittest.TestCase):
         )
         self.assertEqual(
             stable["signed_release_seed_media_agent_sha256"],
-            "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
         )
         self.assertEqual(
             stable["portable_v3_release_agent_seed_sha256"],
-            "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
         )
         self.assertEqual(
             stable["portable_v3_release_agent_target_sha256"],
             "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
         )
-        self.assertTrue(
-            stable["portable_v3_release_agent_seed_requires_hash_addressed_refresh"]
+        self.assertEqual(
+            stable["portable_v3_release_agent_previous_seed_sha256"],
+            "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
         )
+        self.assertTrue(
+            stable["portable_v3_existing_previous_seed_requires_hash_addressed_refresh"]
+        )
+        self.assertTrue(stable["portable_v3_new_media_includes_capable_agent"])
         self.assertTrue(
             stable["portable_v3_release_agent_supports_content_addressed_runtime"]
         )
