@@ -42,9 +42,9 @@
       "write-exact-two-partition-gpt",
       "format-ORDAX-ESP-fat32",
       "format-ORDAX-DATA-exfat",
-      "materialize-13-exact-artifacts",
+      "materialize-15-exact-artifacts",
       "flush-and-sync",
-      "readback-sha256-and-size-for-13-artifacts",
+      "readback-sha256-and-size-for-15-artifacts",
       "verify-gpt-filesystems-labels-and-capacity"
     ]
   },
