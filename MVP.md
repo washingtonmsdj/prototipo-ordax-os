@@ -187,6 +187,40 @@ site oficial
 
 O Creator do MVP prepara mídia removível. Não oferece gravação/instalação em disco interno.
 
+### Estado técnico atual do USB durável v2
+
+O alvo durável do MVP não deve ser confundido com a mídia transitória de três partições usada nas primeiras provas físicas.
+
+```text
+MVP target
+ -> ORDAX-ESP   FAT32
+ -> ORDAX-DATA  exFAT
+    -> .ordax/releases/<commit>/system.erofs
+    -> .ordax/state/persistent-state.img   # ext4
+    -> arquivos do usuário
+```
+
+Estado atual do caminho v2:
+
+- storage `ORDAX-ESP + ORDAX-DATA`: prova descartável verde;
+- release `system.erofs`: determinística e byte-reprodutível em CI;
+- `release-manifest/2`: generator + signer + verifier implementados;
+- materialização portátil: implementada sem ativação implícita;
+- revalidação offline exata da release assinada: implementada;
+- mount EROFS + estado ext4 + runtime system read-only: prova descartável verde;
+- helper de mount portátil dentro do initramfs: implementado, ainda desconectado do PID1;
+- leitura de estado `current/known-good/candidate`: implementada no initramfs;
+- seleção read-only `current -> known-good`: implementada como helper e permanece desconectada do PID1 até os gates de boot;
+- bootstrap capsule EROFS: candidata determinística e reprodutível;
+- pin SHA-256 da bootstrap capsule dentro de initramfs candidato: implementado/provado, mas ainda não enforced pelo PID1;
+- Stable Base EROFS: builder candidato existente; locks de upstream/pacotes e integração de boot ainda são gates;
+- writer físico v2: desativado;
+- boot físico v2: não provado;
+- canonical release trust público: pendente;
+- Native continua fora do MVP.
+
+A mídia transitória atual continua apenas como caminho de validação de hardware até que o v2 tenha **Stable Base reproduzível, trust canônico, PID1 v2, current/known-good, recovery, QEMU boot e prova física**. Não habilitar o writer v2 antes desses gates.
+
 ## 9. Site público e rotas
 
 ```text
