@@ -60,8 +60,19 @@
     "native_target_bound_plan": "tools/creator/core/native_install_target.go#PlanNativeInstallationForTarget",
     "native_target_adapter_discovery": "tools/creator/host/linux/native_targets.go#EnumerateNativeInstallTargets",
     "native_target_apply_binding": false,
-    "native_source_boot_identity_handoff": true,
-    "native_target_discovery_command": "tools/creator/cmd/ordax-creator-native-targets"
+    "native_source_boot_identity_handoff": false,
+    "native_target_discovery_command": "tools/creator/cmd/ordax-creator-native-targets",
+    "native_source_boot_mount_discovery": "tools/creator/host/linux/source_mount.go#DiscoverMountedBlockDevice",
+    "native_product_mode_identity": {
+      "source": "bootstrap/config/product-mode",
+      "usb_value": "usb",
+      "installed_value": "native-disk",
+      "runtime_handoff": "ORDAX_PRODUCT_MODE",
+      "implemented": true
+    },
+    "native_read_only_broker": "system/surface/runtime/native_install_broker.sh",
+    "native_read_only_loopback_api": "/__ordax/native/native-install-targets",
+    "native_surface_target_port": "system/adapters/native/native-install-targets.mjs"
   },
   "fail_closed": [
     "never-touch-physical-device-during-plan",
@@ -69,7 +80,8 @@
     "never-use-git-as-stable-install-source",
     "never-claim-install-complete-before-readback-and-first-boot-health",
     "never-simulate-dual-boot-or-partition-resize",
-    "never-authorize-a-target-whose-identity-changed-after-selection"
+    "never-authorize-a-target-whose-identity-changed-after-selection",
+    "never-enable-native-installer-when-product-mode-is-native-disk"
   ],
   "target_identity": {
     "owner": "tools/creator/core/native_install_target.go",
@@ -86,7 +98,13 @@
     "reenumeration_required_before_apply": true,
     "adapter_discovery_requires_positive_source_boot_device": true,
     "unknown_source_boot_device_behavior": "fail-closed-no-target-selection",
-    "source_boot_device_handoff": "/run/ordax-install/source-block-device",
-    "source_boot_device_handoff_owner": "bootstrap/initramfs/root/init"
+    "source_boot_device_resolution": {
+      "authority": "mounted-/ordax-filesystem",
+      "mountinfo": "/proc/self/mountinfo",
+      "mountpoint": "/ordax",
+      "requires_absolute_dev_source": true,
+      "ambiguous_or_missing_behavior": "fail-closed-no-target-selection",
+      "fixed_initramfs_change_required": false
+    }
   }
 }
