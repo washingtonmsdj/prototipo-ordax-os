@@ -83,6 +83,47 @@ class ReleaseProtocolContractTests(unittest.TestCase):
         self.assertFalse(portable["boot_handoff_support"])
         self.assertFalse(portable["production_publication_allowed"])
 
+    def test_portable_v3_runtime_contract_is_explicit_and_fail_closed(self):
+        contract = self.load_contract()
+        portable = contract["portable_v3"]
+        self.assertEqual(
+            portable["manifest_schema"],
+            "prototype-ordax.release-manifest/3",
+        )
+        self.assertEqual(portable["artifact_count"], 2)
+        self.assertEqual(
+            portable["artifacts"],
+            [
+                {"name": "system.erofs", "role": "system-image"},
+                {
+                    "name": "native-surface-runtime.erofs",
+                    "role": "surface-runtime",
+                },
+            ],
+        )
+        self.assertTrue(portable["canonical_artifact_order"])
+        self.assertTrue(portable["generator_support"])
+        self.assertTrue(portable["signer_support"])
+        self.assertTrue(portable["acquisition_agent_support"])
+        self.assertTrue(portable["materialization_support"])
+        self.assertTrue(portable["verified_runtime_reuse"])
+        self.assertFalse(portable["runtime_redownload_when_verified_hash_present"])
+        self.assertFalse(portable["activation_support"])
+        self.assertFalse(portable["boot_handoff_support"])
+        self.assertFalse(portable["production_publication_allowed"])
+
+        acquisition = self.read_source(ACQUISITION)
+        signing = self.read_source(SIGNING)
+        generator = self.read_source(MANIFEST_TOOL)
+        for source in (acquisition, signing, generator):
+            self.assertIn("prototype-ordax.release-manifest/3", source)
+            self.assertIn("native-surface-runtime.erofs", source)
+            self.assertIn("surface-runtime", source)
+        self.assertIn("materializePortableV3(", acquisition)
+        self.assertIn("verifyPortableV3Exact(", acquisition)
+        self.assertIn('filepath.Join(root, "runtimes", "sha256"', acquisition)
+        self.assertIn("surface-runtime.sha256", acquisition)
+
     def test_channel_inspection_is_signed_and_non_destructive(self):
         current = self.load_contract()["current"]
         inspection = current["channel_inspection"]
