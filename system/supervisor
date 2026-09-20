@@ -48,6 +48,7 @@ HEALTH_FILE=$UPDATE_RUN_DIR/healthy-sha
 SURFACE_HEARTBEAT_FILE=$STATE_DIR/native-state/surface-heartbeat.json
 GIT_BIN=${ORDAX_GIT_BIN:-/usr/bin/git}
 DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}
+PRODUCT_MODE=${ORDAX_PRODUCT_MODE:-}
 SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
 STABLE_ROOT=${ORDAX_STABLE_ROOT:-/ordax}
 STABLE_RELEASE_AGENT=${ORDAX_STABLE_RELEASE_AGENT:-$STABLE_ROOT/bootstrap/release-acquisition/ordax-release-agent}
@@ -868,6 +869,7 @@ start_surface_from_system() {
 
     ORDAX_SYSTEM_ROOT="$surface_system_root" \
     ORDAX_DISTRIBUTION_PROFILE="$DISTRIBUTION_PROFILE" \
+    ORDAX_PRODUCT_MODE="$PRODUCT_MODE" \
     ORDAX_SOURCE_SHA="$surface_source_sha" \
         "$surface_entrypoint" &
     SURFACE_PID=$!
@@ -1836,6 +1838,14 @@ check_for_update() {
 
 trap stop_surface EXIT
 trap terminate HUP INT TERM
+
+case "$PRODUCT_MODE" in
+    usb|native-disk)
+        ;;
+    *)
+        fail_closed "OrdaX product mode identity is missing or invalid"
+        ;;
+esac
 
 case "$DISTRIBUTION_PROFILE" in
     owner-development)
