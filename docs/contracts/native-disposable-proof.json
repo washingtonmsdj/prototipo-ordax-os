@@ -1,0 +1,56 @@
+{
+  "$schema": "prototype-ordax.native-disposable-proof/1",
+  "status": "proof-only",
+  "plan_schema": "prototype-ordax.native-materialization-plan/1",
+  "target_bytes": 1610612736,
+  "physical_write_allowed": false,
+  "physical_device_paths_allowed": false,
+  "bootable_proof": false,
+  "boot_integration_status": "pending-native-luks2-btrfs-bootstrap",
+  "expected": {
+    "partition_table": "gpt",
+    "logical_sector_bytes": 512,
+    "alignment_bytes": 1048576,
+    "partitions": [
+      {
+        "index": 1,
+        "name": "ORDAX-ESP",
+        "type_guid": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
+        "filesystem": "fat32",
+        "filesystem_label": "ORDAX-ESP"
+      },
+      {
+        "index": 2,
+        "name": "ORDAX-POOL",
+        "type_guid": "ca7d7ccb-63ed-4c53-861c-1742536059cc",
+        "encryption": "luks2",
+        "filesystem": "btrfs",
+        "filesystem_label": "ORDAX-POOL"
+      }
+    ],
+    "subvolumes": [
+      "ordax-state",
+      "ordax-home",
+      "ordax-apps",
+      "ordax-containers",
+      "ordax-snapshots"
+    ],
+    "target_product_mode": "native-disk",
+    "target_product_mode_path": "/ordax/bootstrap/config/product-mode"
+  },
+  "proof_requirements": [
+    "regular-sparse-raw-file-only",
+    "gpt-exactly-two-partitions",
+    "partition-names-starts-ends-and-type-guids-match-core-plan",
+    "esp-fat32-label-verified",
+    "pool-luks2-header-verified",
+    "pool-btrfs-label-verified-through-temporary-mapper",
+    "canonical-btrfs-subvolumes-created-and-read-back",
+    "target-product-mode-native-disk-materialized-and-read-back",
+    "raw-partition-regions-match-generated-partition-images",
+    "ephemeral-luks-key-destroyed-before-success",
+    "no-physical-device-opened",
+    "physical-write-remains-unauthorized",
+    "bootability-not-claimed"
+  ]
+}
