@@ -1,0 +1,4 @@
+title OrdaX Native Recovery
+linux /ordax/vmlinuz
+initrd /ordax/native-initrd.gz
+options console=tty0 ordax.mode=recovery ordax.product_mode=native-disk ordax.pool_uuid=@ORDAX_POOL_UUID@
