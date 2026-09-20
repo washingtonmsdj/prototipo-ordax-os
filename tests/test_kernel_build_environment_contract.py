@@ -47,6 +47,21 @@ class KernelBuildEnvironmentContractTests(unittest.TestCase):
             self.assertTrue(proof["repeat_build_digest_match"])
             self.assertTrue(proof["promotable_to_physical"])
 
+    def test_artifact_reproducibility_compares_same_current_source(self):
+        value = self.load()
+        policy = value["artifact_digest_policy"]
+        self.assertTrue(policy["current_source_or_config_may_change_artifact_bytes"])
+        self.assertTrue(policy["historical_reference_artifacts_are_environment_observation_only"])
+        self.assertTrue(policy["promotion_requires_same_current_source_repeat_build_match"])
+        self.assertTrue(policy["historical_artifact_digest_is_not_a_permanent_current_build_oracle"])
+
+        verifier = (
+            ROOT / "bootstrap/kernel/verify_reproducibility.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("--repeat-artifact-dir", verifier)
+        self.assertIn("current-source repeat digest mismatch", verifier)
+        self.assertNotIn('if observed != expected_digest', verifier)
+
     def test_package_list_is_sorted_and_unique(self):
         packages = self.load()["apt"]["packages"]
         self.assertEqual(packages, sorted(set(packages)))
