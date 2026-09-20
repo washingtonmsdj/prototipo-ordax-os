@@ -68,7 +68,7 @@
     "busybox_losetup_applet_required": true,
     "busybox_losetup_applet_currently_enabled": true,
     "portable_handoff_helper_required": true,
-    "portable_handoff_helper_currently_installed": false,
+    "portable_handoff_helper_currently_installed": true,
     "ordax_data_exfat_mount_required": true,
     "exact_release_selection_metadata_required": true,
     "known_good_fallback_metadata_required": true,
@@ -77,7 +77,12 @@
     "busybox_exfat_volume_id_currently_enabled": true,
     "activation_state_reader_required": true,
     "activation_state_reader_currently_installed": true,
-    "activation_state_reader_path": "/sbin/ordax-portable-state"
+    "activation_state_reader_path": "/sbin/ordax-portable-state",
+    "portable_handoff_helper_path": "/sbin/ordax-portable-mount",
+    "portable_handoff_helper_pid1_connected": false,
+    "portable_handoff_helper_selects_release": false,
+    "portable_handoff_helper_verifies_signature": false,
+    "portable_handoff_helper_writes_activation_state": false
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",

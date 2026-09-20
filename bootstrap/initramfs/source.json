@@ -55,7 +55,7 @@
     "kernel_erofs_required": true,
     "kernel_overlayfs_required": true,
     "boot_path_enabled": false,
-    "handoff_helper_installed": false,
+    "handoff_helper_installed": true,
     "main_partition_label_unchanged": "ORDAX",
     "physical_boot_promotion_allowed": false,
     "kernel_uapi_source_contract": "bootstrap/kernel/source.json",
@@ -77,6 +77,26 @@
       "nofollow_directory_walk": true,
       "activation_performed": false
     },
-    "activation_state_reader_installed": true
+    "activation_state_reader_installed": true,
+    "portable_mount_helper": {
+      "source": "bootstrap/initramfs/portable_mount.c",
+      "runtime_path": "/sbin/ordax-portable-mount",
+      "static": true,
+      "operations": [
+        "mount-state",
+        "mount-system"
+      ],
+      "state_filesystem": "ext4",
+      "release_filesystem": "erofs",
+      "runtime_system_view": "overlayfs",
+      "regular_file_backing_only": true,
+      "physical_device_path_input_allowed": false,
+      "release_read_only": true,
+      "selects_release": false,
+      "verifies_signature": false,
+      "writes_activation_state": false,
+      "pid1_connected": false
+    },
+    "handoff_helper_pid1_connected": false
   }
 }

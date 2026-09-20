@@ -53,7 +53,8 @@ class PortableBootHandoffContractTests(unittest.TestCase):
         self.assertTrue(requirements["busybox_mount_loop_currently_enabled"])
         self.assertTrue(requirements["busybox_exfat_volume_id_currently_enabled"])
         self.assertTrue(requirements["portable_handoff_helper_required"])
-        self.assertFalse(requirements["portable_handoff_helper_currently_installed"])
+        self.assertTrue(requirements["portable_handoff_helper_currently_installed"])
+        self.assertFalse(requirements["portable_handoff_helper_pid1_connected"])
         initramfs = INITRAMFS_BUILD.read_text(encoding="utf-8")
         applets = initramfs.split("REQUIRED_APPLETS", 1)[1].split("}", 1)[0]
         self.assertIn('"losetup"', applets)

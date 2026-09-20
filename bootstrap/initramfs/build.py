@@ -30,6 +30,7 @@ HERE = ROOT / "bootstrap" / "initramfs"
 CONTRACT = HERE / "source.json"
 GROW_HELPER_SOURCE = HERE / "grow_ext4.c"
 PORTABLE_STATE_HELPER_SOURCE = HERE / "portable_state.c"
+PORTABLE_MOUNT_HELPER_SOURCE = HERE / "portable_mount.c"
 KERNEL_BUILDER_PATH = ROOT / "bootstrap" / "kernel" / "build.py"
 
 
@@ -133,11 +134,19 @@ def portable_state_helper_source_path() -> Path:
     return path
 
 
+def portable_mount_helper_source_path() -> Path:
+    path = PORTABLE_MOUNT_HELPER_SOURCE.resolve()
+    if ROOT.resolve() not in path.parents or not path.is_file() or path.is_symlink():
+        raise BuildError("portable mount helper source is missing or unsafe")
+    return path
+
+
 def check_contract() -> dict:
     contract = load_contract()
     init = init_path(contract)
     helper_source = growth_helper_source_path()
     portable_state_source = portable_state_helper_source_path()
+    portable_mount_source = portable_mount_helper_source_path()
     text = init.read_text(encoding="utf-8")
     forbidden = ("ORDAX-HOME", "ORDAX-PLATFORM", "sshd", "remote-core", "control-plane", "codex")
     found = [value for value in forbidden if value.lower() in text.lower()]
@@ -171,6 +180,8 @@ def check_contract() -> dict:
         "ext4_growth_helper_source_sha256": sha256_file(helper_source),
         "portable_state_helper_source": str(portable_state_source.relative_to(ROOT)),
         "portable_state_helper_source_sha256": sha256_file(portable_state_source),
+        "portable_mount_helper_source": str(portable_mount_source.relative_to(ROOT)),
+        "portable_mount_helper_source_sha256": sha256_file(portable_mount_source),
         "main_partition_label": contract["main_partition_label"],
         "portable_v2_prerequisites": contract["portable_v2_prerequisites"],
     }
@@ -478,11 +489,43 @@ def build_portable_state_helper(
         raise BuildError("portable state helper build did not produce a safe regular binary")
 
 
+def build_portable_mount_helper(
+    musl_cc: str,
+    readelf: str,
+    source: Path,
+    destination: Path,
+    uapi_include: Path,
+    env: dict[str, str],
+) -> None:
+    command = [
+        musl_cc,
+        "-static",
+        "-Os",
+        "-s",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-Wl,--build-id=none",
+        f"-I{uapi_include}",
+        f"-ffile-prefix-map={ROOT}=.",
+        "-o",
+        str(destination),
+        str(source),
+    ]
+    run(command, cwd=ROOT, env=env)
+    elf = capture([readelf, "-l", str(destination)])
+    if "Requesting program interpreter" in elf:
+        raise BuildError("portable mount helper is dynamically linked")
+    if not destination.is_file() or destination.is_symlink():
+        raise BuildError("portable mount helper build did not produce a safe regular binary")
+
+
 def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
     contract = load_contract()
     init = init_path(contract)
     grow_source = growth_helper_source_path()
     portable_state_source = portable_state_helper_source_path()
+    portable_mount_source = portable_mount_helper_source_path()
     check_contract()
     for name in ("make", "musl-gcc", "readelf"):
         resolve_program(name)
@@ -556,6 +599,19 @@ def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
     shutil.copy2(portable_state_binary, portable_state_install)
     os.chmod(portable_state_install, 0o755)
 
+    portable_mount_binary = work_dir / "ordax-portable-mount"
+    build_portable_mount_helper(
+        musl_cc,
+        readelf,
+        portable_mount_source,
+        portable_mount_binary,
+        uapi_include,
+        env,
+    )
+    portable_mount_install = rootfs / "sbin" / "ordax-portable-mount"
+    shutil.copy2(portable_mount_binary, portable_mount_install)
+    os.chmod(portable_mount_install, 0o755)
+
     final_config = out_dir / "busybox.config"
     shutil.copy2(source / ".config", final_config)
     archive_path = out_dir / "initramfs.cpio.gz"
@@ -590,6 +646,20 @@ def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
             "normal_boot_best_effort": True,
             "recovery_mode_allowed": False,
         },
+        "portable_mount_helper": {
+            "installed": True,
+            "helper_path": "/sbin/ordax-portable-mount",
+            "source_sha256": sha256_file(portable_mount_source),
+            "binary_sha256": sha256_file(portable_mount_binary),
+            "state_filesystem": "ext4",
+            "release_filesystem": "erofs",
+            "runtime_system_view": "overlayfs",
+            "release_mount_read_only": True,
+            "selects_release": False,
+            "verifies_signature": False,
+            "writes_activation_state": False,
+            "pid1_connected": False,
+        },
         "portable_activation_state_reader": {
             "installed": True,
             "helper_path": "/sbin/ordax-portable-state",
@@ -608,7 +678,8 @@ def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
             "mount_loop_support": True,
             "exfat_volume_id": True,
             "boot_path_enabled": False,
-            "handoff_helper_installed": False,
+            "handoff_helper_installed": True,
+            "handoff_helper_pid1_connected": False,
             "activation_state_reader_installed": True,
         },
         "artifacts": {
@@ -655,6 +726,23 @@ def verify(out_dir: Path) -> dict:
         or not _SHA256.fullmatch(str(kernel_uapi.get("linux_loop_h_sha256", "")))
     ):
         raise BuildError("initramfs provenance is missing the pinned kernel UAPI identity")
+
+    mount_helper = provenance.get("portable_mount_helper", {})
+    if (
+        mount_helper.get("installed") is not True
+        or mount_helper.get("helper_path") != "/sbin/ordax-portable-mount"
+        or mount_helper.get("state_filesystem") != "ext4"
+        or mount_helper.get("release_filesystem") != "erofs"
+        or mount_helper.get("runtime_system_view") != "overlayfs"
+        or mount_helper.get("release_mount_read_only") is not True
+        or mount_helper.get("selects_release") is not False
+        or mount_helper.get("verifies_signature") is not False
+        or mount_helper.get("writes_activation_state") is not False
+        or mount_helper.get("pid1_connected") is not False
+        or not _SHA256.fullmatch(str(mount_helper.get("source_sha256", "")))
+        or not _SHA256.fullmatch(str(mount_helper.get("binary_sha256", "")))
+    ):
+        raise BuildError("initramfs provenance is missing the isolated portable mount helper")
 
     state_reader = provenance.get("portable_activation_state_reader", {})
     if (

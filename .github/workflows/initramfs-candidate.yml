@@ -35,7 +35,7 @@ jobs:
       - name: Install initramfs build and runtime-proof dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends make musl-tools binutils bzip2 e2fsprogs util-linux
+          sudo apt-get install -y --no-install-recommends make musl-tools binutils bzip2 e2fsprogs erofs-utils util-linux
 
       - name: Validate initramfs source contract
         run: python bootstrap/initramfs/build.py check
@@ -48,6 +48,44 @@ jobs:
 
       - name: Verify initramfs candidate
         run: python bootstrap/initramfs/build.py verify
+
+      - name: Prove isolated portable mount helper on disposable images
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-mount-helper"
+          mkdir -p "$work/source/system" "$work/state-mount" "$work/release-mount" "$work/system-mount"
+          printf '#!/bin/sh\nexit 0\n' > "$work/source/system/entrypoint"
+          chmod 0755 "$work/source/system/entrypoint"
+          mkfs.erofs -T 0 -U 00000000-0000-0000-0000-000000000001 \
+            -L ORDAX-SYSTEM "$work/system.erofs" "$work/source"
+
+          truncate -s 67108864 "$work/state.img"
+          mkfs.ext4 -q -F -L ORDAX-STATE "$work/state.img"
+          debugfs -w -R 'mkdir /upper' "$work/state.img"
+          debugfs -w -R 'mkdir /work' "$work/state.img"
+
+          helper="$PWD/out/initramfs-work/ordax-portable-mount"
+          test -x "$helper"
+          sudo "$helper" mount-state "$work/state.img" "$work/state-mount"
+          sudo "$helper" mount-system \
+            "$work/system.erofs" \
+            "$work/state-mount" \
+            "$work/release-mount" \
+            "$work/system-mount"
+
+          test -x "$work/system-mount/entrypoint"
+          sudo sh -n "$work/system-mount/entrypoint"
+          printf 'persistent\n' | sudo tee "$work/system-mount/.ordax-mount-helper-proof" >/dev/null
+          sync
+          test -f "$work/state-mount/upper/.ordax-mount-helper-proof"
+          test ! -e "$work/release-mount/system/.ordax-mount-helper-proof"
+
+          sudo umount "$work/system-mount"
+          sudo umount "$work/release-mount"
+          sudo umount "$work/state-mount"
+          echo 'PORTABLE_MOUNT_HELPER_RUNTIME_PROOF=PASS'
+          echo 'PID1_CONNECTED=NO'
+          echo 'PHYSICAL_DEVICE_TOUCHED=NO'
 
       - name: Prove ext4 online growth and read-only refusal
         run: |

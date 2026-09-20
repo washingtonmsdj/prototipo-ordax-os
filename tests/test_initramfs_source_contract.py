@@ -9,6 +9,7 @@ DEV_BOOTSTRAP = (ROOT / "bootstrap/dev/entrypoint").read_text(encoding="utf-8")
 BUILDER = (ROOT / "bootstrap/initramfs/build.py").read_text(encoding="utf-8")
 GROW_HELPER = (ROOT / "bootstrap/initramfs/grow_ext4.c").read_text(encoding="utf-8")
 PORTABLE_STATE_HELPER = (ROOT / "bootstrap/initramfs/portable_state.c").read_text(encoding="utf-8")
+PORTABLE_MOUNT_HELPER = (ROOT / "bootstrap/initramfs/portable_mount.c").read_text(encoding="utf-8")
 GROWTH_PROOF = (ROOT / "bootstrap/initramfs/prove_ext4_growth.sh").read_text(encoding="utf-8")
 
 
@@ -184,6 +185,36 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertNotIn("O_WRONLY", PORTABLE_STATE_HELPER)
         self.assertNotIn("O_CREAT", PORTABLE_STATE_HELPER)
         self.assertNotIn("ordax-portable-state", INIT)
+
+    def test_portable_mount_helper_is_isolated_and_non_authoritative(self):
+        helper = CONTRACT["portable_v2_prerequisites"]["portable_mount_helper"]
+        self.assertEqual(helper["source"], "bootstrap/initramfs/portable_mount.c")
+        self.assertEqual(helper["runtime_path"], "/sbin/ordax-portable-mount")
+        self.assertTrue(helper["static"])
+        self.assertEqual(helper["operations"], ["mount-state", "mount-system"])
+        self.assertEqual(helper["state_filesystem"], "ext4")
+        self.assertEqual(helper["release_filesystem"], "erofs")
+        self.assertEqual(helper["runtime_system_view"], "overlayfs")
+        self.assertTrue(helper["regular_file_backing_only"])
+        self.assertFalse(helper["physical_device_path_input_allowed"])
+        self.assertTrue(helper["release_read_only"])
+        self.assertFalse(helper["selects_release"])
+        self.assertFalse(helper["verifies_signature"])
+        self.assertFalse(helper["writes_activation_state"])
+        self.assertFalse(helper["pid1_connected"])
+
+        self.assertIn('strncmp(path, "/dev/", 5) == 0', PORTABLE_MOUNT_HELPER)
+        self.assertIn("O_NOFOLLOW", PORTABLE_MOUNT_HELPER)
+        self.assertIn("LOOP_CTL_GET_FREE", PORTABLE_MOUNT_HELPER)
+        self.assertIn("LO_FLAGS_AUTOCLEAR", PORTABLE_MOUNT_HELPER)
+        self.assertIn("LO_FLAGS_READ_ONLY", PORTABLE_MOUNT_HELPER)
+        self.assertIn('mount(state.device, state_mount, "ext4"', PORTABLE_MOUNT_HELPER)
+        self.assertIn('mount(release.device, release_mount, "erofs"', PORTABLE_MOUNT_HELPER)
+        self.assertIn('mount("overlay", system_mount, "overlay"', PORTABLE_MOUNT_HELPER)
+        self.assertNotIn("release-envelope", PORTABLE_MOUNT_HELPER)
+        self.assertNotIn("release-manifest", PORTABLE_MOUNT_HELPER)
+        self.assertNotIn("https://", PORTABLE_MOUNT_HELPER)
+        self.assertNotIn("ordax-portable-mount", INIT)
 
     def test_physical_use_remains_fail_closed(self):
         self.assertFalse(CONTRACT["build"]["physical_artifact_authorized"])
