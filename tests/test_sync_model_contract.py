@@ -74,21 +74,30 @@ class SyncModelContractTests(unittest.TestCase):
         self.assertTrue(compatibility["changing_conflict_semantics_requires_new_resolver_version"])
         self.assertTrue(compatibility["removing_syncable_data_class_requires_explicit_migration"])
 
-    def test_plans_do_not_fragment_identity_or_destroy_data(self):
+    def test_mvp_sync_and_commercial_policy_are_deferred_without_losing_architecture(self):
         foundation = self.load(FOUNDATION)
         sync = self.load(SYNC)
         plans = sync["plans_and_quota"]
         self.assertFalse(sync["identity"]["account_identity_is_plan_gated"])
-        self.assertFalse(plans["basic_cross_device_sync_is_plan_gated"])
+        self.assertFalse(sync["mvp_availability"]["synchronization_available"])
+        self.assertFalse(sync["mvp_availability"]["web_continuity_available"])
+        self.assertFalse(sync["mvp_availability"]["mobile_continuity_available"])
+        self.assertEqual(sync["mvp_availability"]["public_copy"], "coming-soon-only")
+        self.assertFalse(plans["billing_implemented"])
+        self.assertFalse(plans["pricing_defined"])
+        self.assertFalse(plans["commercial_tiers_defined"])
+        self.assertFalse(plans["commercial_device_limit_defined"])
+        self.assertFalse(plans["second_device_fee_policy_defined"])
+        self.assertTrue(plans["entitlement_architecture_prepared"])
+        self.assertTrue(plans["future_entitlements_are_server_authoritative"])
         self.assertFalse(plans["downgrade_may_silently_delete_data"])
-        self.assertTrue(plans["entitlements_are_server_authoritative"])
         self.assertEqual(
-            plans["basic_cross_device_sync_is_plan_gated"],
-            foundation["plans"]["basic_cross_device_sync_is_plan_gated"],
+            plans["commercial_device_limit_defined"],
+            foundation["plans"]["commercial_device_limit_defined"],
         )
         self.assertEqual(
-            plans["entitlements_are_server_authoritative"],
-            foundation["plans"]["entitlements_are_server_authoritative"],
+            plans["future_entitlements_are_server_authoritative"],
+            foundation["plans"]["future_entitlements_are_server_authoritative"],
         )
 
 

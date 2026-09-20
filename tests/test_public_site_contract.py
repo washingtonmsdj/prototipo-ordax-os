@@ -48,6 +48,16 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertFalse(account["may_simulate_user_data"])
         self.assertFalse(account["public_root_may_render_authenticated_workspace"])
         self.assertTrue(account["ordax_web_is_separate_product_mode"])
+        scope = contract["mvp_scope"]
+        self.assertEqual(scope["execution_mode"], "usb-only")
+        self.assertFalse(scope["native_installation_available"])
+        self.assertFalse(scope["internal_disk_write_available"])
+        self.assertFalse(scope["dual_boot_available"])
+        commerce = contract["commerce"]
+        self.assertFalse(commerce["billing_implemented"])
+        self.assertFalse(commerce["pricing_published"])
+        self.assertFalse(commerce["commercial_tiers_defined"])
+        self.assertFalse(commerce["commercial_device_limit_defined"])
 
     def test_identity_fails_closed_and_downloads_use_generated_catalog(self):
         config = json.loads((SITE / "config" / "public-site.json").read_text(encoding="utf-8"))
@@ -125,8 +135,10 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertIn("Downloads públicos aparecem somente", landing)
         self.assertIn("Stable/MVP", landing)
         self.assertIn("OrdaX Creator", landing)
-        self.assertIn("usar o OrdaX diretamente pelo USB", landing)
-        self.assertIn("SSD/NVMe/HD", landing)
+        self.assertIn("diretamente pelo pendrive", landing)
+        self.assertIn("pós-MVP", landing)
+        self.assertNotIn("Usar ou instalar", landing)
+        self.assertNotIn("instalar o OrdaX no disco interno", landing)
         self.assertIn("Arquivos", landing)
         self.assertIn("Notas", landing)
         self.assertIn("Internet", landing)

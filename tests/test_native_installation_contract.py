@@ -16,21 +16,25 @@ class NativeInstallationContractTests(unittest.TestCase):
         cls.install = json.loads(INSTALL.read_text(encoding="utf-8"))
         cls.storage = json.loads(STORAGE.read_text(encoding="utf-8"))
 
-    def test_native_install_is_mvp_and_stable_only(self):
+    def test_native_install_is_preserved_post_mvp_but_not_exposed_in_mvp(self):
         self.assertEqual(
             self.install["$schema"], "prototype-ordax.native-installation/1"
         )
-        self.assertTrue(self.install["mvp_required"])
+        self.assertFalse(self.install["mvp_required"])
+        availability = self.install["mvp_availability"]
+        self.assertFalse(availability["available"])
+        self.assertFalse(availability["advertised"])
+        self.assertFalse(availability["capability_exposed"])
+        self.assertFalse(availability["target_discovery_exposed"])
+        self.assertFalse(availability["internal_disk_write_allowed"])
+        self.assertFalse(availability["destructive_operations_allowed"])
+        self.assertEqual(availability["activation_phase"], "post-mvp")
+        self.assertTrue(availability["foundation_retained"])
         self.assertEqual(self.install["source_mode"], "ordax-usb")
         self.assertEqual(self.install["target_mode"], "native-disk")
-        self.assertEqual(self.install["distribution_profile"], "stable-mvp")
-        self.assertFalse(self.install["release_policy"]["operational_git_allowed"])
-        self.assertTrue(
-            self.install["release_policy"]["signed_authorized_release_required"]
-        )
 
-    def test_first_mvp_is_whole_disk_and_does_not_fake_dual_boot(self):
-        scope = self.install["initial_mvp_scope"]
+    def test_future_activation_scope_is_whole_disk_and_does_not_fake_dual_boot(self):
+        scope = self.install["post_mvp_activation_scope"]
         self.assertTrue(scope["whole_disk_install"])
         self.assertTrue(scope["target_must_be_explicitly_selected"])
         self.assertTrue(scope["source_boot_media_must_not_be_target"])
@@ -61,6 +65,12 @@ class NativeInstallationContractTests(unittest.TestCase):
         self.assertFalse(state["first_boot_health_connected"])
         self.assertFalse(state["native_source_boot_identity_handoff"])
         self.assertIn("DiscoverMountedBlockDevice", state["native_source_boot_mount_discovery"])
+        policy = state["mvp_runtime_policy"]
+        self.assertEqual(policy["stable_mvp_native_install_capability"], "disabled")
+        self.assertFalse(policy["stable_mvp_broker_started"])
+        self.assertFalse(policy["stable_mvp_session_token_exposed"])
+        self.assertFalse(policy["stable_mvp_internal_disk_apply_allowed"])
+        self.assertTrue(policy["owner_development_post_mvp_preview_requires_explicit_opt_in"])
         mode = state["native_product_mode_identity"]
         self.assertTrue(mode["implemented"])
         self.assertEqual(mode["usb_value"], "usb")
