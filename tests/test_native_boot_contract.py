@@ -54,6 +54,12 @@ class NativeBootContractTests(unittest.TestCase):
         subprocess.run(["sh", "-n", str(INIT)], check=True)
         self.assertIn("cmdline_value ordax.product_mode", text)
         self.assertIn("cmdline_value ordax.pool_uuid", text)
+        self.assertIn("find_pool_device()", text)
+        self.assertIn('for sys_path in /sys/class/block/*; do', text)
+        self.assertIn('[ -e "$sys_path/partition" ] || continue', text)
+        self.assertIn('cryptsetup isLuks --type luks2 "$candidate"', text)
+        self.assertIn('[ "$matches" -eq 1 ] || return 1', text)
+        self.assertNotIn("findfs ", text)
         self.assertIn('cryptsetup isLuks --type luks2 "$POOL_DEVICE"', text)
         self.assertIn("cryptsetup open --readonly --type luks2", text)
         self.assertIn('mount -t btrfs -o ro,subvolid=5 "$MAPPER_DEVICE" /ordax', text)
@@ -89,6 +95,15 @@ class NativeBootContractTests(unittest.TestCase):
         self.assertFalse(policy["interactive_secret_echo"])
         self.assertTrue(policy["tpm2_future_allowed"])
         self.assertTrue(policy["tpm2_requires_recovery_key"])
+
+    def test_pool_discovery_uses_cryptsetup_not_busybox_volume_id_heuristics(self):
+        discovery = BOOT["initramfs"]["pool_device_discovery"]
+        self.assertEqual(discovery["authority"], "cryptsetup-luksUUID")
+        self.assertEqual(discovery["candidate_scope"], "sysfs-partitions-only")
+        self.assertTrue(discovery["exact_uuid_required"])
+        self.assertTrue(discovery["exactly_one_match_required"])
+        self.assertFalse(discovery["busybox_findfs_authoritative"])
+        self.assertIn("duplicate-pool-uuid", BOOT["fail_closed"])
 
     def test_build_stays_blocked_until_exact_environment_is_observed(self):
         self.assertEqual(ENV["status"], "observation-required")

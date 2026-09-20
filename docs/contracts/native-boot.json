@@ -47,7 +47,16 @@
     "normal_pool_open": "read-write",
     "mapper_name": "ordax-pool",
     "pool_filesystem": "btrfs",
-    "pool_top_level_mount": "/ordax"
+    "pool_top_level_mount": "/ordax",
+    "pool_device_discovery": {
+      "authority": "cryptsetup-luksUUID",
+      "candidate_scope": "sysfs-partitions-only",
+      "sysfs_root": "/sys/class/block",
+      "physical_probe": "read-only-luks2-header",
+      "exact_uuid_required": true,
+      "exactly_one_match_required": true,
+      "busybox_findfs_authoritative": false
+    }
   },
   "secret_policy": {
     "luks_passphrase_in_kernel_cmdline": false,
@@ -106,6 +115,7 @@
     "missing-or-duplicate-pool-uuid",
     "invalid-pool-uuid-syntax",
     "pool-uuid-not-found",
+    "duplicate-pool-uuid",
     "selected-device-not-luks2",
     "unlock-failure",
     "btrfs-mount-failure",

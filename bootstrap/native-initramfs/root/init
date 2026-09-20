@@ -121,10 +121,32 @@ POOL_UUID=$(cmdline_value ordax.pool_uuid 2>/dev/null || true)
 valid_uuid "$POOL_UUID" || rescue "missing, duplicate or invalid ordax.pool_uuid"
 POOL_UUID=$(printf '%s' "$POOL_UUID" | tr 'A-F' 'a-f')
 
-POOL_DEVICE=$(findfs "UUID=$POOL_UUID" 2>/dev/null || true)
+find_pool_device() {
+    expected_uuid=$1
+    matched=""
+    matches=0
+    for sys_path in /sys/class/block/*; do
+        [ -e "$sys_path/partition" ] || continue
+        name=${sys_path##*/}
+        case "$name" in
+            ''|*[!A-Za-z0-9._-]*) continue ;;
+        esac
+        candidate=/dev/$name
+        [ -b "$candidate" ] || continue
+        cryptsetup isLuks --type luks2 "$candidate" >/dev/null 2>&1 || continue
+        observed=$(cryptsetup luksUUID "$candidate" 2>/dev/null | tr 'A-F' 'a-f' || true)
+        [ "$observed" = "$expected_uuid" ] || continue
+        matched=$candidate
+        matches=$((matches + 1))
+    done
+    [ "$matches" -eq 1 ] || return 1
+    printf '%s' "$matched"
+}
+
+POOL_DEVICE=$(find_pool_device "$POOL_UUID" 2>/dev/null || true)
 case "$POOL_DEVICE" in
     /dev/*) ;;
-    *) rescue "exact LUKS pool UUID was not found" ;;
+    *) rescue "exact LUKS pool UUID was not found uniquely" ;;
 esac
 
 cryptsetup isLuks --type luks2 "$POOL_DEVICE" \

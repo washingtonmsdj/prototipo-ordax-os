@@ -14,7 +14,7 @@ import sys
 SCHEMA = "prototype-ordax.native-initramfs-build-environment/1"
 OBSERVATION_SCHEMA = "prototype-ordax.native-initramfs-environment-observation/1"
 PRIMARY_BINARIES = ("/usr/sbin/cryptsetup", "/usr/bin/btrfs")
-REQUIRED_BUSYBOX_APPLETS = {"sh", "mount", "umount", "cat", "findfs", "mkdir", "tr"}
+REQUIRED_BUSYBOX_APPLETS = {"sh", "mount", "umount", "cat", "mkdir", "tr"}
 PACKAGE_RE = re.compile(r"^[a-z0-9][a-z0-9+.-]*$")
 
 

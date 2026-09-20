@@ -30,7 +30,7 @@ SOURCE_CONTRACT = HERE / "source.json"
 ENV_CONTRACT = ROOT / "docs" / "contracts" / "native-initramfs-build-environment.json"
 BOOT_CONTRACT = ROOT / "docs" / "contracts" / "native-boot.json"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-REQUIRED_BUSYBOX_APPLETS = {"sh", "mount", "umount", "cat", "findfs", "mkdir", "tr"}
+REQUIRED_BUSYBOX_APPLETS = {"sh", "mount", "umount", "cat", "mkdir", "tr"}
 PRIMARY_BINARIES = ("/usr/sbin/cryptsetup", "/usr/bin/btrfs")
 
 
@@ -121,6 +121,9 @@ def check_contract() -> dict:
     required_markers = (
         "ordax.product_mode",
         "ordax.pool_uuid",
+        "find_pool_device",
+        '/sys/class/block/*',
+        'cryptsetup isLuks --type luks2 "$candidate"',
         'cryptsetup isLuks --type luks2 "$POOL_DEVICE"',
         'cryptsetup open --readonly --type luks2',
         'cryptsetup open --type luks2',
@@ -143,6 +146,7 @@ def check_contract() -> dict:
         "http://",
         "https://",
         "ordax.pool_key",
+        "findfs ",
     )
     leaked = [marker for marker in forbidden if marker in text]
     if leaked:
