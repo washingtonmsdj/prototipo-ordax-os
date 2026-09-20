@@ -186,6 +186,82 @@ jobs:
           echo 'RELEASE_PUBLISHED=NO'
           echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
 
+      - name: Prove portable v3 multi-artifact signed protocol compatibility
+        run: |
+          set -euo pipefail
+          manifest_tool="$PWD/out/release-pipeline/ordax-release-manifest"
+          signer="$PWD/out/release-pipeline/ordax-release-signing"
+          agent="$PWD/out/release-pipeline/ordax-release-agent"
+          work="$RUNNER_TEMP/release-v3-pipeline-proof"
+          commit="0123456789abcdef0123456789abcdef01234567"
+          mkdir -p "$work"
+
+          python - "$work/system.erofs" "$work/native-surface-runtime.erofs" <<'PY'
+          import pathlib, sys
+          for index, raw in enumerate(sys.argv[1:], start=1):
+              data = bytearray(4096)
+              data[1024:1028] = bytes([0xE2, 0xE1, 0xF5, 0xE0])
+              data[-1] = index
+              pathlib.Path(raw).write_bytes(data)
+          PY
+
+          "$manifest_tool" \
+            --manifest-schema 3 \
+            --artifact "$work/system.erofs" \
+            --runtime-artifact "$work/native-surface-runtime.erofs" \
+            --source-commit "$commit" \
+            --artifact-url "https://example.invalid/releases/system.erofs" \
+            --runtime-artifact-url "https://example.invalid/runtime/native-surface-runtime.erofs" \
+            --out "$work/release-manifest-v3.json"
+
+          "$signer" generate-key \
+            --private-key "$work/private-v3.pem" \
+            --trust "$work/trust-v3.json" \
+            --key-id ci-v3-1
+          "$signer" sign \
+            --manifest "$work/release-manifest-v3.json" \
+            --private-key "$work/private-v3.pem" \
+            --trust "$work/trust-v3.json" \
+            --key-id ci-v3-1 \
+            --out "$work/release-envelope-v3.json"
+
+          verify_output="$("$agent" verify-envelope \
+            --envelope "$work/release-envelope-v3.json" \
+            --trust "$work/trust-v3.json")"
+          printf '%s\n' "$verify_output"
+          grep -q '"status": "verified"' <<<"$verify_output"
+          grep -q '"artifact_count": 2' <<<"$verify_output"
+
+          python - "$work/release-manifest-v3.json" "$work/system.erofs" "$work/native-surface-runtime.erofs" <<'PY'
+          import hashlib, json, pathlib, sys
+          manifest = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          system = pathlib.Path(sys.argv[2]).read_bytes()
+          runtime = pathlib.Path(sys.argv[3]).read_bytes()
+          assert manifest['$schema'] == 'prototype-ordax.release-manifest/3'
+          assert manifest['product_mode'] == 'usb'
+          assert manifest['storage_profile'] == 'portable-usb-v2'
+          assert manifest['runtime_format'] == 'erofs'
+          artifacts = manifest['artifacts']
+          assert [a['name'] for a in artifacts] == [
+              'system.erofs',
+              'native-surface-runtime.erofs',
+          ]
+          assert [a['role'] for a in artifacts] == [
+              'system-image',
+              'surface-runtime',
+          ]
+          assert artifacts[0]['sha256'] == hashlib.sha256(system).hexdigest()
+          assert artifacts[1]['sha256'] == hashlib.sha256(runtime).hexdigest()
+          print('PORTABLE_V3_MULTI_ARTIFACT_IDENTITY=PASS')
+          PY
+
+          rm -f "$work/private-v3.pem"
+          test ! -e "$work/private-v3.pem"
+          echo 'PORTABLE_V3_SIGNED_PROTOCOL=PASS'
+          echo 'PORTABLE_V3_RUNTIME_REUSE_CONTRACT=CONTENT_ADDRESSED_SHA256'
+          echo 'PORTABLE_V3_ACTIVATION_ALLOWED=NO'
+          echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
+
       - name: Prove public trust promotion check with ephemeral recovery proof
         run: |
           set -euo pipefail
