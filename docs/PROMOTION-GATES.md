@@ -2,7 +2,7 @@
 
 Status: CANONICAL FOR PROTOTYPE
 
-This repository remains a prototype until every required gate below is closed with reproducible evidence. A green CI candidate never implicitly authorizes physical-media mutation.
+This repository remains a prototype until every required canonical product gate below is closed with reproducible evidence. A green CI candidate never implicitly authorizes physical-media mutation. Owner/Development evidence is recorded explicitly where it exists, but it must not be reinterpreted as Stable/MVP release proof.
 
 ## Gate 0 - Repository foundation
 
@@ -72,7 +72,7 @@ QEMU_REQUIRED=NO
 
 The trust custody/recovery/rotation policy is defined in `docs/contracts/release-trust-policy.json`; policy completion does not resolve the actual public trust artifact.
 
-## Gate 3 - Two-partition provisioning in disposable media
+## Gate 3 - Two-partition bootstrap-seed provisioning in disposable media
 
 ```text
 DISPOSABLE_GPT=PASS
@@ -86,11 +86,11 @@ PROVISION_VERIFY=PASS
 PHYSICAL_WRITE_AUTHORIZED=NO
 ```
 
-This gate is proven against an ephemeral regular RAW representation through Creator Core staging plus `tools/creator/proof/disposable_media.py`. It does not authorize a physical write.
+This gate is proven against the capacity-independent **bootstrap seed** through an ephemeral regular RAW representation plus Creator Core staging and `tools/creator/proof/disposable_media.py`. It does not describe the final prepared USB geometry and does not authorize a physical write. The final Creator-prepared target is governed separately by `docs/contracts/physical-prepared-media.json` and includes target-capacity-specific `ORDAX-DATA`.
 
 ## Gate 4 - Boot artifact and bootstrap proof
 
-Current source/CI state:
+Current source/CI and Owner/Development state:
 
 ```text
 UEFI_BOOT_CONTRACT=PASS
@@ -104,13 +104,14 @@ SURFACE_BOOTSTRAP_RUNTIME=PASS
 REAL_SYSTEM_BUNDLE=PASS
 RELEASE_TRUST_VALIDATION_WITH_EPHEMERAL_CI_KEY=PASS
 RELEASE_TRUST_VALIDATION_WITH_CANONICAL_KEY=PENDING
-PHYSICAL_KERNEL_BOOT=PENDING
+DEVELOPMENT_PHYSICAL_KERNEL_BOOT=PASS_PHYSICAL_DEVELOPMENT_USB
+CANONICAL_PHYSICAL_KERNEL_BOOT=PENDING
 LEGACY_MEDIA_DEPENDENCY=NO
 EMULATOR_SPECIFIC_DEPENDENCY=NO
 REMOTE_CONTROL_DEPENDENCY=NO
 ```
 
-The full-bootstrap-media proof may close byte-complete disposable composition with ephemeral trust, but only canonical trust plus physical boot can close the remaining physical portions of this gate.
+The existing Owner/Development USB physically boots the pinned kernel path on the target notebook. That closes the development-hardware bring-up fact only. The full-bootstrap-media proof may close byte-complete disposable composition with ephemeral trust, but only canonical trust plus a Stable/MVP physical boot can close `CANONICAL_PHYSICAL_KERNEL_BOOT` and the remaining canonical portions of this gate.
 
 ## Gate 5 - OrdaX Creator host independence and target safety
 
@@ -178,7 +179,7 @@ RAW_BACKEND_IN_PUBLIC_BUILD=NO
 PUBLIC_PHYSICAL_APPLY=NO
 SOURCE_LAYOUT_CONTRACT=PASS
 MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=PENDING_CANONICAL_TRUST
-RELEASE_TRUST=PENDING_CANONICAL_KEY
+CANONICAL_RELEASE_TRUST=PENDING_CANONICAL_KEY
 PINNED_BOOT_BUILD_ENVIRONMENT=PASS
 DISPOSABLE_LAYOUT_TEST=PASS
 FULL_BOOTSTRAP_BYTE_COMPLETE_PROOF=PENDING_WORKFLOW_RESULT
@@ -205,22 +206,28 @@ PHYSICAL_LAYOUT_CHANGED=NO
 DESTRUCTIVE_AUTHORIZATION=NO
 ```
 
-## Gate 7 - Physical notebook minimal bootstrap
+## Gate 7 - Physical notebook bootstrap
 
-Required:
+Owner/Development and canonical Stable/MVP are separate evidence scopes:
 
 ```text
-NOTEBOOK_UEFI_BOOT=PENDING
-NETWORK_READY=PENDING_PHYSICAL
-RELEASE_CHANNEL_REACHABLE=PENDING_PHYSICAL
-RELEASE_SIGNATURE_VERIFY=PENDING_CANONICAL_TRUST_AND_PHYSICAL
-RECOVERY_PATH=PENDING_PHYSICAL
+DEVELOPMENT_NOTEBOOK_UEFI_BOOT=PASS_PHYSICAL_DEVELOPMENT_USB
+CANONICAL_NOTEBOOK_UEFI_BOOT=PENDING
+DEVELOPMENT_NETWORK_READY=PASS_PHYSICAL_DEVELOPMENT_USB
+CANONICAL_NETWORK_READY=PENDING_PHYSICAL
+DEVELOPMENT_GIT_MAIN_REACHABLE=PASS_PHYSICAL_DEVELOPMENT_USB
+CANONICAL_RELEASE_CHANNEL_REACHABLE=PENDING_PHYSICAL
+CANONICAL_RELEASE_SIGNATURE_VERIFY=PENDING_CANONICAL_TRUST_AND_PHYSICAL
+DEVELOPMENT_RESCUE_PATH=PASS_PHYSICAL_DEVELOPMENT_USB
+CANONICAL_RECOVERY_PATH=PENDING_PHYSICAL
 SSH_REQUIRED=NO
 REMOTE_CORE_REQUIRED=NO
 CONTROL_PLANE_REQUIRED=NO
 ```
 
-## Gate 8 - First network release acquisition and activation
+The target notebook has already booted the Owner/Development USB, reached network/Git and exercised the bounded rescue path. These observations prove the development bootstrap on that hardware. They do not prove that a canonical signed Stable/MVP image boots, reaches its release channel, verifies the canonical signature or exercises its canonical recovery path.
+
+## Gate 8 - First canonical network release acquisition and activation
 
 Required:
 
@@ -234,7 +241,7 @@ KNOWN_GOOD_OFFLINE_BOOT=PENDING_PHYSICAL
 ROLLBACK=PENDING_PHYSICAL
 ```
 
-A release must be tied to an exact source commit and authenticated before activation.
+A Stable/MVP release must be tied to an exact source commit and authenticated before activation. The Owner/Development Git checkout/update path is deliberately not counted as completion of this canonical release gate.
 
 ## Gate 9 - Single-source Surface across Web and native
 
@@ -243,33 +250,40 @@ ONE_SURFACE_SOURCE=ARCHITECTURE_PASS
 SYSTEM_TO_SURFACE_HANDOFF=PASS
 BOOTSTRAP_SURFACE_RUNTIME=PASS
 UI_FORKS=NO_BY_CONTRACT
-WEB_MODE=PENDING
-NATIVE_GRAPHICAL_MODE=PENDING
-SAME_COMMIT_VISUAL_CHANGE=PENDING
+WEB_MODE=PASS_SOURCE_BROWSER_CANDIDATE
+NATIVE_GRAPHICAL_MODE=PASS_PHYSICAL_DEVELOPMENT_USB
+SAME_COMMIT_VISUAL_CHANGE=PASS_PHYSICAL_DEVELOPMENT_USB
+MVP_SURFACE_SMOKE_HARNESS=PASS_SOURCE
+MVP_SURFACE_SMOKE_PHYSICAL=PENDING
+CANONICAL_STABLE_GRAPHICAL_MODE=PENDING
 CAPABILITY_ADAPTER_BOUNDARY=PASS_BY_CONTRACT
 ```
 
-The console/bootstrap Surface proves the release handoff but does not close the graphical Surface gate.
+The Web candidate is exercised against the shared Surface graph, and the Owner/Development USB has physically rendered that shared graphical source with keyboard/mouse interaction on the target notebook. A live-safe UI change and its cleanup were both pulled and visibly applied without reboot on the same notebook, closing the development same-source/same-session visual-change proof. The read-only MVP Surface smoke harness is now source-controlled and CI-tested, but its baseline/tour/after-tour run on the notebook remains pending. None of these facts substitutes for first canonical Stable/MVP graphical boot proof.
 
 ## Gate 10 - Git-driven live incremental development
 
-Required with the normal user-facing system running:
+Current Owner/Development state, with Stable/MVP kept separate:
 
 ```text
-EDIT_SOURCE=PENDING_END_TO_END
+EDIT_SOURCE=PASS_PHYSICAL_DEVELOPMENT_USB
 AFFECTED_TEST=PASS_REPOSITORY
-WEB_PREVIEW=PENDING
+WEB_PREVIEW=PASS_SOURCE_BROWSER_CANDIDATE
 GIT_PUSH=PASS
 CI_AFFECTED_ARTIFACT_BUILD=PASS_PARTIAL
-DEVICE_RELEASE_OR_DELTA_UPDATE=PENDING_PHYSICAL
-HEALTH_READINESS=PENDING
-FULL_IMAGE_REBUILD_REQUIRED=NO_TARGET
-USB_REFLASH_REQUIRED=NO_TARGET_AFTER_FIRST_RELEASE
-ROUTINE_REBOOT_REQUIRED=NO_TARGET
+DEVELOPMENT_DEVICE_GIT_HOT_UPDATE=PASS_PHYSICAL_DEVELOPMENT_USB
+DEVELOPMENT_HEALTH_READINESS=PASS_PHYSICAL_DEVELOPMENT_USB
+STABLE_DEVICE_RELEASE_OR_DELTA_UPDATE=PENDING
+STABLE_HEALTH_READINESS=PENDING
+FULL_IMAGE_REBUILD_REQUIRED_FOR_NORMAL_SYSTEM_CHANGES=NO
+USB_REFLASH_REQUIRED_FOR_NORMAL_SYSTEM_CHANGES=NO
+ROUTINE_REBOOT_REQUIRED_FOR_LIVE_SAFE_CHANGES=NO
 SSH_REQUIRED=NO
 REMOTE_CONTROL_REQUIRED=NO
 CODEX_REQUIRED=NO
 ```
+
+The target Owner/Development notebook has already completed the end-to-end `main -> Git update -> Surface reload -> visible change` round trip and later returned to the original UI through a second live-safe update. Guardian/supervisor health and valid-candidate preflight were also physically exercised. This closes the Git-first **development** loop; it does not make Git an acceptable Stable/MVP user update channel. Stable/MVP release/delta acquisition and its production health/rollback path remain separate pending gates.
 
 ## Gate 11 - User continuity Web -> USB -> native disk
 
@@ -283,9 +297,10 @@ NATIVE_DISK_INSTALL=PENDING
 
 ## Gate 12 - Recovery after failure
 
-Agent/unit/disposable tests already prove multiple fail-closed release cases, but physical recovery remains pending. Final required evidence includes:
+Agent/unit/disposable tests already prove multiple fail-closed release cases. The bounded Owner/Development rescue/guardian path is also physically proven, but canonical release recovery remains pending. Final canonical evidence includes:
 
 ```text
+DEVELOPMENT_RESCUE_RECOVERY=PASS_PHYSICAL_DEVELOPMENT_USB
 BOOTSTRAP_RECOVERY_WITHOUT_FIRST_RELEASE=PENDING_PHYSICAL
 KNOWN_GOOD_PRESERVED=PASS_IN_AGENT_TESTS
 OFFLINE_BOOT=PENDING_PHYSICAL
@@ -294,10 +309,12 @@ RELEASE_INTEGRITY_FAIL_CLOSED=PASS
 RELEASE_SIGNATURE_FAIL_CLOSED=PASS
 ```
 
+The physically proven development rescue path is target-bound and deliberately bounded; it is not a generic remote shell and does not close Stable/MVP offline boot, first-release recovery or canonical rollback proof.
+
 ## Optional future remote-management gate
 
 Only if Remote Core or another remote-management feature is later adopted as a supported product capability should it receive its own security, authorization and recovery gates. It is intentionally not part of the bootstrap or daily-development critical path.
 
 ## Promotion decision
 
-Only after the applicable Gates 0-12 pass may the repository be declared a successor candidate. In particular, the existence of a tagged unbound native raw-disk backend does not authorize physical mutation. No physical write is permitted while canonical release trust, canonical-trust media proof, public apply reachability, physical artifact authorization or explicit destructive authorization remain open.
+Only after the applicable canonical Gates 0-12 pass may the repository be declared a successor candidate. Owner/Development `PASS_PHYSICAL_DEVELOPMENT_USB` evidence reduces bring-up uncertainty but never substitutes for canonical trust, Stable/MVP media, canonical update/recovery or public-write authorization. In particular, the existence of a tagged unbound native raw-disk backend does not authorize physical mutation. No physical write is permitted while canonical release trust, canonical-trust media proof, public apply reachability, physical artifact authorization or explicit destructive authorization remain open.

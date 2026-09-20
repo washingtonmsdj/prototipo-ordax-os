@@ -8,6 +8,7 @@ CURRENT_STATE = ROOT / "docs" / "CURRENT-STATE.md"
 AGENTS = ROOT / "AGENTS.md"
 UPDATE_DOC = ROOT / "docs" / "UPDATE-NOMENCLATURE.md"
 INTERNET_DOC = ROOT / "docs" / "INTERNET-APP.md"
+PROMOTION_GATES = ROOT / "docs" / "PROMOTION-GATES.md"
 UPDATE_CONTRACT = ROOT / "docs" / "contracts" / "update-nomenclature.json"
 PRODUCT_VERSION = ROOT / "system" / "contracts" / "product-version.mjs"
 BUNDLED_APP_MANIFESTS = ROOT / "system" / "services" / "components" / "manifests" / "apps.mjs"
@@ -118,6 +119,47 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertEqual(component["independent_update_release_mode"], "component-slot")
         self.assertEqual(component["first_party_pre_1_0_maturity"], "beta")
         self.assertEqual(component["independent_components_currently_enabled_scope"], "production-component-slot-only")
+
+    def test_promotion_gates_separate_development_proof_from_canonical_stable(self):
+        state = assignment_map(CURRENT_STATE.read_text(encoding="utf-8"))
+        promotion = assignment_map(PROMOTION_GATES.read_text(encoding="utf-8"))
+
+        self.assertEqual(state["WEB_CLIENT_CANDIDATE"], "PASS")
+        self.assertEqual(promotion["WEB_MODE"], "PASS_SOURCE_BROWSER_CANDIDATE")
+
+        self.assertEqual(state["NATIVE_GRAPHICAL_HOST"], "PASS_PHYSICAL_DEVELOPMENT_USB")
+        self.assertEqual(promotion["NATIVE_GRAPHICAL_MODE"], "PASS_PHYSICAL_DEVELOPMENT_USB")
+        self.assertEqual(promotion["CANONICAL_STABLE_GRAPHICAL_MODE"], "PENDING")
+
+        self.assertEqual(state["GIT_HOT_UPDATE_ROUND_TRIP"], "PASS")
+        self.assertEqual(promotion["DEVELOPMENT_DEVICE_GIT_HOT_UPDATE"], "PASS_PHYSICAL_DEVELOPMENT_USB")
+        self.assertEqual(promotion["STABLE_DEVICE_RELEASE_OR_DELTA_UPDATE"], "PENDING")
+
+        self.assertEqual(promotion["MVP_SURFACE_SMOKE_HARNESS"], "PASS_SOURCE")
+        self.assertEqual(promotion["MVP_SURFACE_SMOKE_PHYSICAL"], "PENDING")
+        self.assertEqual(promotion["CANONICAL_RELEASE_TRUST"], "PENDING_CANONICAL_KEY")
+        self.assertEqual(promotion["PHYSICAL_USB_WRITE"], "NO")
+
+    def test_known_stale_promotion_claims_cannot_return(self):
+        promotion = assignment_map(PROMOTION_GATES.read_text(encoding="utf-8"))
+        stale_keys = {
+            "PHYSICAL_KERNEL_BOOT",
+            "NOTEBOOK_UEFI_BOOT",
+            "NETWORK_READY",
+            "RELEASE_CHANNEL_REACHABLE",
+            "RELEASE_SIGNATURE_VERIFY",
+            "RECOVERY_PATH",
+            "DEVICE_RELEASE_OR_DELTA_UPDATE",
+            "HEALTH_READINESS",
+        }
+        for key in stale_keys:
+            self.assertNotIn(key, promotion)
+
+        self.assertNotEqual(promotion["WEB_MODE"], "PENDING")
+        self.assertNotEqual(promotion["NATIVE_GRAPHICAL_MODE"], "PENDING")
+        self.assertNotEqual(promotion["SAME_COMMIT_VISUAL_CHANGE"], "PENDING")
+        self.assertNotEqual(promotion["EDIT_SOURCE"], "PENDING_END_TO_END")
+        self.assertNotEqual(promotion["WEB_PREVIEW"], "PENDING")
 
     def test_known_stale_version_claims_cannot_return(self):
         current = CURRENT_STATE.read_text(encoding="utf-8")
