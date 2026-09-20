@@ -96,6 +96,23 @@ class BuildAutonomyContractTest(unittest.TestCase):
         self.assertTrue(rules["new_artifact_class_requires_provenance_owner"])
         self.assertTrue(rules["build_cache_may_accelerate_but_may_not_replace_verification"])
 
+    def test_native_release_assembly_is_repository_owned_and_prebuilt(self):
+        native = CONTRACT["native_system_release"]
+        self.assertEqual(
+            native["assembly_recipe"],
+            "tools/native-release-assembly/build.py",
+        )
+        self.assertEqual(
+            native["assembly_contract"],
+            "docs/contracts/native-release-assembly.json",
+        )
+        self.assertEqual(native["shared_system_source"], "system/")
+        self.assertTrue(native["helper_built_by_ci"])
+        self.assertFalse(native["helper_compiled_on_end_user_device"])
+        self.assertTrue(native["helper_covered_by_signed_system_tar"])
+        self.assertEqual(native["final_bundle_owner"], "tools/release-bundle")
+        self.assertFalse(native["separate_helper_release_channel"])
+
     def test_codex_is_optional_and_not_an_authority(self):
         model = CONTRACT["ai_operating_model"]
         self.assertTrue(model["any_repository_agent_may_edit_source"])
