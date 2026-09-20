@@ -13,12 +13,14 @@
     "name": "system.erofs",
     "filesystem": "erofs",
     "volume_label": "ORDAX-SYSTEM",
-    "filesystem_uuid": "00000000-0000-0000-0000-000000000000",
     "compression": "lz4",
     "timestamp": 0,
     "all_files_owned_by_root": true,
     "read_only": true,
-    "byte_reproducible_required": true
+    "byte_reproducible_required": true,
+    "filesystem_uuid_policy": "uuidv5-fixed-namespace-over-system-tar-sha256",
+    "filesystem_uuid_namespace": "7a471b52-6f72-5d61-9f58-2fb58012e6d1",
+    "filesystem_uuid_release_unique": true
   },
   "builder": {
     "path": "tools/portable-release-image/build.py",
@@ -26,8 +28,9 @@
     "fsck_tool": "fsck.erofs",
     "source_mode": "--tar=f",
     "fixed_timestamp": "-T 0",
-    "fixed_uuid": true,
-    "all_root": "--all-root"
+    "fixed_uuid": false,
+    "all_root": "--all-root",
+    "deterministic_uuid_from_source_hash": true
   },
   "integration": {
     "release_protocol_v1_changed": false,

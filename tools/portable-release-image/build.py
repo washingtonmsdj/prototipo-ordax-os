@@ -20,9 +20,10 @@ import subprocess
 import sys
 import tarfile
 from typing import Any
+import uuid
 
 SCHEMA = "prototype-ordax.portable-release-image-result/1"
-FIXED_UUID = "00000000-0000-0000-0000-000000000000"
+UUID_NAMESPACE = uuid.UUID("7a471b52-6f72-5d61-9f58-2fb58012e6d1")
 VOLUME_LABEL = "ORDAX-SYSTEM"
 MAX_ENTRIES = 100000
 MAX_TOTAL_BYTES = 16 << 30
@@ -68,6 +69,12 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def deterministic_image_uuid(source_sha256: str) -> str:
+    if len(source_sha256) != 64 or any(ch not in "0123456789abcdef" for ch in source_sha256):
+        raise ImageError("source SHA-256 is not canonical lowercase hex")
+    return str(uuid.uuid5(UUID_NAMESPACE, source_sha256))
 
 
 def validate_tar(path: Path) -> dict[str, Any]:
@@ -171,6 +178,7 @@ def parse_blkid(image: Path) -> dict[str, str]:
 def build(source_tar: Path, output: Path) -> dict[str, Any]:
     source_tar = require_regular(source_tar, "system.tar")
     source = validate_tar(source_tar)
+    image_uuid = deterministic_image_uuid(source["sha256"])
     output = output_path(output, source_tar)
     try:
         run([
@@ -178,7 +186,7 @@ def build(source_tar: Path, output: Path) -> dict[str, Any]:
             "--tar=f",
             "-zlz4",
             "-T", "0",
-            "-U", FIXED_UUID,
+            "-U", image_uuid,
             "-L", VOLUME_LABEL,
             "--all-root",
             str(output),
@@ -191,7 +199,7 @@ def build(source_tar: Path, output: Path) -> dict[str, Any]:
             raise ImageError("portable release output is not EROFS")
         if identity.get("LABEL") != VOLUME_LABEL:
             raise ImageError("portable release EROFS label mismatch")
-        if identity.get("UUID", "").lower() != FIXED_UUID:
+        if identity.get("UUID", "").lower() != image_uuid:
             raise ImageError("portable release EROFS UUID mismatch")
 
         result = {
@@ -205,7 +213,7 @@ def build(source_tar: Path, output: Path) -> dict[str, Any]:
                 "name": "system.erofs",
                 "filesystem": "erofs",
                 "label": VOLUME_LABEL,
-                "uuid": FIXED_UUID,
+                "uuid": image_uuid,
                 "compression": "lz4",
                 "timestamp": 0,
                 "sha256": sha256_file(output),
@@ -234,7 +242,8 @@ def verify(source_tar: Path, image: Path) -> dict[str, Any]:
     identity = parse_blkid(image)
     if identity.get("TYPE") != "erofs" or identity.get("LABEL") != VOLUME_LABEL:
         raise ImageError("portable release image filesystem identity mismatch")
-    if identity.get("UUID", "").lower() != FIXED_UUID:
+    expected_uuid = deterministic_image_uuid(source["sha256"])
+    if identity.get("UUID", "").lower() != expected_uuid:
         raise ImageError("portable release image UUID mismatch")
     return {
         "$schema": SCHEMA,

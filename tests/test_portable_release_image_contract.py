@@ -67,7 +67,15 @@ class PortableReleaseImageContractTests(unittest.TestCase):
         self.assertEqual(output["name"], "system.erofs")
         self.assertEqual(output["filesystem"], "erofs")
         self.assertEqual(output["volume_label"], "ORDAX-SYSTEM")
-        self.assertEqual(output["filesystem_uuid"], module.FIXED_UUID)
+        self.assertEqual(
+            output["filesystem_uuid_policy"],
+            "uuidv5-fixed-namespace-over-system-tar-sha256",
+        )
+        first = module.deterministic_image_uuid("a" * 64)
+        second = module.deterministic_image_uuid("a" * 64)
+        different = module.deterministic_image_uuid("b" * 64)
+        self.assertEqual(first, second)
+        self.assertNotEqual(first, different)
         self.assertEqual(output["timestamp"], 0)
         self.assertEqual(output["compression"], "lz4")
         self.assertTrue(output["read_only"])
