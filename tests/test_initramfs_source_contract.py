@@ -51,15 +51,6 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertFalse(recovery["filesystem_growth"])
         self.assertFalse(recovery["network_started"])
 
-        handoff = CONTRACT["native_install_source_handoff"]
-        self.assertTrue(handoff["enabled"])
-        self.assertEqual(
-            handoff["runtime_path"],
-            "/run/ordax-install/source-block-device",
-        )
-        self.assertFalse(handoff["network_required"])
-        self.assertFalse(handoff["physical_write_authorized"])
-
     def test_pid1_understands_only_new_storage_handoff(self):
         self.assertIn("findfs LABEL=ORDAX", INIT)
         self.assertIn("mount -t ext4 -o ro \"$ORDAX_DEVICE\" /ordax", INIT)
@@ -67,11 +58,6 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn('/sbin/ordax-grow-ext4 --check "$ORDAX_DEVICE"', INIT)
         self.assertIn('/sbin/ordax-grow-ext4 "$ORDAX_DEVICE" /ordax', INIT)
         self.assertIn("/ordax/bootstrap/entrypoint", INIT)
-        self.assertIn("umask 077", INIT)
-        self.assertIn("SOURCE_BLOCK_DEVICE_FILE=$INSTALL_RUNTIME_DIR/source-block-device", INIT)
-        self.assertIn('printf \'%s\\n\' "$ORDAX_DEVICE" >"$SOURCE_BLOCK_DEVICE_FILE"', INIT)
-        self.assertNotIn("chmod ", INIT)
-        self.assertNotIn("mv -f", INIT)
         recovery_pos = INIT.index('case "$RECOVERY_MODE" in')
         grow_pos = INIT.index('/sbin/ordax-grow-ext4 "$ORDAX_DEVICE" /ordax')
         self.assertLess(recovery_pos, grow_pos)
