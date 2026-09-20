@@ -114,6 +114,18 @@ The shared product source may feed several delivery modes, but those delivery ar
 
 This lets future targets and features be added without turning every commit into a kernel/full-product rebuild. The `public-site` artifact is owned by `tools/public-site/build.py` and its contract in `docs/contracts/public-site.json`; it is intentionally distinct from the `web-client` product mode.
 
+## Native system release assembly
+
+The `native-system-release` is not identical to a raw copy of the shared `system/` tree. Some privileged Native capabilities require prebuilt host executables that browsers and shared JavaScript must never implement directly.
+
+Those binaries are assembled through the repository-owned recipe:
+
+```text
+tools/native-release-assembly/build.py
+```
+
+The recipe copies the canonical shared `system/` source into an isolated temporary tree, cross-compiles only explicitly contracted Native helper packages, records their hashes/provenance, and hands the staged tree to the existing deterministic release bundler. No generated helper is committed into `system/`, no compiler is required on the end-user device, and no helper escapes the signed `system.tar` release boundary.
+
 ## Release provenance
 
 Every boot-critical generated artifact must have machine-readable provenance containing at least:
