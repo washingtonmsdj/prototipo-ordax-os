@@ -42,6 +42,8 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn("releases/*)", text)
         self.assertIn("ORDAX_DISTRIBUTION_PROFILE=stable-mvp", text)
         self.assertIn('ORDAX_SOURCE_SHA="$source_sha"', text)
+        self.assertIn('ORDAX_PRODUCT_MODE="$mode"', text)
+        self.assertIn('PRODUCT_MODE_FILE=/ordax/bootstrap/config/product-mode', text)
         self.assertIn('boot_current || recovery "verified release handoff failed"', text)
 
     def test_owner_handoff_binds_git_head_to_owner_profile(self):
@@ -49,11 +51,15 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn('"$GIT_BIN" -C "$WORKTREE" rev-parse HEAD', text)
         self.assertIn("ORDAX_DISTRIBUTION_PROFILE=owner-development", text)
         self.assertIn('ORDAX_SOURCE_SHA="$source_sha"', text)
+        self.assertIn("ORDAX_PRODUCT_MODE=usb", text)
 
     def test_guardian_rebinds_stable_identity_from_current_release(self):
         text = ENTRYPOINT.read_text(encoding="utf-8")
         self.assertIn('DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}', text)
         self.assertIn('STABLE_ROOT=${ORDAX_STABLE_ROOT:-/ordax}', text)
+        self.assertIn('PRODUCT_MODE=${ORDAX_PRODUCT_MODE:-}', text)
+        self.assertIn('fail_closed "OrdaX product mode identity is missing or invalid"', text)
+        self.assertIn("export ORDAX_PRODUCT_MODE", text)
         resolver = text.split("stable_current_release_sha() {", 1)[1].split("\n}", 1)[0]
         self.assertIn('current=$STABLE_ROOT/current', resolver)
         self.assertIn('[ -L "$current" ]', resolver)
@@ -107,6 +113,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn('start_surface_from_system "$SYSTEM_ROOT" "$(current_sha)"', start)
         shared_start = text.split("start_surface_from_system() {", 1)[1].split("\n}", 1)[0]
         self.assertIn('ORDAX_DISTRIBUTION_PROFILE="$DISTRIBUTION_PROFILE"', shared_start)
+        self.assertIn('ORDAX_PRODUCT_MODE="$PRODUCT_MODE"', shared_start)
         self.assertIn('ORDAX_SOURCE_SHA="$surface_source_sha"', shared_start)
         self.assertIn(
             'if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then\n    rm -f "$SUPERVISOR_GUARD_FILE"',
@@ -119,6 +126,10 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn("stable-mvp)", configure)
         self.assertIn("SOURCE_SHA=$SOURCE_SHA_HINT", configure)
         self.assertIn("owner-development)", configure)
+        self.assertIn('PRODUCT_MODE=${ORDAX_PRODUCT_MODE:-}', text)
+        self.assertIn('--product-mode "$PRODUCT_MODE"', text)
+        self.assertIn('[ "$PRODUCT_MODE" = "usb" ] || return 0', text)
+        self.assertIn('[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] || return 0', text)
 
         rescue = text.split("ensure_rescue_agent() {", 1)[1].split("\n}", 1)[0]
         self.assertIn('[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]', rescue)
