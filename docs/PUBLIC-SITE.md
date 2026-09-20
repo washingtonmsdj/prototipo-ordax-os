@@ -119,7 +119,9 @@ The portal shares OrdaX brand language, not the desktop shell implementation:
 
 It must not copy the Surface desktop markup or make the marketing site look like a fake operating-system screenshot.
 
-Public copy should explain user-facing product behavior: Creator, apps, official updates, rollback/recovery and account availability. Do not use the landing page to explain Owner/Development Git operations.
+Public copy should explain user-facing product behavior: Creator, **USB execution**, apps, official updates, rollback/recovery and account availability. The MVP must not advertise internal-disk installation as available. Native installation may be described only as a future/post-MVP direction. Web, Mobile, synchronization, backup and cross-device continuity may appear only as **Em breve** while unavailable. Do not use the landing page to explain Owner/Development Git operations.
+
+No public page may invent prices, billing, commercial tier names or device-count limits before those policies exist.
 
 ## Build
 
