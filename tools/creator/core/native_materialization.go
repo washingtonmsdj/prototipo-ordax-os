@@ -37,8 +37,9 @@ type NativeMaterializationPlan struct {
 	TargetBytes        uint64 `json:"target_bytes"`
 
 	SourceProductMode     string `json:"source_product_mode"`
-	TargetProductMode     string `json:"target_product_mode"`
-	TargetProductModePath string `json:"target_product_mode_path"`
+	TargetProductMode                 string `json:"target_product_mode"`
+	TargetProductModePath             string `json:"target_product_mode_path"`
+	TargetProductModePoolRelativePath string `json:"target_product_mode_pool_relative_path"`
 
 	Partitions []NativePartitionMaterialization `json:"partitions"`
 	Subvolumes []NativeSubvolumeMaterialization `json:"subvolumes"`
@@ -65,9 +66,10 @@ func PlanNativeMaterialization(targetBytes uint64) (NativeMaterializationPlan, e
 		LogicalSectorBytes:    storageSectorBytes,
 		AlignmentBytes:        storageAlignmentBytes,
 		TargetBytes:           storage.TargetBytes,
-		SourceProductMode:     install.SourceProductMode,
-		TargetProductMode:     install.TargetProductMode,
-		TargetProductModePath: install.TargetProductModePath,
+		SourceProductMode:                 install.SourceProductMode,
+		TargetProductMode:                 install.TargetProductMode,
+		TargetProductModePath:             install.TargetProductModePath,
+		TargetProductModePoolRelativePath: "bootstrap/config/product-mode",
 		Partitions: []NativePartitionMaterialization{
 			{
 				Index:           1,
