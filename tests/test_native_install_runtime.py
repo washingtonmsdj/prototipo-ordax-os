@@ -125,15 +125,26 @@ class NativeInstallRuntimeTests(unittest.TestCase):
         self.assertNotIn("subprocess", server)
         self.assertNotIn("os.system", server)
 
-    def test_launcher_starts_broker_only_for_stable_usb_with_signed_helper(self):
+    def test_launcher_starts_broker_only_for_explicit_owner_post_mvp_preview(self):
         launcher = LAUNCHER.read_text(encoding="utf-8")
         start = launcher.split("start_native_install_broker() {", 1)[1].split("\n}", 1)[0]
-        self.assertIn('[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] || return 0', start)
+        self.assertIn(
+            '[ "$NATIVE_INSTALL_CAPABILITY" = "post-mvp-preview" ] || return 0',
+            start,
+        )
+        self.assertIn(
+            '[ "$DISTRIBUTION_PROFILE" = "owner-development" ] || return 0',
+            start,
+        )
         self.assertIn('[ "$PRODUCT_MODE" = "usb" ] || return 0', start)
         self.assertIn('[ -x "$NATIVE_INSTALL_HELPER" ]', start)
         self.assertIn('[ ! -L "$NATIVE_INSTALL_HELPER" ]', start)
         self.assertIn("ORDAX_NATIVE_INSTALL_HELPER", start)
         self.assertNotIn("eval ", start)
+        self.assertIn(
+            '[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] && NATIVE_INSTALL_CAPABILITY=disabled',
+            launcher,
+        )
 
     @unittest.skipUnless(os.name == "posix", "private FIFO broker proof requires POSIX")
     def test_private_broker_and_host_queue_round_trip_read_only_snapshot(self):

@@ -73,7 +73,12 @@ class NativeESPProofContractTests(unittest.TestCase):
         self.assertIn("go run ./cmd/ordax-creator render-native-boot", WORKFLOW)
         self.assertIn("--pool-uuid", WORKFLOW)
         self.assertIn("native-esp-proof/proof.json", WORKFLOW)
-        self.assertNotIn("qemu-system", WORKFLOW)
+        self.assertIn(
+            "Prove Native UEFI and PID1 handoff on disposable QEMU disk",
+            WORKFLOW,
+        )
+        self.assertIn("qemu-system-x86", WORKFLOW)
+        self.assertIn("native-qemu-proof/proof.json", WORKFLOW)
 
 
 if __name__ == "__main__":

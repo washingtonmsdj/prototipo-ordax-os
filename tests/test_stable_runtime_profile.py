@@ -128,8 +128,17 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn("owner-development)", configure)
         self.assertIn('PRODUCT_MODE=${ORDAX_PRODUCT_MODE:-}', text)
         self.assertIn('--product-mode "$PRODUCT_MODE"', text)
+        self.assertIn('--distribution-profile "$DISTRIBUTION_PROFILE"', text)
+        self.assertIn('--native-install-capability "$NATIVE_INSTALL_CAPABILITY"', text)
         self.assertIn('[ "$PRODUCT_MODE" = "usb" ] || return 0', text)
-        self.assertIn('[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] || return 0', text)
+        self.assertIn(
+            '[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] && NATIVE_INSTALL_CAPABILITY=disabled',
+            text,
+        )
+        self.assertIn(
+            '[ "$DISTRIBUTION_PROFILE" = "owner-development" ] || return 0',
+            text,
+        )
 
         rescue = text.split("ensure_rescue_agent() {", 1)[1].split("\n}", 1)[0]
         self.assertIn('[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]', rescue)
@@ -175,6 +184,9 @@ class StableRuntimeProfileTests(unittest.TestCase):
 
     def test_contract_marks_signed_polling_and_materialization_without_activation(self):
         stable = CONTRACT["profiles"]["stable-mvp"]
+        self.assertEqual(stable["mvp_execution_mode"], "usb-only")
+        self.assertFalse(stable["native_install_capability_enabled"])
+        self.assertFalse(stable["internal_disk_destructive_write_allowed"])
         self.assertTrue(stable["runtime_profile_selection_implemented"])
         self.assertFalse(stable["git_update_polling_enabled"])
         self.assertFalse(stable["development_git_rescue_enabled"])
