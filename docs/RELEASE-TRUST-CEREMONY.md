@@ -206,9 +206,10 @@ It **does not** authorize destructive writes. After successful public trust prom
 ```text
 MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=YES
 PHYSICAL_AUTHORIZATION_ELIGIBLE=YES
-PHYSICAL_AUTHORIZATION_ELIGIBLE=NO
 PHYSICAL_WRITE_ALLOWED=NO
 ```
+
+`PHYSICAL_AUTHORIZATION_ELIGIBLE=YES` means only that the trust-side prerequisites for the separate physical-promotion gate are satisfied. It is not an authorization to write physical media.
 
 Physical authorization remains a separate contract and separate gate.
 
