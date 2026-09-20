@@ -122,42 +122,6 @@ jobs:
           print('PORTABLE_USB_V2_PLAN=PASS')
           PY
 
-      - name: Prove host-neutral portable application transaction plan
-        run: |
-          set -euo pipefail
-          root="$RUNNER_TEMP/creator-portable-prepared"
-          test -s "$root/plan.json"
-          (
-            cd tools/creator
-            go run ./cmd/ordax-creator plan-portable-application \
-              --plan "$root/plan.json"
-          ) > "$root/application-plan.json"
-
-          python3 - "$root/application-plan.json" <<'PY'
-          import json, pathlib, sys
-          plan = json.loads(pathlib.Path(sys.argv[1]).read_text())
-          assert plan['$schema'] == 'prototype-ordax.portable-application-plan/1'
-          assert plan['status'] == 'planned-not-authorized'
-          assert plan['profile'] == 'portable-usb'
-          assert [p['name'] for p in plan['partitions']] == ['ORDAX-ESP', 'ORDAX-DATA']
-          assert [p['filesystem'] for p in plan['partitions']] == ['fat32', 'exfat']
-          assert plan['whole_disk_raw_image_required'] is False
-          assert plan['physical_device_bound'] is False
-          assert plan['physical_write_authorized'] is False
-          assert plan['public_promotion_allowed'] is False
-          assert len(plan['operations']) == 31
-          assert sum(op['kind'] == 'materialize-artifact' for op in plan['operations']) == 13
-          assert sum(op['kind'] == 'readback-sha256-size' for op in plan['operations']) == 13
-          assert all(
-              op['readback_required']
-              for op in plan['operations']
-              if op['kind'] in {'materialize-artifact', 'readback-sha256-size'}
-          )
-          print('CREATOR_PORTABLE_APPLICATION_PLAN=PASS')
-          print('PHYSICAL_DEVICE_BOUND=NO')
-          print('PHYSICAL_WRITE_AUTHORIZED=NO')
-          PY
-
       - name: Prove Creator Core final artifact plan on disposable prepared media
         run: |
           set -euo pipefail
@@ -242,6 +206,42 @@ jobs:
 
           sudo rm -f "$root/portable-prepared.raw"
           test ! -e "$root/portable-prepared.raw"
+
+      - name: Prove host-neutral portable application transaction plan
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/creator-portable-prepared"
+          test -s "$root/plan.json"
+          (
+            cd tools/creator
+            go run ./cmd/ordax-creator plan-portable-application \
+              --plan "$root/plan.json"
+          ) > "$root/application-plan.json"
+
+          python3 - "$root/application-plan.json" <<'PY'
+          import json, pathlib, sys
+          plan = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert plan['$schema'] == 'prototype-ordax.portable-application-plan/1'
+          assert plan['status'] == 'planned-not-authorized'
+          assert plan['profile'] == 'portable-usb'
+          assert [p['name'] for p in plan['partitions']] == ['ORDAX-ESP', 'ORDAX-DATA']
+          assert [p['filesystem'] for p in plan['partitions']] == ['fat32', 'exfat']
+          assert plan['whole_disk_raw_image_required'] is False
+          assert plan['physical_device_bound'] is False
+          assert plan['physical_write_authorized'] is False
+          assert plan['public_promotion_allowed'] is False
+          assert len(plan['operations']) == 31
+          assert sum(op['kind'] == 'materialize-artifact' for op in plan['operations']) == 13
+          assert sum(op['kind'] == 'readback-sha256-size' for op in plan['operations']) == 13
+          assert all(
+              op['readback_required']
+              for op in plan['operations']
+              if op['kind'] in {'materialize-artifact', 'readback-sha256-size'}
+          )
+          print('CREATOR_PORTABLE_APPLICATION_PLAN=PASS')
+          print('PHYSICAL_DEVICE_BOUND=NO')
+          print('PHYSICAL_WRITE_AUTHORIZED=NO')
+          PY
 
       - name: Prove FAT32 exFAT EROFS and ext4-in-file storage
         run: |
