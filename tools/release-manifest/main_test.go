@@ -183,3 +183,107 @@ func TestPortableManifestRejectsWrongArtifactName(t *testing.T) {
 		t.Fatal("portable manifest accepted non-canonical artifact name")
 	}
 }
+
+
+func TestBuildPortableRuntimeManifestV3PinsCanonicalSystemAndRuntime(t *testing.T) {
+	root := t.TempDir()
+	systemPath := filepath.Join(root, "system.erofs")
+	runtimePath := filepath.Join(root, "native-surface-runtime.erofs")
+	systemPayload := []byte("deterministic-system-erofs\n")
+	runtimePayload := []byte("deterministic-surface-runtime-erofs\n")
+	if err := os.WriteFile(systemPath, systemPayload, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(runtimePath, runtimePayload, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	manifest, err := buildPortableRuntimeManifest(
+		systemPath,
+		runtimePath,
+		testCommit,
+		"https://example.invalid/system.erofs",
+		"https://example.invalid/native-surface-runtime.erofs",
+		defaultRepo,
+		defaultPortableRuntimeRecipe,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.Schema != manifestSchemaV3 ||
+		manifest.ProductMode != "usb" ||
+		manifest.StorageProfile != "portable-usb-v2" ||
+		manifest.RuntimeFormat != "erofs" {
+		t.Fatalf("unexpected v3 identity: %#v", manifest)
+	}
+	if len(manifest.Artifacts) != 2 {
+		t.Fatalf("v3 artifact count = %d", len(manifest.Artifacts))
+	}
+	systemDigest := sha256.Sum256(systemPayload)
+	runtimeDigest := sha256.Sum256(runtimePayload)
+	if got := manifest.Artifacts[0]; got.Name != "system.erofs" ||
+		got.Role != "system-image" ||
+		got.SHA256 != hex.EncodeToString(systemDigest[:]) ||
+		got.Size != int64(len(systemPayload)) {
+		t.Fatalf("unexpected v3 system artifact: %#v", got)
+	}
+	if got := manifest.Artifacts[1]; got.Name != "native-surface-runtime.erofs" ||
+		got.Role != "surface-runtime" ||
+		got.SHA256 != hex.EncodeToString(runtimeDigest[:]) ||
+		got.Size != int64(len(runtimePayload)) {
+		t.Fatalf("unexpected v3 runtime artifact: %#v", got)
+	}
+
+	v2, err := buildPortableManifest(
+		systemPath,
+		testCommit,
+		"https://example.invalid/system.erofs",
+		defaultRepo,
+		defaultPortableRecipe,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v2.Schema != manifestSchemaV2 || len(v2.Artifacts) != 1 {
+		t.Fatalf("v2 semantics drifted after v3 support: %#v", v2)
+	}
+}
+
+func TestPortableRuntimeManifestV3RejectsWrongRuntimeNameAndNonHTTPSURL(t *testing.T) {
+	root := t.TempDir()
+	systemPath := filepath.Join(root, "system.erofs")
+	runtimePath := filepath.Join(root, "wrong-runtime.erofs")
+	if err := os.WriteFile(systemPath, []byte("system"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(runtimePath, []byte("runtime"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := buildPortableRuntimeManifest(
+		systemPath,
+		runtimePath,
+		testCommit,
+		"https://example.invalid/system.erofs",
+		"https://example.invalid/native-surface-runtime.erofs",
+		defaultRepo,
+		defaultPortableRuntimeRecipe,
+	); err == nil {
+		t.Fatal("v3 accepted non-canonical Surface runtime filename")
+	}
+
+	runtimePath = filepath.Join(root, "native-surface-runtime.erofs")
+	if err := os.WriteFile(runtimePath, []byte("runtime"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := buildPortableRuntimeManifest(
+		systemPath,
+		runtimePath,
+		testCommit,
+		"https://example.invalid/system.erofs",
+		"http://example.invalid/native-surface-runtime.erofs",
+		defaultRepo,
+		defaultPortableRuntimeRecipe,
+	); err == nil {
+		t.Fatal("v3 accepted non-HTTPS Surface runtime URL")
+	}
+}
