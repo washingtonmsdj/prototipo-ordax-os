@@ -31,7 +31,8 @@
             "default_bytes": 1073741824,
             "reason": "room-for-signed-current-fallback-and-recovery-boot-artifacts-without-consuming-main-pool-capacity"
           },
-          "user_data_allowed": false
+          "user_data_allowed": false,
+          "gpt_type_guid": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
         },
         {
           "name": "ORDAX-POOL",
@@ -43,7 +44,9 @@
             "default_when-supported": true,
             "tpm2_auto_unlock_allowed": true,
             "recovery_key_required_when-tpm2-auto-unlock-is-enabled": true
-          }
+          },
+          "gpt_type_guid": "ca7d7ccb-63ed-4c53-861c-1742536059cc",
+          "gpt_type_semantics": "linux-luks"
         }
       ],
       "pool_model": {
