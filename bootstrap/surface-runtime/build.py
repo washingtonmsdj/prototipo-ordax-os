@@ -148,6 +148,34 @@ def normalize_tree(rootfs: Path) -> None:
             raise RuntimeBuildError(f"cannot normalize timestamp: {path}") from exc
 
 
+def write_tree_manifest(rootfs: Path, destination: Path) -> str:
+    entries: list[dict[str, object]] = []
+    for path in sorted(rootfs.rglob("*"), key=lambda p: p.relative_to(rootfs).as_posix()):
+        relative = path.relative_to(rootfs).as_posix()
+        info = path.lstat()
+        mode = stat.S_IMODE(info.st_mode)
+        if path.is_dir():
+            entries.append({"path": relative, "type": "dir", "mode": mode})
+        elif path.is_file():
+            entries.append({
+                "path": relative,
+                "type": "file",
+                "mode": mode,
+                "size": info.st_size,
+                "sha256": sha256_file(path),
+            })
+        else:
+            raise RuntimeBuildError(f"non-regular object reached runtime tree manifest: {relative}")
+    payload = {
+        "$schema": "prototype-ordax.surface-runtime-tree/1",
+        "entry_count": len(entries),
+        "entries": entries,
+    }
+    data = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    destination.write_text(data, encoding="utf-8")
+    return sha256_file(destination)
+
+
 def normalized_tar(rootfs: Path, destination: Path) -> None:
     entries = [rootfs] + sorted(rootfs.rglob("*"), key=lambda p: p.relative_to(rootfs).as_posix())
     with tarfile.open(destination, "w", format=tarfile.USTAR_FORMAT, dereference=True) as archive:
@@ -275,6 +303,9 @@ def build(out_dir: Path, cache_dir: Path) -> dict:
         verify_runtime_tree(rootfs)
         normalize_tree(rootfs)
 
+        tree_manifest_path = out_dir / "surface-runtime-tree.json"
+        tree_manifest_sha = write_tree_manifest(rootfs, tree_manifest_path)
+
         tar_path = work / "native-surface-runtime.tar"
         normalized_tar(rootfs, tar_path)
         tar_sha = sha256_file(tar_path)
@@ -307,6 +338,7 @@ def build(out_dir: Path, cache_dir: Path) -> dict:
             "runtime_id": contract["runtime_id"],
             "alpine_archive_sha256": actual_sha,
             "apk_package_lock_count": len(installed),
+            "tree_manifest_sha256": tree_manifest_sha,
             "normalized_tar_sha256": tar_sha,
             "image": {
                 "name": image.name,
@@ -334,10 +366,13 @@ def verify(out_dir: Path) -> dict:
     contract = load_contract()
     image = out_dir.resolve() / contract["artifact"]["name"]
     provenance_path = out_dir.resolve() / "surface-runtime-provenance.json"
+    tree_manifest_path = out_dir.resolve() / "surface-runtime-tree.json"
     if image.is_symlink() or not image.is_file():
         raise RuntimeBuildError("Surface runtime EROFS candidate is missing")
     if provenance_path.is_symlink() or not provenance_path.is_file():
         raise RuntimeBuildError("Surface runtime provenance is missing")
+    if tree_manifest_path.is_symlink() or not tree_manifest_path.is_file():
+        raise RuntimeBuildError("Surface runtime tree manifest is missing")
     try:
         provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -350,6 +385,8 @@ def verify(out_dir: Path) -> dict:
         raise RuntimeBuildError("Surface runtime id differs from contract")
     if provenance.get("image", {}).get("sha256") != sha256_file(image):
         raise RuntimeBuildError("Surface runtime image SHA-256 differs from provenance")
+    if provenance.get("tree_manifest_sha256") != sha256_file(tree_manifest_path):
+        raise RuntimeBuildError("Surface runtime tree manifest SHA-256 differs from provenance")
     if provenance.get("physical_artifact_authorized") is not False:
         raise RuntimeBuildError("Surface runtime provenance unexpectedly authorizes physical use")
     if provenance.get("portable_v2_boot_connected") is not False:
