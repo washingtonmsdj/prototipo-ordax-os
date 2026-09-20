@@ -72,8 +72,12 @@ def validate_contract() -> tuple[dict, dict]:
         if contract.get("apk_package_lock_count") != len(lock):
             raise DiscoveryError("candidate APK lock count disagrees with committed lock")
     artifact = contract.get("artifact", {})
-    if artifact.get("physical_artifact_authorized") is not False or artifact.get("portable_v2_boot_connected") is not False:
-        raise DiscoveryError("discovery contract may not authorize or connect a physical artifact")
+    if artifact.get("physical_artifact_authorized") is not False:
+        raise DiscoveryError("discovery contract may not authorize a physical artifact")
+    if artifact.get("portable_v3_boot_handoff_candidate_connected") is not True:
+        raise DiscoveryError("discovery contract lost the portable v3 candidate handoff binding")
+    if artifact.get("physical_boot_connected") is not False:
+        raise DiscoveryError("discovery contract may not claim physical boot integration")
     packages = contract.get("packages")
     if not isinstance(packages, list) or not packages or len(packages) != len(set(packages)):
         raise DiscoveryError("Surface runtime package request must be a non-empty unique list")
@@ -184,7 +188,8 @@ def discover(out: Path, cache: Path) -> dict:
             "first_boot_offline_required": True,
             "physical_artifact_created": False,
             "physical_write_authorized": False,
-            "portable_v2_boot_connected": False,
+            "portable_v3_boot_handoff_candidate_connected": True,
+            "physical_boot_connected": False,
         }
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
