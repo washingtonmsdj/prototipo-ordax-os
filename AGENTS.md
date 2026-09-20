@@ -39,6 +39,8 @@ Antes de alterar codigo, contratos ou midia:
 
 Quando um snapshot de estado conflitar com texto historico, `docs/CURRENT-STATE.md` e os contratos arquiteturais canonicos vencem. Para a separacao Owner/Development vs Stable/MVP, `docs/contracts/distribution-profiles.json` e a autoridade machine-readable. Para numero/geometria de particoes, os dois contratos fisicos acima sao a autoridade final porque descrevem artefatos diferentes.
 
+Um snapshot canonico tambem nao pode vencer silenciosamente o proprio source atual. Antes de usar valores correntes como versoes, `releaseMode`, geometria de midia ou estado de uma capacidade, compare `docs/CURRENT-STATE.md` com os manifests/owners e contratos machine-readable correspondentes. Se divergirem, trate a documentacao canonica como defeito a corrigir na mesma mudanca; nao planeje trabalho novo em cima de uma afirmacao obsoleta.
+
 ### Plano funcional da Surface e dos aplicativos
 
 Antes de planejar, implementar ou revisar a area de trabalho, a barra lateral ou os apps Arquivos, Ajustes, Conta e Sistema, leia e analise tambem [PLANO-FUNCIONAL-SURFACE-E-APPS.md](PLANO-FUNCIONAL-SURFACE-E-APPS.md), na raiz do repositorio, depois da leitura canonica acima.
@@ -243,7 +245,9 @@ OrdaX Creator deve consumir artefatos preconstruidos e verificados; o usuario fi
 - SSOT unico por responsabilidade.
 - Sem bridges permanentes ou compatibilidade legada sem owner.
 - Testes cobrem contratos criticos.
-- Documentacao canonica muda junto com arquitetura.
+- Documentacao canonica muda junto com arquitetura e com valores correntes que ela registra.
+- Snapshot canonico de versao, `releaseMode`, geometria fisica ou capability deve ser validado mecanicamente contra seu source/contrato quando houver fonte estruturada.
+- Divergencia entre source atual e documentacao canonica e falha de CI/qualidade, nao detalhe editorial para corrigir depois.
 - Platform adapters nao podem duplicar regras de produto.
 - Build reproduzivel e provenance sao parte da qualidade, nao tarefas opcionais de release.
 
@@ -287,7 +291,9 @@ Antes de alterar versionamento, histórico ou a UI de atualizações, leia `docs
 - SHA Git permanece a identidade técnica exata;
 - `Entrega N` é a sequência humana de mudanças aplicáveis ao dispositivo;
 - `Atualização` é o evento/estado de aplicação no dispositivo;
-- versão comercial do OrdaX não é inferida de PR ou de Entrega;
-- componentes não recebem número próprio enquanto não tiverem empacotamento e ciclo de release independentes.
+- versão do produto OrdaX não é inferida de PR ou de Entrega;
+- **Versão própria de componente e atualização independente são eixos diferentes**: todo componente pode possuir SemVer próprio, enquanto `releaseMode` define como ele e entregue/ativado;
+- first-party apps em `0.x` sao Beta; `git-app` e um modo Owner/Development e nao significa Store/updater publico independente;
+- `component-slot` e o caminho reservado para atualizacao independente de producao depois de verificacao assinada, pending health, promocao e rollback provados.
 
-Não reintroduzir derivação de versão/entrega a partir de `Merge pull request #N`.
+Não reintroduzir derivação de versão/entrega a partir de `Merge pull request #N`. Não alterar versão ou `releaseMode` sem atualizar no mesmo change set os snapshots/contratos canônicos que registram esses valores.
