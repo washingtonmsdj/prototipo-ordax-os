@@ -22,9 +22,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - name: Checkout
+      - name: Checkout exact source commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Set up Python
@@ -46,6 +47,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_kernel_artifact_verifier.py' -v
 
       - name: Build kernel candidate with provenance
+        env:
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python bootstrap/kernel/build.py build --jobs 4
 
       - name: Verify kernel candidate artifacts
@@ -54,7 +57,7 @@ jobs:
       - name: Upload kernel candidate
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: ordax-kernel-${{ github.sha }}
+          name: ordax-kernel-${{ github.event.pull_request.head.sha || github.sha }}
           path: out/kernel/
           if-no-files-found: error
           retention-days: 14

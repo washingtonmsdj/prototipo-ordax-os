@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.native-initramfs-source/1",
-  "status": "environment-locked-candidate-build-enabled",
+  "status": "candidate-runtime-proof-complete-boot-pending",
   "root_init": "bootstrap/native-initramfs/root/init",
   "boot_contract": "docs/contracts/native-boot.json",
   "shared_kernel_contract": "bootstrap/kernel/source.json",
@@ -50,6 +50,9 @@
     "deterministic_archive_required": true,
     "environment_lock_required_before_artifact_build": true,
     "physical_artifact_authorized": false,
-    "environment_lock_status": "verified-ci-observation"
+    "environment_lock_status": "verified-ci-observation",
+    "candidate_artifact_proven": true,
+    "packaged_runtime_proven": true,
+    "qemu_uefi_boot_proven": false
   }
 }

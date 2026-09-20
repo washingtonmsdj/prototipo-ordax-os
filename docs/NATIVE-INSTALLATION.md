@@ -93,6 +93,15 @@ inspect target
 
 No installation is complete merely because files were copied. Promotion requires a bootable verified deployment and first-boot health.
 
+
+### Native initramfs runtime proof
+
+The dedicated Native initramfs is now built from an exact CI-observed and byte-locked userspace closure. A disposable runtime proof executes the **packaged** BusyBox, `cryptsetup` and `btrfs` bytes against a regular-file-backed LUKS2 container, creates the canonical subvolumes, writes/reads back `product-mode=native-disk`, reopens the mapper read-only and proves that a read-only Btrfs mount rejects writes. The ephemeral key and container are destroyed before success.
+
+This closes the packaged LUKS2/Btrfs userspace gate only. It does **not** prove UEFI boot, kernel command-line parsing, PID 1 handoff, first-boot health or physical installation.
+
+The shared kernel configuration has also been compiled and its resolved `.config` proves device-mapper/dm-crypt, AES-XTS and Btrfs are built in. A new exact-head provenance run is required before that kernel candidate is consumed as a Native ESP boot artifact.
+
 ## Current implementation boundary
 
 The Creator Core already implements target geometry in:

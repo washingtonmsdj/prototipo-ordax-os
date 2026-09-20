@@ -124,8 +124,8 @@
     "bootstrap-entrypoint-missing"
   ],
   "proof_state": {
-    "kernel_prerequisite_ci": "pending",
-    "native_initramfs_artifact": "pending",
+    "kernel_prerequisite_ci": "pass-resolved-config",
+    "native_initramfs_artifact": "pass-candidate",
     "disposable_unlock_mount_proof": "pending",
     "qemu_uefi_boot_proof": "pending",
     "physical_native_boot_proof": "pending",
@@ -133,7 +133,36 @@
     "environment_observation": "pass",
     "environment_observation_workflow_run_id": 35480254444,
     "environment_lock": "pinned",
-    "packaged_runtime_proof": "pending",
-    "packaged_runtime_proof_contract": "docs/contracts/native-initramfs-runtime-proof.json"
+    "packaged_runtime_proof": "pass-disposable-ci",
+    "packaged_runtime_proof_contract": "docs/contracts/native-initramfs-runtime-proof.json",
+    "kernel_exact_source_candidate": "pending",
+    "kernel_prerequisite_evidence": {
+      "workflow_run_id": 35480254464,
+      "workflow_head_sha": "6efc615a066071c9870d6cc7da47b230e85c18df",
+      "artifact_id": 10595174100,
+      "artifact_zip_sha256": "8d684f0b143e4d161e0f2eaf8daca22cdccebed945b276e128923c3e08d4308e",
+      "resolved_config_sha256": "d07d985890fb5f91a6a34c95bb8b9143b248312b40f4b8733b151298c02ef597",
+      "vmlinuz_sha256": "b5d715fb934d5a3854b7f6ebc1fd4d6755d51bcaa75da220d673f4e77fff0782",
+      "required_builtins_verified": [
+        "CONFIG_BLK_DEV_DM=y",
+        "CONFIG_DM_CRYPT=y",
+        "CONFIG_CRYPTO_AES=y",
+        "CONFIG_CRYPTO_XTS=y",
+        "CONFIG_BTRFS_FS=y",
+        "CONFIG_BTRFS_FS_POSIX_ACL=y"
+      ],
+      "physical_artifact_authorized": false,
+      "exact_source_provenance": "pending-rerun-with-exact-pr-head"
+    },
+    "initramfs_runtime_evidence": {
+      "workflow_run_id": 35480758434,
+      "workflow_job_id": 105998003725,
+      "workflow_head_sha": "e8974a62c3594bfaff1a49777be0c2d60b4a48ac",
+      "artifact_id": 10595562593,
+      "artifact_zip_sha256": "b1394ec0540295e344f468a9ad9884aae5150bcba994ab9267cbc8886af2c6a9",
+      "candidate_artifact_sha256": "fb4f70f1eb3852fb6936a762adc022bc341e908bae3d9417dfabf040b18a83f6",
+      "candidate_artifact_size": 6676736,
+      "result": "pass"
+    }
   }
 }

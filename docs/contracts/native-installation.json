@@ -85,15 +85,19 @@
         "CONFIG_BTRFS_FS_POSIX_ACL=y"
       ],
       "implemented": true,
-      "separate_native_kernel": false
+      "separate_native_kernel": false,
+      "ci_resolved_config_proven": true,
+      "exact_source_candidate_provenance": false
     },
     "native_boot_initramfs": {
       "source_owner": "bootstrap/native-initramfs",
       "environment_lock": "docs/contracts/native-initramfs-build-environment.json",
       "environment_observation_complete": true,
       "candidate_builder_implemented": true,
-      "candidate_artifact_proven": false,
-      "boot_proven": false,
+      "candidate_artifact_proven": true,
+      "packaged_luks2_btrfs_runtime_proven": true,
+      "pid1_kernel_cmdline_boot_proven": false,
+      "qemu_uefi_boot_proven": false,
       "physical_write_authorized": false
     },
     "disposable_storage_materialization_proof": {

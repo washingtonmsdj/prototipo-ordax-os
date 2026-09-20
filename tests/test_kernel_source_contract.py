@@ -63,6 +63,15 @@ class KernelSourceContractTest(unittest.TestCase):
         ):
             self.assertIn(required, FRAGMENT)
 
+    def test_kernel_candidate_binds_checkout_and_provenance_to_exact_pr_head(self):
+        workflow = (ROOT / ".github/workflows/kernel-candidate.yml").read_text(
+            encoding="utf-8"
+        )
+        identity = "${{ github.event.pull_request.head.sha || github.sha }}"
+        self.assertIn(f"ref: {identity}", workflow)
+        self.assertIn(f"GITHUB_SHA: {identity}", workflow)
+        self.assertIn(f"ordax-kernel-{identity}", workflow)
+
     def test_environment_is_pinned_but_physical_use_remains_fail_closed(self):
         self.assertTrue(SOURCE["build"]["pinned_environment_resolved"])
         self.assertFalse(SOURCE["build"]["physical_artifact_authorized"])
