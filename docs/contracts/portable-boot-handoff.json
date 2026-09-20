@@ -129,7 +129,12 @@
     "known_good_exact_resolver_implemented": true,
     "known_good_exact_resolver_verifies_materialized_shape": true,
     "known_good_exact_resolver_verifies_signature": false,
-    "known_good_exact_resolver_signature_handoff": "ordax-release-agent verify-portable-exact"
+    "known_good_exact_resolver_signature_handoff": "ordax-release-agent verify-portable-exact",
+    "capsule_hash_verification_helper_installed": true,
+    "capsule_hash_verification_helper_path": "/sbin/ordax-portable-capsule-verify",
+    "capsule_hash_verification_helper_pid1_connected": false,
+    "capsule_hash_verification_fixed_paths": true,
+    "capsule_hash_verification_mounts_capsule": false
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",

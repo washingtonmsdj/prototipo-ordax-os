@@ -90,7 +90,13 @@
       "initramfs_hash_pin_default_candidate_build_enabled": false,
       "pid1_hash_enforcement_implemented": false,
       "hash_verification_primitive_implemented": true,
-      "read_only_mount_helper_implemented": true
+      "read_only_mount_helper_implemented": true,
+      "hash_verification_helper_installed": true,
+      "hash_verification_helper_path": "/sbin/ordax-portable-capsule-verify",
+      "hash_verification_helper_fixed_paths": true,
+      "hash_verification_helper_provenance_recorded": true,
+      "hash_verification_helper_mounts_capsule": false,
+      "hash_verification_helper_pid1_connected": false
     }
   },
   "release_trust": {

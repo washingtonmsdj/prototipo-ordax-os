@@ -71,7 +71,14 @@
     "capsule_hash_pin_default_candidate_build_enabled": false,
     "hash_check_primitive_implemented": true,
     "hash_check_primitive": "busybox-sha256sum",
-    "read_only_mount_helper_implemented": true
+    "read_only_mount_helper_implemented": true,
+    "capsule_hash_verification_helper_installed": true,
+    "capsule_hash_verification_helper_path": "/sbin/ordax-portable-capsule-verify",
+    "capsule_hash_verification_helper_provenance_recorded": true,
+    "capsule_hash_verification_uses_fixed_paths": true,
+    "capsule_hash_verification_accepts_user_path": false,
+    "capsule_hash_verification_performs_mount": false,
+    "capsule_hash_verification_network_access": false
   },
   "proof": {
     "workflow": ".github/workflows/portable-bootstrap-capsule.yml",
