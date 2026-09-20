@@ -9,28 +9,13 @@ Apps are product modules, not Web/Mobile/Desktop forks. The Surface imports the 
 Each first-party app has one explicit owner:
 
 ```text
-system/apps/files/
-system/apps/notes/
-system/apps/internet/
-system/apps/settings/
-system/apps/account/
-system/apps/system/
+system/apps/files/app.mjs
+system/apps/notes/app.mjs
+system/apps/internet/app.mjs
+system/apps/settings/app.mjs
+system/apps/account/app.mjs
+system/apps/system/app.mjs
 ```
-
-Each owner also owns its component identity and semantic version through `component.mjs` and `version.mjs`. Versioning an app is therefore independent from the human OrdaX product version even when that app is still delivered in the same system bundle.
-
-Current first-party app versions are:
-
-```text
-Arquivos  0.1.0
-Ajustes   0.1.0
-Conta     0.1.0
-Sistema   0.1.0
-Internet  0.3.0
-Notas     0.4.0
-```
-
-For first-party apps, OrdaX treats the `0.x` line as **Beta**. `1.0.0` is reserved for the first stable app release. The Beta label is an app maturity convention; it does not claim that independent production distribution is already enabled.
 
 `app-contract.mjs` validates the stable first-party app shape. `catalog.mjs` is deliberately thin: it composes the current owners, rejects duplicate IDs and exposes lookup/list operations to the Surface.
 
@@ -49,25 +34,31 @@ Application availability is capability-driven. A future app that requires a capa
 
 ## Version and update identity
 
-The OrdaX product, the system delivery and each app version are different identities:
+Every first-party app has a component semantic version. This version is different from the OrdaX product version, from the human Entrega number and from the exact Git SHA.
+
+Current app versions are:
 
 ```text
-OrdaX product version  -> human product milestone
-Entrega                -> notebook-facing system delivery sequence
-Git SHA                -> exact technical source/build identity
-App version             -> semantic version owned by that app
+Arquivos  0.1.0
+Ajustes   0.1.0
+Conta     0.1.0
+Sistema   0.1.0
+Internet  0.3.0
+Notas     0.4.0
 ```
 
-Updating OrdaX does not require every app version to change. Updating an app version does not create a new product version automatically.
+For first-party apps, OrdaX treats the `0.x` line as **Beta**. `1.0.0` is reserved for the first stable app release. The Beta label is an app maturity convention; it does not claim that independent production distribution is already enabled.
+
+Updating OrdaX does not require every app version to change. Updating an app version does not create a new OrdaX product version automatically.
 
 Current release modes are intentionally mixed while the MVP hardens:
 
 - `bundled`: Arquivos, Ajustes, Conta and Sistema currently update with the OrdaX system delivery;
-- `git-app`: Notas and Internet own independent semantic versions, while the Owner/Development profile still delivers their code through the ordinary Git checkout/reconcile path;
+- `git-app`: Notas and Internet own explicit app versions while the Owner/Development profile still delivers their code through the ordinary Git checkout/reconcile path;
 - `component-slot`: reserved for an app that has completed the signed independent-package path with verification, pending health, promotion and rollback;
-- no `git-app` claim is equivalent to a production app updater or Store.
+- `git-app` does not claim a production app updater, Store or app-local rollback.
 
-`system/services/components/update-presentation.mjs` derives the two user-facing update scopes consumed by Sistema: **system** and **applications**. The `system` scope includes Base, Surface/services and the Sistema app itself. Other first-party apps belong to the `applications` scope even when their current channel is still bundled with OrdaX.
+`system/services/components/update-presentation.mjs` derives two update scopes for Sistema: **system** and **applications**. Base, Surface/services and the Sistema app belong to `system`; the other first-party apps belong to `applications`, even when a current app still arrives bundled with the OrdaX delivery.
 
 **Notas is an app, not a Surface/system subsystem.** Its stable app id is `notes`; Native/USB may enrich it through optional filesystem capabilities without changing its app identity.
 
