@@ -41,7 +41,7 @@ class PortableBootstrapCapsuleTests(unittest.TestCase):
         self.assertEqual(self.contract["status"], "candidate-proof-only")
         self.assertFalse(self.contract["physical_write_authorized"])
         self.assertFalse(self.contract["physical_boot_connected"])
-        self.assertFalse(self.contract["pid1_verified_mount_connected"])
+        self.assertTrue(self.contract["pid1_verified_mount_connected"])
         self.assertFalse(self.contract["canonical_trust_embedded"])
         self.assertFalse(self.contract["publisher_private_key_embedded"])
         self.assertFalse(self.contract["first_boot_network_required"])
@@ -76,7 +76,7 @@ class PortableBootstrapCapsuleTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertNotEqual(first, other)
 
-    def test_bootstrap_contract_keeps_capsule_unconnected_to_pid1(self):
+    def test_bootstrap_contract_connects_capsule_only_to_candidate_pid1(self):
         bootstrap = json.loads(BOOTSTRAP.read_text(encoding="utf-8"))
         capsule = bootstrap["esp_substrate"]["bootstrap_capsule"]
         self.assertEqual(
@@ -91,9 +91,9 @@ class PortableBootstrapCapsuleTests(unittest.TestCase):
         self.assertTrue(capsule["initramfs_hash_pin_implemented"])
         self.assertTrue(capsule["initramfs_hash_pin_candidate_only"])
         self.assertFalse(capsule["initramfs_hash_pin_default_candidate_build_enabled"])
-        self.assertFalse(capsule["pid1_hash_enforcement_implemented"])
-        self.assertFalse(capsule["pid1_verified_mount_implemented"])
-        self.assertFalse(capsule["implemented"])
+        self.assertTrue(capsule["pid1_hash_enforcement_implemented"])
+        self.assertTrue(capsule["pid1_verified_mount_implemented"])
+        self.assertTrue(capsule["implemented"])
 
 
 if __name__ == "__main__":
