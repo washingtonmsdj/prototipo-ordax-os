@@ -8,9 +8,14 @@ on:
       - 'docs/contracts/storage-architecture.json'
       - 'docs/PHYSICAL-MEDIA.md'
       - 'tools/creator/core/storage_profiles.go'
+      - 'tools/creator/core/portable_media.go'
+      - 'tools/creator/core/portable_media_test.go'
       - 'tools/creator/core/storage_profiles_test.go'
       - 'tools/creator/cmd/ordax-creator/main.go'
       - 'tools/creator/proof/portable_usb_v2.py'
+      - 'tools/creator/proof/portable_prepared_media.py'
+      - 'docs/contracts/creator-portable-media-plan.json'
+      - 'tests/test_creator_portable_prepared_media.py'
       - 'tests/test_portable_usb_v2_contract.py'
       - 'tests/test_storage_architecture_contract.py'
       - '.github/workflows/portable-usb-v2-proof.yml'
@@ -20,9 +25,14 @@ on:
       - 'docs/contracts/storage-architecture.json'
       - 'docs/PHYSICAL-MEDIA.md'
       - 'tools/creator/core/storage_profiles.go'
+      - 'tools/creator/core/portable_media.go'
+      - 'tools/creator/core/portable_media_test.go'
       - 'tools/creator/core/storage_profiles_test.go'
       - 'tools/creator/cmd/ordax-creator/main.go'
       - 'tools/creator/proof/portable_usb_v2.py'
+      - 'tools/creator/proof/portable_prepared_media.py'
+      - 'docs/contracts/creator-portable-media-plan.json'
+      - 'tests/test_creator_portable_prepared_media.py'
       - 'tests/test_portable_usb_v2_contract.py'
       - 'tests/test_storage_architecture_contract.py'
       - '.github/workflows/portable-usb-v2-proof.yml'
@@ -80,7 +90,8 @@ jobs:
           set -euo pipefail
           python -m unittest \
             tests.test_portable_usb_v2_contract \
-            tests.test_storage_architecture_contract -v
+            tests.test_storage_architecture_contract \
+            tests.test_creator_portable_prepared_media -v
           (
             cd tools/creator
             go test -count=1 ./core ./cmd/ordax-creator
@@ -110,6 +121,91 @@ jobs:
           assert plan['payload_last_lba'] == plan['last_usable_lba']
           print('PORTABLE_USB_V2_PLAN=PASS')
           PY
+
+      - name: Prove Creator Core final artifact plan on disposable prepared media
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/creator-portable-prepared"
+          fixtures="$root/fixtures"
+          mkdir -p "$fixtures" "$root/metadata"
+          commit="${{ github.event.pull_request.head.sha || github.sha }}"
+          target_bytes="$(python3 - <<'PY'
+          import json, pathlib
+          contract = json.loads(pathlib.Path('docs/contracts/portable-usb-v2.json').read_text())
+          print(contract['target_bytes'])
+          PY
+          )"
+
+          python3 - "$fixtures" "$root/bindings.json" <<'PY'
+          import hashlib, json, pathlib, sys
+          fixtures = pathlib.Path(sys.argv[1])
+          out = pathlib.Path(sys.argv[2])
+          ids = [
+              'systemd-boot', 'loader-config', 'loader-normal', 'loader-recovery',
+              'kernel', 'initramfs', 'bootstrap-capsule', 'release-trust',
+              'stable-base', 'persistent-state', 'system-image',
+              'release-manifest', 'release-envelope',
+          ]
+          artifacts = []
+          for index, artifact_id in enumerate(ids):
+              path = fixtures / artifact_id
+              payload = (
+                  f'ORDAX_PORTABLE_V2_CREATOR_FIXTURE={artifact_id}\n'
+                  f'INDEX={index}\n'
+              ).encode()
+              path.write_bytes(payload)
+              artifacts.append({
+                  'id': artifact_id,
+                  'sha256': hashlib.sha256(payload).hexdigest(),
+                  'size_bytes': len(payload),
+              })
+          out.write_text(json.dumps({
+              '$schema': 'prototype-ordax.portable-media-bindings/1',
+              'artifacts': artifacts,
+          }, indent=2, sort_keys=True) + '\n')
+          PY
+
+          (
+            cd tools/creator
+            go run ./cmd/ordax-creator plan-portable-media \
+              --target-bytes "$target_bytes" \
+              --source-commit "$commit" \
+              --bindings "$root/bindings.json"
+          ) > "$root/plan.json"
+
+          args=()
+          for id in \
+            systemd-boot loader-config loader-normal loader-recovery \
+            kernel initramfs bootstrap-capsule release-trust \
+            stable-base persistent-state system-image release-manifest release-envelope
+          do
+            args+=(--source "$id=$fixtures/$id")
+          done
+
+          sudo -E python3 tools/creator/proof/portable_prepared_media.py \
+            --plan "$root/plan.json" \
+            "${args[@]}" \
+            --out "$root/portable-prepared.raw" \
+            --proof "$root/metadata/prepared-proof.json"
+
+          sudo chown "$(id -u):$(id -g)" "$root/metadata/prepared-proof.json"
+          python3 - "$root/metadata/prepared-proof.json" <<'PY'
+          import json, pathlib, sys
+          proof = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert proof['status'] == 'pass'
+          assert proof['artifact_count'] == 13
+          assert proof['partitions'] == ['ORDAX-ESP', 'ORDAX-DATA']
+          assert proof['physical_target_device_touched'] is False
+          assert proof['physical_write_authorized'] is False
+          assert proof['public_physical_promotion_allowed'] is False
+          assert all(proof['checks'].values())
+          print('CREATOR_PORTABLE_V2_PREPARED_MEDIA=PASS')
+          print('PHYSICAL_TARGET_DEVICE_TOUCHED=NO')
+          print('PHYSICAL_WRITE_AUTHORIZED=NO')
+          PY
+
+          sudo rm -f "$root/portable-prepared.raw"
+          test ! -e "$root/portable-prepared.raw"
 
       - name: Prove FAT32 exFAT EROFS and ext4-in-file storage
         run: |
@@ -159,6 +255,8 @@ jobs:
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: portable-usb-v2-proof-${{ github.event.pull_request.head.sha || github.sha }}
-          path: ${{ runner.temp }}/portable-usb-v2-metadata/proof.json
+          path: |
+            ${{ runner.temp }}/portable-usb-v2-metadata/proof.json
+            ${{ runner.temp }}/creator-portable-prepared/metadata/prepared-proof.json
           if-no-files-found: error
           retention-days: 14

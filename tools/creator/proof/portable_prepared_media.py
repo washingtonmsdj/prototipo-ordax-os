@@ -283,7 +283,7 @@ def prove(plan_path: Path, source_values: list[str], output: Path, proof_path: P
         "all_13_artifacts_materialized_from_core_targets": False,
         "read_only_remount_readback_verified": False,
         "physical_target_device_untouched": True,
-        "physical_write_authorized": False,
+        "physical_write_unauthorized": True,
     }
     try:
         run(["sgdisk", "--zap-all", str(raw)])
