@@ -214,3 +214,51 @@ ordax-release-agent verify-portable-exact \
 ```
 
 This command performs no network access, does not modify the release, does not create an activation pointer and does not mount the image. It revalidates the stored signed envelope, manifest v2 identity, exact commit, artifact hash/size and EROFS superblock. The boot handoff must consume only a release that passes this exact verification.
+
+
+## Portable USB v3 runtime materialization
+
+`release-manifest/3` adds the offline graphical Surface runtime as a second signed artifact without changing the v2 meaning.
+
+Canonical signed artifacts:
+
+```text
+1. system.erofs                  role=system-image
+2. native-surface-runtime.erofs  role=surface-runtime
+```
+
+Acquire one exact v3 release:
+
+```text
+ordax-release-agent materialize-portable-v3 \
+  --envelope-url <https-url> \
+  --trust <release-trust.json> \
+  --expected-commit <40-hex> \
+  --root /ordax-data/.ordax
+```
+
+The system image remains release-addressed by source commit. The larger graphical runtime is content-addressed by the signed SHA-256 so identical runtime bytes can be reused across later system releases:
+
+```text
+/ordax-data/.ordax/releases/<commit>/
+├─ system.erofs
+├─ surface-runtime.sha256
+├─ release-manifest.json
+└─ release-envelope.json
+
+/ordax-data/.ordax/runtimes/sha256/<runtime_sha256>/
+└─ native-surface-runtime.erofs
+```
+
+Before reuse, the agent rechecks the stored runtime size, SHA-256 and EROFS superblock. A hash match therefore avoids a network download but does not bypass verification.
+
+Offline revalidation is explicit:
+
+```text
+ordax-release-agent verify-portable-v3-exact \
+  --trust <release-trust.json> \
+  --expected-commit <40-hex> \
+  --root /ordax-data/.ordax
+```
+
+Both v3 commands are non-activating. They do not create `current`, do not perform a boot handoff and do not authorize physical USB writing or publication.

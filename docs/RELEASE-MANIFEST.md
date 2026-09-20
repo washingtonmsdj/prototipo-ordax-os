@@ -48,7 +48,7 @@ Future features extend the protocol through new schema versions rather than by w
 
 The machine-readable authority for these compatibility rules is `docs/contracts/release-protocol.json`.
 
-This policy intentionally avoids a large internal framework before a second protocol version exists. The current generator, signer and acquisition agent remain independent fail-closed owners, while CI prevents their shared v1 assumptions from drifting. When a real v2 requirement appears, shared protocol code can be extracted incrementally behind the versioned contract instead of through a risky big-bang rewrite.
+The generator, signer and acquisition agent remain independent fail-closed owners, while CI prevents their schema assumptions from drifting. V1, v2 and v3 stay explicit compatibility boundaries; shared protocol code should only be extracted when it reduces real duplication without weakening those versioned contracts.
 
 ## Portable USB v2 manifest
 
@@ -66,7 +66,35 @@ artifact.role=system-image
 
 The generator still defaults to schema v1. V1 continues to require exactly `system.tar` with role `system` and contains none of the portable-v2 identity fields.
 
-The v2 generator and signer are implemented, but public publication, device materialization and activation remain disabled until the acquisition agent and portable boot path support the same schema.
+The v2 generator, signer and non-activating acquisition/materialization path are implemented. Public publication and legacy `current` activation remain disabled; portable boot handoff is a separate proof boundary and does not turn v2 materialization into production authorization.
+
+## Portable USB v3 manifest with offline Surface runtime
+
+Schema `prototype-ordax.release-manifest/3` is the explicit multi-artifact successor to v2. It keeps the same USB/EROFS product identity and the same signed envelope/trust boundary, but pins two artifacts in canonical order:
+
+```text
+artifacts[0].name=system.erofs
+artifacts[0].role=system-image
+artifacts[1].name=native-surface-runtime.erofs
+artifacts[1].role=surface-runtime
+```
+
+Generation uses `--manifest-schema 3` plus `--runtime-artifact` and `--runtime-artifact-url`. The signer accepts v3 only when both artifacts, roles and order match this contract exactly. V1 and v2 remain byte/semantic compatibility boundaries and are not reinterpreted.
+
+The acquisition agent materializes the release system image under the source commit while storing the verified Surface runtime by SHA-256:
+
+```text
+/ordax-data/.ordax/releases/<source_commit>/
+├─ system.erofs
+├─ surface-runtime.sha256
+├─ release-manifest.json
+└─ release-envelope.json
+
+/ordax-data/.ordax/runtimes/sha256/<runtime_sha256>/
+└─ native-surface-runtime.erofs
+```
+
+A later system release that references the same already verified runtime hash reuses those exact bytes instead of downloading the runtime again. This is content-addressed reuse, not a mutable shared runtime. The v3 materializer still creates no `current` pointer, performs no boot handoff and does not authorize physical USB publication.
 
 ## Canonical pipeline
 
@@ -92,6 +120,10 @@ SYSTEM_TAR_HASH_AND_SIZE_PINNED=YES
 SOURCE_COMMIT_PINNED=YES
 RELEASE_PROTOCOL_VERSIONING_CONTRACT=YES
 RELEASE_MANIFEST_V1_SEMANTICS_IMMUTABLE=YES
+RELEASE_MANIFEST_V2_SEMANTICS_IMMUTABLE=YES
+RELEASE_MANIFEST_V3_MULTI_ARTIFACT_RUNTIME=YES
+V3_RUNTIME_CONTENT_ADDRESSED_REUSE=YES
+V3_ACTIVATION_ENABLED=NO
 DELTA_REQUIRES_NEW_MANIFEST_SCHEMA=YES
 MULTI_ARTIFACT_REQUIRES_NEW_MANIFEST_SCHEMA=YES
 CANONICAL_RELEASE_TRUST_RESOLVED=NO

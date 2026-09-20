@@ -39,7 +39,7 @@ jobs:
           check-latest: false
           cache: false
 
-      - name: Test v1 protocol and non-activating portable v2 materialization
+      - name: Test v1 plus non-activating portable v2/v3 materialization
         run: go test -count=1 ./...
 
       - name: Build static Linux amd64 release agent

@@ -9,11 +9,12 @@
     "19f36d913321d9f073717f335b52d6850856cca6c98fa4dec4136738b6ff35e0",
     "74a03bd9901c33b7281d529fb0d379a735d20b5ef7495e0af2f73ca2ff40c90e",
     "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
-    "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce"
+    "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+    "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da"
   ],
-  "target_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
-  "target_size": 7143584,
-  "download_url": "https://github.com/washingtonmsdj/prototipo-ordax-os/releases/download/ordax-release-agent-102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da/ordax-release-agent",
+  "target_sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
+  "target_size": 7172256,
+  "download_url": "https://github.com/washingtonmsdj/prototipo-ordax-os/releases/download/ordax-release-agent-ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c/ordax-release-agent",
   "target_path": "/ordax/bootstrap/release-acquisition/ordax-release-agent",
   "mode": "0755",
   "physical_media_rewrite_required": false,

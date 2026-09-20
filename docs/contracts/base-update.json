@@ -292,17 +292,25 @@
     "seed_media_agent_may_precede_refresh_target": true,
     "seed_media_agent_must_be_recognized_migration_source": true,
     "refresh_target_may_advance_without_physical_media_rewrite": true,
-    "current_seed_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
-    "current_refresh_target_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+    "current_seed_sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
+    "current_refresh_target_sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
     "current_seed_includes_inspect": true,
     "legacy_seed_sha256": [
       "74a03bd9901c33b7281d529fb0d379a735d20b5ef7495e0af2f73ca2ff40c90e",
       "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
-      "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce"
+      "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+      "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da"
     ],
     "current_seed_includes_activate_exact": true,
     "current_seed_includes_portable_v2_verify_exact": true,
-    "current_seed_includes_portable_v2_materialize": true
+    "current_seed_includes_portable_v2_materialize": true,
+    "current_seed_includes_portable_v3_materialize": true,
+    "current_seed_includes_portable_v3_verify_exact": true,
+    "current_refresh_target_includes_portable_v3_materialize": true,
+    "current_refresh_target_includes_portable_v3_verify_exact": true,
+    "current_refresh_target_runtime_reuse_by_sha256": true,
+    "previous_seed_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+    "previous_seed_refreshes_without_physical_media_rewrite": true
   },
   "runtime_owner": {
     "development_host_state_root": "/state/ordax",

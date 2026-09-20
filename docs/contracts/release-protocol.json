@@ -68,7 +68,8 @@
     "new_trust_transition_requires_explicit_protocol": true,
     "portable_usb_v2_erofs_requires_new_manifest_schema": true,
     "portable_usb_v2_candidate_must_not_mutate_manifest_v1": true,
-    "portable_usb_v2_candidate_contract": "docs/contracts/portable-release-image.json"
+    "portable_usb_v2_candidate_contract": "docs/contracts/portable-release-image.json",
+    "surface_runtime_multi_artifact_requires_manifest_v3": true
   },
   "owners": {
     "generator": "tools/release-manifest",
@@ -112,6 +113,52 @@
     "current_symlink_created": false,
     "offline_exact_verification_support": true,
     "offline_exact_verification_command": "ordax-release-agent verify-portable-exact",
+    "offline_exact_verification_network_access": false,
+    "offline_exact_verification_mutates_release": false,
+    "offline_exact_verification_activation_performed": false
+  },
+  "portable_v3": {
+    "manifest_schema": "prototype-ordax.release-manifest/3",
+    "envelope_schema": "prototype-ordax.release-envelope/1",
+    "trust_schema": "prototype-ordax.release-trust/1",
+    "release_addressing": "source-commit",
+    "product_mode": "usb",
+    "storage_profile": "portable-usb-v2",
+    "runtime_format": "erofs",
+    "artifact_count": 2,
+    "artifacts": [
+      {
+        "name": "system.erofs",
+        "role": "system-image"
+      },
+      {
+        "name": "native-surface-runtime.erofs",
+        "role": "surface-runtime"
+      }
+    ],
+    "canonical_artifact_order": true,
+    "generator_support": true,
+    "signer_support": true,
+    "envelope_verifier_support": true,
+    "acquisition_agent_support": true,
+    "materialization_support": true,
+    "activation_support": false,
+    "boot_handoff_support": false,
+    "production_publication_allowed": false,
+    "channel_inspection_support": true,
+    "materialization_command": "ordax-release-agent materialize-portable-v3",
+    "materialization_root": "/ordax-data/.ordax",
+    "release_layout": ".ordax/releases/<source_commit>/{system.erofs,surface-runtime.sha256,release-manifest.json,release-envelope.json}",
+    "runtime_store": ".ordax/runtimes/sha256/<runtime_sha256>/native-surface-runtime.erofs",
+    "runtime_content_addressed_by": "sha256",
+    "verified_runtime_reuse": true,
+    "runtime_redownload_when_verified_hash_present": false,
+    "materialization_atomic_release_directory_rename": true,
+    "runtime_erofs_superblock_checked": true,
+    "system_erofs_superblock_checked": true,
+    "current_symlink_created": false,
+    "offline_exact_verification_support": true,
+    "offline_exact_verification_command": "ordax-release-agent verify-portable-v3-exact",
     "offline_exact_verification_network_access": false,
     "offline_exact_verification_mutates_release": false,
     "offline_exact_verification_activation_performed": false
