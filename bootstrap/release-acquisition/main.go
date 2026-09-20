@@ -1641,6 +1641,67 @@ func verifyPortableExactCommand(args []string) error {
 	return printJSON(receipt)
 }
 
+func materializePortableV3Command(args []string) error {
+	fs := flag.NewFlagSet("materialize-portable-v3", flag.ContinueOnError)
+	envelopeURL := fs.String("envelope-url", "", "HTTPS URL for signed portable v3 release envelope")
+	trustPath := fs.String("trust", "", "release trust anchor file")
+	root := fs.String("root", "/ordax-data/.ordax", "portable OrdaX internal root")
+	repository := fs.String("repository", defaultRepo, "expected source repository")
+	expectedCommit := fs.String("expected-commit", "", "required exact portable v3 source commit")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *envelopeURL == "" || *trustPath == "" || *expectedCommit == "" || fs.NArg() != 0 {
+		return errors.New("materialize-portable-v3 requires --envelope-url, --trust and --expected-commit")
+	}
+	if !commitPattern.MatchString(*expectedCommit) {
+		return errors.New("expected_commit must be lowercase 40-hex")
+	}
+	trust, key, err := loadTrust(*trustPath)
+	if err != nil {
+		return err
+	}
+	receipt, err := materializePortableV3(
+		secureClient(),
+		*envelopeURL,
+		*root,
+		trust,
+		key,
+		*repository,
+		*expectedCommit,
+	)
+	if err != nil {
+		return err
+	}
+	return printJSON(receipt)
+}
+
+func verifyPortableV3ExactCommand(args []string) error {
+	fs := flag.NewFlagSet("verify-portable-v3-exact", flag.ContinueOnError)
+	trustPath := fs.String("trust", "", "release trust anchor file")
+	root := fs.String("root", "/ordax-data/.ordax", "portable OrdaX internal root")
+	repository := fs.String("repository", defaultRepo, "expected source repository")
+	expectedCommit := fs.String("expected-commit", "", "required exact portable v3 source commit")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *trustPath == "" || *expectedCommit == "" || fs.NArg() != 0 {
+		return errors.New("verify-portable-v3-exact requires --trust and --expected-commit")
+	}
+	if !commitPattern.MatchString(*expectedCommit) {
+		return errors.New("expected_commit must be lowercase 40-hex")
+	}
+	trust, key, err := loadTrust(*trustPath)
+	if err != nil {
+		return err
+	}
+	receipt, err := verifyPortableV3Exact(*root, trust, key, *repository, *expectedCommit)
+	if err != nil {
+		return err
+	}
+	return printJSON(receipt)
+}
+
 func activateExactCommand(args []string) error {
 	fs := flag.NewFlagSet("activate-exact", flag.ContinueOnError)
 	trustPath := fs.String("trust", "", "release trust anchor file")
@@ -1726,7 +1787,7 @@ func materializeCommand(args []string) error {
 
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: ordax-release-agent <verify-envelope|inspect|materialize|materialize-portable|verify-portable-exact|activate-exact|install> [options]")
+	fmt.Fprintln(os.Stderr, "usage: ordax-release-agent <verify-envelope|inspect|materialize|materialize-portable|verify-portable-exact|materialize-portable-v3|verify-portable-v3-exact|activate-exact|install> [options]")
 }
 
 func main() {
@@ -1746,6 +1807,10 @@ func main() {
 		err = materializePortableCommand(os.Args[2:])
 	case "verify-portable-exact":
 		err = verifyPortableExactCommand(os.Args[2:])
+	case "materialize-portable-v3":
+		err = materializePortableV3Command(os.Args[2:])
+	case "verify-portable-v3-exact":
+		err = verifyPortableV3ExactCommand(os.Args[2:])
 	case "activate-exact":
 		err = activateExactCommand(os.Args[2:])
 	case "install":
