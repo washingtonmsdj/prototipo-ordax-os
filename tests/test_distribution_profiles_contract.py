@@ -96,12 +96,27 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(stable["signed_release_seed_media_includes_inspect"])
         self.assertEqual(
             stable["signed_release_discovery_physical_agent_target_sha256"],
-            "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
         )
         self.assertEqual(
             stable["signed_release_seed_media_agent_sha256"],
             "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
         )
+        self.assertEqual(
+            stable["portable_v3_release_agent_seed_sha256"],
+            "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+        )
+        self.assertEqual(
+            stable["portable_v3_release_agent_target_sha256"],
+            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
+        )
+        self.assertTrue(
+            stable["portable_v3_release_agent_seed_requires_hash_addressed_refresh"]
+        )
+        self.assertTrue(
+            stable["portable_v3_release_agent_supports_content_addressed_runtime"]
+        )
+        self.assertFalse(stable["portable_v3_release_agent_activation_connected"])
         self.assertTrue(stable["periodic_signed_channel_polling_connected"])
         self.assertEqual(stable["periodic_signed_channel_default_seconds"], 60)
         self.assertTrue(stable["signed_release_materialization_connected"])
@@ -193,7 +208,7 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(stable["exact_release_activation_supervisor_connected"])
         self.assertEqual(
             stable["exact_release_activation_physical_agent_target_sha256"],
-            "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
         )
         self.assertTrue(stable["exact_release_activation_seed_media_includes_primitive"])
         self.assertTrue(stable["exact_release_activation_asset_published"])
