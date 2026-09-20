@@ -171,10 +171,10 @@
         {
           "source_path": "bootstrap/release-acquisition/ordax-release-agent",
           "target_path": "/ordax/bootstrap/release-acquisition/ordax-release-agent",
-          "sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+          "sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
           "mode": "0755",
           "logical_owner": "bootstrap-release-acquisition",
-          "reason": "Static Linux amd64 release agent with immutable v1 support plus signed portable manifest v2 inspect/materialize-portable/verify-portable-exact support; activation remains separately gated"
+          "reason": "Static Linux amd64 release agent with immutable v1 support, portable manifest v2 compatibility, and signed v3 system+Surface-runtime inspect/materialize/verify support; activation remains separately gated"
         }
       ]
     },
