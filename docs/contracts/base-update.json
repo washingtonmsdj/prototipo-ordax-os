@@ -293,7 +293,7 @@
     "seed_media_agent_must_be_recognized_migration_source": true,
     "refresh_target_may_advance_without_physical_media_rewrite": true,
     "current_seed_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
-    "current_refresh_target_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+    "current_refresh_target_sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
     "current_seed_includes_inspect": true,
     "legacy_seed_sha256": [
       "74a03bd9901c33b7281d529fb0d379a735d20b5ef7495e0af2f73ca2ff40c90e",
@@ -302,7 +302,12 @@
     ],
     "current_seed_includes_activate_exact": true,
     "current_seed_includes_portable_v2_verify_exact": true,
-    "current_seed_includes_portable_v2_materialize": true
+    "current_seed_includes_portable_v2_materialize": true,
+    "current_seed_includes_portable_v3_materialize": false,
+    "current_seed_includes_portable_v3_verify_exact": false,
+    "current_refresh_target_includes_portable_v3_materialize": true,
+    "current_refresh_target_includes_portable_v3_verify_exact": true,
+    "current_refresh_target_runtime_reuse_by_sha256": true
   },
   "runtime_owner": {
     "development_host_state_root": "/state/ordax",
