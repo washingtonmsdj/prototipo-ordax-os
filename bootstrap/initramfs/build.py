@@ -451,7 +451,7 @@ def portable_capsule_pin(capsule: Path | None) -> dict:
         info = path.lstat()
     except OSError as exc:
         raise BuildError(f"cannot stat portable bootstrap capsule: {exc}") from exc
-    if path.is_symlink() or not info.is_file() or info.st_nlink != 1:
+    if path.is_symlink() or not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
         raise BuildError("portable bootstrap capsule must be a regular non-symlink single-link file")
     if path.name != "bootstrap.erofs" or info.st_size < 4096:
         raise BuildError("portable bootstrap capsule must be a non-empty bootstrap.erofs")

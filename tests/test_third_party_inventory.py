@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 INVENTORY_PATH = ROOT / "platform" / "compliance" / "declared-inputs.json"
 KERNEL_SOURCE = ROOT / "bootstrap" / "kernel" / "source.json"
 DEV_CORE = ROOT / "bootstrap" / "base" / "alpine_core.py"
+BASE_RUNTIME_POLICY = ROOT / "bootstrap" / "base" / "runtime_policy.py"
 DEV_BUILD = ROOT / "bootstrap" / "dev-base" / "build.py"
 SURFACE = ROOT / "system" / "surface" / "bin" / "ordax-surface"
 
@@ -48,13 +49,16 @@ class ThirdPartyInventoryTests(unittest.TestCase):
 
     def test_development_base_input_matches_selected_packages(self):
         core = assignment_literals(DEV_CORE)
-        build = assignment_literals(DEV_BUILD)
+        runtime = assignment_literals(BASE_RUNTIME_POLICY)
         item = self.by_id["alpine-development-base"]
         self.assertEqual(item["version"], core["ALPINE_VERSION"])
         self.assertEqual(item["branch"], core["ALPINE_BRANCH"])
         self.assertEqual(item["arch"], core["ARCH"])
         self.assertEqual(item["packages"], core["PACKAGES"])
-        self.assertEqual(item["build_only_packages"], list(build["BUILD_ONLY_PACKAGES"]))
+        self.assertEqual(
+            item["build_only_packages"],
+            list(runtime["BUILD_ONLY_PACKAGES"]),
+        )
 
     def test_native_surface_runtime_matches_apk_request(self):
         text = SURFACE.read_text(encoding="utf-8")
