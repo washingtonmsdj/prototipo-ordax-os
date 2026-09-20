@@ -96,6 +96,10 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn("KERNEL_BUILD.extract_archive", BUILDER)
         self.assertIn('"headers_install"', BUILDER)
         self.assertIn('f"EXTRA_CFLAGS=-I{uapi_include}"', BUILDER)
+        self.assertIn("--portable-bootstrap-capsule", BUILDER)
+        self.assertIn("portable_capsule_pin", BUILDER)
+        self.assertIn("install_portable_capsule_pin", BUILDER)
+        self.assertIn("portable-bootstrap-capsule.sha256", BUILDER)
         self.assertNotIn('"CONFIG_TEST": "y"', BUILDER)
         self.assertIn('f"CC={musl_cc}"', BUILDER)
         self.assertIn('f"EXTRA_CFLAGS=-I{uapi_include}"', BUILDER)
@@ -164,6 +168,22 @@ class InitramfsSourceContractTests(unittest.TestCase):
             portable["busybox_extra_cflags_policy"],
             "pinned-kernel-uapi-include-only",
         )
+        capsule = portable["bootstrap_capsule_pin"]
+        self.assertTrue(capsule["builder_support"])
+        self.assertEqual(capsule["optional_build_input"], "--portable-bootstrap-capsule")
+        self.assertEqual(
+            capsule["pin_runtime_path"],
+            "/etc/ordax/portable-bootstrap-capsule.sha256",
+        )
+        self.assertEqual(
+            capsule["expected_capsule_path"],
+            "/ordax-esp/ordax/bootstrap/bootstrap.erofs",
+        )
+        self.assertEqual(capsule["hash_algorithm"], "sha256")
+        self.assertTrue(capsule["capsule_erofs_magic_checked"])
+        self.assertFalse(capsule["pid1_enforced"])
+        self.assertFalse(capsule["default_candidate_build_pinned"])
+        self.assertFalse(capsule["physical_boot_authorized"])
         self.assertIn("findfs LABEL=ORDAX", INIT)
         self.assertNotIn("findfs LABEL=ORDAX-DATA", INIT)
 

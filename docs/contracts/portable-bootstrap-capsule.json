@@ -63,7 +63,10 @@
     "anchor_is_outside_capsule": true,
     "capsule_hash_must_be_pinned_by_fixed_initramfs_before_pid1_use": true,
     "capsule_hash_pin_implemented": false,
-    "canonical_public_anchor_currently_pinned": false
+    "canonical_public_anchor_currently_pinned": false,
+    "capsule_hash_pin_builder_support": true,
+    "capsule_hash_pin_disposable_proof_workflow": ".github/workflows/portable-initramfs-capsule-pin.yml",
+    "pid1_hash_enforcement_implemented": false
   },
   "proof": {
     "workflow": ".github/workflows/portable-bootstrap-capsule.yml",

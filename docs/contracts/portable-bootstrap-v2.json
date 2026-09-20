@@ -83,7 +83,9 @@
       "deterministic_proof_implemented": true,
       "esp_materialization_implemented": false,
       "initramfs_hash_pin_implemented": false,
-      "pid1_verified_mount_implemented": false
+      "pid1_verified_mount_implemented": false,
+      "initramfs_hash_pin_builder_support": true,
+      "initramfs_hash_pin_disposable_proof_implemented": true
     }
   },
   "release_trust": {

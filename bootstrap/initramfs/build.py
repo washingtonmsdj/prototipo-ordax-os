@@ -437,6 +437,53 @@ def git_head() -> str:
         return "unknown"
 
 
+def portable_capsule_pin(capsule: Path | None) -> dict:
+    if capsule is None:
+        return {
+            "provided": False,
+            "expected_path": "/ordax-esp/ordax/bootstrap/bootstrap.erofs",
+            "sha256": None,
+            "pid1_enforced": False,
+            "physical_boot_authorized": False,
+        }
+    path = capsule.resolve()
+    try:
+        info = path.lstat()
+    except OSError as exc:
+        raise BuildError(f"cannot stat portable bootstrap capsule: {exc}") from exc
+    if path.is_symlink() or not info.is_file() or info.st_nlink != 1:
+        raise BuildError("portable bootstrap capsule must be a regular non-symlink single-link file")
+    if path.name != "bootstrap.erofs" or info.st_size < 4096:
+        raise BuildError("portable bootstrap capsule must be a non-empty bootstrap.erofs")
+    with path.open("rb") as handle:
+        handle.seek(1024)
+        magic = handle.read(4)
+    if magic != bytes((0xe2, 0xe1, 0xf5, 0xe0)):
+        raise BuildError("portable bootstrap capsule does not contain an EROFS superblock")
+    return {
+        "provided": True,
+        "expected_path": "/ordax-esp/ordax/bootstrap/bootstrap.erofs",
+        "sha256": sha256_file(path),
+        "pid1_enforced": False,
+        "physical_boot_authorized": False,
+    }
+
+
+def install_portable_capsule_pin(rootfs: Path, pin: dict) -> None:
+    if pin.get("provided") is not True:
+        return
+    digest = str(pin.get("sha256", ""))
+    if not _SHA256.fullmatch(digest):
+        raise BuildError("portable bootstrap capsule pin digest is invalid")
+    target = rootfs / "etc" / "ordax" / "portable-bootstrap-capsule.sha256"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        f"{digest}  /ordax-esp/ordax/bootstrap/bootstrap.erofs\n",
+        encoding="ascii",
+    )
+    os.chmod(target, 0o644)
+
+
 def build_growth_helper(musl_cc: str, readelf: str, source: Path, destination: Path, env: dict[str, str]) -> None:
     command = [
         musl_cc,
@@ -520,10 +567,11 @@ def build_portable_mount_helper(
         raise BuildError("portable mount helper build did not produce a safe regular binary")
 
 
-def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
+def build(work_dir: Path, out_dir: Path, jobs: int, portable_bootstrap_capsule: Path | None = None) -> dict:
     contract = load_contract()
     init = init_path(contract)
     grow_source = growth_helper_source_path()
+    capsule_pin = portable_capsule_pin(portable_bootstrap_capsule)
     portable_state_source = portable_state_helper_source_path()
     portable_mount_source = portable_mount_helper_source_path()
     check_contract()
@@ -580,6 +628,7 @@ def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
         (rootfs / directory).mkdir(parents=True, exist_ok=True)
     shutil.copy2(init, rootfs / "init")
     os.chmod(rootfs / "init", 0o755)
+    install_portable_capsule_pin(rootfs, capsule_pin)
     grow_binary = work_dir / "ordax-grow-ext4"
     build_growth_helper(musl_cc, readelf, grow_source, grow_binary, env)
     grow_install = rootfs / "sbin" / "ordax-grow-ext4"
@@ -632,6 +681,7 @@ def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
             if key != "include"
         },
         "root_init_sha256": sha256_file(init),
+        "portable_bootstrap_capsule_pin": capsule_pin,
         "filesystem_health": {
             "pre_mount_check": True,
             "error_flag_policy": "read-only-recovery",
@@ -708,6 +758,18 @@ def verify(out_dir: Path) -> dict:
         raise BuildError(f"invalid initramfs provenance: {exc}") from exc
     if provenance.get("$schema") != "prototype-ordax.initramfs-provenance/1":
         raise BuildError("unexpected initramfs provenance schema")
+    capsule_pin = provenance.get("portable_bootstrap_capsule_pin", {})
+    if capsule_pin.get("provided") is True:
+        if (
+            capsule_pin.get("expected_path") != "/ordax-esp/ordax/bootstrap/bootstrap.erofs"
+            or not _SHA256.fullmatch(str(capsule_pin.get("sha256", "")))
+            or capsule_pin.get("pid1_enforced") is not False
+            or capsule_pin.get("physical_boot_authorized") is not False
+        ):
+            raise BuildError("initramfs portable bootstrap capsule pin provenance is invalid")
+    elif capsule_pin.get("provided") is not False:
+        raise BuildError("initramfs portable bootstrap capsule pin state is invalid")
+
     health = provenance.get("filesystem_health", {})
     if (
         health.get("pre_mount_check") is not True
@@ -790,6 +852,12 @@ def main() -> int:
     build_parser.add_argument("--work-dir", type=Path, default=ROOT / "out" / "initramfs-work")
     build_parser.add_argument("--out-dir", type=Path, default=ROOT / "out" / "initramfs")
     build_parser.add_argument("--jobs", type=int, default=max(1, os.cpu_count() or 1))
+    build_parser.add_argument(
+        "--portable-bootstrap-capsule",
+        type=Path,
+        default=None,
+        help="optional verified bootstrap.erofs candidate whose SHA-256 is embedded as a non-enforced pin",
+    )
     verify_parser = sub.add_parser("verify")
     verify_parser.add_argument("--out-dir", type=Path, default=ROOT / "out" / "initramfs")
     args = parser.parse_args()
@@ -797,7 +865,12 @@ def main() -> int:
         if args.command == "check":
             result = check_contract()
         elif args.command == "build":
-            result = build(args.work_dir, args.out_dir, args.jobs)
+            result = build(
+                args.work_dir,
+                args.out_dir,
+                args.jobs,
+                args.portable_bootstrap_capsule,
+            )
         else:
             result = verify(args.out_dir)
         print(json.dumps(result, indent=2, sort_keys=True))
