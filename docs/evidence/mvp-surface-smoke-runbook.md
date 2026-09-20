@@ -12,7 +12,8 @@ O harness é deliberadamente somente leitura. Ele complementa — não substitui
 
 - confirma a presença e registra somente tamanho + SHA-256 das fontes compartilhadas de Arquivos, Notas, Internet, Ajustes, Sistema, composição Native e Surface;
 - confirma que o documento Native da Surface responde pelo loopback esperado;
-- lê e valida os contratos observacionais de métricas, rede, energia, raiz de Arquivos e histórico de atualização;
+- lê e valida os contratos observacionais de métricas, rede, energia e raiz de Arquivos;
+- lê e valida por `GET` o estado vivo do atualizador e o histórico de atualização, sem confirmar health nem disparar qualquer ação;
 - registra apenas resumos limitados dos dados observados;
 - verifica o tail do log do host por marcadores `traceback`, `segmentation fault` e `fatal`, armazenando apenas hash e contagem;
 - grava um relatório JSON com `PASS/WARN/FAIL` sem executar `POST`, `PUT`, `PATCH` ou `DELETE`.
@@ -27,9 +28,11 @@ O relatório não inclui:
 - conteúdo bruto de logs;
 - conteúdo de notas;
 - URLs/histórico de navegação;
+- token de health ou texto bruto de diagnóstico do atualizador;
+- SHAs operacionais brutos de source/target/rejeição do atualizador;
 - cookies, tokens ou credenciais.
 
-A listagem de Arquivos é reduzida a contagens. Rede é reduzida a contagem por tipo/estado. A Surface e as fontes são representadas por tamanho/hash quando aplicável.
+A listagem de Arquivos é reduzida a contagens. Rede é reduzida a contagem por tipo/estado. O estado do atualizador é reduzido a fase/modo/Entrega, flags de presença e uma impressão SHA-256 da identidade de source, sem preservar o SHA bruto nem o token de health. A Surface e as fontes são representadas por tamanho/hash quando aplicável.
 
 ## Pré-condições
 
@@ -66,7 +69,7 @@ Depois da coleta inicial, registrar PASS/FAIL separadamente para cada item:
 3. **Notas:** abre, permite criar/editar uma nota de teste e preserva o conteúdo após uma recarga/reabertura normal da Surface conforme o armazenamento local disponível.
 4. **Internet:** abre uma página HTTPS pública e mantém chrome/rail/painel do OrdaX utilizáveis. Para isolamento, persistência de abas e limites de rede, executar também o harness específico `ordax-internet-proof`.
 5. **Ajustes:** tema e ao menos uma preferência de acessibilidade suportada mudam a Surface e permanecem coerentes após reabrir a janela.
-6. **Sistema:** Visão geral, Atualizações, Armazenamento, Diagnóstico e Sobre abrem sem dados fictícios; métricas/armazenamento exibidos devem ser compatíveis com a coleta automática.
+6. **Sistema:** Visão geral, Atualizações, Armazenamento, Diagnóstico e Sobre abrem sem dados fictícios; métricas/armazenamento e estado de atualização exibidos devem ser compatíveis com a coleta automática.
 7. **Rede e energia:** estados aparecem somente quando a capacidade correspondente existe. Não executar desligamento/reinício como parte deste smoke test; ações de energia possuem prova própria.
 8. **Isolamento de falha:** alternar entre os cinco apps principais não deve encerrar a Surface nem corromper o estado dos demais apps.
 9. **Continuidade:** fechar/reabrir janelas e trocar áreas não deve criar duplicação inesperada de estado nem perder o target interno já persistido pelo workspace.
@@ -84,7 +87,7 @@ Sem reiniciar o notebook, execute novamente:
 
 A segunda coleta também deve terminar com `FAIL=0`.
 
-A existência de dois relatórios sem falha mostra que os endpoints essenciais e o host continuaram saudáveis antes/depois do uso manual. Ela não prova, sozinha, o comportamento visual de cada app; por isso o checklist manual é obrigatório.
+A existência de dois relatórios sem falha mostra que os endpoints essenciais, o estado observacional do atualizador e o host continuaram saudáveis antes/depois do uso manual. Ela não prova, sozinha, o comportamento visual de cada app; por isso o checklist manual é obrigatório.
 
 ## Evidência mínima para declarar esta prova física
 

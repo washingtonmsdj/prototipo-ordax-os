@@ -19,6 +19,26 @@ PROC_ROOT = Path("/proc")
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 MAX_BODY = 2 * 1024 * 1024
+UPDATE_PHASES = frozenset({
+    "idle",
+    "checking",
+    "fetching",
+    "validating",
+    "activating",
+    "health-wait",
+    "rollback",
+    "blocked",
+    "error",
+})
+BASE_UPDATE_PHASES = frozenset({
+    "none",
+    "waiting-candidate",
+    "candidate-requested",
+    "candidate-fetching",
+    "candidate-ready",
+    "staged",
+    "activation-ready",
+})
 
 REQUIRED_SOURCE_FILES = (
     "apps/files/app.mjs",
@@ -236,6 +256,80 @@ def validate_update_history(value: object) -> dict:
     }
 
 
+def validate_update_status(value: object) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError("update status payload must be an object")
+
+    source_sha = value.get("sourceSha")
+    status = value.get("status")
+    apply_mode = value.get("applyMode")
+    if not isinstance(source_sha, str) or not source_sha:
+        raise ValueError("update status requires sourceSha")
+    if not isinstance(status, str) or not status:
+        raise ValueError("update status requires status")
+    if not isinstance(apply_mode, str) or not apply_mode:
+        raise ValueError("update status requires applyMode")
+
+    phase = value.get("phase", "idle")
+    if phase not in UPDATE_PHASES:
+        raise ValueError("invalid update phase")
+
+    delivery_number = value.get("deliveryNumber", value.get("versionNumber", 0))
+    if (
+        not isinstance(delivery_number, int)
+        or isinstance(delivery_number, bool)
+        or not 0 <= delivery_number <= 1_000_000
+    ):
+        raise ValueError("invalid delivery number")
+
+    boot_refresh_required = value.get("bootRefreshRequired") is True
+    base_update_phase = value.get(
+        "baseUpdatePhase",
+        "waiting-candidate" if boot_refresh_required else "none",
+    )
+    if base_update_phase not in BASE_UPDATE_PHASES:
+        raise ValueError("invalid Base update phase")
+
+    optional_text_fields = (
+        "runtimeSurfaceSha",
+        "targetSha",
+        "attemptId",
+        "baseUpdateSha",
+        "checkedAt",
+        "lastAppliedSha",
+        "lastAppliedAt",
+        "rejectedSha",
+        "lastError",
+        "healthToken",
+    )
+    for field in optional_text_fields:
+        item = value.get(field)
+        if item not in (None, "") and not isinstance(item, str):
+            raise ValueError(f"invalid update status text field: {field}")
+
+    for field in ("lastApplyDurationSeconds", "lastStageDurationSeconds"):
+        item = value.get(field, 0)
+        if not isinstance(item, int) or isinstance(item, bool) or not 0 <= item <= 3600:
+            raise ValueError(f"invalid update status duration: {field}")
+
+    runtime_surface_sha = value.get("runtimeSurfaceSha") or source_sha
+    return {
+        "status": status,
+        "phase": phase,
+        "apply_mode": apply_mode,
+        "delivery_number": delivery_number,
+        "boot_refresh_required": boot_refresh_required,
+        "base_update_phase": base_update_phase,
+        "source_identity_sha256": _sha(source_sha.encode("utf-8")),
+        "runtime_surface_matches_source": runtime_surface_sha == source_sha,
+        "has_target": bool(value.get("targetSha")),
+        "has_last_applied": bool(value.get("lastAppliedSha")),
+        "has_rejected": bool(value.get("rejectedSha")),
+        "has_last_error": bool(value.get("lastError")),
+        "health_token_present": bool(value.get("healthToken")),
+    }
+
+
 def live_surface_checks(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, timeout: float = 1.5) -> tuple[dict, list[dict]]:
     checks = []
     observed = {}
@@ -258,6 +352,7 @@ def live_surface_checks(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, time
         ("network_status", "/__ordax/native/network-status", validate_network),
         ("power_status", "/__ordax/native/power-status", validate_power),
         ("file_space_root", f"/__ordax/native/files?path={quote('/', safe='')}", validate_files),
+        ("update_status", "/__ordax/native/update", validate_update_status),
         ("update_history", "/__ordax/native/update-history", validate_update_history),
     )
     for name, target, validator in probes:
