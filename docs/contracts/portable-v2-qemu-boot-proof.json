@@ -20,7 +20,10 @@
     "data_filesystem": "exfat",
     "persistent_state_filesystem": "ext4-in-file",
     "release_filesystem": "erofs-in-file",
-    "stable_base_filesystem": "erofs-in-file"
+    "stable_base_filesystem": "erofs-in-file",
+    "qemu_disk_transport": "piix-ide",
+    "kernel_transport_prerequisite": "CONFIG_ATA_PIIX=y",
+    "virtio_block_required": false
   },
   "required_real_artifacts": [
     "exact-source-kernel",

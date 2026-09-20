@@ -276,7 +276,7 @@ def boot_qemu(args: argparse.Namespace, inputs: dict[str, Any], disk: Path, work
         "-kernel", str(inputs["kernel"]),
         "-initrd", str(inputs["initramfs"]),
         "-append", "console=ttyS0 rdinit=/sbin/ordax-portable-init loglevel=6",
-        "-drive", f"file={disk},format=raw,if=virtio,media=disk",
+        "-drive", f"file={disk},format=raw,if=ide,index=0,media=disk",
         "-display", "none",
         "-serial", f"file:{serial}",
         "-monitor", "none",
@@ -333,7 +333,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
     require_programs()
     inputs = validate_inputs(args)
     work = Path(tempfile.mkdtemp(prefix="ordax-portable-v2-qemu-"))
-    disk = Path()
+    disk: Path | None = None
     checks = {
         "real_pinned_inputs_bound": True,
         "regular_sparse_guest_disk_only": False,
@@ -389,7 +389,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         args.out.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         return result
     finally:
-        if disk and disk.exists():
+        if disk is not None and disk.exists():
             disk.unlink()
         shutil.rmtree(work, ignore_errors=True)
 

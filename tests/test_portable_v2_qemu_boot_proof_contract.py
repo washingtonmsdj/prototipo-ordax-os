@@ -37,6 +37,8 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
         self.assertIn("--change-name=1:ORDAX-ESP", text)
         self.assertIn("--change-name=2:ORDAX-DATA", text)
         self.assertIn("rdinit=/sbin/ordax-portable-init", text)
+        self.assertIn("if=ide,index=0", text)
+        self.assertNotIn("if=virtio", text)
         self.assertIn('"system.erofs"', text)
         self.assertIn('"stable-base.erofs"', text)
         self.assertIn('"persistent-state.img"', text)
