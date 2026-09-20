@@ -14,6 +14,16 @@ OrdaX USB
 
 Native installation is not a different OrdaX product. It installs the same verified Stable release using the `native-disk` storage profile from `docs/contracts/storage-architecture.json`.
 
+Execution mode is explicit rather than inferred from hardware:
+
+```text
+/ordax/bootstrap/config/product-mode
+  usb          -> live/portable OrdaX; installer capability may be available
+  native-disk  -> installed OrdaX; Native installer capability is forbidden
+```
+
+The Stable bootstrap passes this identity as `ORDAX_PRODUCT_MODE` through guardian, supervisor and Surface. The future physical installer must write `native-disk` into the target bootstrap before first boot. The shared signed `system.tar` is the same in both modes; this marker does not fork the product.
+
 ## Initial MVP scope
 
 The first public installer is deliberately smaller than a general-purpose partition editor:
@@ -57,13 +67,9 @@ read-only adapter enumeration
 
 Changing capacity, device path, serial/stable identity, read-only state or source-boot classification invalidates the confirmation. The currently booted OrdaX USB is always ineligible as a Native installation target.
 
-The initramfs now publishes the exact block device resolved from `LABEL=ORDAX` into the protected runtime handoff:
+The fixed initramfs is deliberately **not** expanded for the installer. Once OrdaX is running, `/ordax` is already the mounted bootstrap/release filesystem. The Linux Creator adapter resolves the exact backing block device from `/proc/self/mountinfo`, maps that partition to its containing physical disk and marks that disk as the source boot medium.
 
-```text
-/run/ordax-install/source-block-device
-```
-
-`ordax-creator-native-targets` consumes that file automatically, maps the partition to its containing physical disk through the read-only Linux adapter, and refuses all target selection if the source disk cannot be identified. No manual source-device input is part of the normal MVP path.
+`ordax-creator-native-targets` refuses all target selection when the `/ordax` mount is absent, ambiguous or not backed by a canonical `/dev/...` source. No manual source-device input is part of the normal MVP path; the explicit source-file flag exists only for bounded tests/recovery engineering.
 
 Transport alone is not authority: an internal NVMe/SATA disk and a suitable external SSD may both use the Native profile, while the source live USB remains forbidden.
 
