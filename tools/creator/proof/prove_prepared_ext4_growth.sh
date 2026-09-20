@@ -189,7 +189,7 @@ UNUSED_TAIL_BLOCKS="$((RAW_TARGET_BLOCKS - AFTER_BLOCKS))"
 
 sudo e2fsck -fn "$LOOP" >/dev/null 2>&1 || fail "grown Creator-prepared ext4 failed read-only e2fsck"
 
-SOURCE_COMMIT="${GITHUB_SHA:-unknown}"
+SOURCE_COMMIT="${ORDAX_SOURCE_COMMIT:-${GITHUB_SHA:-unknown}}"
 cat >"$PROOF_ABS" <<EOF
 {
   "\$schema": "prototype-ordax.creator-prepared-ext4-growth-proof/1",

@@ -173,7 +173,7 @@ if [[ "$RO_AFTER_BLOCKS" != "$RO_BEFORE_BLOCKS" ]]; then
 fi
 
 HELPER_SHA256="$(sha256sum "$HELPER" | awk '{print $1}')"
-SOURCE_COMMIT="${GITHUB_SHA:-unknown}"
+SOURCE_COMMIT="${ORDAX_SOURCE_COMMIT:-${GITHUB_SHA:-unknown}}"
 cat >"$PROOF" <<EOF
 {
   "\$schema": "prototype-ordax.ext4-growth-runtime-proof/2",

@@ -118,19 +118,31 @@ def fsync_directory(path: Path) -> None:
 
 
 def source_commit(repository_root: Path) -> str:
-    github_sha = os.environ.get("GITHUB_SHA", "").lower()
-    if re.fullmatch(r"[0-9a-f]{40}", github_sha):
-        return github_sha
+    explicit = os.environ.get("ORDAX_SOURCE_COMMIT", "").strip().lower()
+    if explicit:
+        if not re.fullmatch(r"[0-9a-f]{40}", explicit):
+            raise AssembleError(
+                "ORDAX_SOURCE_COMMIT must be exactly 40 lowercase hexadecimal characters"
+            )
+        return explicit
+
     try:
-        return subprocess.run(
+        checkout = subprocess.run(
             ["git", "rev-parse", "HEAD"],
             cwd=repository_root,
             check=True,
             capture_output=True,
             text=True,
-        ).stdout.strip()
+        ).stdout.strip().lower()
+        if re.fullmatch(r"[0-9a-f]{40}", checkout):
+            return checkout
     except Exception:
-        return "unknown"
+        pass
+
+    github_sha = os.environ.get("GITHUB_SHA", "").strip().lower()
+    if re.fullmatch(r"[0-9a-f]{40}", github_sha):
+        return github_sha
+    return "unknown"
 
 
 def preflight(

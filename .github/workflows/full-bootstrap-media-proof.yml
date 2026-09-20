@@ -55,6 +55,8 @@ jobs:
   full-bootstrap-media-proof:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    env:
+      ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -125,7 +127,7 @@ jobs:
           proof = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
           assert proof['$schema'] == 'prototype-ordax.ext4-growth-runtime-proof/2'
           assert proof['status'] == 'pass'
-          assert proof['source_commit'] == __import__('os').environ['GITHUB_SHA']
+          assert proof['source_commit'] == __import__('os').environ['ORDAX_SOURCE_COMMIT']
           assert proof['checks']['static_helper'] is True
           assert proof['checks']['mismatched_device_rejected'] is True
           assert proof['checks']['canonical_superblock_count_used'] is True
@@ -257,7 +259,7 @@ jobs:
           assert prepared['$schema'] == 'prototype-ordax.creator-prepared-ext4-growth-proof/1'
           assert prepared['status'] == 'pass'
           assert all(prepared['checks'].values())
-          assert prepared['source_commit'] == __import__('os').environ['GITHUB_SHA']
+          assert prepared['source_commit'] == __import__('os').environ['ORDAX_SOURCE_COMMIT']
           assert prepared['seed_image_sha256'] == disk_proof['image_sha256']
           assert prepared['gpt']['prepared_ordax_last_lba'] == prepared['gpt']['last_usable_lba']
           assert prepared['ext4']['ordax_final_blocks'] == prepared['ext4']['resize2fs_final_blocks']
