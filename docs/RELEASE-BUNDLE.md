@@ -18,7 +18,7 @@ The bootstrap activates that immutable release through `/ordax/current` only aft
 
 ## Bundle source contract
 
-The bundler receives a source root containing `system/` and emits a new `system.tar`.
+The bundler receives a source root containing `system/` and emits a new `system.tar`. For the Native product release, that source root is prepared by `tools/native-release-assembly/build.py`: it starts from the canonical shared `system/` source and injects only explicitly contracted, prebuilt Native release tools plus their provenance. The bundler itself remains platform-neutral and does not compile or invent Native content.
 
 Required:
 
