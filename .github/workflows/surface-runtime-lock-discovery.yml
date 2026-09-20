@@ -1,4 +1,4 @@
-name: Surface Runtime Lock Discovery
+name: Surface Runtime Candidate
 
 on:
   pull_request:
@@ -14,9 +14,9 @@ permissions:
   contents: read
 
 jobs:
-  discover:
+  candidate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 75
     steps:
       - name: Checkout exact source commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -30,11 +30,11 @@ jobs:
           python-version: '3.12'
           check-latest: false
 
-      - name: Install bounded discovery dependency
+      - name: Install bounded runtime build dependencies
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends proot
+          sudo apt-get install -y --no-install-recommends proot erofs-utils util-linux
 
       - name: Validate offline runtime source contract
         run: |
@@ -42,7 +42,7 @@ jobs:
           python -m unittest tests.test_surface_runtime_source_contract -v
           python -m py_compile bootstrap/surface-runtime/discover_lock.py bootstrap/surface-runtime/build.py
 
-      - name: Resolve full transitive Alpine package lock
+      - name: Revalidate full transitive Alpine package lock
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/surface-runtime"
@@ -51,21 +51,77 @@ jobs:
           python - "$RUNNER_TEMP/surface-runtime/surface-runtime-lock.json" <<'PY'
           import json, pathlib, sys
           result = json.loads(pathlib.Path(sys.argv[1]).read_text())
-          assert result['status'] == 'discovered-not-promotable'
+          assert result['status'] == 'verified-pinned-lock'
           assert result['first_boot_offline_required'] is True
           assert result['physical_artifact_created'] is False
           assert result['physical_write_authorized'] is False
           assert result['portable_v2_boot_connected'] is False
           assert result['resolved_package_count'] == len(result['apk_package_lock'])
           assert result['resolved_package_count'] >= len(result['requested_packages'])
-          print('SURFACE_RUNTIME_LOCK_DISCOVERY=PASS')
+          print('SURFACE_RUNTIME_PINNED_LOCK=PASS')
           print('SURFACE_RUNTIME_PROMOTABLE=NO')
           PY
 
-      - name: Upload lock discovery metadata only
+      - name: Build candidate runtime twice
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/surface-runtime"
+          python bootstrap/surface-runtime/build.py build \
+            --cache-dir "$work/cache" \
+            --out-dir "$work/build-a"
+          python bootstrap/surface-runtime/build.py verify \
+            --out-dir "$work/build-a"
+
+          python bootstrap/surface-runtime/build.py build \
+            --cache-dir "$work/cache" \
+            --out-dir "$work/build-b"
+          python bootstrap/surface-runtime/build.py verify \
+            --out-dir "$work/build-b"
+
+      - name: Prove byte-reproducible EROFS runtime
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/surface-runtime"
+          a="$work/build-a/native-surface-runtime.erofs"
+          b="$work/build-b/native-surface-runtime.erofs"
+          cmp "$a" "$b"
+          sha_a="$(sha256sum "$a" | awk '{print $1}')"
+          sha_b="$(sha256sum "$b" | awk '{print $1}')"
+          test "$sha_a" = "$sha_b"
+
+          python - "$work/build-a/surface-runtime-provenance.json" "$work/build-b/surface-runtime-provenance.json" <<'PY'
+          import json, pathlib, sys
+          a = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          b = json.loads(pathlib.Path(sys.argv[2]).read_text())
+          assert a['status'] == b['status'] == 'candidate-not-promotable'
+          assert a['normalized_tar_sha256'] == b['normalized_tar_sha256']
+          assert a['image']['sha256'] == b['image']['sha256']
+          assert a['image']['size'] == b['image']['size']
+          assert a['apk_package_lock_count'] == b['apk_package_lock_count'] == 253
+          assert a['first_boot_offline_required'] is True
+          assert a['network_package_install_during_stable_boot_allowed'] is False
+          assert a['physical_artifact_authorized'] is False
+          assert a['portable_v2_boot_connected'] is False
+          print('SURFACE_RUNTIME_EROFS_REPEAT_DIGEST=PASS')
+          PY
+
+      - name: Remove unpromoted runtime image bytes
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/surface-runtime"
+          rm -f "$work/build-a/native-surface-runtime.erofs" "$work/build-b/native-surface-runtime.erofs"
+          test ! -e "$work/build-a/native-surface-runtime.erofs"
+          test ! -e "$work/build-b/native-surface-runtime.erofs"
+
+      - name: Upload proof metadata only
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: surface-runtime-lock-${{ github.event.pull_request.head.sha || github.sha }}
-          path: ${{ runner.temp }}/surface-runtime/surface-runtime-lock.json
+          name: surface-runtime-candidate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ${{ runner.temp }}/surface-runtime/surface-runtime-lock.json
+            ${{ runner.temp }}/surface-runtime/build-a/surface-runtime-provenance.json
+            ${{ runner.temp }}/surface-runtime/build-b/surface-runtime-provenance.json
           if-no-files-found: error
           retention-days: 14
