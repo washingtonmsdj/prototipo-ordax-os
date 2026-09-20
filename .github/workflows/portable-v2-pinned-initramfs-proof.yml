@@ -141,7 +141,7 @@ jobs:
 
       - name: Build one initramfs pinned to both real EROFS artifacts
         env:
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP/portable-v2-pinned"

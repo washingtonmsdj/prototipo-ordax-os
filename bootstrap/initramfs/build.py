@@ -463,13 +463,29 @@ def build_cpio(root: Path, destination: Path) -> None:
 
 
 def git_head() -> str:
-    value = os.environ.get("GITHUB_SHA", "")
-    if re.fullmatch(r"[0-9a-fA-F]{40}", value):
-        return value.lower()
+    explicit = os.environ.get("ORDAX_SOURCE_COMMIT", "").strip()
+    if explicit:
+        if not re.fullmatch(r"[0-9a-fA-F]{40}", explicit):
+            raise BuildError("ORDAX_SOURCE_COMMIT must be exactly 40 hexadecimal characters")
+        return explicit.lower()
+
     try:
-        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
+        checkout = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        if re.fullmatch(r"[0-9a-fA-F]{40}", checkout):
+            return checkout.lower()
     except Exception:
-        return "unknown"
+        pass
+
+    fallback = os.environ.get("GITHUB_SHA", "").strip()
+    if re.fullmatch(r"[0-9a-fA-F]{40}", fallback):
+        return fallback.lower()
+    return "unknown"
 
 
 def portable_capsule_pin(capsule: Path | None) -> dict:

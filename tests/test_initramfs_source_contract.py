@@ -89,6 +89,18 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn('cat "$DEV_INIT_SOURCE" >/dev/null 2>&1', DEV_BOOTSTRAP)
         self.assertIn('exec switch_root "$DEV_ROOT" "$DEV_INIT"', DEV_BOOTSTRAP)
 
+    def test_initramfs_source_identity_prefers_explicit_ordax_commit_then_checkout(self):
+        self.assertIn('os.environ.get("ORDAX_SOURCE_COMMIT", "")', BUILDER)
+        self.assertIn(
+            'raise BuildError("ORDAX_SOURCE_COMMIT must be exactly 40 hexadecimal characters")',
+            BUILDER,
+        )
+        explicit_pos = BUILDER.index('os.environ.get("ORDAX_SOURCE_COMMIT", "")')
+        git_pos = BUILDER.index('["git", "rev-parse", "HEAD"]')
+        github_pos = BUILDER.index('os.environ.get("GITHUB_SHA", "")')
+        self.assertLess(explicit_pos, git_pos)
+        self.assertLess(git_pos, github_pos)
+
     def test_builder_uses_minimal_busybox_and_explicit_musl_target_compiler(self):
         self.assertIn('"CONFIG_BUSYBOX": "y"', BUILDER)
         self.assertIn('"losetup"', BUILDER)
