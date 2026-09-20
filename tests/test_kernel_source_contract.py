@@ -54,6 +54,12 @@ class KernelSourceContractTest(unittest.TestCase):
             "CONFIG_IWLWIFI=m",
             "CONFIG_EXT4_FS=y",
             "CONFIG_VFAT_FS=y",
+            "CONFIG_BLK_DEV_DM=y",
+            "CONFIG_DM_CRYPT=y",
+            "CONFIG_CRYPTO_AES=y",
+            "CONFIG_CRYPTO_XTS=y",
+            "CONFIG_BTRFS_FS=y",
+            "CONFIG_BTRFS_FS_POSIX_ACL=y",
         ):
             self.assertIn(required, FRAGMENT)
 
