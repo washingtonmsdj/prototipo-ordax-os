@@ -25,6 +25,7 @@ const (
 	envelopeSchema   = "prototype-ordax.release-envelope/1"
 	manifestSchema   = "prototype-ordax.release-manifest/1"
 	manifestSchemaV2 = "prototype-ordax.release-manifest/2"
+	manifestSchemaV3 = "prototype-ordax.release-manifest/3"
 	trustSchema      = "prototype-ordax.release-trust/1"
 	defaultRepo    = "washingtonmsdj/prototipo-ordax-os"
 	maxManifest    = 512 << 10
@@ -304,44 +305,55 @@ func strictManifest(data []byte, expectedRepository string) (Manifest, error) {
 	if !recipePattern.MatchString(manifest.CreatedFromCIRecipe) {
 		return Manifest{}, errors.New("invalid created_from_ci_recipe")
 	}
-	if len(manifest.Artifacts) != 1 {
-		switch manifest.Schema {
-		case manifestSchema:
-			return Manifest{}, errors.New("release-manifest/1 requires exactly one system.tar artifact")
-		case manifestSchemaV2:
-			return Manifest{}, errors.New("release-manifest/2 requires exactly one system.erofs artifact")
-		default:
-			return Manifest{}, errors.New("unsupported release manifest schema")
-		}
-	}
 
-	artifact := manifest.Artifacts[0]
 	switch manifest.Schema {
 	case manifestSchema:
+		if len(manifest.Artifacts) != 1 {
+			return Manifest{}, errors.New("release-manifest/1 requires exactly one system.tar artifact")
+		}
 		if manifest.ProductMode != "" || manifest.StorageProfile != "" || manifest.RuntimeFormat != "" {
 			return Manifest{}, errors.New("release-manifest/1 forbids portable-v2 identity fields")
 		}
-		if artifact.Name != "system.tar" || artifact.Role != "system" {
+		if manifest.Artifacts[0].Name != "system.tar" || manifest.Artifacts[0].Role != "system" {
 			return Manifest{}, errors.New("release-manifest/1 artifact must be system.tar with role=system")
 		}
 	case manifestSchemaV2:
+		if len(manifest.Artifacts) != 1 {
+			return Manifest{}, errors.New("release-manifest/2 requires exactly one system.erofs artifact")
+		}
 		if manifest.ProductMode != "usb" || manifest.StorageProfile != "portable-usb-v2" || manifest.RuntimeFormat != "erofs" {
 			return Manifest{}, errors.New("release-manifest/2 requires usb portable-usb-v2 erofs identity")
 		}
-		if artifact.Name != "system.erofs" || artifact.Role != "system-image" {
+		if manifest.Artifacts[0].Name != "system.erofs" || manifest.Artifacts[0].Role != "system-image" {
 			return Manifest{}, errors.New("release-manifest/2 artifact must be system.erofs with role=system-image")
+		}
+	case manifestSchemaV3:
+		if len(manifest.Artifacts) != 2 {
+			return Manifest{}, errors.New("release-manifest/3 requires exactly system.erofs and native-surface-runtime.erofs")
+		}
+		if manifest.ProductMode != "usb" || manifest.StorageProfile != "portable-usb-v2" || manifest.RuntimeFormat != "erofs" {
+			return Manifest{}, errors.New("release-manifest/3 requires usb portable-usb-v2 erofs identity")
+		}
+		if manifest.Artifacts[0].Name != "system.erofs" || manifest.Artifacts[0].Role != "system-image" {
+			return Manifest{}, errors.New("release-manifest/3 first artifact must be system.erofs with role=system-image")
+		}
+		if manifest.Artifacts[1].Name != "native-surface-runtime.erofs" || manifest.Artifacts[1].Role != "surface-runtime" {
+			return Manifest{}, errors.New("release-manifest/3 second artifact must be native-surface-runtime.erofs with role=surface-runtime")
 		}
 	default:
 		return Manifest{}, errors.New("unsupported release manifest schema")
 	}
-	if !shaPattern.MatchString(artifact.SHA256) {
-		return Manifest{}, fmt.Errorf("invalid artifact SHA-256 for %s", artifact.Name)
-	}
-	if artifact.Size <= 0 || artifact.Size > maxArtifact {
-		return Manifest{}, fmt.Errorf("%s size outside allowed range", artifact.Name)
-	}
-	if err := validateHTTPSURL(artifact.URL); err != nil {
-		return Manifest{}, fmt.Errorf("%s: %w", artifact.Name, err)
+
+	for _, artifact := range manifest.Artifacts {
+		if !shaPattern.MatchString(artifact.SHA256) {
+			return Manifest{}, fmt.Errorf("invalid artifact SHA-256 for %s", artifact.Name)
+		}
+		if artifact.Size <= 0 || artifact.Size > maxArtifact {
+			return Manifest{}, fmt.Errorf("%s size outside allowed range", artifact.Name)
+		}
+		if err := validateHTTPSURL(artifact.URL); err != nil {
+			return Manifest{}, fmt.Errorf("%s: %w", artifact.Name, err)
+		}
 	}
 	return manifest, nil
 }
