@@ -46,14 +46,5 @@
     "writable_mount_error_policy": "remount-ro",
     "helper_runtime_path": "/sbin/ordax-grow-ext4",
     "automatic_destructive_repair": false
-  },
-  "native_install_source_handoff": {
-    "enabled": true,
-    "source": "findfs-LABEL-ORDAX",
-    "runtime_path": "/run/ordax-install/source-block-device",
-    "contains": "exact-current-ORDAX-block-device-path",
-    "permissions_policy": "umask-077-initramfs-runtime-only",
-    "network_required": false,
-    "physical_write_authorized": false
   }
 }
