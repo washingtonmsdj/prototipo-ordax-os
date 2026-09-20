@@ -16,10 +16,12 @@ import (
 )
 
 const (
-	manifestSchema = "prototype-ordax.release-manifest/1"
-	defaultRepo    = "washingtonmsdj/prototipo-ordax-os"
-	defaultRecipe  = "release/native/1"
-	maxArtifact    = int64(16 << 30)
+	manifestSchema         = "prototype-ordax.release-manifest/1"
+	manifestSchemaV2       = "prototype-ordax.release-manifest/2"
+	defaultRepo            = "washingtonmsdj/prototipo-ordax-os"
+	defaultRecipe          = "release/native/1"
+	defaultPortableRecipe  = "release/portable-usb-v2/1"
+	maxArtifact            = int64(16 << 30)
 )
 
 var (
@@ -33,6 +35,9 @@ type Manifest struct {
 	SourceCommit        string     `json:"source_commit"`
 	ReleaseID           string     `json:"release_id"`
 	CreatedFromCIRecipe string     `json:"created_from_ci_recipe"`
+	ProductMode         string     `json:"product_mode,omitempty"`
+	StorageProfile      string     `json:"storage_profile,omitempty"`
+	RuntimeFormat       string     `json:"runtime_format,omitempty"`
 	Artifacts           []Artifact `json:"artifacts"`
 }
 
@@ -79,7 +84,7 @@ func validateHTTPSURL(raw string) error {
 	return nil
 }
 
-func hashArtifact(path string) (string, int64, error) {
+func hashNamedArtifact(path, expectedName, schemaLabel string) (string, int64, error) {
 	absolute, err := ensureRealParent(path)
 	if err != nil {
 		return "", 0, err
@@ -91,8 +96,8 @@ func hashArtifact(path string) (string, int64, error) {
 	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
 		return "", 0, errors.New("artifact must be a regular non-symlink file")
 	}
-	if filepath.Base(absolute) != "system.tar" {
-		return "", 0, errors.New("release-manifest/1 artifact must be named system.tar")
+	if filepath.Base(absolute) != expectedName {
+		return "", 0, fmt.Errorf("%s artifact must be named %s", schemaLabel, expectedName)
 	}
 	if info.Size() <= 0 || info.Size() > maxArtifact {
 		return "", 0, fmt.Errorf("artifact size outside allowed range: %d", info.Size())
@@ -111,6 +116,10 @@ func hashArtifact(path string) (string, int64, error) {
 		return "", 0, errors.New("artifact size changed while hashing")
 	}
 	return hex.EncodeToString(h.Sum(nil)), n, nil
+}
+
+func hashArtifact(path string) (string, int64, error) {
+	return hashNamedArtifact(path, "system.tar", "release-manifest/1")
 }
 
 func buildManifest(artifactPath, sourceCommit, artifactURL, repository, recipe string) (Manifest, error) {
@@ -139,6 +148,42 @@ func buildManifest(artifactPath, sourceCommit, artifactURL, repository, recipe s
 		Artifacts: []Artifact{{
 			Name:   "system.tar",
 			Role:   "system",
+			URL:    artifactURL,
+			SHA256: digest,
+			Size:   size,
+		}},
+	}, nil
+}
+
+func buildPortableManifest(artifactPath, sourceCommit, artifactURL, repository, recipe string) (Manifest, error) {
+	if !commitPattern.MatchString(sourceCommit) {
+		return Manifest{}, errors.New("source commit must be lowercase 40-hex")
+	}
+	if repository == "" {
+		return Manifest{}, errors.New("source repository is required")
+	}
+	if !recipePattern.MatchString(recipe) {
+		return Manifest{}, errors.New("invalid CI recipe identifier")
+	}
+	if err := validateHTTPSURL(artifactURL); err != nil {
+		return Manifest{}, err
+	}
+	digest, size, err := hashNamedArtifact(artifactPath, "system.erofs", "release-manifest/2")
+	if err != nil {
+		return Manifest{}, err
+	}
+	return Manifest{
+		Schema:              manifestSchemaV2,
+		SourceRepository:    repository,
+		SourceCommit:        sourceCommit,
+		ReleaseID:           sourceCommit,
+		CreatedFromCIRecipe: recipe,
+		ProductMode:         "usb",
+		StorageProfile:      "portable-usb-v2",
+		RuntimeFormat:       "erofs",
+		Artifacts: []Artifact{{
+			Name:   "system.erofs",
+			Role:   "system-image",
 			URL:    artifactURL,
 			SHA256: digest,
 			Size:   size,
@@ -188,26 +233,51 @@ func writeManifest(path string, manifest Manifest) error {
 
 func run(args []string) error {
 	flags := flag.NewFlagSet("ordax-release-manifest", flag.ContinueOnError)
-	artifact := flags.String("artifact", "", "verified system.tar path")
+	artifact := flags.String("artifact", "", "verified release artifact path")
 	commit := flags.String("source-commit", "", "exact lowercase 40-hex source commit")
-	artifactURL := flags.String("artifact-url", "", "canonical HTTPS URL for system.tar")
+	artifactURL := flags.String("artifact-url", "", "canonical HTTPS URL for the exact artifact")
 	out := flags.String("out", "", "new release-manifest.json path")
 	repository := flags.String("repository", defaultRepo, "source repository")
-	recipe := flags.String("recipe", defaultRecipe, "CI recipe identity")
+	recipe := flags.String("recipe", "", "CI recipe identity; defaults by schema")
+	schema := flags.String("manifest-schema", "1", "release manifest schema major: 1 or 2")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
 	if *artifact == "" || *commit == "" || *artifactURL == "" || *out == "" || flags.NArg() != 0 {
 		return errors.New("requires --artifact, --source-commit, --artifact-url and --out")
 	}
-	manifest, err := buildManifest(*artifact, *commit, *artifactURL, *repository, *recipe)
+
+	selectedRecipe := *recipe
+	var manifest Manifest
+	var err error
+	switch *schema {
+	case "1":
+		if selectedRecipe == "" {
+			selectedRecipe = defaultRecipe
+		}
+		manifest, err = buildManifest(*artifact, *commit, *artifactURL, *repository, selectedRecipe)
+	case "2":
+		if selectedRecipe == "" {
+			selectedRecipe = defaultPortableRecipe
+		}
+		manifest, err = buildPortableManifest(*artifact, *commit, *artifactURL, *repository, selectedRecipe)
+	default:
+		return errors.New("unsupported manifest schema major; expected 1 or 2")
+	}
 	if err != nil {
 		return err
 	}
 	if err := writeManifest(*out, manifest); err != nil {
 		return err
 	}
-	fmt.Printf("RELEASE_MANIFEST_BUILT=YES\nSOURCE_COMMIT=%s\nSYSTEM_TAR_SHA256=%s\nSYSTEM_TAR_SIZE=%d\n", manifest.SourceCommit, manifest.Artifacts[0].SHA256, manifest.Artifacts[0].Size)
+	fmt.Printf(
+		"RELEASE_MANIFEST_BUILT=YES\nMANIFEST_SCHEMA=%s\nSOURCE_COMMIT=%s\nARTIFACT_NAME=%s\nARTIFACT_SHA256=%s\nARTIFACT_SIZE=%d\n",
+		manifest.Schema,
+		manifest.SourceCommit,
+		manifest.Artifacts[0].Name,
+		manifest.Artifacts[0].SHA256,
+		manifest.Artifacts[0].Size,
+	)
 	return nil
 }
 

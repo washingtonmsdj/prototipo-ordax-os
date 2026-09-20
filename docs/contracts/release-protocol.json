@@ -83,5 +83,25 @@
     "support old and new schemas side by side during an explicit migration window when required",
     "prefer a verified full release fallback while delta delivery remains optional",
     "remove old protocol support only through a recorded migration decision with compatibility evidence"
-  ]
+  ],
+  "portable_v2": {
+    "manifest_schema": "prototype-ordax.release-manifest/2",
+    "envelope_schema": "prototype-ordax.release-envelope/1",
+    "trust_schema": "prototype-ordax.release-trust/1",
+    "release_addressing": "source-commit",
+    "product_mode": "usb",
+    "storage_profile": "portable-usb-v2",
+    "runtime_format": "erofs",
+    "artifact_count": 1,
+    "artifact_name": "system.erofs",
+    "artifact_role": "system-image",
+    "generator_support": true,
+    "signer_support": true,
+    "envelope_verifier_support": true,
+    "acquisition_agent_support": false,
+    "materialization_support": false,
+    "activation_support": false,
+    "boot_handoff_support": false,
+    "production_publication_allowed": false
+  }
 }

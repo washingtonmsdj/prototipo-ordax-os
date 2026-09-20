@@ -7,6 +7,8 @@ on:
       - 'system/**'
       - 'tools/release-bundle/**'
       - 'tools/portable-release-image/**'
+      - 'tools/release-manifest/**'
+      - 'tools/release-signing/**'
       - 'docs/contracts/portable-release-image.json'
       - 'docs/contracts/release-protocol.json'
       - 'docs/contracts/storage-architecture.json'
@@ -18,6 +20,8 @@ on:
       - 'system/**'
       - 'tools/release-bundle/**'
       - 'tools/portable-release-image/**'
+      - 'tools/release-manifest/**'
+      - 'tools/release-signing/**'
       - 'docs/contracts/portable-release-image.json'
       - 'docs/contracts/release-protocol.json'
       - 'docs/contracts/storage-architecture.json'
@@ -123,6 +127,62 @@ jobs:
           print('PORTABLE_BOOT_HANDOFF_CONNECTED=NO')
           print('PHYSICAL_WRITE_AUTHORIZED=NO')
           PY
+
+      - name: Prove portable manifest v2 signing boundary
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-release"
+          (
+            cd tools/release-manifest
+            go test -count=1 ./...
+            CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$work/ordax-release-manifest" .
+          )
+          (
+            cd tools/release-signing
+            go test -count=1 ./...
+            CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$work/ordax-release-signing" .
+          )
+
+          commit="${{ github.event.pull_request.head.sha || github.sha }}"
+          "$work/ordax-release-manifest" \
+            --manifest-schema 2 \
+            --artifact "$work/a/system.erofs" \
+            --source-commit "$commit" \
+            --artifact-url "https://example.invalid/releases/$commit/system.erofs" \
+            --out "$work/release-manifest-v2.json"
+
+          "$work/ordax-release-signing" generate-key \
+            --private-key "$work/ci-private.pem" \
+            --trust "$work/ci-trust.json" \
+            --key-id ci-portable-v2
+          "$work/ordax-release-signing" sign \
+            --manifest "$work/release-manifest-v2.json" \
+            --private-key "$work/ci-private.pem" \
+            --trust "$work/ci-trust.json" \
+            --key-id ci-portable-v2 \
+            --out "$work/release-envelope-v2.json"
+          "$work/ordax-release-signing" verify-envelope \
+            --envelope "$work/release-envelope-v2.json" \
+            --trust "$work/ci-trust.json"
+
+          python - "$work/release-manifest-v2.json" <<'PY'
+          import json, pathlib, sys
+          manifest = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert manifest['$schema'] == 'prototype-ordax.release-manifest/2'
+          assert manifest['product_mode'] == 'usb'
+          assert manifest['storage_profile'] == 'portable-usb-v2'
+          assert manifest['runtime_format'] == 'erofs'
+          assert len(manifest['artifacts']) == 1
+          assert manifest['artifacts'][0]['name'] == 'system.erofs'
+          assert manifest['artifacts'][0]['role'] == 'system-image'
+          print('PORTABLE_RELEASE_MANIFEST_V2=PASS')
+          print('PORTABLE_RELEASE_SIGNING_V2=PASS')
+          print('PORTABLE_RELEASE_PUBLICATION=NO')
+          print('PORTABLE_RELEASE_ACTIVATION=NO')
+          PY
+
+          rm -f "$work/ci-private.pem"
+          test ! -e "$work/ci-private.pem"
 
       - name: Publish candidate metadata only
         run: |

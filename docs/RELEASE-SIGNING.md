@@ -66,7 +66,9 @@ A mismatch fails before output creation. This prevents an operator or CI job fro
 
 ## Signing
 
-Before signing, the tool validates the same v1 release-manifest shape consumed by the device agent:
+Before signing, the tool validates an explicitly supported manifest schema. V1 remains unchanged, and v2 support is narrowly scoped to the portable USB EROFS candidate.
+
+For v1:
 
 - exact schema;
 - expected source repository;
@@ -79,7 +81,11 @@ Before signing, the tool validates the same v1 release-manifest shape consumed b
 - HTTPS artifact URL;
 - exact SHA-256 syntax and positive bounded size.
 
-The signature is standard Ed25519 over the **exact manifest file bytes**. Whitespace is preserved in the signed payload. The output envelope uses `prototype-ordax.release-envelope/1`.
+For v2, the signer requires exactly one `system.erofs` artifact with role `system-image` and exact signed identity `product_mode=usb`, `storage_profile=portable-usb-v2`, `runtime_format=erofs`.
+
+The signature is standard Ed25519 over the **exact manifest file bytes**. Whitespace is preserved in the signed payload. The output envelope remains `prototype-ordax.release-envelope/1`; envelope and manifest versions evolve independently.
+
+Signer support does not authorize publication or activation. Until the acquisition agent and boot handoff support v2, a signed v2 envelope remains a CI/protocol candidate only.
 
 ## CI policy
 

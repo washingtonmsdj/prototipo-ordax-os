@@ -22,9 +22,10 @@ import (
 )
 
 const (
-	envelopeSchema = "prototype-ordax.release-envelope/1"
-	manifestSchema = "prototype-ordax.release-manifest/1"
-	trustSchema    = "prototype-ordax.release-trust/1"
+	envelopeSchema   = "prototype-ordax.release-envelope/1"
+	manifestSchema   = "prototype-ordax.release-manifest/1"
+	manifestSchemaV2 = "prototype-ordax.release-manifest/2"
+	trustSchema      = "prototype-ordax.release-trust/1"
 	defaultRepo    = "washingtonmsdj/prototipo-ordax-os"
 	maxManifest    = 512 << 10
 	maxEnvelope    = 2 << 20
@@ -59,6 +60,9 @@ type Manifest struct {
 	SourceCommit        string     `json:"source_commit"`
 	ReleaseID           string     `json:"release_id"`
 	CreatedFromCIRecipe string     `json:"created_from_ci_recipe"`
+	ProductMode         string     `json:"product_mode,omitempty"`
+	StorageProfile      string     `json:"storage_profile,omitempty"`
+	RuntimeFormat       string     `json:"runtime_format,omitempty"`
 	Artifacts           []Artifact `json:"artifacts"`
 }
 
@@ -288,9 +292,6 @@ func strictManifest(data []byte, expectedRepository string) (Manifest, error) {
 	if err := decodeStrict(data, maxManifest, &manifest); err != nil {
 		return Manifest{}, fmt.Errorf("decode manifest: %w", err)
 	}
-	if manifest.Schema != manifestSchema {
-		return Manifest{}, errors.New("unsupported release manifest schema")
-	}
 	if manifest.SourceRepository != expectedRepository {
 		return Manifest{}, fmt.Errorf("unexpected source repository: %q", manifest.SourceRepository)
 	}
@@ -304,20 +305,36 @@ func strictManifest(data []byte, expectedRepository string) (Manifest, error) {
 		return Manifest{}, errors.New("invalid created_from_ci_recipe")
 	}
 	if len(manifest.Artifacts) != 1 {
-		return Manifest{}, errors.New("release-manifest/1 requires exactly one system.tar artifact")
+		return Manifest{}, fmt.Errorf("%s requires exactly one release artifact", manifest.Schema)
 	}
+
 	artifact := manifest.Artifacts[0]
-	if artifact.Name != "system.tar" || artifact.Role != "system" {
-		return Manifest{}, errors.New("release-manifest/1 artifact must be system.tar with role=system")
+	switch manifest.Schema {
+	case manifestSchema:
+		if manifest.ProductMode != "" || manifest.StorageProfile != "" || manifest.RuntimeFormat != "" {
+			return Manifest{}, errors.New("release-manifest/1 forbids portable-v2 identity fields")
+		}
+		if artifact.Name != "system.tar" || artifact.Role != "system" {
+			return Manifest{}, errors.New("release-manifest/1 artifact must be system.tar with role=system")
+		}
+	case manifestSchemaV2:
+		if manifest.ProductMode != "usb" || manifest.StorageProfile != "portable-usb-v2" || manifest.RuntimeFormat != "erofs" {
+			return Manifest{}, errors.New("release-manifest/2 requires usb portable-usb-v2 erofs identity")
+		}
+		if artifact.Name != "system.erofs" || artifact.Role != "system-image" {
+			return Manifest{}, errors.New("release-manifest/2 artifact must be system.erofs with role=system-image")
+		}
+	default:
+		return Manifest{}, errors.New("unsupported release manifest schema")
 	}
 	if !shaPattern.MatchString(artifact.SHA256) {
-		return Manifest{}, errors.New("invalid artifact SHA-256 for system.tar")
+		return Manifest{}, fmt.Errorf("invalid artifact SHA-256 for %s", artifact.Name)
 	}
 	if artifact.Size <= 0 || artifact.Size > maxArtifact {
-		return Manifest{}, errors.New("system.tar size outside allowed range")
+		return Manifest{}, fmt.Errorf("%s size outside allowed range", artifact.Name)
 	}
 	if err := validateHTTPSURL(artifact.URL); err != nil {
-		return Manifest{}, fmt.Errorf("system.tar: %w", err)
+		return Manifest{}, fmt.Errorf("%s: %w", artifact.Name, err)
 	}
 	return manifest, nil
 }

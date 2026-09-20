@@ -34,11 +34,12 @@
   },
   "integration": {
     "release_protocol_v1_changed": false,
-    "manifest_v2_implemented": false,
+    "manifest_v2_implemented": true,
     "acquisition_agent_v2_implemented": false,
     "portable_boot_handoff_connected": false,
     "public_signed_publication_enabled": false,
-    "physical_write_authorized": false
+    "physical_write_authorized": false,
+    "signer_v2_implemented": true
   },
   "fail_closed": [
     "reject-non-regular-or-symlink-system-tar",

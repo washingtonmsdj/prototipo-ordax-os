@@ -126,3 +126,60 @@ func TestOutputOverwriteIsRejected(t *testing.T) {
 		t.Fatal("existing output changed")
 	}
 }
+
+func TestBuildPortableManifestPinsEROFSIdentityWithoutChangingV1(t *testing.T) {
+	root := t.TempDir()
+	artifact := filepath.Join(root, "system.erofs")
+	payload := []byte("deterministic-erofs-candidate\n")
+	if err := os.WriteFile(artifact, payload, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := buildPortableManifest(
+		artifact,
+		testCommit,
+		"https://example.invalid/system.erofs",
+		defaultRepo,
+		defaultPortableRecipe,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256(payload)
+	if manifest.Schema != manifestSchemaV2 {
+		t.Fatalf("portable schema = %q", manifest.Schema)
+	}
+	if manifest.ProductMode != "usb" || manifest.StorageProfile != "portable-usb-v2" || manifest.RuntimeFormat != "erofs" {
+		t.Fatalf("portable identity mismatch: %#v", manifest)
+	}
+	if len(manifest.Artifacts) != 1 {
+		t.Fatalf("portable artifact count = %d", len(manifest.Artifacts))
+	}
+	got := manifest.Artifacts[0]
+	if got.Name != "system.erofs" || got.Role != "system-image" || got.SHA256 != hex.EncodeToString(digest[:]) || got.Size != int64(len(payload)) {
+		t.Fatalf("portable artifact mismatch: %#v", got)
+	}
+
+	v1, err := buildManifest(makeArtifact(t), testCommit, "https://example.invalid/system.tar", defaultRepo, defaultRecipe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v1.Schema != manifestSchema || v1.ProductMode != "" || v1.StorageProfile != "" || v1.RuntimeFormat != "" {
+		t.Fatalf("v1 semantics drifted: %#v", v1)
+	}
+}
+
+func TestPortableManifestRejectsWrongArtifactName(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "other.erofs")
+	if err := os.WriteFile(path, []byte("payload"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := buildPortableManifest(
+		path,
+		testCommit,
+		"https://example.invalid/system.erofs",
+		defaultRepo,
+		defaultPortableRecipe,
+	); err == nil {
+		t.Fatal("portable manifest accepted non-canonical artifact name")
+	}
+}

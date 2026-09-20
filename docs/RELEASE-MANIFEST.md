@@ -50,6 +50,24 @@ The machine-readable authority for these compatibility rules is `docs/contracts/
 
 This policy intentionally avoids a large internal framework before a second protocol version exists. The current generator, signer and acquisition agent remain independent fail-closed owners, while CI prevents their shared v1 assumptions from drifting. When a real v2 requirement appears, shared protocol code can be extracted incrementally behind the versioned contract instead of through a risky big-bang rewrite.
 
+## Portable USB v2 manifest
+
+Schema `prototype-ordax.release-manifest/2` is now generated explicitly with `--manifest-schema 2`. It is not a reinterpretation of v1.
+
+The v2 shape is deliberately narrow:
+
+```text
+product_mode=usb
+storage_profile=portable-usb-v2
+runtime_format=erofs
+artifact.name=system.erofs
+artifact.role=system-image
+```
+
+The generator still defaults to schema v1. V1 continues to require exactly `system.tar` with role `system` and contains none of the portable-v2 identity fields.
+
+The v2 generator and signer are implemented, but public publication, device materialization and activation remain disabled until the acquisition agent and portable boot path support the same schema.
+
 ## Canonical pipeline
 
 ```text

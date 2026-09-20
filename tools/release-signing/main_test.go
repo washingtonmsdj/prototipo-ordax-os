@@ -33,6 +33,28 @@ func validManifestBytes() []byte {
 `)
 }
 
+func validManifestV2Bytes() []byte {
+	return []byte(`{
+  "$schema": "prototype-ordax.release-manifest/2",
+  "source_repository": "washingtonmsdj/prototipo-ordax-os",
+  "source_commit": "0123456789abcdef0123456789abcdef01234567",
+  "release_id": "0123456789abcdef0123456789abcdef01234567",
+  "created_from_ci_recipe": "release/portable-usb-v2/1",
+  "product_mode": "usb",
+  "storage_profile": "portable-usb-v2",
+  "runtime_format": "erofs",
+  "artifacts": [
+    {
+      "name": "system.erofs",
+      "role": "system-image",
+      "url": "https://example.invalid/releases/system.erofs",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "size": 4096
+    }
+  ]
+}`)
+}
+
 func decodePrivateForTest(t *testing.T, path string) ed25519.PrivateKey {
 	t.Helper()
 	data, err := os.ReadFile(path)
@@ -443,5 +465,60 @@ func TestDerivedTrustMatchesPrivatePublicKey(t *testing.T) {
 	}
 	if string(decoded) != string(privateKey.Public().(ed25519.PublicKey)) {
 		t.Fatal("trust public key does not match private key")
+	}
+}
+
+func TestStrictManifestAcceptsPortableV2AndKeepsV1Exact(t *testing.T) {
+	v2, err := strictManifest(validManifestV2Bytes(), defaultRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v2.Schema != manifestSchemaV2 || v2.ProductMode != "usb" || v2.StorageProfile != "portable-usb-v2" || v2.RuntimeFormat != "erofs" {
+		t.Fatalf("unexpected v2 manifest: %#v", v2)
+	}
+	if _, err := strictManifest(validManifestBytes(), defaultRepo); err != nil {
+		t.Fatalf("v1 rejected after v2 support: %v", err)
+	}
+
+	var invalid Manifest
+	if err := json.Unmarshal(validManifestV2Bytes(), &invalid); err != nil {
+		t.Fatal(err)
+	}
+	invalid.StorageProfile = "native-disk"
+	data, _ := json.Marshal(invalid)
+	if _, err := strictManifest(data, defaultRepo); err == nil || !strings.Contains(err.Error(), "portable-usb-v2") {
+		t.Fatalf("v2 wrong storage profile accepted: %v", err)
+	}
+}
+
+func TestSignAndVerifyPortableV2UsesExistingTrustEnvelopeBoundary(t *testing.T) {
+	root := t.TempDir()
+	privatePath := filepath.Join(root, "private.pem")
+	trustPath := filepath.Join(root, "trust.json")
+	if _, err := generateKeyFiles(privatePath, trustPath, "prototype-1"); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := writeManifestForTest(t, root, validManifestV2Bytes())
+	envelopePath := filepath.Join(root, "portable-envelope.json")
+	commit, err := signManifest(
+		manifestPath,
+		privatePath,
+		trustPath,
+		envelopePath,
+		"prototype-1",
+		defaultRepo,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if commit != "0123456789abcdef0123456789abcdef01234567" {
+		t.Fatalf("unexpected signed commit: %s", commit)
+	}
+	verified, err := verifyEnvelope(envelopePath, trustPath, defaultRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verified.Schema != manifestSchemaV2 || verified.Artifacts[0].Name != "system.erofs" {
+		t.Fatalf("portable signed envelope lost v2 identity: %#v", verified)
 	}
 }
