@@ -304,7 +304,6 @@
     "purpose": "resolve-and-review-the-full-transitive-apk-lock-before-any-runtime-artifact-is-promotable"
   },
   "promotion_blockers": [
-    "commit-full-transitive-apk-lock",
     "build-byte-reproducible-erofs-runtime",
     "bind-runtime-hash-to-portable-v2-trust-chain",
     "preseed-runtime-through-creator",
@@ -321,5 +320,13 @@
     "resolved_package_count": 253,
     "physical_artifact_created": false,
     "physical_write_authorized": false
+  },
+  "closed_gates": [
+    "full-transitive-apk-lock-pinned"
+  ],
+  "reproducibility_proof": {
+    "workflow": ".github/workflows/surface-runtime-lock-discovery.yml",
+    "repeat_digest_required": true,
+    "status": "pending-current-head"
   }
 }
