@@ -54,6 +54,16 @@ class NativeDisposableProofContractTests(unittest.TestCase):
         names = [entry["name"] for entry in native["pool_model"]["recommended_subvolumes"]]
         self.assertEqual(PROOF["expected"]["subvolumes"], names)
 
+    def test_product_mode_runtime_path_is_translated_to_pool_root(self):
+        self.assertEqual(
+            PROOF["expected"]["target_product_mode_path"],
+            "/ordax/bootstrap/config/product-mode",
+        )
+        self.assertIn('runtime_prefix = "/ordax/"', SCRIPT)
+        self.assertIn('logical = target_mode_path[len(runtime_prefix):]', SCRIPT)
+        self.assertNotIn('logical = target_mode_path.lstrip("/")', SCRIPT)
+        self.assertIn('marker = mountpoint / logical', SCRIPT)
+
     def test_proof_tool_refuses_physical_device_semantics(self):
         self.assertIn('str(path).startswith("/dev/")', SCRIPT)
         self.assertIn("stat.S_ISREG", SCRIPT)
