@@ -18,10 +18,14 @@ on:
       - 'tools/release-manifest/**'
       - 'tools/release-signing/**'
       - 'docs/contracts/portable-v2-qemu-boot-proof.json'
+      - 'docs/contracts/portable-v2-uefi-boot-proof.json'
+      - 'boot/portable-v2/**'
+      - 'boot/esp/**'
       - 'docs/contracts/portable-bootstrap-v2.json'
       - 'docs/contracts/portable-boot-handoff.json'
       - 'docs/MINIMAL-USB-BOOTSTRAP.md'
       - 'tests/test_portable_v2_qemu_boot_proof_contract.py'
+      - 'tests/test_portable_v2_uefi_boot_proof_contract.py'
       - '.github/workflows/portable-v2-qemu-boot-proof.yml'
   pull_request:
     paths:
@@ -39,10 +43,14 @@ on:
       - 'tools/release-manifest/**'
       - 'tools/release-signing/**'
       - 'docs/contracts/portable-v2-qemu-boot-proof.json'
+      - 'docs/contracts/portable-v2-uefi-boot-proof.json'
+      - 'boot/portable-v2/**'
+      - 'boot/esp/**'
       - 'docs/contracts/portable-bootstrap-v2.json'
       - 'docs/contracts/portable-boot-handoff.json'
       - 'docs/MINIMAL-USB-BOOTSTRAP.md'
       - 'tests/test_portable_v2_qemu_boot_proof_contract.py'
+      - 'tests/test_portable_v2_uefi_boot_proof_contract.py'
       - '.github/workflows/portable-v2-qemu-boot-proof.yml'
   workflow_dispatch:
 
@@ -56,7 +64,7 @@ permissions:
 jobs:
   qemu-portable-v2:
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 210
     steps:
       - name: Checkout exact source commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -85,10 +93,14 @@ jobs:
             gcc-13 make bc perl bison flex openssl libssl-dev libelf-dev \
             dwarves kmod xz-utils pkg-config musl-tools binutils bzip2 \
             e2fsprogs util-linux proot erofs-utils gdisk dosfstools \
-            exfatprogs exfat-fuse qemu-system-x86
+            exfatprogs exfat-fuse qemu-system-x86 ovmf \
+            meson ninja-build gperf libcap-dev libmount-dev libblkid-dev \
+            liblz4-dev libzstd-dev liblzma-dev libpcre2-dev
           command -v qemu-system-x86_64
           command -v mkfs.exfat
           command -v mount.exfat-fuse
+          test -e /usr/share/OVMF/OVMF_CODE.fd || test -e /usr/share/OVMF/OVMF_CODE_4M.fd
+          python -m pip install --disable-pip-version-check --no-cache-dir jinja2 pyelftools
 
       - name: Validate portable-v2 QEMU contract
         run: |
@@ -290,12 +302,71 @@ jobs:
           print('PORTABLE_V2_PUBLIC_PROMOTION=NO')
           PY
 
+      - name: Build pinned systemd-boot for portable UEFI proof
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-qemu"
+          python boot/esp/build.py check
+          python boot/esp/build.py build \
+            --work-dir "$work/esp-work" \
+            --out-dir "$work/esp"
+          python boot/esp/build.py verify --out-dir "$work/esp"
+          test -s "$work/esp/systemd-bootx64.efi"
+
+      - name: Validate portable UEFI proof contract
+        run: |
+          set -euo pipefail
+          python -m unittest tests.test_portable_v2_uefi_boot_proof_contract -v
+
+      - name: Boot same portable-v2 disk through OVMF and systemd-boot
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-qemu"
+          rm -rf "$work/uefi-proof"
+          mkdir -p "$work/uefi-proof"
+          sudo -E python3 bootstrap/portable-v2/uefi_boot.py \
+            --kernel "$work/kernel/vmlinuz-6.6.52" \
+            --initramfs "$work/initramfs/initramfs.cpio.gz" \
+            --initramfs-provenance "$work/initramfs/initramfs-provenance.json" \
+            --capsule "$work/capsule/bootstrap.erofs" \
+            --stable-base "$work/stable-base/stable-base.erofs" \
+            --state-image "$work/persistent-state.img" \
+            --portable-root "$work/portable/.ordax" \
+            --trust "$work/release-trust.json" \
+            --source-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --bootloader "$work/esp/systemd-bootx64.efi" \
+            --loader-conf boot/portable-v2/loader/loader.conf \
+            --normal-entry boot/portable-v2/loader/entries/ordax-portable.conf \
+            --recovery-entry boot/portable-v2/loader/entries/ordax-portable-recovery.conf \
+            --out "$work/uefi-proof/proof.json"
+          sudo chown -R "$(id -u):$(id -g)" "$work/uefi-proof"
+
+          python - "$work/uefi-proof/proof.json" <<'PY'
+          import json, pathlib, sys
+          proof = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert proof['status'] == 'pass'
+          assert proof['qemu_uefi_boot_proven'] is True
+          assert proof['secure_boot_proven'] is False
+          assert proof['physical_usb_boot_proven'] is False
+          assert proof['public_physical_promotion_allowed'] is False
+          assert proof['physical_target_device_touched'] is False
+          assert proof['physical_write_authorized'] is False
+          assert proof['guest_disk']['retained'] is False
+          assert proof['ovmf_vars']['retained'] is False
+          assert all(proof['checks'].values())
+          print('PORTABLE_V2_QEMU_UEFI_BOOT=PASS')
+          print('PORTABLE_V2_SECURE_BOOT_PROVEN=NO')
+          print('PORTABLE_V2_PHYSICAL_BOOT_PROVEN=NO')
+          print('PORTABLE_V2_PUBLIC_PROMOTION=NO')
+          PY
+
       - name: Upload proof metadata only
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: portable-v2-qemu-boot-proof-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             ${{ runner.temp }}/portable-v2-qemu/qemu-proof/proof.json
+            ${{ runner.temp }}/portable-v2-qemu/uefi-proof/proof.json
             ${{ runner.temp }}/portable-v2-qemu/metadata/
           if-no-files-found: error
           retention-days: 14
