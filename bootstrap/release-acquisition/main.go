@@ -657,16 +657,16 @@ func verifyExistingRelease(path string, m Manifest, payload, envelope []byte) er
 	return nil
 }
 
-func verifyPortableEROFS(path string) error {
+func verifyEROFSArtifact(path, label string) error {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return err
 	}
 	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-		return errors.New("portable system image must be a regular non-symlink file")
+		return fmt.Errorf("%s must be a regular non-symlink file", label)
 	}
 	if info.Size() < 4096 || info.Size() > maxArtifact {
-		return errors.New("portable system image size is outside allowed range")
+		return fmt.Errorf("%s size is outside allowed range", label)
 	}
 	file, err := os.Open(path)
 	if err != nil {
@@ -675,12 +675,20 @@ func verifyPortableEROFS(path string) error {
 	defer file.Close()
 	magic := make([]byte, 4)
 	if _, err := file.ReadAt(magic, 1024); err != nil {
-		return fmt.Errorf("read EROFS superblock: %w", err)
+		return fmt.Errorf("read %s EROFS superblock: %w", label, err)
 	}
 	if !bytes.Equal(magic, []byte{0xe2, 0xe1, 0xf5, 0xe0}) {
-		return errors.New("portable system image does not contain the EROFS superblock magic")
+		return fmt.Errorf("%s does not contain the EROFS superblock magic", label)
 	}
 	return nil
+}
+
+func verifyPortableEROFS(path string) error {
+	return verifyEROFSArtifact(path, "portable system image")
+}
+
+func verifySurfaceRuntimeEROFS(path string) error {
+	return verifyEROFSArtifact(path, "Surface runtime image")
 }
 
 func verifyExistingPortableRelease(path string, m Manifest, payload, envelope []byte) error {
@@ -869,6 +877,312 @@ func verifyPortableExact(root string, trust TrustAnchor, key ed25519.PublicKey, 
 		SourceCommit: manifest.SourceCommit,
 		ReleasePath: releasePath,
 		ArtifactPath: filepath.Join(releasePath, "system.erofs"),
+		ActivationAllowed: false,
+	}, nil
+}
+
+
+func verifyRuntimeStoreFile(root string, artifact Artifact) (string, error) {
+	runtimeDir := filepath.Join(root, "runtimes", "sha256", artifact.SHA256)
+	info, err := os.Lstat(runtimeDir)
+	if err != nil {
+		return "", err
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return "", errors.New("Surface runtime store entry is not a safe directory")
+	}
+	entries, err := os.ReadDir(runtimeDir)
+	if err != nil {
+		return "", err
+	}
+	if len(entries) != 1 || entries[0].Name() != "native-surface-runtime.erofs" {
+		return "", errors.New("Surface runtime store entry contains unexpected files")
+	}
+	runtimePath := filepath.Join(runtimeDir, "native-surface-runtime.erofs")
+	actualHash, actualSize, err := hashFile(runtimePath)
+	if err != nil || actualSize != artifact.Size {
+		return "", errors.New("Surface runtime stored size is invalid")
+	}
+	if actualHash != artifact.SHA256 {
+		return "", errors.New("Surface runtime stored digest mismatch")
+	}
+	if err := verifySurfaceRuntimeEROFS(runtimePath); err != nil {
+		return "", err
+	}
+	return runtimePath, nil
+}
+
+func materializeRuntimeBlob(client *http.Client, root string, artifact Artifact) (string, bool, error) {
+	if artifact.Name != "native-surface-runtime.erofs" || artifact.Role != "surface-runtime" {
+		return "", false, errors.New("invalid Surface runtime artifact identity")
+	}
+	digestRoot := filepath.Join(root, "runtimes", "sha256")
+	if err := ensureDir(digestRoot, 0o755); err != nil {
+		return "", false, err
+	}
+	targetDir := filepath.Join(digestRoot, artifact.SHA256)
+	if info, err := os.Lstat(targetDir); err == nil {
+		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return "", false, errors.New("Surface runtime digest target exists but is not a safe directory")
+		}
+		path, err := verifyRuntimeStoreFile(root, artifact)
+		return path, true, err
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", false, err
+	}
+
+	stage, err := os.MkdirTemp(digestRoot, ".runtime-staging-"+artifact.SHA256[:12]+"-")
+	if err != nil {
+		return "", false, err
+	}
+	keepStage := false
+	defer func() {
+		if !keepStage {
+			_ = os.RemoveAll(stage)
+		}
+	}()
+
+	stagePath := filepath.Join(stage, "native-surface-runtime.erofs")
+	if err := downloadArtifact(client, artifact, stagePath); err != nil {
+		return "", false, err
+	}
+	if err := verifySurfaceRuntimeEROFS(stagePath); err != nil {
+		return "", false, fmt.Errorf("verify Surface runtime image: %w", err)
+	}
+	if err := syncDir(stage); err != nil {
+		return "", false, err
+	}
+	if err := os.Rename(stage, targetDir); err != nil {
+		return "", false, err
+	}
+	keepStage = true
+	if err := syncDir(digestRoot); err != nil {
+		return "", false, err
+	}
+	path, err := verifyRuntimeStoreFile(root, artifact)
+	if err != nil {
+		return "", false, err
+	}
+	return path, false, nil
+}
+
+func verifyExistingPortableV3Release(path, root string, m Manifest, payload, envelope []byte) error {
+	if m.Schema != manifestSchemaV3 {
+		return errors.New("portable v3 materialized release requires release-manifest/3")
+	}
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	allowed := map[string]bool{
+		"system.erofs": true,
+		"surface-runtime.sha256": true,
+		"release-envelope.json": true,
+		"release-manifest.json": true,
+	}
+	if len(entries) != len(allowed) {
+		return errors.New("portable v3 release contains unexpected top-level entry count")
+	}
+	for _, entry := range entries {
+		if !allowed[entry.Name()] {
+			return fmt.Errorf("portable v3 release contains unexpected top-level entry: %s", entry.Name())
+		}
+	}
+
+	manifestPath := filepath.Join(path, "release-manifest.json")
+	data, err := readBoundedRegularFile(manifestPath, maxPayload, "stored portable v3 release manifest")
+	if err != nil || !bytes.Equal(data, payload) {
+		return errors.New("portable v3 release manifest differs from signed payload")
+	}
+	envelopePath := filepath.Join(path, "release-envelope.json")
+	storedEnvelope, err := readBoundedRegularFile(envelopePath, maxEnvelope, "stored portable v3 release envelope")
+	if err != nil || !bytes.Equal(storedEnvelope, envelope) {
+		return errors.New("portable v3 release envelope differs from verified signed envelope")
+	}
+
+	systemArtifact := m.Artifacts[0]
+	systemPath := filepath.Join(path, "system.erofs")
+	actualHash, actualSize, err := hashFile(systemPath)
+	if err != nil || actualSize != systemArtifact.Size {
+		return errors.New("portable v3 system image size is invalid")
+	}
+	if actualHash != systemArtifact.SHA256 {
+		return errors.New("portable v3 system image digest mismatch")
+	}
+	if err := verifyPortableEROFS(systemPath); err != nil {
+		return err
+	}
+
+	runtimeArtifact := m.Artifacts[1]
+	refPath := filepath.Join(path, "surface-runtime.sha256")
+	refBytes, err := readBoundedRegularFile(refPath, 128, "stored Surface runtime reference")
+	if err != nil {
+		return err
+	}
+	if string(refBytes) != runtimeArtifact.SHA256+"\n" {
+		return errors.New("portable v3 Surface runtime reference differs from signed manifest")
+	}
+	if _, err := verifyRuntimeStoreFile(root, runtimeArtifact); err != nil {
+		return fmt.Errorf("verify portable v3 Surface runtime store: %w", err)
+	}
+	return nil
+}
+
+func materializePortableV3(client *http.Client, envelopeURL, root string, trust TrustAnchor, key ed25519.PublicKey, expectedRepo, expectedCommit string) (PortableMaterializeReceipt, error) {
+	envelope, err := fetchBytes(client, envelopeURL, maxEnvelope)
+	if err != nil {
+		return PortableMaterializeReceipt{}, fmt.Errorf("fetch envelope: %w", err)
+	}
+	manifest, payload, err := verifyEnvelope(envelope, trust, key, expectedRepo)
+	if err != nil {
+		return PortableMaterializeReceipt{}, err
+	}
+	if manifest.Schema != manifestSchemaV3 {
+		return PortableMaterializeReceipt{}, errors.New("materialize-portable-v3 requires release-manifest/3")
+	}
+	if !commitPattern.MatchString(expectedCommit) {
+		return PortableMaterializeReceipt{}, errors.New("expected_commit must be lowercase 40-hex")
+	}
+	if manifest.SourceCommit != expectedCommit {
+		return PortableMaterializeReceipt{}, fmt.Errorf(
+			"signed portable v3 release source_commit does not match expected commit: got=%s expected=%s",
+			manifest.SourceCommit,
+			expectedCommit,
+		)
+	}
+	if err := ensureDir(root, 0o755); err != nil {
+		return PortableMaterializeReceipt{}, err
+	}
+	releases := filepath.Join(root, "releases")
+	if err := ensureDir(releases, 0o755); err != nil {
+		return PortableMaterializeReceipt{}, err
+	}
+
+	runtimePath, runtimeReused, err := materializeRuntimeBlob(client, root, manifest.Artifacts[1])
+	if err != nil {
+		return PortableMaterializeReceipt{}, err
+	}
+
+	target := filepath.Join(releases, manifest.SourceCommit)
+	systemPath := filepath.Join(target, "system.erofs")
+	if info, err := os.Lstat(target); err == nil {
+		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return PortableMaterializeReceipt{}, errors.New("portable v3 release target exists but is not a safe directory")
+		}
+		if err := verifyExistingPortableV3Release(target, root, manifest, payload, envelope); err != nil {
+			return PortableMaterializeReceipt{}, err
+		}
+		return PortableMaterializeReceipt{
+			Status: "materialized-portable-v3",
+			SourceCommit: manifest.SourceCommit,
+			ReleasePath: target,
+			ArtifactPath: systemPath,
+			RuntimePath: runtimePath,
+			RuntimeReused: true,
+			Idempotent: true,
+			ActivationAllowed: false,
+		}, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return PortableMaterializeReceipt{}, err
+	}
+
+	stage, err := os.MkdirTemp(releases, ".portable-v3-staging-"+manifest.SourceCommit+"-")
+	if err != nil {
+		return PortableMaterializeReceipt{}, err
+	}
+	keepStage := false
+	defer func() {
+		if !keepStage {
+			_ = os.RemoveAll(stage)
+		}
+	}()
+
+	stageSystem := filepath.Join(stage, "system.erofs")
+	if err := downloadArtifact(client, manifest.Artifacts[0], stageSystem); err != nil {
+		return PortableMaterializeReceipt{}, err
+	}
+	if err := verifyPortableEROFS(stageSystem); err != nil {
+		return PortableMaterializeReceipt{}, fmt.Errorf("verify portable v3 system image: %w", err)
+	}
+	if err := writeSynced(filepath.Join(stage, "surface-runtime.sha256"), []byte(manifest.Artifacts[1].SHA256+"\n"), 0o644); err != nil {
+		return PortableMaterializeReceipt{}, err
+	}
+	if err := writeSynced(filepath.Join(stage, "release-manifest.json"), payload, 0o644); err != nil {
+		return PortableMaterializeReceipt{}, err
+	}
+	if err := writeSynced(filepath.Join(stage, "release-envelope.json"), envelope, 0o644); err != nil {
+		return PortableMaterializeReceipt{}, err
+	}
+	if err := verifyExistingPortableV3Release(stage, root, manifest, payload, envelope); err != nil {
+		return PortableMaterializeReceipt{}, fmt.Errorf("verify staged portable v3 release: %w", err)
+	}
+	if err := syncDir(stage); err != nil {
+		return PortableMaterializeReceipt{}, err
+	}
+	if err := os.Rename(stage, target); err != nil {
+		return PortableMaterializeReceipt{}, err
+	}
+	keepStage = true
+	if err := syncDir(releases); err != nil {
+		return PortableMaterializeReceipt{}, err
+	}
+	return PortableMaterializeReceipt{
+		Status: "materialized-portable-v3",
+		SourceCommit: manifest.SourceCommit,
+		ReleasePath: target,
+		ArtifactPath: systemPath,
+		RuntimePath: runtimePath,
+		RuntimeReused: runtimeReused,
+		Idempotent: false,
+		ActivationAllowed: false,
+	}, nil
+}
+
+func verifyPortableV3Exact(root string, trust TrustAnchor, key ed25519.PublicKey, expectedRepo, expectedCommit string) (PortableVerifyReceipt, error) {
+	if !commitPattern.MatchString(expectedCommit) {
+		return PortableVerifyReceipt{}, errors.New("expected_commit must be lowercase 40-hex")
+	}
+	releasePath := filepath.Join(root, "releases", expectedCommit)
+	info, err := os.Lstat(releasePath)
+	if err != nil {
+		return PortableVerifyReceipt{}, fmt.Errorf("portable v3 release root: %w", err)
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return PortableVerifyReceipt{}, errors.New("portable v3 release root is not a safe directory")
+	}
+
+	envelopePath := filepath.Join(releasePath, "release-envelope.json")
+	envelope, err := readBoundedRegularFile(envelopePath, maxEnvelope, "stored portable v3 release envelope")
+	if err != nil {
+		return PortableVerifyReceipt{}, err
+	}
+	manifest, payload, err := verifyEnvelope(envelope, trust, key, expectedRepo)
+	if err != nil {
+		return PortableVerifyReceipt{}, fmt.Errorf("verify stored portable v3 release envelope: %w", err)
+	}
+	if manifest.Schema != manifestSchemaV3 {
+		return PortableVerifyReceipt{}, errors.New("stored portable v3 release is not release-manifest/3")
+	}
+	if manifest.SourceCommit != expectedCommit {
+		return PortableVerifyReceipt{}, fmt.Errorf(
+			"stored portable v3 source_commit does not match expected commit: got=%s expected=%s",
+			manifest.SourceCommit,
+			expectedCommit,
+		)
+	}
+	if err := verifyExistingPortableV3Release(releasePath, root, manifest, payload, envelope); err != nil {
+		return PortableVerifyReceipt{}, fmt.Errorf("verify exact portable v3 release: %w", err)
+	}
+	runtimePath, err := verifyRuntimeStoreFile(root, manifest.Artifacts[1])
+	if err != nil {
+		return PortableVerifyReceipt{}, err
+	}
+	return PortableVerifyReceipt{
+		Status: "verified-portable-v3-exact",
+		SourceCommit: manifest.SourceCommit,
+		ReleasePath: releasePath,
+		ArtifactPath: filepath.Join(releasePath, "system.erofs"),
+		RuntimePath: runtimePath,
 		ActivationAllowed: false,
 	}, nil
 }
@@ -1097,7 +1411,7 @@ func materialize(client *http.Client, envelopeURL, root string, trust TrustAncho
 		return MaterializeReceipt{}, err
 	}
 	if manifest.Schema != manifestSchema {
-		return MaterializeReceipt{}, errors.New("materialize supports release-manifest/1 only; use materialize-portable for portable USB v2")
+		return MaterializeReceipt{}, errors.New("materialize supports release-manifest/1 only; use materialize-portable for v2 or materialize-portable-v3 for v3")
 	}
 	if expectedCommit != "" {
 		if !commitPattern.MatchString(expectedCommit) {
