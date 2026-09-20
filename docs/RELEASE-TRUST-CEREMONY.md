@@ -37,7 +37,27 @@ runtime:    /ordax/bootstrap/trust/release-ed25519.json
 
 The actual canonical key generation is a local user action and must not be performed in CI, a chat session or a disposable runner. The signer under `tools/release-signing/` already supports the required operation and uses only standard Ed25519/PKCS#8 primitives from the Go standard library.
 
-Build the signer from the exact reviewed source commit, then generate into a private path outside the repository and a separate temporary public-review path:
+For the canonical ceremony, use the complete **Windows Prototype Toolkit** produced for one exact reviewed commit. Keep `provenance.json`, `ordax-release-signing.exe` and `Initialize-OrdaXReleaseTrust.ps1` together exactly as downloaded; do not mix files from different toolkit runs and do not replace one file with a locally rebuilt copy.
+
+Start the ceremony through:
+
+```text
+2-Initialize-OrdaXTrust.cmd
+```
+
+Before any key is generated, the initializer fails closed unless:
+
+1. `provenance.json` has schema `prototype-ordax.windows-prototype-toolkit/2` and status `candidate`;
+2. the toolkit provenance declares repository `washingtonmsdj/prototipo-ordax-os`, event `push`, ref `refs/heads/main` and `canonical_trust_ceremony_eligible=true`;
+3. `source_commit` is exactly 40 lowercase hexadecimal characters;
+4. the SHA-256 of `ordax-release-signing.exe` matches the toolkit provenance;
+5. the SHA-256 of `Initialize-OrdaXReleaseTrust.ps1` matches the toolkit provenance.
+
+Artifacts produced for pull requests or manual workflow-dispatch remain useful for CI and review, but they are **not eligible** to create the canonical release-signing identity. After this PR is merged, the ceremony must use the toolkit emitted by the resulting `push` run on `main`.
+
+The proof manifest and `ceremony-result.json` are then bound to that provenance `source_commit`. The operator must not type or substitute a placeholder commit. A provenance or component-hash mismatch aborts the ceremony before private-key creation.
+
+The initializer generates into a private path outside the toolkit/repository and a separate temporary public-review path. Its underlying signing operation is equivalent to:
 
 ```text
 ordax-release-signing.exe generate-key \

@@ -35,8 +35,45 @@ if ([string]::IsNullOrWhiteSpace($ReviewDirectory)) {
 
 $KeyId = 'ordax-prototype-release-v1'
 $Signer = Join-Path $ScriptRoot 'ordax-release-signing.exe'
+$ToolkitProvenancePath = Join-Path $ScriptRoot 'provenance.json'
 if (-not (Test-Path -LiteralPath $Signer -PathType Leaf)) {
     throw "ordax-release-signing.exe was not found next to this script: $Signer"
+}
+if (-not (Test-Path -LiteralPath $ToolkitProvenancePath -PathType Leaf)) {
+    throw "Toolkit provenance was not found next to this script: $ToolkitProvenancePath"
+}
+$ToolkitProvenanceItem = Get-Item -LiteralPath $ToolkitProvenancePath -Force
+if (($ToolkitProvenanceItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+    throw 'Toolkit provenance may not be a reparse point or symlink.'
+}
+$ToolkitProvenance = Get-Content -LiteralPath $ToolkitProvenancePath -Raw | ConvertFrom-Json
+if ($ToolkitProvenance.'$schema' -ne 'prototype-ordax.windows-prototype-toolkit/2' -or
+    $ToolkitProvenance.status -ne 'candidate') {
+    throw 'Toolkit provenance schema or status is invalid.'
+}
+if ($ToolkitProvenance.source_repository -ne 'washingtonmsdj/prototipo-ordax-os' -or
+    $ToolkitProvenance.source_event -ne 'push' -or
+    $ToolkitProvenance.source_ref -ne 'refs/heads/main' -or
+    $ToolkitProvenance.canonical_trust_ceremony_eligible -ne $true) {
+    throw 'Canonical trust ceremony requires a toolkit produced by a push of the canonical main branch.'
+}
+$ToolkitSourceCommit = [string]$ToolkitProvenance.source_commit
+if ($ToolkitSourceCommit -notmatch '^[0-9a-f]{40}$') {
+    throw 'Toolkit provenance source_commit must be exactly 40 lowercase hexadecimal characters.'
+}
+$ExpectedSignerSha256 = [string]$ToolkitProvenance.components.release_signer.sha256
+$ExpectedInitializerSha256 = [string]$ToolkitProvenance.components.trust_initializer.sha256
+if ($ExpectedSignerSha256 -notmatch '^[0-9a-f]{64}$' -or
+    $ExpectedInitializerSha256 -notmatch '^[0-9a-f]{64}$') {
+    throw 'Toolkit provenance component hashes are invalid.'
+}
+$ActualSignerSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $Signer).Hash.ToLowerInvariant()
+$ActualInitializerSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $ScriptPath).Hash.ToLowerInvariant()
+if ($ActualSignerSha256 -ne $ExpectedSignerSha256) {
+    throw 'Release signer bytes do not match toolkit provenance.'
+}
+if ($ActualInitializerSha256 -ne $ExpectedInitializerSha256) {
+    throw 'Trust initializer bytes do not match toolkit provenance.'
 }
 
 $PrivateKeyPath = [IO.Path]::GetFullPath($PrivateKeyPath)
@@ -106,7 +143,7 @@ if ($PublicBytes.Length -ne 32) {
     throw 'Ed25519 public key must contain exactly 32 raw bytes.'
 }
 
-$ProofCommit = '0123456789abcdef0123456789abcdef01234567'
+$ProofCommit = $ToolkitSourceCommit
 $Manifest = [ordered]@{
     '$schema' = 'prototype-ordax.release-manifest/1'
     source_repository = 'washingtonmsdj/prototipo-ordax-os'
@@ -139,6 +176,7 @@ $TrustHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $TrustPath).Hash.ToLow
 $Result = [ordered]@{
     '$schema' = 'prototype-ordax.release-trust-ceremony-result/1'
     status = 'local-key-generated-public-anchor-verified-proof-signed'
+    source_commit = $ToolkitSourceCommit
     key_id = $KeyId
     public_trust_path = $TrustPath
     public_trust_sha256 = $TrustHash
@@ -154,6 +192,8 @@ $Result = [ordered]@{
 
 Write-Host ''
 Write-Host 'CANONICAL_KEY_MATERIAL_GENERATED=YES'
+Write-Host "SOURCE_COMMIT=$ToolkitSourceCommit"
+Write-Host 'TOOLKIT_COMPONENT_HASHES_VERIFIED=YES'
 Write-Host 'PUBLIC_TRUST_DERIVATION_MATCH=PASS'
 Write-Host 'PROOF_SIGNATURE_CREATED=YES'
 Write-Host "PUBLIC_TRUST_SHA256=$TrustHash"
