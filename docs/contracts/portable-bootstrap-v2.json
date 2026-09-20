@@ -82,10 +82,13 @@
       "candidate_builder_implemented": true,
       "deterministic_proof_implemented": true,
       "esp_materialization_implemented": false,
-      "initramfs_hash_pin_implemented": false,
+      "initramfs_hash_pin_implemented": true,
       "pid1_verified_mount_implemented": false,
       "initramfs_hash_pin_builder_support": true,
-      "initramfs_hash_pin_disposable_proof_implemented": true
+      "initramfs_hash_pin_disposable_proof_implemented": true,
+      "initramfs_hash_pin_candidate_only": true,
+      "initramfs_hash_pin_default_candidate_build_enabled": false,
+      "pid1_hash_enforcement_implemented": false
     }
   },
   "release_trust": {

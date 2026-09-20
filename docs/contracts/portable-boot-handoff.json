@@ -71,7 +71,9 @@
     "bootstrap_capsule_hash_pin_disposable_proof_implemented": true,
     "system_runtime_mutability": "immutable-release-tree",
     "system_persistent_overlay_allowed": false,
-    "stable_base_overlay_required": true
+    "stable_base_overlay_required": true,
+    "bootstrap_capsule_hash_pin_candidate_implemented": true,
+    "bootstrap_capsule_hash_pin_pid1_enforced": false
   },
   "initramfs_integration_requirements": {
     "busybox_losetup_applet_required": true,

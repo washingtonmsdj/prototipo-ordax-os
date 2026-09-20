@@ -62,11 +62,13 @@
     "canonical_public_anchor_location": "/ordax/bootstrap/trust/release-ed25519.json",
     "anchor_is_outside_capsule": true,
     "capsule_hash_must_be_pinned_by_fixed_initramfs_before_pid1_use": true,
-    "capsule_hash_pin_implemented": false,
+    "capsule_hash_pin_implemented": true,
     "canonical_public_anchor_currently_pinned": false,
     "capsule_hash_pin_builder_support": true,
     "capsule_hash_pin_disposable_proof_workflow": ".github/workflows/portable-initramfs-capsule-pin.yml",
-    "pid1_hash_enforcement_implemented": false
+    "pid1_hash_enforcement_implemented": false,
+    "capsule_hash_pin_candidate_only": true,
+    "capsule_hash_pin_default_candidate_build_enabled": false
   },
   "proof": {
     "workflow": ".github/workflows/portable-bootstrap-capsule.yml",

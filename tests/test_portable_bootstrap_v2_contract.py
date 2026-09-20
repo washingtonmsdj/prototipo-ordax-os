@@ -42,6 +42,11 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         self.assertEqual(capsule["filesystem"], "erofs")
         self.assertTrue(capsule["read_only"])
         self.assertTrue(capsule["hash_pin_required_before_pid1_use"])
+        self.assertTrue(capsule["initramfs_hash_pin_implemented"])
+        self.assertTrue(capsule["initramfs_hash_pin_candidate_only"])
+        self.assertFalse(capsule["initramfs_hash_pin_default_candidate_build_enabled"])
+        self.assertFalse(capsule["pid1_hash_enforcement_implemented"])
+        self.assertFalse(capsule["pid1_verified_mount_implemented"])
         self.assertFalse(capsule["implemented"])
 
     def test_release_trust_is_bootstrap_owned_and_private_key_never_on_media(self):
