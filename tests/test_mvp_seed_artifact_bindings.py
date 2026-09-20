@@ -30,7 +30,7 @@ class MVPSeedArtifactBindingsTests(unittest.TestCase):
     def test_current_initramfs_binding_matches_portable_v2_capable_capsule(self):
         artifact = self.artifact("initramfs")
         self.assertEqual(artifact["source_path"], "bootstrap/initramfs/initramfs.cpio.gz")
-        self.assertEqual(artifact["sha256"], "8ac9998a95a7dc63ffa5b9d48377be0d10246a1e54d0a0b4fdf52c7eaf3023f3")
+        self.assertEqual(artifact["sha256"], "eb1aa5e9d9e5532d771158a395d723255c8a6d87674ce6cb176a0c2618f67b0d")
 
     def test_current_release_agent_binding_matches_v2_refresh_target(self):
         artifact = self.artifact("bootstrap-release-acquisition")
