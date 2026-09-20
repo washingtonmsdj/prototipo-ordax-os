@@ -1,0 +1,60 @@
+{
+  "$schema": "prototype-ordax.surface-runtime-source/1",
+  "status": "lock-discovery-required",
+  "product_scope": "stable-mvp-usb-only",
+  "runtime_id": "alpine-v3.22-cage-webkitgtk-v2-offline",
+  "first_boot_offline_required": true,
+  "network_package_install_during_stable_boot_allowed": false,
+  "owner_development_dynamic_runtime_preserved": true,
+  "alpine": {
+    "version": "3.22.5",
+    "branch": "v3.22",
+    "arch": "x86_64",
+    "archive_sha256": "4b4daa9fe2fc696c4919c4412a4c3d3e770d8fb70292a004a2c72f5096175282",
+    "identity_owner": "bootstrap/stable-base/source.json"
+  },
+  "packages": [
+    "alpine-baselayout",
+    "busybox",
+    "ca-certificates",
+    "cage",
+    "xwayland",
+    "python3",
+    "py3-gobject3",
+    "gtk+3.0",
+    "webkit2gtk-4.1",
+    "seatd-launch",
+    "mesa-dri-gallium",
+    "mesa-egl",
+    "mesa-gbm",
+    "font-dejavu",
+    "eudev",
+    "libinput-udev"
+  ],
+  "apk_package_versions_pinned": false,
+  "apk_package_lock": null,
+  "artifact": {
+    "name": "native-surface-runtime.erofs",
+    "format": "erofs",
+    "compression": "lz4",
+    "target_path": ".ordax/runtime/native-surface-runtime.erofs",
+    "immutable_lower": true,
+    "ephemeral_overlay_required": true,
+    "persistent_user_data_inside_artifact": false,
+    "physical_artifact_authorized": false,
+    "portable_v2_boot_connected": false
+  },
+  "discovery": {
+    "entrypoint": "bootstrap/surface-runtime/discover_lock.py",
+    "workflow": ".github/workflows/surface-runtime-lock-discovery.yml",
+    "purpose": "resolve-and-review-the-full-transitive-apk-lock-before-any-runtime-artifact-is-promotable"
+  },
+  "promotion_blockers": [
+    "commit-full-transitive-apk-lock",
+    "build-byte-reproducible-erofs-runtime",
+    "bind-runtime-hash-to-portable-v2-trust-chain",
+    "preseed-runtime-through-creator",
+    "prove-stable-first-surface-boot-with-network-disabled",
+    "prove-physical-stable-surface-on-supported-usb-hardware"
+  ]
+}
