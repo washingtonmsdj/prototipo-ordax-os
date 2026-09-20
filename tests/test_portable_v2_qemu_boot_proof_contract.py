@@ -70,6 +70,31 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
             "CONFIG_FEATURE_MOUNT_FLAGS=y",
         )
 
+
+    def test_initramfs_has_posix_test_and_bracket_for_candidate_pid1(self):
+        build = INITRAMFS_BUILD.read_text(encoding="utf-8")
+        source = json.loads(INITRAMFS_SOURCE.read_text(encoding="utf-8"))
+        for selector in (
+            '"CONFIG_TEST": "y"',
+            '"CONFIG_TEST1": "y"',
+            '"CONFIG_FEATURE_TEST_64": "y"',
+        ):
+            self.assertIn(selector, build)
+        self.assertIn('"test"', build)
+        self.assertIn('"["', build)
+        prereq = source["portable_v2_prerequisites"]
+        self.assertTrue(prereq["posix_test_applet"])
+        self.assertTrue(prereq["posix_bracket_applet"])
+        self.assertTrue(prereq["test_64_bit_comparisons"])
+        self.assertEqual(
+            prereq["posix_test_busybox_selectors"],
+            [
+                "CONFIG_TEST=y",
+                "CONFIG_TEST1=y",
+                "CONFIG_FEATURE_TEST_64=y",
+            ],
+        )
+
     def test_workflow_builds_signed_release_real_base_capsule_and_pinned_initramfs(self):
         for marker in (
             "bootstrap/kernel/build.py build",
