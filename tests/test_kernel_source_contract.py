@@ -63,6 +63,11 @@ class KernelSourceContractTest(unittest.TestCase):
             "CONFIG_IWLWIFI=m",
             "CONFIG_EXT4_FS=y",
             "CONFIG_VFAT_FS=y",
+            "CONFIG_BLK_DEV_LOOP=y",
+            "CONFIG_EXFAT_FS=y",
+            "CONFIG_EROFS_FS=y",
+            "CONFIG_EROFS_FS_ZIP=y",
+            "CONFIG_OVERLAY_FS=y",
             "CONFIG_BLK_DEV_DM=y",
             "CONFIG_DM_CRYPT=y",
             "CONFIG_CRYPTO_AES=y",
@@ -109,6 +114,17 @@ class KernelSourceContractTest(unittest.TestCase):
             if f"ORDAX_SOURCE_COMMIT: {identity}" not in text:
                 offenders.append(f"{path.name}:missing-source-identity")
         self.assertEqual(offenders, [])
+
+    def test_portable_usb_v2_filesystems_are_builtin_before_release_handoff(self):
+        for selector in (
+            "CONFIG_BLK_DEV_LOOP=y",
+            "CONFIG_EXFAT_FS=y",
+            "CONFIG_EROFS_FS=y",
+            "CONFIG_EROFS_FS_ZIP=y",
+            "CONFIG_OVERLAY_FS=y",
+            "CONFIG_EXT4_FS=y",
+        ):
+            self.assertIn(selector + "\n", FRAGMENT, selector)
 
     def test_environment_is_pinned_but_physical_use_remains_fail_closed(self):
         self.assertTrue(SOURCE["build"]["pinned_environment_resolved"])

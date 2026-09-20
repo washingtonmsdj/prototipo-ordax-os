@@ -82,5 +82,25 @@
     "physical-device-path-input",
     "claiming-bootable-proof-from-storage-only-proof",
     "enabling-public-physical-write"
-  ]
+  ],
+  "kernel_prerequisites": {
+    "source": "bootstrap/kernel/config/ordax.fragment",
+    "built_in_before_release_handoff": true,
+    "selectors": [
+      "CONFIG_BLK_DEV_LOOP=y",
+      "CONFIG_EXFAT_FS=y",
+      "CONFIG_EROFS_FS=y",
+      "CONFIG_EROFS_FS_ZIP=y",
+      "CONFIG_OVERLAY_FS=y",
+      "CONFIG_EXT4_FS=y"
+    ],
+    "purpose": {
+      "CONFIG_BLK_DEV_LOOP": "mount EROFS release and ext4 persistent-state files as loop-backed block devices",
+      "CONFIG_EXFAT_FS": "mount ORDAX-DATA before the full release is available",
+      "CONFIG_EROFS_FS": "mount immutable release images",
+      "CONFIG_EROFS_FS_ZIP": "read compressed EROFS release images",
+      "CONFIG_OVERLAY_FS": "compose immutable lower system with Linux-native writable persistent state",
+      "CONFIG_EXT4_FS": "mount the persistent-state image"
+    }
+  }
 }

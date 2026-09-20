@@ -115,6 +115,16 @@ CONFIG_VFAT_FS=y
 CONFIG_EXT4_FS=y
 CONFIG_EXT4_FS_POSIX_ACL=y
 CONFIG_EXT4_FS_SECURITY=y
+
+# Durable portable USB v2 runtime prerequisites. These are built in because
+# ORDAX-DATA and the immutable/state images must be mounted before the full
+# system release can provide modules.
+CONFIG_BLK_DEV_LOOP=y
+CONFIG_EXFAT_FS=y
+CONFIG_EROFS_FS=y
+CONFIG_EROFS_FS_ZIP=y
+CONFIG_OVERLAY_FS=y
+
 CONFIG_NLS_CODEPAGE_437=y
 CONFIG_NLS_ISO8859_1=y
 CONFIG_NLS_ASCII=y
