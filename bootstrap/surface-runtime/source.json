@@ -304,7 +304,6 @@
     "purpose": "resolve-and-review-the-full-transitive-apk-lock-before-any-runtime-artifact-is-promotable"
   },
   "promotion_blockers": [
-    "build-byte-reproducible-erofs-runtime",
     "bind-runtime-hash-to-portable-v2-trust-chain",
     "preseed-runtime-through-creator",
     "prove-stable-first-surface-boot-with-network-disabled",
@@ -322,12 +321,23 @@
     "physical_write_authorized": false
   },
   "closed_gates": [
-    "full-transitive-apk-lock-pinned"
+    "full-transitive-apk-lock-pinned",
+    "byte-reproducible-erofs-runtime-ci"
   ],
   "reproducibility_proof": {
     "workflow": ".github/workflows/surface-runtime-lock-discovery.yml",
+    "workflow_run_id": 35535887040,
+    "source_commit": "2a7ce56d2506e09d02aa738aafbb7838dc8f82ee",
+    "status": "pass-ci-repeat-digest",
+    "tree_manifest_sha256": "5e0c1d3972dc8f4f394712a4645d8da1134ff95746196aa95294eaa1dc084718",
+    "normalized_tar_sha256": "572b05a31e1a2af85b54c2e056567ca0deccde753a2e3560823bf34b4066ad66",
+    "erofs_sha256": "170d306b38cfdbadba47a7548a6757a920ceaedea98697270aaa8ca4f4d8d038",
+    "erofs_size": 1051987968,
     "repeat_digest_required": true,
-    "status": "pending-current-head"
+    "repeat_digest_passed": true,
+    "runtime_image_retained": false,
+    "physical_artifact_authorized": false,
+    "portable_v2_boot_connected": false
   },
   "runtime_generated_state": {
     "machine_identity_baked_into_image": false,
