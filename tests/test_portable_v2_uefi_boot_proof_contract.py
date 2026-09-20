@@ -21,6 +21,12 @@ class PortableV2UEFIBootProofTests(unittest.TestCase):
         self.assertFalse(CONTRACT["physical_usb_boot_proven"])
         self.assertFalse(CONTRACT["physical_write_authorized"])
         self.assertFalse(CONTRACT["public_physical_promotion_allowed"])
+        self.assertEqual(
+            CONTRACT["release_manifest_schema"],
+            "prototype-ordax.release-manifest/3",
+        )
+        self.assertTrue(CONTRACT["surface_runtime_required"])
+        self.assertTrue(CONTRACT["surface_runtime_content_addressed"])
 
     def test_loader_entries_are_portable_only(self):
         normal = (ROOT / CONTRACT["loader"]["normal_entry"]).read_text(encoding="utf-8")
@@ -47,6 +53,10 @@ class PortableV2UEFIBootProofTests(unittest.TestCase):
             '"-net", "none"',
             "ORDAX_PORTABLE_V2_HANDOFF=VERIFIED",
             "ORDAX_STABLE_INIT_HANDOFF=VERIFIED",
+            "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3",
+            "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED",
+            "ORDAX_SURFACE_RUNTIME_SHA256=",
+            '"surface_runtime_sha_exact": True',
             '"qemu_uefi_boot_proven": True',
             '"secure_boot_proven": False',
             '"physical_usb_boot_proven": False',
