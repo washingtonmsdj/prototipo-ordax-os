@@ -245,5 +245,16 @@
     "uefi_boot_proven": false,
     "physical_boot_proven": false,
     "public_physical_promotion_allowed": false
+  },
+  "qemu_uefi_proof": {
+    "contract": "docs/contracts/portable-v2-uefi-boot-proof.json",
+    "workflow_implemented": true,
+    "proof_passed_on_current_head": false,
+    "pinned_systemd_boot_required": true,
+    "dedicated_portable_loader_entry": true,
+    "non_secure_boot_ovmf_only": true,
+    "secure_boot_proven": false,
+    "physical_boot_proven": false,
+    "public_physical_promotion_allowed": false
   }
 }

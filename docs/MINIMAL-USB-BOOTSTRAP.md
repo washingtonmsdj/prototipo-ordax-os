@@ -344,3 +344,9 @@ The disk contains the verified bootstrap capsule and bootstrap-owned CI trust on
 This gate invokes the candidate PID1 explicitly with `rdinit=/sbin/ordax-portable-init`, disables guest networking and requires both the portable PID1 handoff marker and the Stable Base handoff marker. It proves the durable runtime chain without silently changing the default boot path.
 
 This is deliberately **not yet a UEFI proof**. systemd-boot/OVMF, a public physical boot entry and real USB hardware remain later gates.
+
+### Portable v2 UEFI/QEMU gate
+
+After the direct-kernel candidate proof, the same disposable final-layout disk is staged with the pinned `systemd-boot` candidate at the standard fallback path `EFI/BOOT/BOOTX64.EFI`, the exact kernel/initramfs and dedicated portable-v2 loader entries. QEMU then boots it through non-Secure-Boot OVMF with networking disabled.
+
+This gate proves the UEFI firmware -> systemd-boot -> exact kernel/initramfs -> portable PID1 -> Stable Base chain only when its workflow passes. It does **not** prove Secure Boot, physical USB boot or public promotion. The physical Creator writer remains blocked.
