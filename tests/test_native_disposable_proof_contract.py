@@ -56,6 +56,8 @@ class NativeDisposableProofContractTests(unittest.TestCase):
 
     def test_proof_tool_refuses_physical_device_semantics(self):
         self.assertIn('str(path).startswith("/dev/")', SCRIPT)
+        self.assertIn("stat.S_ISREG", SCRIPT)
+        self.assertIn("stat.S_ISLNK", SCRIPT)
         self.assertIn("stat.S_ISBLK", SCRIPT)
         self.assertIn('"physical_write_authorized": False', SCRIPT)
         self.assertIn('"physical_device_touched": False', SCRIPT)
