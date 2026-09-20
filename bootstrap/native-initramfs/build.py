@@ -353,7 +353,7 @@ def build_archive(rootfs: Path, destination: Path) -> None:
         "./" + path.relative_to(rootfs).as_posix()
         for path in sorted(rootfs.rglob("*"), key=lambda item: item.relative_to(rootfs).as_posix())
     ]
-    payload = (" ".join(names) + " ").encode("utf-8")
+    payload = ("\0".join(names) + "\0").encode("utf-8")
     try:
         result = subprocess.run(
             [
