@@ -102,15 +102,20 @@ class StorageArchitectureContractTest(unittest.TestCase):
         self.assertTrue(internal["persistent_state_image"]["overlayfs_upper_owner"])
         self.assertNotIn("ORDAX", [p["name"] for p in contract["partitions"]])
 
-    def test_portable_v2_migration_cannot_replace_physical_writer_before_boot_proof(self):
+    def test_portable_v2_migration_cannot_replace_physical_writer_before_physical_boot_proof(self):
         migration = self.storage["prototype_migration"]
         self.assertEqual(
             migration["portable_usb_v2_contract"],
             "docs/contracts/portable-usb-v2.json",
         )
         self.assertTrue(migration["portable_usb_v2_disposable_storage_proof_implemented"])
-        self.assertFalse(migration["portable_usb_v2_boot_handoff_implemented"])
+        self.assertTrue(migration["portable_usb_v2_boot_handoff_implemented"])
+        self.assertTrue(migration["portable_release_protocol_v3_implemented"])
+        self.assertTrue(
+            migration["portable_surface_runtime_v3_boot_handoff_implemented"]
+        )
         self.assertFalse(migration["portable_usb_v2_physical_write_enabled"])
+        self.assertFalse(migration["public_physical_promotion_allowed"])
         self.assertTrue(migration["transitional_layout_remains_active_physical_writer"])
 
     def test_storage_contract_forbids_future_rigid_regressions(self):
