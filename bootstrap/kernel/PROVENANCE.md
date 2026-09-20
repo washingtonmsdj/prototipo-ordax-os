@@ -156,6 +156,18 @@ LOCAL_DEVELOPER_KERNEL_TOOLCHAIN_REQUIRED=NO
 
 The known-good legacy bzImage digest is a comparison baseline, not a permanent byte-identity requirement. Intentional config/toolchain changes may produce a new digest, but they must remain explicit and pass boot/hardware gates.
 
+The current shared kernel source now also carries the Native boot prerequisites (device-mapper/dm-crypt, AES-XTS and Btrfs) in the same kernel rather than introducing a second Native kernel. That intentional config change produced a new current candidate:
+
+```text
+CURRENT_NATIVE_SHARED_KERNEL_CONFIG_SHA256=d07d985890fb5f91a6a34c95bb8b9143b248312b40f4b8733b151298c02ef597
+CURRENT_NATIVE_SHARED_KERNEL_MODULES_SHA256=e883e9456faaf73c79d3ace406bd16a00af03a973419413163382080b57bdbda
+CURRENT_NATIVE_SHARED_VMLINUX_SHA256=b5d715fb934d5a3854b7f6ebc1fd4d6755d51bcaa75da220d673f4e77fff0782
+CURRENT_NATIVE_SHARED_KERNEL_PHYSICAL_AUTHORIZED=NO
+```
+
+The historical pinned repeat proof above remains immutable evidence for the earlier fragment. The current-source pinned repeat workflow must prove the new bytes independently; history must not be rewritten to manufacture that proof.
+
+
 ## Remaining gates
 
 1. resolve canonical Ed25519 release trust through the local key ceremony and pin only the public trust anchor;

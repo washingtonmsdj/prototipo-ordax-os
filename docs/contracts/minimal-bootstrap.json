@@ -88,10 +88,10 @@
         {
           "source_path": "bootstrap/kernel/vmlinuz-6.6.52",
           "target_path": "/ordax/vmlinuz",
-          "sha256": "e080323be390b2e921ed34286794cbce18642b653fc6790ae308f61720c90ba1",
+          "sha256": "b5d715fb934d5a3854b7f6ebc1fd4d6755d51bcaa75da220d673f4e77fff0782",
           "mode": "0644",
           "logical_owner": "kernel",
-          "reason": "Clean Linux 6.6.52 candidate with built-in first-acquisition Ethernet and USB-tether paths"
+          "reason": "Shared Linux 6.6.52 candidate with built-in first-acquisition networking plus Native dm-crypt/AES-XTS/Btrfs prerequisites"
         }
       ]
     },
