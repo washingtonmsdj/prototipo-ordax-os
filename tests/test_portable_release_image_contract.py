@@ -56,11 +56,22 @@ class PortableReleaseImageContractTests(unittest.TestCase):
             contract["source_artifact"]["release_protocol_v1_signed_artifact_unchanged"]
         )
         self.assertFalse(contract["integration"]["release_protocol_v1_changed"])
-        self.assertFalse(contract["integration"]["manifest_v2_implemented"])
+        self.assertTrue(contract["integration"]["manifest_v2_implemented"])
+        self.assertTrue(contract["integration"]["signer_v2_implemented"])
+        self.assertTrue(contract["integration"]["acquisition_agent_v2_implemented"])
+        self.assertTrue(contract["integration"]["portable_materialization_implemented"])
+        self.assertFalse(contract["integration"]["portable_activation_implemented"])
+        self.assertFalse(contract["integration"]["portable_boot_handoff_connected"])
         self.assertFalse(contract["integration"]["public_signed_publication_enabled"])
         self.assertFalse(contract["integration"]["physical_write_authorized"])
         self.assertEqual(protocol["current"]["manifest_v1"]["artifact_name"], "system.tar")
         self.assertEqual(protocol["current"]["manifest_v1"]["artifact_role"], "system")
+        self.assertEqual(
+            protocol["portable_v2"]["manifest_schema"],
+            "prototype-ordax.release-manifest/2",
+        )
+        self.assertTrue(protocol["portable_v2"]["materialization_support"])
+        self.assertFalse(protocol["portable_v2"]["activation_support"])
 
     def test_image_policy_is_deterministic_and_read_only(self):
         output = self.load_contract()["output"]

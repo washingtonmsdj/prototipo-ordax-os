@@ -305,7 +305,14 @@ func strictManifest(data []byte, expectedRepository string) (Manifest, error) {
 		return Manifest{}, errors.New("invalid created_from_ci_recipe")
 	}
 	if len(manifest.Artifacts) != 1 {
-		return Manifest{}, fmt.Errorf("%s requires exactly one release artifact", manifest.Schema)
+		switch manifest.Schema {
+		case manifestSchema:
+			return Manifest{}, errors.New("release-manifest/1 requires exactly one system.tar artifact")
+		case manifestSchemaV2:
+			return Manifest{}, errors.New("release-manifest/2 requires exactly one system.erofs artifact")
+		default:
+			return Manifest{}, errors.New("unsupported release manifest schema")
+		}
 	}
 
 	artifact := manifest.Artifacts[0]

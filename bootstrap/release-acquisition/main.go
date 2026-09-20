@@ -212,7 +212,14 @@ func validateManifest(m Manifest, expectedRepo string) error {
 		return errors.New("invalid created_from_ci_recipe")
 	}
 	if len(m.Artifacts) != 1 {
-		return fmt.Errorf("%s requires exactly one release artifact", m.Schema)
+		switch m.Schema {
+		case manifestSchema:
+			return errors.New("release-manifest/1 requires exactly one system.tar artifact")
+		case manifestSchemaV2:
+			return errors.New("release-manifest/2 requires exactly one system.erofs artifact")
+		default:
+			return errors.New("unsupported release manifest schema")
+		}
 	}
 
 	a := m.Artifacts[0]

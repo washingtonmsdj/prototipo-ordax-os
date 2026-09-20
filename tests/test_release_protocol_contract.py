@@ -60,10 +60,28 @@ class ReleaseProtocolContractTests(unittest.TestCase):
         self.assert_v1_validator_semantics(acquisition)
         self.assert_v1_validator_semantics(signing)
 
-        self.assertIn('filepath.Base(absolute) != "system.tar"', generator)
+        self.assertIn(
+            'hashNamedArtifact(path, "system.tar", "release-manifest/1")',
+            generator,
+        )
         self.assertIn('Name:   "system.tar"', generator)
         self.assertIn('Role:   "system"', generator)
         self.assertIn("ReleaseID:           sourceCommit", generator)
+
+        portable = contract["portable_v2"]
+        self.assertEqual(
+            portable["manifest_schema"],
+            "prototype-ordax.release-manifest/2",
+        )
+        self.assertEqual(portable["artifact_name"], "system.erofs")
+        self.assertEqual(portable["artifact_role"], "system-image")
+        self.assertTrue(portable["generator_support"])
+        self.assertTrue(portable["signer_support"])
+        self.assertTrue(portable["acquisition_agent_support"])
+        self.assertTrue(portable["materialization_support"])
+        self.assertFalse(portable["activation_support"])
+        self.assertFalse(portable["boot_handoff_support"])
+        self.assertFalse(portable["production_publication_allowed"])
 
     def test_channel_inspection_is_signed_and_non_destructive(self):
         current = self.load_contract()["current"]
