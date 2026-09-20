@@ -1,0 +1,54 @@
+{
+  "$schema": "prototype-ordax.native-initramfs-source/1",
+  "status": "source-contract-build-environment-lock-pending",
+  "root_init": "bootstrap/native-initramfs/root/init",
+  "boot_contract": "docs/contracts/native-boot.json",
+  "shared_kernel_contract": "bootstrap/kernel/source.json",
+  "product_mode": "native-disk",
+  "pool": {
+    "mapper_name": "ordax-pool",
+    "encryption": "luks2",
+    "filesystem": "btrfs",
+    "top_level_mount": "/ordax",
+    "selection": "exact-luks-uuid-from-kernel-cmdline",
+    "persistent_mode_cross_check": "/ordax/bootstrap/config/product-mode"
+  },
+  "userspace": {
+    "build_environment_contract": "docs/contracts/native-initramfs-build-environment.json",
+    "required_programs": [
+      "/bin/busybox",
+      "/usr/sbin/cryptsetup",
+      "/usr/bin/btrfs"
+    ],
+    "network_clients_included": false,
+    "git_included": false,
+    "package_manager_in_runtime": false
+  },
+  "normal_boot": {
+    "initial_pool_mount": "read-only-validation",
+    "final_pool_mount": "read-write",
+    "btrfs_compression": "zstd:1",
+    "state_dir": "/var/lib/ordax",
+    "user_home": "/var/home",
+    "handoff": "/ordax/bootstrap/entrypoint"
+  },
+  "recovery": {
+    "luks_mapper": "read-only",
+    "pool_mount": "read-only",
+    "persistent_subvolumes_mounted": false,
+    "handoff": "/ordax/bootstrap/recovery/entrypoint"
+  },
+  "secret_policy": {
+    "repository_secret_material": false,
+    "esp_secret_material": false,
+    "kernel_cmdline_secret_material": false,
+    "interactive_unlock": true,
+    "tpm2_auto_unlock": false
+  },
+  "build": {
+    "canonical_entrypoint": "bootstrap/native-initramfs/build.py",
+    "deterministic_archive_required": true,
+    "environment_lock_required_before_artifact_build": true,
+    "physical_artifact_authorized": false
+  }
+}
