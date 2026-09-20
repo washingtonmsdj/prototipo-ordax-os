@@ -79,6 +79,13 @@ class KernelSourceContractTest(unittest.TestCase):
         self.assertIn("git\", \"rev-parse\", \"HEAD", builder)
         self.assertNotIn('os.environ.get("GITHUB_SHA")', builder)
 
+    def test_kernel_builder_can_verify_detached_head_without_git_binary(self):
+        builder = (ROOT / "bootstrap/kernel/build.py").read_text(encoding="utf-8")
+        self.assertIn("def repository_head_without_git(root: Path)", builder)
+        self.assertIn('head_path = gitdir / "HEAD"', builder)
+        self.assertIn('git = shutil.which("git")', builder)
+        self.assertIn("actual = repository_head_without_git(ROOT)", builder)
+
     def test_environment_is_pinned_but_physical_use_remains_fail_closed(self):
         self.assertTrue(SOURCE["build"]["pinned_environment_resolved"])
         self.assertFalse(SOURCE["build"]["physical_artifact_authorized"])

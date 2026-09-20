@@ -62,6 +62,18 @@ class KernelBuildEnvironmentContractTests(unittest.TestCase):
         self.assertIn("current-source repeat digest mismatch", verifier)
         self.assertNotIn('if observed != expected_digest', verifier)
 
+    def test_pinned_workflow_binds_source_to_exact_pr_head_without_expanding_toolchain(self):
+        workflow = (
+            ROOT / ".github/workflows/kernel-pinned-environment.yml"
+        ).read_text(encoding="utf-8")
+        identity = "${{ github.event.pull_request.head.sha || github.sha }}"
+        self.assertIn(f"ref: {identity}", workflow)
+        self.assertIn(f"SOURCE_COMMIT: {identity}", workflow)
+        self.assertIn('-e ORDAX_SOURCE_COMMIT="$SOURCE_COMMIT"', workflow)
+        self.assertIn("'source_commit': os.environ['SOURCE_COMMIT']", workflow)
+        self.assertNotIn('-e GITHUB_SHA="$GITHUB_SHA"', workflow)
+        self.assertNotIn('"git"', self.load()["apt"]["packages"])
+
     def test_package_list_is_sorted_and_unique(self):
         packages = self.load()["apt"]["packages"]
         self.assertEqual(packages, sorted(set(packages)))

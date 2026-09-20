@@ -351,21 +351,63 @@ def package_modules(stage: Path, destination: Path) -> set[str]:
     return module_basenames
 
 
+def repository_head_without_git(root: Path) -> str:
+    dotgit = root / ".git"
+    if dotgit.is_symlink():
+        raise BuildError("repository .git boundary must not be a symlink")
+
+    gitdir = dotgit
+    if dotgit.is_file():
+        raw = dotgit.read_text(encoding="utf-8").strip()
+        prefix = "gitdir: "
+        if not raw.startswith(prefix):
+            raise BuildError("repository .git file is malformed")
+        candidate = Path(raw[len(prefix):])
+        if not candidate.is_absolute():
+            candidate = (root / candidate).resolve()
+        gitdir = candidate
+
+    head_path = gitdir / "HEAD"
+    if head_path.is_symlink() or not head_path.is_file():
+        raise BuildError("repository Git HEAD is missing or unsafe")
+    head = head_path.read_text(encoding="utf-8").strip().lower()
+    if re.fullmatch(r"[0-9a-f]{40}", head):
+        return head
+
+    prefix = "ref: "
+    if not head.startswith(prefix):
+        raise BuildError("repository Git HEAD is not a commit or ref")
+    ref = head[len(prefix):]
+    if not re.fullmatch(r"refs/[A-Za-z0-9._/-]+", ref) or ".." in ref.split("/"):
+        raise BuildError("repository Git HEAD ref is unsafe")
+    ref_path = gitdir / ref
+    if ref_path.is_symlink() or not ref_path.is_file():
+        raise BuildError("repository Git HEAD ref is unavailable without git")
+    value = ref_path.read_text(encoding="utf-8").strip().lower()
+    if re.fullmatch(r"[0-9a-f]{40}", value) is None:
+        raise BuildError("repository Git HEAD ref is not an exact commit")
+    return value
+
+
 def repository_source_commit() -> str:
     expected = os.environ.get("ORDAX_SOURCE_COMMIT", "").strip().lower()
     if expected and re.fullmatch(r"[0-9a-f]{40}", expected) is None:
         raise BuildError("ORDAX_SOURCE_COMMIT must be an exact 40-hex commit")
 
-    try:
-        actual = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip().lower()
-    except Exception as exc:
-        raise BuildError("cannot resolve checked-out OrdaX source commit") from exc
+    git = shutil.which("git")
+    if git:
+        try:
+            actual = subprocess.run(
+                [git, "rev-parse", "HEAD"],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip().lower()
+        except Exception as exc:
+            raise BuildError("cannot resolve checked-out OrdaX source commit") from exc
+    else:
+        actual = repository_head_without_git(ROOT)
 
     if re.fullmatch(r"[0-9a-f]{40}", actual) is None:
         raise BuildError("checked-out OrdaX source commit is invalid")
