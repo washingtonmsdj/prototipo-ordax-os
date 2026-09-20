@@ -56,6 +56,11 @@ class StableBaseContractTests(unittest.TestCase):
         self.assertEqual(alpine["archive_hash_pin_status"], "pending-from-verified-candidate")
         self.assertFalse(self.source["apk_package_versions_pinned"])
         self.assertEqual(self.source["apk_package_lock_status"], "pending-before-promotion")
+        self.assertIsNone(self.source["apk_package_lock"])
+        self.assertEqual(
+            self.source["apk_package_lock_scope"],
+            "all-installed-packages-including-transitive-dependencies",
+        )
         self.assertIn("pin-alpine-minirootfs-sha256", self.source["promotion_blockers"])
         self.assertIn("lock-exact-apk-package-versions", self.source["promotion_blockers"])
 
@@ -79,6 +84,14 @@ class StableBaseContractTests(unittest.TestCase):
         self.assertIn("[ -x /system/entrypoint ]", text)
         self.assertIn("exec /system/entrypoint", text)
         self.assertNotIn("git", text.lower())
+
+    def test_builder_records_and_can_enforce_full_transitive_apk_lock(self):
+        text = BUILDER.read_text(encoding="utf-8")
+        self.assertIn("def installed_apk_lock(", text)
+        self.assertIn("lib/apk/db/installed", text)
+        self.assertIn("def verify_apk_lock(", text)
+        self.assertIn('"installed_packages": installed_packages', text)
+        self.assertIn('"apk_package_lock_matches_contract"', text)
 
     def test_common_module_selector_is_profile_neutral_with_dev_compatibility(self):
         text = COMMON.read_text(encoding="utf-8")

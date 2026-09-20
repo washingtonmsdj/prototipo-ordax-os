@@ -122,6 +122,56 @@ def install_kernel_modules(rootfs: Path, archive_path: Path, required: set[str])
         archive.extractall(rootfs, members=selected, filter="data")
 
 
+def installed_apk_lock(rootfs: Path) -> dict[str, str]:
+    database = rootfs / "lib/apk/db/installed"
+    if database.is_symlink() or not database.is_file():
+        raise StableBaseError("Alpine installed-package database is missing before runtime pruning")
+    packages: dict[str, str] = {}
+    current_name = ""
+    current_version = ""
+    for raw in database.read_text(encoding="utf-8", errors="strict").splitlines() + [""]:
+        if raw.startswith("P:"):
+            current_name = raw[2:].strip()
+        elif raw.startswith("V:"):
+            current_version = raw[2:].strip()
+        elif raw == "":
+            if current_name or current_version:
+                if (
+                    not current_name
+                    or not current_version
+                    or current_name in packages
+                    or any(ch.isspace() for ch in current_name + current_version)
+                ):
+                    raise StableBaseError("Alpine installed-package database is malformed")
+                packages[current_name] = current_version
+            current_name = ""
+            current_version = ""
+    if not packages:
+        raise StableBaseError("Alpine installed-package lock is empty")
+    return dict(sorted(packages.items()))
+
+
+def verify_apk_lock(contract: dict, installed: dict[str, str]) -> None:
+    expected = contract.get("apk_package_lock")
+    if expected is None:
+        return
+    if not isinstance(expected, dict) or not expected:
+        raise StableBaseError("Stable Base apk_package_lock must be null or a non-empty object")
+    normalized = {str(name): str(version) for name, version in expected.items()}
+    if dict(sorted(normalized.items())) != installed:
+        missing = sorted(set(normalized) - set(installed))
+        extra = sorted(set(installed) - set(normalized))
+        changed = sorted(
+            name
+            for name in set(normalized) & set(installed)
+            if normalized[name] != installed[name]
+        )
+        raise StableBaseError(
+            "Stable Base APK lock mismatch: "
+            f"missing={missing[:8]} extra={extra[:8]} changed={changed[:8]}"
+        )
+
+
 def install_stable_runtime(rootfs: Path, kernel_modules: Path, contract: dict) -> set[str]:
     required = set(contract["kernel_modules"]["required_basenames"])
     install_kernel_modules(rootfs, kernel_modules, required)
@@ -302,6 +352,8 @@ def build(kernel_modules: Path, out_dir: Path, cache_dir: Path) -> dict:
 
         stage("install-packages")
         CORE.proot_rootfs(rootfs, "apk add --no-cache " + " ".join(contract["packages"]))
+        installed_packages = installed_apk_lock(rootfs)
+        verify_apk_lock(contract, installed_packages)
         stage("install-runtime")
         firmware = install_stable_runtime(rootfs, kernel_modules.resolve(), contract)
 
@@ -348,6 +400,9 @@ def build(kernel_modules: Path, out_dir: Path, cache_dir: Path) -> dict:
             "apk_package_versions_pinned": bool(contract["apk_package_versions_pinned"]),
             "kernel_modules_sha256": sha256_file(kernel_modules.resolve()),
             "packages": contract["packages"],
+            "installed_packages": installed_packages,
+            "installed_package_count": len(installed_packages),
+            "apk_package_lock_matches_contract": contract.get("apk_package_lock") is not None,
             "firmware_selection": "shared-selected-kernel-module-declarations",
             "firmware_files": len(firmware),
             "symlinks_flattened": flattened,
@@ -378,6 +433,8 @@ def build(kernel_modules: Path, out_dir: Path, cache_dir: Path) -> dict:
             encoding="ascii",
         )
         print(f"STABLE_BASE_ALPINE_SHA256={actual_archive_sha}")
+        print(f"STABLE_BASE_APK_PACKAGE_COUNT={len(installed_packages)}")
+        print("STABLE_BASE_APK_LOCK_JSON=" + json.dumps(installed_packages, sort_keys=True, separators=(",", ":")))
         print(f"STABLE_BASE_EROFS_SHA256={provenance['erofs_sha256']}")
         print("STABLE_BASE_GIT=NO")
         print("STABLE_BASE_PHYSICAL_AUTHORIZED=NO")

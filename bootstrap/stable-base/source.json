@@ -88,5 +88,8 @@
     "signed-stable-base-update-protocol",
     "qemu-portable-v2-boot-proof",
     "physical-usb-boot-proof"
-  ]
+  ],
+  "apk_package_lock": null,
+  "apk_package_lock_scope": "all-installed-packages-including-transitive-dependencies",
+  "apk_package_lock_source": "candidate-provenance"
 }
