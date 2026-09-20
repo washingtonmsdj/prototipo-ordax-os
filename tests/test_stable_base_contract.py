@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 from pathlib import Path
+import tarfile
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,6 +95,51 @@ class StableBaseContractTests(unittest.TestCase):
         self.assertIn("def verify_apk_lock(", text)
         self.assertIn('"installed_packages": installed_packages', text)
         self.assertIn('"apk_package_lock_matches_contract"', text)
+        self.assertIn("dereference=True", text)
+
+    def test_normalized_tar_serializes_hardlinks_as_regular_files(self):
+        namespace = {}
+        module = ast.parse(BUILDER.read_text(encoding="utf-8"))
+        fn = next(
+            node for node in module.body
+            if isinstance(node, ast.FunctionDef) and node.name == "normalized_tar"
+        )
+        mini = ast.Module(
+            body=[
+                ast.Import(names=[ast.alias(name="tarfile")]),
+                ast.ImportFrom(
+                    module="pathlib",
+                    names=[ast.alias(name="Path")],
+                    level=0,
+                ),
+                fn,
+            ],
+            type_ignores=[],
+        )
+        code = compile(ast.fix_missing_locations(mini), str(BUILDER), "exec")
+        exec(code, namespace)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            rootfs = root / "rootfs"
+            (rootfs / "bin").mkdir(parents=True)
+            busybox = rootfs / "bin/busybox"
+            busybox.write_bytes(b"busybox-fixture\n")
+            busybox.chmod(0o755)
+            os.link(busybox, rootfs / "bin/ash")
+            archive_path = root / "stable-base.tar"
+            namespace["normalized_tar"](rootfs, archive_path)
+
+            with tarfile.open(archive_path, "r:") as archive:
+                members = {member.name: member for member in archive.getmembers()}
+                self.assertTrue(members["bin/busybox"].isfile())
+                self.assertTrue(members["bin/ash"].isfile())
+                self.assertFalse(members["bin/ash"].islnk())
+                self.assertFalse(members["bin/ash"].issym())
+                self.assertEqual(
+                    archive.extractfile(members["bin/ash"]).read(),
+                    b"busybox-fixture\n",
+                )
 
     def test_common_module_selector_is_profile_neutral_with_dev_compatibility(self):
         text = COMMON.read_text(encoding="utf-8")

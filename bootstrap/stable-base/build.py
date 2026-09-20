@@ -271,7 +271,16 @@ def verify_rootfs(rootfs: Path, contract: dict) -> None:
 
 def normalized_tar(rootfs: Path, destination: Path) -> None:
     paths = [rootfs] + sorted(rootfs.rglob("*"), key=lambda p: p.relative_to(rootfs).as_posix())
-    with tarfile.open(destination, "w", format=tarfile.USTAR_FORMAT) as archive:
+    # The rootfs intentionally flattens Alpine symlinks into regular files or
+    # directories. Regular files may share an inode through hard links; the
+    # portable EROFS source tar must still serialize every path as file bytes
+    # rather than reintroducing tar hard-link entries.
+    with tarfile.open(
+        destination,
+        "w",
+        format=tarfile.USTAR_FORMAT,
+        dereference=True,
+    ) as archive:
         for path in paths:
             relative = "." if path == rootfs else path.relative_to(rootfs).as_posix()
             info = archive.gettarinfo(str(path), arcname=relative)
