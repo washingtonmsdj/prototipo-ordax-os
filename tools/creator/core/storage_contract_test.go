@@ -11,6 +11,10 @@ type preparedMediaContract struct {
 	Schema             string `json:"$schema"`
 	Status             string `json:"status"`
 	Scope              string `json:"scope"`
+	MVPFinalProductLayout bool `json:"mvp_final_product_layout"`
+	StableMVPPublicPromotionAllowed bool `json:"stable_mvp_public_promotion_allowed"`
+	TransitionalProfileOwner string `json:"transitional_profile_owner"`
+	ReplacementContract string `json:"replacement_contract"`
 	PartitionTable     string `json:"partition_table"`
 	LogicalSectorBytes uint64 `json:"logical_sector_bytes"`
 	AlignmentBytes     uint64 `json:"alignment_bytes"`
@@ -52,13 +56,28 @@ func loadPreparedMediaContractForTest(t *testing.T) preparedMediaContract {
 	return contract
 }
 
-func TestPreparedMediaContractMatchesStoragePlanner(t *testing.T) {
+func TestTransitionalPreparedMediaContractMatchesLegacyStoragePlanner(t *testing.T) {
 	contract := loadPreparedMediaContractForTest(t)
 	if contract.Schema != "prototype-ordax.physical-prepared-media/1" {
 		t.Fatalf("unexpected schema %q", contract.Schema)
 	}
-	if contract.Scope != "final-target-usb-after-creator-preparation" {
+	if contract.Status != "transitional-owner-development-physical-proof" {
+		t.Fatalf("unexpected contract status %q", contract.Status)
+	}
+	if contract.Scope != "transitional-three-partition-prepared-usb-not-mvp-final-layout" {
 		t.Fatalf("unexpected contract scope %q", contract.Scope)
+	}
+	if contract.MVPFinalProductLayout {
+		t.Fatal("three-partition prepared media must not be treated as the MVP final layout")
+	}
+	if contract.StableMVPPublicPromotionAllowed {
+		t.Fatal("transitional three-partition prepared media must not be promoted as Stable/MVP")
+	}
+	if contract.TransitionalProfileOwner != "owner-development" {
+		t.Fatalf("unexpected transitional profile owner %q", contract.TransitionalProfileOwner)
+	}
+	if contract.ReplacementContract != "docs/contracts/portable-usb-v2.json" {
+		t.Fatalf("unexpected replacement contract %q", contract.ReplacementContract)
 	}
 	if contract.PartitionTable != "gpt" {
 		t.Fatalf("partition table=%q want=gpt", contract.PartitionTable)

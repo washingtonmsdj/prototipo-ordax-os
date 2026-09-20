@@ -89,6 +89,22 @@ The proof verifies:
 
 `.github/workflows/creator-disposable-media.yml` routes its input through the Creator Core `stage-tree` first, then runs the GPT/filesystem proof. CI publishes only `proof.json`; the RAW is ephemeral and deleted.
 
+## MVP durable USB migration boundary
+
+The existing three-partition prepared-media path (`ORDAX-ESP + ORDAX + ORDAX-DATA`) is retained only as an Owner/Development hardware-validation bridge. Its contract is `docs/contracts/physical-prepared-media.json`, and it must not be promoted as the Stable/MVP final layout.
+
+The public MVP target is `docs/contracts/portable-usb-v2.json`:
+
+```text
+ORDAX-ESP   FAT32
+ORDAX-DATA  exFAT
+  .ordax/base/stable-base.erofs
+  .ordax/releases/<commit>/system.erofs
+  .ordax/state/persistent-state.img
+```
+
+The Creator Core already owns the v2 geometry through `PlanPortableTargetStorage`. Physical v2 apply remains disabled until the prepared-media proof, UEFI/QEMU gate, canonical trust and physical USB gates all pass.
+
 ## Release bootstrap inputs
 
 The release-channel pointer is now canonical and hash-bound in the minimal-bootstrap manifest:

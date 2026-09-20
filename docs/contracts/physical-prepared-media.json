@@ -1,7 +1,7 @@
 {
   "$schema": "prototype-ordax.physical-prepared-media/1",
-  "status": "implemented-owner-prototype-validation-pending",
-  "scope": "final-target-usb-after-creator-preparation",
+  "status": "transitional-owner-development-physical-proof",
+  "scope": "transitional-three-partition-prepared-usb-not-mvp-final-layout",
   "authorization_role": "geometry-and-filesystem-contract-only",
   "physical_write_authorized_by_this_contract": false,
   "partition_table": "gpt",
@@ -93,5 +93,19 @@
     "zero-region-skip_implemented": true,
     "skipped_region_owner": "the-unformatted-middle-of-ORDAX-DATA-is-immediately-replaced-by-Windows-exFAT-formatting",
     "fail_closed_rule": "supported-real-USB-capacities-require-exact-storage-v2-GPT-validation-and-never-fall-back-to-whole-disk-write-on-validation-failure"
+  },
+  "mvp_final_product_layout": false,
+  "stable_mvp_public_promotion_allowed": false,
+  "transitional_profile_owner": "owner-development",
+  "replacement_contract": "docs/contracts/portable-usb-v2.json",
+  "migration": {
+    "final_mvp_layout": [
+      "ORDAX-ESP",
+      "ORDAX-DATA"
+    ],
+    "final_mvp_contract": "docs/contracts/portable-usb-v2.json",
+    "current_three_partition_writer_retained_for_owner_validation": true,
+    "current_three_partition_writer_must_not_be_public_mvp_default": true,
+    "portable_v2_physical_writer_implemented": false
   }
 }
