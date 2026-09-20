@@ -14,6 +14,8 @@ CONTRACT = json.loads(
     )
 )
 SCRIPT = ROOT / "bootstrap/portable-v2/qemu_boot.py"
+INITRAMFS_BUILD = ROOT / "bootstrap/initramfs/build.py"
+INITRAMFS_SOURCE = ROOT / "bootstrap/initramfs/source.json"
 WORKFLOW = (
     ROOT / ".github/workflows/portable-v2-qemu-boot-proof.yml"
 ).read_text(encoding="utf-8")
@@ -55,6 +57,18 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
         self.assertIn('"qemu_direct_kernel_boot_proven": True', text)
         self.assertIn('"qemu_uefi_boot_proven": False', text)
         self.assertIn('"physical_usb_boot_proven": False', text)
+
+
+    def test_initramfs_mount_understands_security_flags_before_vfat_handoff(self):
+        build = INITRAMFS_BUILD.read_text(encoding="utf-8")
+        source = json.loads(INITRAMFS_SOURCE.read_text(encoding="utf-8"))
+        self.assertIn('"CONFIG_FEATURE_MOUNT_FLAGS": "y"', build)
+        self.assertIn('"CONFIG_FEATURE_VOLUMEID_FAT": "y"', build)
+        self.assertTrue(source["portable_v2_prerequisites"]["mount_security_flags"])
+        self.assertEqual(
+            source["portable_v2_prerequisites"]["mount_security_flags_busybox_selector"],
+            "CONFIG_FEATURE_MOUNT_FLAGS=y",
+        )
 
     def test_workflow_builds_signed_release_real_base_capsule_and_pinned_initramfs(self):
         for marker in (
