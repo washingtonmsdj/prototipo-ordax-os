@@ -156,7 +156,36 @@ LEGACY_ORDAX_PLATFORM_PARTITION=FORBIDDEN
 LEGACY_ORDAX_HOME_PARTITION=FORBIDDEN
 ```
 
-Canonical geometry remains defined by `docs/contracts/physical-media.json`. The canonical release layout remains `/ordax/bootstrap`, `/ordax/releases/<commit>`, `/ordax/current`, `/ordax/state` and `/ordax/home`.
+Canonical geometry remains defined by `docs/contracts/physical-media.json`. The legacy/transitional release layout remains `/ordax/bootstrap`, `/ordax/releases/<commit>`, `/ordax/current`, `/ordax/state` and `/ordax/home` only for the existing three-partition validation path. It is **not** the durable Stable/MVP USB storage target.
+
+The durable MVP target is portable USB v2:
+
+```text
+ORDAX-ESP   FAT32
+ORDAX-DATA  exFAT
+  -> .ordax/base/stable-base.erofs
+  -> .ordax/releases/<commit>/system.erofs
+  -> .ordax/state/persistent-state.img   # ext4-in-file
+```
+
+Mutable activation authority (`current`, `known-good`, `candidate`) lives inside the ext4 persistent-state image, never as a mutable exFAT symlink/pointer. The product release is a signed `release-manifest/2` EROFS image; the Stable Base is a separate immutable minimal OS EROFS. The fixed initramfs contains candidate helpers for exact release selection, EROFS/ext4/OverlayFS handoff, capsule/Base SHA-256 verification and a non-default portable PID1.
+
+```text
+PORTABLE_USB_V2_STORAGE_PROOF=PASS_CI_DISPOSABLE
+PORTABLE_RELEASE_EROFS_REPRODUCIBLE=PASS_CI
+PORTABLE_RELEASE_MANIFEST_V2_SIGN_VERIFY=PASS_CI
+PORTABLE_RELEASE_OFFLINE_EXACT_VERIFY=PASS_CI
+PORTABLE_MOUNT_HANDOFF_PROOF=PASS_CI_DISPOSABLE
+PORTABLE_BOOTSTRAP_CAPSULE_REPRODUCIBLE=PASS_CI
+PORTABLE_INITRAMFS_HELPERS=PASS_CI
+PORTABLE_PINNED_INITRAMFS_COMPOSITION=PENDING_CURRENT_HEAD
+PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PENDING_CURRENT_HEAD
+PORTABLE_QEMU_UEFI_BOOT=NO
+PORTABLE_PHYSICAL_USB_BOOT=NO
+PORTABLE_V2_PUBLIC_WRITER_ENABLED=NO
+```
+
+CI proof remains distinct from physical boot evidence and does not authorize the public writer.
 
 ## Minimal bootstrap and canonical release path
 
