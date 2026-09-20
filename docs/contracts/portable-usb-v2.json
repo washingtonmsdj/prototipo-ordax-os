@@ -1,0 +1,86 @@
+{
+  "$schema": "prototype-ordax.portable-usb-v2/1",
+  "status": "disposable-proof-only",
+  "product_scope": "mvp-usb-durable-storage-target",
+  "storage_architecture_contract": "docs/contracts/storage-architecture.json",
+  "creator_planner": "tools/creator/core/storage_profiles.go#PlanPortableTargetStorage",
+  "physical_write_authorized": false,
+  "physical_device_paths_allowed": false,
+  "host_loop_devices_allowed": true,
+  "bootable_proven": false,
+  "mvp_boot_handoff_connected": false,
+  "logical_sector_bytes": 512,
+  "alignment_bytes": 1048576,
+  "target_bytes": 3221225472,
+  "partitions": [
+    {
+      "index": 1,
+      "name": "ORDAX-ESP",
+      "role": "uefi-boot-current-fallback-and-recovery",
+      "filesystem": "fat32",
+      "filesystem_label": "ORDAX-ESP",
+      "gpt_type_guid": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
+      "start_lba": 2048,
+      "size_bytes": 536870912
+    },
+    {
+      "index": 2,
+      "name": "ORDAX-DATA",
+      "role": "portable-shared-capacity",
+      "filesystem": "exfat",
+      "filesystem_label": "ORDAX-DATA",
+      "gpt_type_guid": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7",
+      "size_policy": "fill-all-remaining-usable-capacity",
+      "windows_visible": true,
+      "direct_overlayfs_upper": false
+    }
+  ],
+  "ordax_internal_layout": {
+    "root": "ORDAX-DATA/.ordax",
+    "release_directory": ".ordax/releases",
+    "release_image": {
+      "path": ".ordax/releases/proof-system.erofs",
+      "filesystem": "erofs",
+      "read_only": true,
+      "compressed": true
+    },
+    "state_directory": ".ordax/state",
+    "persistent_state_image": {
+      "path": ".ordax/state/persistent-state.img",
+      "filesystem": "ext4",
+      "filesystem_label": "ORDAX-STATE",
+      "size_bytes": 268435456,
+      "mounted_through_loop_device_in_runtime": true,
+      "overlayfs_upper_owner": true
+    }
+  },
+  "user_data": {
+    "shares_ordax_data_capacity": true,
+    "outside_internal_directory_allowed": true,
+    "preserved_by_system_image_reset": true
+  },
+  "proof_requirements": [
+    "regular-sparse-raw-file-only",
+    "gpt-valid",
+    "exactly-two-partitions",
+    "portable-planner-geometry-matches-contract",
+    "ordax-esp-is-fat32",
+    "ordax-data-is-exfat",
+    "no-fixed-physical-ordax-system-partition",
+    "real-erofs-release-image-inside-ordax-data",
+    "real-ext4-persistent-state-image-inside-ordax-data",
+    "persistent-state-image-is-not-exfat-overlay-upper",
+    "user-file-coexists-with-ordax-internal-data",
+    "read-only-remount-reverifies-contained-image-hashes",
+    "physical-write-remains-unauthorized"
+  ],
+  "forbidden": [
+    "physical-ORDAX-system-partition",
+    "physical-ORDAX-HOME-partition",
+    "physical-ORDAX-PLATFORM-partition",
+    "direct-exfat-overlayfs-upper",
+    "physical-device-path-input",
+    "claiming-bootable-proof-from-storage-only-proof",
+    "enabling-public-physical-write"
+  ]
+}

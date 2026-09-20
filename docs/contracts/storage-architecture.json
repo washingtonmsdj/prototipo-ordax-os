@@ -219,6 +219,11 @@
     "current_layout_may_remain_for-immediate-physical-boot-validation": true,
     "must_not_be_promoted_as-long-term-portable-storage-contract": true,
     "target_next_layout": "two-physical-partition-portable-usb-with-file-based-immutable-system-and-linux-native-persistent-state-image",
-    "migration_requires-new-contract-major-and-regression-gates-before-destructive-use": true
+    "migration_requires-new-contract-major-and-regression-gates-before-destructive-use": true,
+    "portable_usb_v2_contract": "docs/contracts/portable-usb-v2.json",
+    "portable_usb_v2_disposable_storage_proof_implemented": true,
+    "portable_usb_v2_boot_handoff_implemented": false,
+    "portable_usb_v2_physical_write_enabled": false,
+    "transitional_layout_remains_active_physical_writer": true
   }
 }

@@ -14,6 +14,7 @@ import (
 func usage() {
 	fmt.Fprintln(os.Stderr, "usage: ordax-creator <check|verify-payload|stage-tree|plan> --manifest <path> [--payload-root <dir>] [--output-root <dir>]")
 	fmt.Fprintln(os.Stderr, "       ordax-creator prepare-image --seed <regular-file> --out <new-regular-file> --target-bytes <bytes>")
+	fmt.Fprintln(os.Stderr, "       ordax-creator plan-portable --target-bytes <bytes>")
 	fmt.Fprintln(os.Stderr, "       ordax-creator plan-native --target-bytes <bytes>")
 	fmt.Fprintln(os.Stderr, "       ordax-creator plan-native-materialization --target-bytes <bytes>")
 	fmt.Fprintln(os.Stderr, "       ordax-creator plan-native-boot --pool-uuid <luks2-uuid>")
@@ -53,6 +54,31 @@ func runPrepareImage(args []string) int {
 	fmt.Printf("PREPARED_LAST_USABLE_LBA=%d\n", prepared.LastUsableLBA)
 	fmt.Printf("PREPARED_MAIN_LAST_LBA=%d\n", prepared.MainLastLBA)
 	fmt.Printf("PHYSICAL_DEVICE_TOUCHED=NO\n")
+	return 0
+}
+
+func runPlanPortable(args []string) int {
+	fs := flag.NewFlagSet("plan-portable", flag.ContinueOnError)
+	targetBytes := fs.Uint64("target-bytes", 0, "exact portable USB target capacity in bytes; must be 512-byte aligned")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 || *targetBytes == 0 {
+		usage()
+		return 2
+	}
+
+	plan, err := creatorcore.PlanPortableTargetStorage(*targetBytes)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ordax-creator: portable USB plan failed: %v\n", err)
+		return 1
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(plan); err != nil {
+		fmt.Fprintf(os.Stderr, "ordax-creator: encode portable USB plan: %v\n", err)
+		return 1
+	}
 	return 0
 }
 
@@ -279,6 +305,9 @@ func main() {
 	command := os.Args[1]
 	if command == "prepare-image" {
 		os.Exit(runPrepareImage(os.Args[2:]))
+	}
+	if command == "plan-portable" {
+		os.Exit(runPlanPortable(os.Args[2:]))
 	}
 	if command == "plan-native" {
 		os.Exit(runPlanNative(os.Args[2:]))

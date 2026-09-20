@@ -8,6 +8,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 FOUNDATION_PATH = ROOT / "docs" / "contracts" / "foundation.json"
 STORAGE_PATH = ROOT / "docs" / "contracts" / "storage-architecture.json"
+PORTABLE_V2_PATH = ROOT / "docs" / "contracts" / "portable-usb-v2.json"
 
 
 class StorageArchitectureContractTest(unittest.TestCase):
@@ -15,6 +16,7 @@ class StorageArchitectureContractTest(unittest.TestCase):
     def setUpClass(cls):
         cls.foundation = json.loads(FOUNDATION_PATH.read_text(encoding="utf-8"))
         cls.storage = json.loads(STORAGE_PATH.read_text(encoding="utf-8"))
+        cls.portable_v2 = json.loads(PORTABLE_V2_PATH.read_text(encoding="utf-8"))
 
     def test_foundation_points_to_storage_authority(self):
         storage = self.foundation["storage_architecture"]
@@ -78,6 +80,38 @@ class StorageArchitectureContractTest(unittest.TestCase):
         self.assertTrue(state["mounted-through-loop-device"])
         self.assertTrue(state["overlayfs-upper"])
         self.assertFalse(state["exfat-used-directly-as-overlay-upper"])
+
+    def test_portable_v2_proof_contract_matches_durable_profile_without_authorizing_write(self):
+        contract = self.portable_v2
+        self.assertEqual(contract["$schema"], "prototype-ordax.portable-usb-v2/1")
+        self.assertEqual(contract["status"], "disposable-proof-only")
+        self.assertFalse(contract["physical_write_authorized"])
+        self.assertFalse(contract["physical_device_paths_allowed"])
+        self.assertFalse(contract["bootable_proven"])
+        self.assertEqual(
+            [p["name"] for p in contract["partitions"]],
+            ["ORDAX-ESP", "ORDAX-DATA"],
+        )
+        self.assertEqual(
+            [p["filesystem"] for p in contract["partitions"]],
+            ["fat32", "exfat"],
+        )
+        internal = contract["ordax_internal_layout"]
+        self.assertEqual(internal["release_image"]["filesystem"], "erofs")
+        self.assertEqual(internal["persistent_state_image"]["filesystem"], "ext4")
+        self.assertTrue(internal["persistent_state_image"]["overlayfs_upper_owner"])
+        self.assertNotIn("ORDAX", [p["name"] for p in contract["partitions"]])
+
+    def test_portable_v2_migration_cannot_replace_physical_writer_before_boot_proof(self):
+        migration = self.storage["prototype_migration"]
+        self.assertEqual(
+            migration["portable_usb_v2_contract"],
+            "docs/contracts/portable-usb-v2.json",
+        )
+        self.assertTrue(migration["portable_usb_v2_disposable_storage_proof_implemented"])
+        self.assertFalse(migration["portable_usb_v2_boot_handoff_implemented"])
+        self.assertFalse(migration["portable_usb_v2_physical_write_enabled"])
+        self.assertTrue(migration["transitional_layout_remains_active_physical_writer"])
 
     def test_storage_contract_forbids_future_rigid_regressions(self):
         forbidden = set(self.storage["forbidden_default_architectures"])

@@ -1,0 +1,162 @@
+name: Portable USB v2 Disposable Proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/contracts/portable-usb-v2.json'
+      - 'docs/contracts/storage-architecture.json'
+      - 'docs/PHYSICAL-MEDIA.md'
+      - 'tools/creator/core/storage_profiles.go'
+      - 'tools/creator/core/storage_profiles_test.go'
+      - 'tools/creator/cmd/ordax-creator/main.go'
+      - 'tools/creator/proof/portable_usb_v2.py'
+      - 'tests/test_portable_usb_v2_contract.py'
+      - 'tests/test_storage_architecture_contract.py'
+      - '.github/workflows/portable-usb-v2-proof.yml'
+  pull_request:
+    paths:
+      - 'docs/contracts/portable-usb-v2.json'
+      - 'docs/contracts/storage-architecture.json'
+      - 'docs/PHYSICAL-MEDIA.md'
+      - 'tools/creator/core/storage_profiles.go'
+      - 'tools/creator/core/storage_profiles_test.go'
+      - 'tools/creator/cmd/ordax-creator/main.go'
+      - 'tools/creator/proof/portable_usb_v2.py'
+      - 'tests/test_portable_usb_v2_contract.py'
+      - 'tests/test_storage_architecture_contract.py'
+      - '.github/workflows/portable-usb-v2-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable-usb-v2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+          cache: false
+
+      - name: Install disposable portable-storage tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gdisk \
+            dosfstools \
+            exfatprogs \
+            erofs-utils \
+            e2fsprogs \
+            util-linux
+          command -v sgdisk
+          command -v mkfs.vfat
+          command -v mkfs.exfat
+          command -v mkfs.erofs
+          command -v fsck.erofs
+          command -v mkfs.ext4
+          command -v debugfs
+          command -v losetup
+
+      - name: Validate portable USB contracts and Creator planner
+        run: |
+          set -euo pipefail
+          python -m unittest \
+            tests.test_portable_usb_v2_contract \
+            tests.test_storage_architecture_contract -v
+          (
+            cd tools/creator
+            go test -count=1 ./core ./cmd/ordax-creator
+          )
+
+      - name: Generate exact Creator portable target plan
+        run: |
+          set -euo pipefail
+          target_bytes="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          contract = json.loads(Path('docs/contracts/portable-usb-v2.json').read_text())
+          print(contract['target_bytes'])
+          PY
+          )"
+          (
+            cd tools/creator
+            go run ./cmd/ordax-creator plan-portable --target-bytes "$target_bytes"
+          ) > "$RUNNER_TEMP/portable-usb-v2-plan.json"
+
+          python3 - "$RUNNER_TEMP/portable-usb-v2-plan.json" <<'PY'
+          import json, pathlib, sys
+          plan = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert plan['profile'] == 'portable-usb'
+          assert plan['payload_name'] == 'ORDAX-DATA'
+          assert plan['esp_bytes'] == 512 * 1024 * 1024
+          assert plan['payload_last_lba'] == plan['last_usable_lba']
+          print('PORTABLE_USB_V2_PLAN=PASS')
+          PY
+
+      - name: Prove FAT32 exFAT EROFS and ext4-in-file storage
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/portable-usb-v2-proof"
+          metadata="$RUNNER_TEMP/portable-usb-v2-metadata"
+          mkdir -p "$metadata"
+          sudo -E python3 tools/creator/proof/portable_usb_v2.py \
+            --contract docs/contracts/portable-usb-v2.json \
+            --plan "$RUNNER_TEMP/portable-usb-v2-plan.json" \
+            --output-root "$output"
+
+          sudo install -o "$(id -u)" -g "$(id -g)" -m 0644 \
+            "$output/proof.json" "$metadata/proof.json"
+
+          python3 - "$metadata/proof.json" <<'PY'
+          import json, pathlib, sys
+          proof = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert proof['status'] == 'pass'
+          assert proof['physical_write_authorized'] is False
+          assert proof['physical_device_touched'] is False
+          assert proof['bootable_proven'] is False
+          assert [p['name'] for p in proof['partitions']] == ['ORDAX-ESP', 'ORDAX-DATA']
+          assert [p['filesystem']['type'] for p in proof['partitions']] == ['vfat', 'exfat']
+          assert proof['contained_artifacts']['release']['filesystem'] == 'erofs'
+          assert proof['contained_artifacts']['persistent_state']['filesystem'] == 'ext4'
+          assert proof['contained_artifacts']['persistent_state']['overlayfs_upper_owner'] is True
+          assert all(proof['checks'].values())
+          print('PORTABLE_USB_V2_DISPOSABLE_PROOF=PASS')
+          print('PORTABLE_USB_V2_BOOTABLE_PROVEN=NO')
+          print('PORTABLE_USB_V2_PHYSICAL_WRITE_AUTHORIZED=NO')
+          PY
+
+      - name: Destroy disposable RAW bytes
+        if: always()
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/portable-usb-v2-proof"
+          if sudo test -d "$output"; then
+            sudo rm -rf "$output"
+          fi
+          test ! -e "$output"
+          echo 'PORTABLE_USB_V2_RAW_RETAINED=NO'
+          echo 'PORTABLE_USB_V2_PROOF_METADATA_ONLY=YES'
+
+      - name: Upload proof metadata only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: portable-usb-v2-proof-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/portable-usb-v2-metadata/proof.json
+          if-no-files-found: error
+          retention-days: 14
