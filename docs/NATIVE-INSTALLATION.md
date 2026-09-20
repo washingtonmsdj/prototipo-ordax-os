@@ -1,6 +1,6 @@
 # OrdaX Native Installation
 
-Status: MVP REQUIRED — PLAN IMPLEMENTED, APPLY PENDING
+Status: MVP REQUIRED — STORAGE PROOF COMPLETE, BOOT/APPLY PENDING
 
 Machine-readable authority: `docs/contracts/native-installation.json`.
 
@@ -107,7 +107,11 @@ and exposes it through:
 
 `ordax-creator plan-native --target-bytes <bytes>`
 
-This command touches no physical device and authorizes no write. Physical APPLY, encryption provisioning, filesystem creation, release materialization and first-boot promotion remain separate gates.
+This command touches no physical device and authorizes no write.
+
+The storage materialization path is now proven in disposable CI: exact GPT geometry, FAT32 ESP, LUKS2 ORDAX-POOL, Btrfs, canonical subvolumes, product-mode materialization and readback all pass without opening a physical target. The proof destroys its ephemeral RAW/container bytes and key and publishes metadata only.
+
+That storage proof is deliberately **not a boot claim**. Physical APPLY, verified Stable release materialization into the target, verified Native boot/recovery assets, unlock/boot proof and first-boot promotion remain separate fail-closed gates.
 
 ## Stable/MVP rules
 

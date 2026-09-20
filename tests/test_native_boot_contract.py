@@ -105,12 +105,27 @@ class NativeBootContractTests(unittest.TestCase):
         self.assertFalse(discovery["busybox_findfs_authoritative"])
         self.assertIn("duplicate-pool-uuid", BOOT["fail_closed"])
 
-    def test_build_stays_blocked_until_exact_environment_is_observed(self):
-        self.assertEqual(ENV["status"], "observation-required")
-        self.assertFalse(ENV["gate"]["environment_observation_complete"])
-        self.assertFalse(ENV["gate"]["versions_pinned"])
-        self.assertFalse(ENV["gate"]["artifact_build_allowed"])
+    def test_exact_environment_lock_allows_candidate_build_but_not_physical_use(self):
+        self.assertEqual(ENV["status"], "environment-locked-from-ci-observation")
+        self.assertTrue(ENV["gate"]["environment_observation_complete"])
+        self.assertTrue(ENV["gate"]["versions_pinned"])
+        self.assertTrue(ENV["gate"]["artifact_build_allowed"])
         self.assertFalse(ENV["gate"]["physical_artifact_authorized"])
+        self.assertEqual(
+            set(ENV["apt"]["expected_top_level_versions"]),
+            set(ENV["apt"]["top_level_packages"]),
+        )
+        lock = ENV["runtime_lock"]
+        self.assertEqual(
+            set(lock["runtime_files"]),
+            set(lock["runtime_file_sha256"]),
+        )
+        for digest in [
+            lock["busybox_sha256"],
+            *lock["primary_binary_sha256"].values(),
+            *lock["runtime_file_sha256"].values(),
+        ]:
+            self.assertRegex(digest, r"^[0-9a-f]{64}$")
         result = subprocess.run(
             ["python3", str(BUILDER), "check"],
             check=True,
@@ -118,8 +133,16 @@ class NativeBootContractTests(unittest.TestCase):
             text=True,
         )
         data = json.loads(result.stdout)
-        self.assertFalse(data["artifact_build_allowed"])
+        self.assertTrue(data["artifact_build_allowed"])
         self.assertFalse(data["physical_artifact_authorized"])
+
+    def test_builder_requires_exact_runtime_bytes_not_only_package_versions(self):
+        text = BUILDER.read_text(encoding="utf-8")
+        self.assertIn("runtime file set does not match lock", text)
+        self.assertIn("runtime file bytes do not match lock", text)
+        self.assertIn("BusyBox bytes do not match lock", text)
+        self.assertIn("primary binary bytes do not match lock", text)
+        self.assertNotIn('"findfs": "bin/findfs"', text)
 
     def test_environment_owner_resolution_handles_usrmerge_aliases(self):
         observer = (ROOT / "bootstrap/native-initramfs/observe_environment.py").read_text(
@@ -136,7 +159,11 @@ class NativeBootContractTests(unittest.TestCase):
             self.assertIn("dict.fromkeys(candidates)", text)
 
     def test_native_initramfs_python_sources_contain_no_literal_nul_bytes(self):
-        for path in (BUILDER, ROOT / ".github/workflows/native-initramfs-environment.yml"):
+        for path in (
+            BUILDER,
+            ROOT / ".github/workflows/native-initramfs-environment.yml",
+            ROOT / ".github/workflows/native-initramfs-candidate.yml",
+        ):
             self.assertNotIn(b"\x00", path.read_bytes(), str(path))
 
 

@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.native-initramfs-source/1",
-  "status": "source-contract-build-environment-lock-pending",
+  "status": "environment-locked-candidate-build-enabled",
   "root_init": "bootstrap/native-initramfs/root/init",
   "boot_contract": "docs/contracts/native-boot.json",
   "shared_kernel_contract": "bootstrap/kernel/source.json",
@@ -49,6 +49,7 @@
     "canonical_entrypoint": "bootstrap/native-initramfs/build.py",
     "deterministic_archive_required": true,
     "environment_lock_required_before_artifact_build": true,
-    "physical_artifact_authorized": false
+    "physical_artifact_authorized": false,
+    "environment_lock_status": "verified-ci-observation"
   }
 }

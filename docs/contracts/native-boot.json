@@ -129,6 +129,9 @@
     "disposable_unlock_mount_proof": "pending",
     "qemu_uefi_boot_proof": "pending",
     "physical_native_boot_proof": "pending",
-    "physical_apply_authorized": false
+    "physical_apply_authorized": false,
+    "environment_observation": "pass",
+    "environment_observation_workflow_run_id": 35480254444,
+    "environment_lock": "pinned"
   }
 }

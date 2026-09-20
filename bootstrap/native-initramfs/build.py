@@ -166,10 +166,20 @@ def check_contract() -> dict:
     artifact_build_allowed = gate.get("artifact_build_allowed") is True
     expected_top = env.get("apt", {}).get("expected_top_level_versions")
     expected_closure = env.get("apt", {}).get("runtime_closure_expected_packages")
+    runtime_lock = env.get("runtime_lock", {})
     if not isinstance(expected_top, dict) or not isinstance(expected_closure, dict):
         raise BuildError("Native initramfs package locks must be objects")
+    if not isinstance(runtime_lock, dict):
+        raise BuildError("Native initramfs runtime lock must be an object")
     if artifact_build_allowed and not (
-        observation_complete and versions_pinned and expected_top and expected_closure
+        observation_complete
+        and versions_pinned
+        and expected_top
+        and expected_closure
+        and runtime_lock.get("runtime_files")
+        and runtime_lock.get("runtime_file_sha256")
+        and runtime_lock.get("busybox_sha256")
+        and runtime_lock.get("primary_binary_sha256")
     ):
         raise BuildError("Native initramfs artifact gate is inconsistent")
 
@@ -300,15 +310,45 @@ def verify_build_environment(env: dict) -> dict:
     if dict(sorted(observed_closure.items())) != env["apt"]["runtime_closure_expected_packages"]:
         raise BuildError("Native initramfs dynamic runtime closure does not match package lock")
 
+    runtime_lock = env["runtime_lock"]
+    expected_files = runtime_lock["runtime_files"]
+    if sorted(closure_files) != expected_files:
+        raise BuildError("Native initramfs runtime file set does not match lock")
+
+    observed_file_hashes = {
+        path: sha256_file(Path(path))
+        for path in sorted(closure_files)
+    }
+    if observed_file_hashes != runtime_lock["runtime_file_sha256"]:
+        raise BuildError("Native initramfs runtime file bytes do not match lock")
+
+    busybox_hash = sha256_file(Path("/bin/busybox"))
+    if busybox_hash != runtime_lock["busybox_sha256"]:
+        raise BuildError("Native initramfs BusyBox bytes do not match lock")
+
+    observed_primary_hashes = {
+        binary: sha256_file(Path(binary))
+        for binary in PRIMARY_BINARIES
+    }
+    if observed_primary_hashes != runtime_lock["primary_binary_sha256"]:
+        raise BuildError("Native initramfs primary binary bytes do not match lock")
+
+    required_applets = set(runtime_lock["required_busybox_applets"])
+    if required_applets != REQUIRED_BUSYBOX_APPLETS:
+        raise BuildError("Native initramfs BusyBox applet lock disagrees with builder")
     applets = set(capture(["/bin/busybox", "--list"]).splitlines())
-    missing = sorted(REQUIRED_BUSYBOX_APPLETS - applets)
+    missing = sorted(required_applets - applets)
     if missing:
         raise BuildError(f"busybox-static lacks required Native applets: {missing}")
+
     return {
         "top_level_versions": observed_top,
         "runtime_closure_packages": dict(sorted(observed_closure.items())),
         "runtime_files": sorted(closure_files),
-        "busybox_applets": sorted(REQUIRED_BUSYBOX_APPLETS),
+        "runtime_file_sha256": observed_file_hashes,
+        "busybox_sha256": busybox_hash,
+        "primary_binary_sha256": observed_primary_hashes,
+        "busybox_applets": sorted(required_applets),
     }
 
 
@@ -338,7 +378,6 @@ def build_rootfs(source: dict, environment: dict, work: Path) -> tuple[Path, dic
         "umount": "bin/umount",
         "cat": "bin/cat",
         "mkdir": "bin/mkdir",
-        "findfs": "bin/findfs",
         "tr": "bin/tr",
     }
     for relative in applet_locations.values():

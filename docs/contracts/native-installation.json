@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.native-installation/1",
-  "status": "mvp-plan-implemented-apply-pending",
+  "status": "mvp-storage-proof-implemented-boot-and-apply-pending",
   "mvp_required": true,
   "source_mode": "ordax-usb",
   "target_mode": "native-disk",
@@ -87,7 +87,22 @@
       "implemented": true,
       "separate_native_kernel": false
     },
-    "native_boot_initramfs": false
+    "native_boot_initramfs": {
+      "source_owner": "bootstrap/native-initramfs",
+      "environment_lock": "docs/contracts/native-initramfs-build-environment.json",
+      "environment_observation_complete": true,
+      "candidate_builder_implemented": true,
+      "candidate_artifact_proven": false,
+      "boot_proven": false,
+      "physical_write_authorized": false
+    },
+    "disposable_storage_materialization_proof": {
+      "implemented": true,
+      "workflow": ".github/workflows/native-disposable-storage-proof.yml",
+      "physical_device_touched": false,
+      "bootable_proven": false,
+      "physical_write_authorized": false
+    }
   },
   "fail_closed": [
     "never-touch-physical-device-during-plan",
