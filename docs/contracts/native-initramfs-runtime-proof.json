@@ -1,0 +1,37 @@
+{
+  "$schema": "prototype-ordax.native-initramfs-runtime-proof/1",
+  "status": "proof-defined-execution-pending",
+  "candidate_provenance_schema": "prototype-ordax.native-initramfs-provenance/1",
+  "physical_device_paths_allowed": false,
+  "physical_write_authorized": false,
+  "qemu_uefi_boot_proven": false,
+  "pid1_kernel_cmdline_boot_proven": false,
+  "scope": [
+    "verify-candidate-artifact-hash-and-size-before-extraction",
+    "extract-only-safe-relative-newc-paths",
+    "execute-packaged-cryptsetup-against-regular-luks2-container",
+    "format-btrfs-only-on-disposable-dm-crypt-mapper",
+    "execute-packaged-btrfs-subvolume-operations",
+    "materialize-and-read-back-native-disk-product-mode",
+    "reopen-luks2-read-only-and-remount-btrfs-read-only",
+    "destroy-ephemeral-key-and-container-before-success"
+  ],
+  "expected_subvolumes": [
+    "ordax-state",
+    "ordax-home",
+    "ordax-apps",
+    "ordax-containers",
+    "ordax-snapshots"
+  ],
+  "expected_product_mode": "native-disk",
+  "expected_pool_label": "ORDAX-POOL",
+  "proof_owner": "bootstrap/native-initramfs/prove_runtime.py",
+  "execution_owner": ".github/workflows/native-initramfs-candidate.yml",
+  "proof_output": "out/native-initramfs-runtime-proof/proof.json",
+  "forbidden_claims": [
+    "uefi-boot-proven",
+    "pid1-cmdline-path-proven",
+    "physical-native-boot-proven",
+    "physical-apply-authorized"
+  ]
+}

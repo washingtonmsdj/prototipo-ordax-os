@@ -132,6 +132,8 @@
     "physical_apply_authorized": false,
     "environment_observation": "pass",
     "environment_observation_workflow_run_id": 35480254444,
-    "environment_lock": "pinned"
+    "environment_lock": "pinned",
+    "packaged_runtime_proof": "pending",
+    "packaged_runtime_proof_contract": "docs/contracts/native-initramfs-runtime-proof.json"
   }
 }

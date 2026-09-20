@@ -7,12 +7,14 @@ on:
       - 'bootstrap/native-initramfs/**'
       - 'docs/contracts/native-boot.json'
       - 'docs/contracts/native-initramfs-build-environment.json'
+      - 'docs/contracts/native-initramfs-runtime-proof.json'
       - '.github/workflows/native-initramfs-candidate.yml'
   pull_request:
     paths:
       - 'bootstrap/native-initramfs/**'
       - 'docs/contracts/native-boot.json'
       - 'docs/contracts/native-initramfs-build-environment.json'
+      - 'docs/contracts/native-initramfs-runtime-proof.json'
       - '.github/workflows/native-initramfs-candidate.yml'
   workflow_dispatch:
 
@@ -106,6 +108,40 @@ jobs:
               chown -R "$HOST_UID:$HOST_GID" /repo/out/native-initramfs
             '
 
+      - name: Install disposable runtime proof harness
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            btrfs-progs \
+            cpio \
+            cryptsetup \
+            util-linux
+
+      - name: Prove packaged LUKS2 and Btrfs runtime on disposable container
+        run: |
+          set -euo pipefail
+          rm -rf out/native-initramfs-runtime-proof
+          mkdir -p out/native-initramfs-runtime-proof
+          sudo unshare --mount --propagation private --fork \
+            python3 bootstrap/native-initramfs/prove_runtime.py \
+              --candidate out/native-initramfs/native-initramfs.cpio.gz \
+              --provenance out/native-initramfs/native-initramfs-provenance.json \
+              --out out/native-initramfs-runtime-proof/proof.json
+          sudo chown -R "$(id -u):$(id -g)" out/native-initramfs-runtime-proof
+          python3 - <<'PY'
+          import json, pathlib
+          proof = json.loads(pathlib.Path('out/native-initramfs-runtime-proof/proof.json').read_text())
+          assert proof['status'] == 'pass'
+          assert proof['physical_device_touched'] is False
+          assert proof['physical_write_authorized'] is False
+          assert proof['qemu_uefi_boot_proven'] is False
+          assert proof['pid1_kernel_cmdline_boot_proven'] is False
+          assert all(proof['checks'].values())
+          print('NATIVE_INITRAMFS_RUNTIME_PROOF=PASS')
+          print('NATIVE_INITRAMFS_BOOT_PROVEN=NO')
+          PY
+
       - name: Assert candidate remains non-physical
         run: |
           set -euo pipefail
@@ -127,6 +163,8 @@ jobs:
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: native-initramfs-candidate-${{ github.event.pull_request.head.sha || github.sha }}
-          path: out/native-initramfs/
+          path: |
+            out/native-initramfs/
+            out/native-initramfs-runtime-proof/proof.json
           if-no-files-found: error
           retention-days: 14
