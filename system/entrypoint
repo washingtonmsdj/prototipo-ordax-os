@@ -10,6 +10,7 @@ UPDATE_STATE=$UPDATE_RUN_DIR/state.json
 WORKTREE=${ORDAX_WORKTREE:-/workspace/ordax}
 GIT_BIN=${ORDAX_GIT_BIN:-/usr/bin/git}
 DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}
+PRODUCT_MODE=${ORDAX_PRODUCT_MODE:-}
 SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
 STABLE_ROOT=${ORDAX_STABLE_ROOT:-/ordax}
 BASE_UPDATE_STATE_DIR=${ORDAX_BASE_UPDATE_STATE_DIR:-/state/ordax/base-update}
@@ -250,6 +251,16 @@ start_supervisor() {
     log "started supervisor pid $SUPERVISOR_PID"
     return 0
 }
+
+case "$PRODUCT_MODE" in
+    usb|native-disk)
+        ;;
+    *)
+        fail_closed "OrdaX product mode identity is missing or invalid"
+        ;;
+esac
+ORDAX_PRODUCT_MODE=$PRODUCT_MODE
+export ORDAX_PRODUCT_MODE
 
 case "$DISTRIBUTION_PROFILE" in
     owner-development)
