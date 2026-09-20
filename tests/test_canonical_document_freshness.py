@@ -141,19 +141,25 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertEqual(promotion["PHYSICAL_USB_WRITE"], "NO")
 
     def test_known_stale_promotion_claims_cannot_return(self):
-        promotion = PROMOTION_GATES.read_text(encoding="utf-8")
-        for phrase in (
-            "PHYSICAL_KERNEL_BOOT=PENDING\n",
-            "NOTEBOOK_UEFI_BOOT=PENDING\n",
-            "WEB_MODE=PENDING\n",
-            "NATIVE_GRAPHICAL_MODE=PENDING\n",
-            "SAME_COMMIT_VISUAL_CHANGE=PENDING\n",
-            "EDIT_SOURCE=PENDING_END_TO_END\n",
-            "WEB_PREVIEW=PENDING\n",
-            "DEVICE_RELEASE_OR_DELTA_UPDATE=PENDING_PHYSICAL\n",
-            "HEALTH_READINESS=PENDING\n",
-        ):
-            self.assertNotIn(phrase, promotion)
+        promotion = assignment_map(PROMOTION_GATES.read_text(encoding="utf-8"))
+        stale_keys = {
+            "PHYSICAL_KERNEL_BOOT",
+            "NOTEBOOK_UEFI_BOOT",
+            "NETWORK_READY",
+            "RELEASE_CHANNEL_REACHABLE",
+            "RELEASE_SIGNATURE_VERIFY",
+            "RECOVERY_PATH",
+            "DEVICE_RELEASE_OR_DELTA_UPDATE",
+            "HEALTH_READINESS",
+        }
+        for key in stale_keys:
+            self.assertNotIn(key, promotion)
+
+        self.assertNotEqual(promotion["WEB_MODE"], "PENDING")
+        self.assertNotEqual(promotion["NATIVE_GRAPHICAL_MODE"], "PENDING")
+        self.assertNotEqual(promotion["SAME_COMMIT_VISUAL_CHANGE"], "PENDING")
+        self.assertNotEqual(promotion["EDIT_SOURCE"], "PENDING_END_TO_END")
+        self.assertNotEqual(promotion["WEB_PREVIEW"], "PENDING")
 
     def test_known_stale_version_claims_cannot_return(self):
         current = CURRENT_STATE.read_text(encoding="utf-8")
