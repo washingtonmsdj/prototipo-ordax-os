@@ -293,7 +293,16 @@ def boot_qemu(args: argparse.Namespace, inputs: dict[str, Any], disk: Path, work
         deadline = time.monotonic() + 150.0
         while time.monotonic() < deadline:
             text = serial.read_text(encoding="utf-8", errors="replace") if serial.exists() else ""
-            if SUCCESS in text and STABLE in text:
+            source_marker = "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit
+            stable_source_marker = "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.source_commit
+            slot_marker = "ORDAX_PORTABLE_V2_SLOT=current"
+            if (
+                SUCCESS in text
+                and STABLE in text
+                and source_marker in text
+                and stable_source_marker in text
+                and slot_marker in text
+            ):
                 process.terminate()
                 try:
                     process.wait(timeout=5)
@@ -305,6 +314,9 @@ def boot_qemu(args: argparse.Namespace, inputs: dict[str, Any], disk: Path, work
                     "stable_init_handoff_marker": True,
                     "qemu_network_disabled": "-net" in command and "none" in command,
                     "candidate_rdinit_used": any("rdinit=/sbin/ordax-portable-init" in item for item in command),
+                    "current_slot_selected": slot_marker in text,
+                    "portable_source_sha_exact": source_marker in text,
+                    "stable_init_source_sha_exact": stable_source_marker in text,
                 }
                 return text, checks
             if process.poll() is not None:
@@ -342,6 +354,9 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         "stable_init_handoff_marker": False,
         "qemu_network_disabled": False,
         "candidate_rdinit_used": False,
+        "current_slot_selected": False,
+        "portable_source_sha_exact": False,
+        "stable_init_source_sha_exact": False,
         "physical_target_device_untouched": True,
         "guest_disk_destroyed": False,
     }
@@ -370,7 +385,13 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
             "public_physical_promotion_allowed": False,
             "candidate_pid1_default_changed": False,
             "network_required_for_first_boot": False,
-            "serial_markers": [SUCCESS, STABLE],
+            "serial_markers": [
+                SUCCESS,
+                STABLE,
+                "ORDAX_PORTABLE_V2_SLOT=current",
+                "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit,
+                "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.source_commit,
+            ],
             "guest_disk": {
                 "sha256_before_destruction": disk_sha,
                 "retained": False,

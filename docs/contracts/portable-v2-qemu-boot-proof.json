@@ -36,7 +36,10 @@
   ],
   "required_serial_markers": [
     "ORDAX_PORTABLE_V2_HANDOFF=VERIFIED",
-    "ORDAX_STABLE_INIT_HANDOFF=VERIFIED"
+    "ORDAX_PORTABLE_V2_SLOT=current",
+    "ORDAX_PORTABLE_V2_SOURCE_SHA=<exact-source-commit>",
+    "ORDAX_STABLE_INIT_HANDOFF=VERIFIED",
+    "ORDAX_STABLE_INIT_SOURCE_SHA=<exact-source-commit>"
   ],
   "required_checks": [
     "initramfs-capsule-pin-matches-staged-capsule",
@@ -49,7 +52,10 @@
     "switch-root-reaches-stable-init",
     "network-disabled",
     "raw-guest-disk-destroyed",
-    "no-physical-target-device-touched"
+    "no-physical-target-device-touched",
+    "current-slot-selected",
+    "portable-pid1-source-sha-is-exact-head",
+    "stable-init-source-sha-is-exact-head"
   ],
   "promotion_effect": {
     "portable_v2_pid1_default_changed": false,
