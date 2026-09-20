@@ -36,7 +36,8 @@
       "ordax-snapshots"
     ],
     "target_product_mode": "native-disk",
-    "target_product_mode_path": "/ordax/bootstrap/config/product-mode"
+    "target_product_mode_path": "/ordax/bootstrap/config/product-mode",
+    "target_product_mode_pool_relative_path": "bootstrap/config/product-mode"
   },
   "proof_requirements": [
     "regular-sparse-raw-file-only",
@@ -51,6 +52,7 @@
     "ephemeral-luks-key-destroyed-before-success",
     "no-physical-device-opened",
     "physical-write-remains-unauthorized",
-    "bootability-not-claimed"
+    "bootability-not-claimed",
+    "runtime-ordax-path-is-translated-to-pool-root-without-duplicate-ordax-prefix"
   ]
 }
