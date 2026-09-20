@@ -212,14 +212,19 @@ PORTABLE_SURFACE_RUNTIME_EROFS_REPRODUCIBLE=PASS_CI
 PORTABLE_SURFACE_RUNTIME_EROFS_SHA256=170d306b38cfdbadba47a7548a6757a920ceaedea98697270aaa8ca4f4d8d038
 PORTABLE_SURFACE_RUNTIME_BOOT_CONNECTED=NO
 PORTABLE_STABLE_FIRST_SURFACE_OFFLINE_PROVEN=NO
-PORTABLE_PINNED_INITRAMFS_COMPOSITION=PENDING_CURRENT_HEAD
-PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PENDING_CURRENT_HEAD
-PORTABLE_QEMU_UEFI_BOOT=NO
+PORTABLE_PINNED_INITRAMFS_COMPOSITION=PASS_CI
+PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PASS_CI
+PORTABLE_QEMU_UEFI_BOOT=PASS_CI_OVMF_NON_SECURE_BOOT
+PORTABLE_QEMU_NETWORK_REQUIRED=NO
+PORTABLE_QEMU_PHYSICAL_TARGET_TOUCHED=NO
+PORTABLE_QEMU_SECURE_BOOT=NO
 PORTABLE_PHYSICAL_USB_BOOT=NO
 PORTABLE_V2_PUBLIC_WRITER_ENABLED=NO
 ```
 
 The offline Stable/MVP graphical runtime is now a separate candidate EROFS artifact with a full 253-package Alpine lock and repeat-digest proof. It deliberately excludes generated machine identity and Fontconfig caches from signed bytes. The artifact is **not yet connected to the Portable v2 boot/runtime handoff** and therefore does not yet prove that a fresh Stable USB reaches the Surface with networking disabled.
+
+Portable v2 itself has now crossed the CI boot-handoff gate with the final two-partition layout: the direct-kernel QEMU proof and the UEFI/OVMF + systemd-boot proof both reached `ORDAX_PORTABLE_V2_HANDOFF=VERIFIED` and `ORDAX_STABLE_INIT_HANDOFF=VERIFIED`, selected the exact `current` slot/source identity, ran with QEMU networking disabled, destroyed disposable guest state afterward and did not touch a physical target device. The UEFI proof uses non-Secure-Boot OVMF; **Secure Boot and physical USB boot remain unproven**.
 
 CI proof remains distinct from physical boot evidence and does not authorize the public writer.
 
