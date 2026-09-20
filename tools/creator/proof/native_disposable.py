@@ -162,6 +162,8 @@ def validate_plan(plan: dict[str, Any], contract: dict[str, Any]) -> None:
         raise ProofError("Native product-mode transition is invalid")
     if plan.get("target_product_mode_path") != "/ordax/bootstrap/config/product-mode":
         raise ProofError("Native product-mode materialization path is invalid")
+    if plan.get("target_product_mode_pool_relative_path") != "bootstrap/config/product-mode":
+        raise ProofError("Native pool-relative product-mode path is invalid")
 
     partitions = plan.get("partitions")
     if not isinstance(partitions, list) or len(partitions) != 2:
@@ -282,6 +284,7 @@ def create_pool(
     partition: dict[str, Any],
     subvolumes: list[dict[str, Any]],
     target_mode_path: str,
+    target_mode_pool_relative_path: str,
     output_root: Path,
 ) -> dict[str, Any]:
     with path.open("wb") as handle:
@@ -328,9 +331,15 @@ def create_pool(
         runtime_prefix = "/ordax/"
         if not target_mode_path.startswith(runtime_prefix):
             raise ProofError("Native product-mode path is outside mounted ORDAX pool")
-        logical = target_mode_path[len(runtime_prefix):]
-        if not logical or logical.startswith("/") or ".." in Path(logical).parts:
-            raise ProofError("Native product-mode path is not safely pool-relative")
+        expected_relative = target_mode_path[len(runtime_prefix):]
+        logical = target_mode_pool_relative_path
+        if (
+            not logical
+            or logical.startswith("/")
+            or ".." in Path(logical).parts
+            or logical != expected_relative
+        ):
+            raise ProofError("Core Native pool-relative product-mode path is inconsistent")
         marker = mountpoint / logical
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.write_text("native-disk\n", encoding="utf-8")
@@ -392,6 +401,7 @@ def prove(contract_path: Path, plan_path: Path, output_root: Path) -> dict[str, 
         plan["partitions"][1],
         plan["subvolumes"],
         plan["target_product_mode_path"],
+        plan["target_product_mode_pool_relative_path"],
         root,
     )
     if (root / ".ephemeral-luks-key").exists():
