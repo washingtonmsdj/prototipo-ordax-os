@@ -109,6 +109,11 @@
     "materialization_layout": ".ordax/releases/<source_commit>/{system.erofs,release-manifest.json,release-envelope.json}",
     "materialization_atomic_directory_rename": true,
     "erofs_superblock_checked_before_persisted_release_promotion": true,
-    "current_symlink_created": false
+    "current_symlink_created": false,
+    "offline_exact_verification_support": true,
+    "offline_exact_verification_command": "ordax-release-agent verify-portable-exact",
+    "offline_exact_verification_network_access": false,
+    "offline_exact_verification_mutates_release": false,
+    "offline_exact_verification_activation_performed": false
   }
 }

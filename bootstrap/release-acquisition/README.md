@@ -202,3 +202,15 @@ It verifies the signed envelope/manifest, exact SHA-256 and size, checks the ERO
 ```
 
 This path deliberately **does not activate** the release and does not create the legacy `current` symlink. The old `materialize`, `install` and `activate-exact` paths remain v1-only. Portable v2 activation stays fail-closed until the dedicated initramfs/boot handoff and recovery model are implemented and proven.
+
+
+Before any portable-v2 boot handoff, the already materialized release can be revalidated offline:
+
+```text
+ordax-release-agent verify-portable-exact \
+  --trust <release-trust.json> \
+  --expected-commit <40-hex> \
+  --root /ordax-data/.ordax
+```
+
+This command performs no network access, does not modify the release, does not create an activation pointer and does not mount the image. It revalidates the stored signed envelope, manifest v2 identity, exact commit, artifact hash/size and EROFS superblock. The boot handoff must consume only a release that passes this exact verification.

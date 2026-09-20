@@ -126,6 +126,14 @@ type PortableMaterializeReceipt struct {
 	ActivationAllowed bool   `json:"activation_allowed"`
 }
 
+type PortableVerifyReceipt struct {
+	Status            string `json:"status"`
+	SourceCommit      string `json:"source_commit"`
+	ReleasePath       string `json:"release_path"`
+	ArtifactPath      string `json:"artifact_path"`
+	ActivationAllowed bool   `json:"activation_allowed"`
+}
+
 func strictDecode(data []byte, max int, out any) error {
 	if len(data) == 0 || len(data) > max {
 		return fmt.Errorf("document size outside allowed range: %d", len(data))
@@ -806,6 +814,50 @@ func materializePortable(client *http.Client, envelopeURL, root string, trust Tr
 	}, nil
 }
 
+func verifyPortableExact(root string, trust TrustAnchor, key ed25519.PublicKey, expectedRepo, expectedCommit string) (PortableVerifyReceipt, error) {
+	if !commitPattern.MatchString(expectedCommit) {
+		return PortableVerifyReceipt{}, errors.New("expected_commit must be lowercase 40-hex")
+	}
+	releasePath := filepath.Join(root, "releases", expectedCommit)
+	info, err := os.Lstat(releasePath)
+	if err != nil {
+		return PortableVerifyReceipt{}, fmt.Errorf("portable release root: %w", err)
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return PortableVerifyReceipt{}, errors.New("portable release root is not a safe directory")
+	}
+
+	envelopePath := filepath.Join(releasePath, "release-envelope.json")
+	envelope, err := readBoundedRegularFile(envelopePath, maxEnvelope, "stored portable release envelope")
+	if err != nil {
+		return PortableVerifyReceipt{}, err
+	}
+	manifest, payload, err := verifyEnvelope(envelope, trust, key, expectedRepo)
+	if err != nil {
+		return PortableVerifyReceipt{}, fmt.Errorf("verify stored portable release envelope: %w", err)
+	}
+	if manifest.Schema != manifestSchemaV2 {
+		return PortableVerifyReceipt{}, errors.New("stored portable release is not release-manifest/2")
+	}
+	if manifest.SourceCommit != expectedCommit {
+		return PortableVerifyReceipt{}, fmt.Errorf(
+			"stored portable source_commit does not match expected commit: got=%s expected=%s",
+			manifest.SourceCommit,
+			expectedCommit,
+		)
+	}
+	if err := verifyExistingPortableRelease(releasePath, manifest, payload, envelope); err != nil {
+		return PortableVerifyReceipt{}, fmt.Errorf("verify exact portable release: %w", err)
+	}
+	return PortableVerifyReceipt{
+		Status: "verified-portable-exact",
+		SourceCommit: manifest.SourceCommit,
+		ReleasePath: releasePath,
+		ArtifactPath: filepath.Join(releasePath, "system.erofs"),
+		ActivationAllowed: false,
+	}, nil
+}
+
 func syncDir(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
@@ -1230,6 +1282,32 @@ func materializePortableCommand(args []string) error {
 	return printJSON(receipt)
 }
 
+func verifyPortableExactCommand(args []string) error {
+	fs := flag.NewFlagSet("verify-portable-exact", flag.ContinueOnError)
+	trustPath := fs.String("trust", "", "release trust anchor file")
+	root := fs.String("root", "/ordax-data/.ordax", "portable OrdaX internal root")
+	repository := fs.String("repository", defaultRepo, "expected source repository")
+	expectedCommit := fs.String("expected-commit", "", "required exact portable source commit")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *trustPath == "" || *expectedCommit == "" || fs.NArg() != 0 {
+		return errors.New("verify-portable-exact requires --trust and --expected-commit")
+	}
+	if !commitPattern.MatchString(*expectedCommit) {
+		return errors.New("expected_commit must be lowercase 40-hex")
+	}
+	trust, key, err := loadTrust(*trustPath)
+	if err != nil {
+		return err
+	}
+	receipt, err := verifyPortableExact(*root, trust, key, *repository, *expectedCommit)
+	if err != nil {
+		return err
+	}
+	return printJSON(receipt)
+}
+
 func activateExactCommand(args []string) error {
 	fs := flag.NewFlagSet("activate-exact", flag.ContinueOnError)
 	trustPath := fs.String("trust", "", "release trust anchor file")
@@ -1315,7 +1393,7 @@ func materializeCommand(args []string) error {
 
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: ordax-release-agent <verify-envelope|inspect|materialize|materialize-portable|activate-exact|install> [options]")
+	fmt.Fprintln(os.Stderr, "usage: ordax-release-agent <verify-envelope|inspect|materialize|materialize-portable|verify-portable-exact|activate-exact|install> [options]")
 }
 
 func main() {
@@ -1333,6 +1411,8 @@ func main() {
 		err = materializeCommand(os.Args[2:])
 	case "materialize-portable":
 		err = materializePortableCommand(os.Args[2:])
+	case "verify-portable-exact":
+		err = verifyPortableExactCommand(os.Args[2:])
 	case "activate-exact":
 		err = activateExactCommand(os.Args[2:])
 	case "install":

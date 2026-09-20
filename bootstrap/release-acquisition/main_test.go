@@ -1053,3 +1053,88 @@ func TestActivateExactExplicitlyRejectsPortableV2(t *testing.T) {
 		t.Fatal("portable v2 activation rejection created current pointer")
 	}
 }
+
+func TestVerifyPortableExactRevalidatesStoredSignedReleaseOffline(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := validPortableEROFS()
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestForPortable(server.URL+"/system.erofs", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(artifact)
+	})
+	root := filepath.Join(t.TempDir(), ".ordax")
+	if _, err := materializePortable(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	receipt, err := verifyPortableExact(root, trust, pub, defaultRepo, testCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.Status != "verified-portable-exact" ||
+		receipt.SourceCommit != testCommit ||
+		receipt.ActivationAllowed {
+		t.Fatalf("unexpected exact portable verification receipt: %#v", receipt)
+	}
+	if receipt.ArtifactPath != filepath.Join(root, "releases", testCommit, "system.erofs") {
+		t.Fatalf("unexpected exact portable artifact path: %s", receipt.ArtifactPath)
+	}
+}
+
+func TestVerifyPortableExactRejectsTamperedStoredImage(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := validPortableEROFS()
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestForPortable(server.URL+"/system.erofs", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(artifact)
+	})
+	root := filepath.Join(t.TempDir(), ".ordax")
+	if _, err := materializePortable(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	image := filepath.Join(root, "releases", testCommit, "system.erofs")
+	data, err := os.ReadFile(image)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data[len(data)-1] ^= 0x01
+	if err := os.WriteFile(image, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := verifyPortableExact(root, trust, pub, defaultRepo, testCommit); err == nil ||
+		!strings.Contains(err.Error(), "digest") {
+		t.Fatalf("tampered stored portable image was accepted: %v", err)
+	}
+}

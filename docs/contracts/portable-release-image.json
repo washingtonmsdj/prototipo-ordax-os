@@ -41,7 +41,8 @@
     "physical_write_authorized": false,
     "signer_v2_implemented": true,
     "portable_materialization_implemented": true,
-    "portable_activation_implemented": false
+    "portable_activation_implemented": false,
+    "offline_exact_verification_implemented": true
   },
   "fail_closed": [
     "reject-non-regular-or-symlink-system-tar",
