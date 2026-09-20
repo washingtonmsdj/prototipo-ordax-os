@@ -10,11 +10,13 @@ on:
       - 'bootstrap/native-initramfs/**'
       - 'docs/contracts/native-esp.json'
       - 'docs/contracts/native-esp-proof.json'
+      - 'docs/contracts/native-qemu-boot-proof.json'
       - 'docs/contracts/native-initramfs-build-environment.json'
       - 'docs/contracts/storage-architecture.json'
       - 'tools/creator/core/native_boot_entries.go'
       - 'tools/creator/cmd/ordax-creator/**'
       - 'tools/creator/proof/native_esp.py'
+      - 'tools/creator/proof/native_qemu_boot.py'
       - '.github/workflows/native-esp-candidate.yml'
   pull_request:
     paths:
@@ -24,11 +26,13 @@ on:
       - 'bootstrap/native-initramfs/**'
       - 'docs/contracts/native-esp.json'
       - 'docs/contracts/native-esp-proof.json'
+      - 'docs/contracts/native-qemu-boot-proof.json'
       - 'docs/contracts/native-initramfs-build-environment.json'
       - 'docs/contracts/storage-architecture.json'
       - 'tools/creator/core/native_boot_entries.go'
       - 'tools/creator/cmd/ordax-creator/**'
       - 'tools/creator/proof/native_esp.py'
+      - 'tools/creator/proof/native_qemu_boot.py'
       - '.github/workflows/native-esp-candidate.yml'
   workflow_dispatch:
 
@@ -68,7 +72,8 @@ jobs:
             meson ninja-build gcc binutils gperf \
             libcap-dev libmount-dev libblkid-dev liblz4-dev libzstd-dev \
             liblzma-dev libpcre2-dev \
-            dosfstools mtools cryptsetup util-linux
+            dosfstools mtools cryptsetup util-linux \
+            gdisk btrfs-progs qemu-system-x86 ovmf
           python -m pip install --disable-pip-version-check --no-cache-dir \
             jinja2 pyelftools
 
@@ -235,6 +240,43 @@ jobs:
           print('NATIVE_ESP_PHYSICAL_WRITE_AUTHORIZED=NO')
           PY
 
+      - name: Prove Native UEFI and PID1 handoff on disposable QEMU disk
+        run: |
+          set -euo pipefail
+          rm -rf out/native-qemu-proof
+          mkdir -p out/native-qemu-proof
+          sudo -E python3 tools/creator/proof/native_qemu_boot.py \
+            --esp-proof out/native-esp-proof/proof.json \
+            --bootloader out/native-esp-bootloader/systemd-bootx64.efi \
+            --kernel out/native-esp-kernel/vmlinuz-6.6.52 \
+            --initramfs out/native-esp-initramfs/native-initramfs.cpio.gz \
+            --loader-conf boot/native/loader/loader.conf \
+            --rendered-root out/native-boot-rendered \
+            --pool-uuid "${{ steps.pool.outputs.uuid }}" \
+            --source-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --out out/native-qemu-proof/proof.json
+          sudo chown -R "$(id -u):$(id -g)" out/native-qemu-proof
+
+          python3 - <<'PY'
+          import json, pathlib
+          proof = json.loads(pathlib.Path('out/native-qemu-proof/proof.json').read_text())
+          assert proof['status'] == 'pass'
+          assert proof['qemu_uefi_boot_proven'] is True
+          assert proof['pid1_kernel_cmdline_path_proven'] is True
+          assert proof['bootstrap_handoff_path_proven'] is True
+          assert proof['production_stable_release_boot_proven'] is False
+          assert proof['physical_native_boot_proven'] is False
+          assert proof['physical_target_device_touched'] is False
+          assert proof['physical_write_authorized'] is False
+          assert proof['qemu_required_for_end_users'] is False
+          assert proof['guest_disk']['retained'] is False
+          assert all(proof['checks'].values())
+          print('NATIVE_QEMU_UEFI_BOOT_PROOF=PASS')
+          print('NATIVE_PRODUCTION_RELEASE_BOOT_PROVEN=NO')
+          print('NATIVE_PHYSICAL_BOOT_PROVEN=NO')
+          print('NATIVE_PHYSICAL_WRITE_AUTHORIZED=NO')
+          PY
+
       - name: Destroy disposable LUKS2 identity bytes and secrets
         if: always()
         run: |
@@ -252,6 +294,8 @@ jobs:
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: native-esp-proof-${{ github.event.pull_request.head.sha || github.sha }}
-          path: out/native-esp-proof/proof.json
+          path: |
+            out/native-esp-proof/proof.json
+            out/native-qemu-proof/proof.json
           if-no-files-found: error
           retention-days: 14

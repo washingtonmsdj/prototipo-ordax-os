@@ -136,7 +136,7 @@
     "kernel_prerequisite_ci": "pass-resolved-config",
     "native_initramfs_artifact": "pass-candidate",
     "disposable_unlock_mount_proof": "pending",
-    "qemu_uefi_boot_proof": "pending",
+    "qemu_uefi_boot_proof": "pending-ci-execution",
     "physical_native_boot_proof": "pending",
     "physical_apply_authorized": false,
     "environment_observation": "pass",
@@ -172,7 +172,10 @@
       "candidate_artifact_sha256": "fb4f70f1eb3852fb6936a762adc022bc341e908bae3d9417dfabf040b18a83f6",
       "candidate_artifact_size": 6676736,
       "result": "pass"
-    }
+    },
+    "qemu_uefi_boot_proof_contract": "docs/contracts/native-qemu-boot-proof.json",
+    "qemu_ci_only": true,
+    "qemu_required_for_end_users": false
   },
   "kernel_boot_storage_policy": {
     "root_device_driver_must_be_built_in": true,
