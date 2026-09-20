@@ -59,6 +59,13 @@ class NativeInstallationContractTests(unittest.TestCase):
         self.assertFalse(state["physical_apply_implemented"])
         self.assertFalse(state["physical_apply_authorized"])
         self.assertFalse(state["first_boot_health_connected"])
+        self.assertFalse(state["native_source_boot_identity_handoff"])
+        self.assertIn("DiscoverMountedBlockDevice", state["native_source_boot_mount_discovery"])
+        mode = state["native_product_mode_identity"]
+        self.assertTrue(mode["implemented"])
+        self.assertEqual(mode["usb_value"], "usb")
+        self.assertEqual(mode["installed_value"], "native-disk")
+        self.assertEqual(mode["runtime_handoff"], "ORDAX_PRODUCT_MODE")
 
 
 if __name__ == "__main__":
