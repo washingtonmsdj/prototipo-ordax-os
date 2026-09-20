@@ -16,17 +16,18 @@ O [PLANO-FUNCIONAL-SURFACE-E-APPS.md](PLANO-FUNCIONAL-SURFACE-E-APPS.md), na rai
 
 A continuacao [PLANO-02-EVOLUCAO-E-REAPROVEITAMENTO-DO-LEGADO.md](PLANO-02-EVOLUCAO-E-REAPROVEITAMENTO-DO-LEGADO.md) compara o prototipo com `novo-ordax-os`: o que ja existe, o que falta recuperar e quais ideias merecem evoluir. Inclui 27 capacidades, fontes fixadas por commit, orientacoes por tela, prioridades, dependencias, criterios de aceite e prompts para implementacao. Leia as duas partes; o legado continua sendo referencia, sem copia automatica de codigo ou arquitetura.
 
-## Um produto, cinco modos
+## Um produto, modos evolutivos
+
+A arquitetura continua preparada para Web, Mobile, Desktop, USB e Native sem forks de produto.
 
 ```text
-OrdaX Web
- -> OrdaX Mobile (Android / iPhone)
- -> OrdaX Desktop
- -> OrdaX USB
- -> OrdaX Native (SSD/HD)
+MVP público        -> OrdaX USB
+Em breve           -> Web / Mobile / sincronização
+Futuro             -> experiência Desktop ampliada
+Pós-MVP            -> OrdaX Native (SSD/NVMe/HD)
 ```
 
-Todos usam uma identidade OrdaX, a mesma Surface/app source onde aplicavel e sincronizacao segura de estado suportado. Diferencas de ambiente ficam atras de adapters de capacidade, nao em forks de produto.
+O MVP roda diretamente pelo pendrive e não oferece instalação em disco interno. A fundação Native permanece preservada para ativação posterior. Todos os modos futuros devem reutilizar identidade, Surface/app source e adapters de capacidade quando aplicável.
 
 ## Site publico
 

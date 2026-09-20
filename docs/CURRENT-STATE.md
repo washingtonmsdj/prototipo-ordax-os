@@ -4,6 +4,21 @@ Status date: 2026-09-19
 
 This is the canonical handoff snapshot. Architecture/contracts win if another document conflicts with it. Detailed historical evidence remains under `docs/evidence/`; this file records the current boundary without treating CI proof, development-hardware proof and product-release authorization as interchangeable.
 
+## MVP scope decision — USB only
+
+```text
+MVP_PUBLIC_EXECUTION_MODE=USB_ONLY
+MVP_NATIVE_INSTALLATION_AVAILABLE=NO
+MVP_INTERNAL_DISK_DESTRUCTIVE_WRITE=NO
+NATIVE_FOUNDATION_RETAINED_FOR_POST_MVP=YES
+MVP_BILLING_IMPLEMENTED=NO
+MVP_PRICING_DEFINED=NO
+MVP_COMMERCIAL_DEVICE_LIMIT_DEFINED=NO
+WEB_MOBILE_SYNC_PUBLIC_STATUS=COMING_SOON_ONLY
+```
+
+Native contracts, Creator Core, LUKS2/Btrfs work, Native initramfs, ESP and disposable proofs remain valid engineering foundation, but they do not block or appear as user-facing MVP functionality.
+
 ## Repository
 
 ```text

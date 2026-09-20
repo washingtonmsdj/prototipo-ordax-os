@@ -24,3 +24,9 @@ Owner/Development remains an internal engineering profile. Public pages must not
 The portal may describe a capability only when its real owner/service exists or clearly mark it as not yet available.
 
 The route `/` is always the public landing page. The authenticated OrdaX/account experience must never replace the public root. OrdaX Web remains a separate product mode and is reached from an appropriate authenticated/product entry point rather than being rendered as the marketing homepage.
+
+## MVP scope: USB-only
+
+The public MVP prepares and boots OrdaX from removable USB media. It does not advertise or expose installation to internal SSD/NVMe/HDD. Native installation remains a post-MVP foundation.
+
+Web, Mobile, synchronization, backup and cross-device continuity may be presented only as **Em breve** while unavailable. No billing, pricing, commercial tier names or device-count limits are defined at this stage.
