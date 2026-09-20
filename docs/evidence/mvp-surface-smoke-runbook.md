@@ -16,7 +16,8 @@ O harness é deliberadamente somente leitura. Ele complementa — não substitui
 - lê e valida por `GET` o estado vivo do atualizador e o histórico de atualização, sem confirmar health nem disparar qualquer ação;
 - registra apenas resumos limitados dos dados observados;
 - verifica o tail do log do host por marcadores `traceback`, `segmentation fault` e `fatal`, armazenando apenas hash e contagem;
-- grava um relatório JSON com `PASS/WARN/FAIL` sem executar `POST`, `PUT`, `PATCH` ou `DELETE`.
+- grava um relatório JSON com `PASS/WARN/FAIL` sem executar `POST`, `PUT`, `PATCH` ou `DELETE`;
+- compara baseline e pós-tour de forma fail-closed para confirmar que pertencem ao mesmo boot, às mesmas fontes e à mesma identidade técnica sanitizada do updater.
 
 ### Privacidade da evidência
 
@@ -34,6 +35,8 @@ O relatório não inclui:
 
 A listagem de Arquivos é reduzida a contagens. Rede é reduzida a contagem por tipo/estado. O estado do atualizador é reduzido a fase/modo/Entrega, flags de presença e uma impressão SHA-256 da identidade de source, sem preservar o SHA bruto nem o token de health. A Surface e as fontes são representadas por tamanho/hash quando aplicável.
 
+O relatório de comparação não copia `boot_id`, hashes de fontes ou a impressão do updater para a saída. Ele registra apenas o resultado de igualdade/consistência entre as duas coletas.
+
 ## Pré-condições
 
 1. notebook inicializado pelo **Owner / Development USB**;
@@ -47,10 +50,12 @@ A listagem de Arquivos é reduzida a contagens. Rede é reduzida a contagem por 
 No shell de manutenção Owner/Development, execute:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-mvp-smoke \
+/workspace/ordax/system/surface/bin/ordax-mvp-smoke collect \
   --label mvp-surface-baseline \
   --output /var/lib/ordax/mvp-smoke/baseline.json
 ```
+
+`collect` continua sendo o comando padrão, portanto a forma antiga sem a palavra `collect` também permanece válida.
 
 A saída deve terminar com:
 
@@ -80,14 +85,36 @@ Depois da coleta inicial, registrar PASS/FAIL separadamente para cada item:
 Sem reiniciar o notebook, execute novamente:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-mvp-smoke \
+/workspace/ordax/system/surface/bin/ordax-mvp-smoke collect \
   --label mvp-surface-after-tour \
   --output /var/lib/ordax/mvp-smoke/after-tour.json
 ```
 
 A segunda coleta também deve terminar com `FAIL=0`.
 
-A existência de dois relatórios sem falha mostra que os endpoints essenciais, o estado observacional do atualizador e o host continuaram saudáveis antes/depois do uso manual. Ela não prova, sozinha, o comportamento visual de cada app; por isso o checklist manual é obrigatório.
+A existência de dois relatórios sem falha mostra que os endpoints essenciais, o estado observacional do atualizador e o host estavam saudáveis nas duas observações. Ela não prova, sozinha, que as observações pertencem ao mesmo estado técnico; por isso a comparação abaixo é obrigatória.
+
+## Comparação automática baseline x pós-tour
+
+Depois das duas coletas, ainda sem reiniciar ou atualizar deliberadamente o notebook, execute:
+
+```sh
+/workspace/ordax/system/surface/bin/ordax-mvp-smoke compare \
+  --label mvp-surface-same-session \
+  --baseline /var/lib/ordax/mvp-smoke/baseline.json \
+  --after /var/lib/ordax/mvp-smoke/after-tour.json \
+  --output /var/lib/ordax/mvp-smoke/comparison.json
+```
+
+A comparação deve terminar com:
+
+```text
+FAIL=0
+```
+
+Ela falha se qualquer coleta já contiver `FAIL`, se os `boot_id` forem diferentes/ausentes, se as fontes obrigatórias mudarem, se a identidade sanitizada do source do updater mudar ou se a Surface não estiver alinhada ao source nas duas observações. Isso impede juntar acidentalmente evidências de boots, checkouts ou atualizações diferentes em uma única prova física.
+
+Uma atualização automática que ocorra entre baseline e pós-tour também invalida esta execução do smoke integrado. Nesse caso, iniciar uma nova sequência baseline -> tour -> pós-tour -> comparação sobre o estado já estabilizado, em vez de reinterpretar as duas sessões como equivalentes.
 
 ## Evidência mínima para declarar esta prova física
 
@@ -96,6 +123,7 @@ Antes de atualizar qualquer snapshot canônico para PASS, devem existir juntos:
 - `baseline.json` revisado com `FAIL=0`;
 - checklist manual com resultado explícito por item;
 - `after-tour.json` revisado com `FAIL=0`;
+- `comparison.json` revisado com `FAIL=0`;
 - referência ao SHA exato do checkout testado;
 - confirmação `PHYSICAL_WRITE=NO` e `REBOOT_REQUIRED=NO` para esta operação;
 - quando Internet fizer parte da afirmação de isolamento/persistência, evidência do runbook específico de Internet.
