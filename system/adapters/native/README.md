@@ -29,3 +29,11 @@ native host block-device metadata
 ```
 
 The shared Surface must never receive raw block-device handles or arbitrary command execution. Until the adapter can enumerate and revalidate the exact target and the apply gate is authorized, the installation action remains unavailable/fail-closed.
+
+### Read-only installer target port
+
+`system/adapters/native/native-install-targets.mjs` implements the neutral `ordax.native-install-targets-port/1` contract only when the host session reports `productMode=usb` and the private signed-helper broker is available.
+
+The Surface receives model, transport, capacity, safety flags and the opaque confirmation fingerprint only. Stable device IDs, WWIDs, serial numbers, raw block-device paths and source-boot paths remain below the adapter boundary.
+
+This port has no write/apply method. Its presence is not proof that Native installation APPLY is implemented or authorized.
