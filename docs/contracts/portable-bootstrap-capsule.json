@@ -10,7 +10,7 @@
   "deterministic": true,
   "physical_write_authorized": false,
   "physical_boot_connected": false,
-  "pid1_verified_mount_connected": false,
+  "pid1_verified_mount_connected": true,
   "canonical_trust_embedded": false,
   "publisher_private_key_embedded": false,
   "first_boot_network_required": false,
@@ -97,5 +97,7 @@
     "exact-offline-release-reverification",
     "portable-v2-qemu-boot-proof",
     "physical-usb-boot-proof"
-  ]
+  ],
+  "public_physical_promotion_allowed": false,
+  "connection_scope": "portable-candidate-pid1-ci-and-qemu"
 }
