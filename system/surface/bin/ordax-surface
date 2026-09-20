@@ -4,6 +4,7 @@ set -eu
 SYSTEM_ROOT=${ORDAX_SYSTEM_ROOT:-}
 DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}
 PRODUCT_MODE=${ORDAX_PRODUCT_MODE:-}
+NATIVE_INSTALL_CAPABILITY=${ORDAX_NATIVE_INSTALL_CAPABILITY:-disabled}
 SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
 SOURCE_SHA=unknown
 STATE_ROOT=${ORDAX_STATE_DIR:-/state/ordax}
@@ -89,6 +90,15 @@ case "$PRODUCT_MODE" in
     usb|native-disk) ;;
     *) echo "ordax-surface: product mode identity is missing or invalid" >&2; exit 1 ;;
 esac
+
+case "$NATIVE_INSTALL_CAPABILITY" in
+    disabled|post-mvp-preview) ;;
+    *) NATIVE_INSTALL_CAPABILITY=disabled ;;
+esac
+
+# Stable/MVP is USB-only. Native installation remains compiled/testable
+# foundation, but the public profile cannot activate its broker or token.
+[ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] && NATIVE_INSTALL_CAPABILITY=disabled
 
 case "$RUNTIME_INSTALL_TIMEOUT" in
     ''|*[!0-9]*) RUNTIME_INSTALL_TIMEOUT=180 ;;
@@ -844,7 +854,8 @@ start_network_broker() {
 }
 
 start_native_install_broker() {
-    [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] || return 0
+    [ "$NATIVE_INSTALL_CAPABILITY" = "post-mvp-preview" ] || return 0
+    [ "$DISTRIBUTION_PROFILE" = "owner-development" ] || return 0
     [ "$PRODUCT_MODE" = "usb" ] || return 0
     [ -f "$NATIVE_INSTALL_BROKER_SOURCE" ] && [ ! -L "$NATIVE_INSTALL_BROKER_SOURCE" ] || return 1
     [ -x "$NATIVE_INSTALL_HELPER" ] && [ ! -L "$NATIVE_INSTALL_HELPER" ] || {
@@ -1093,6 +1104,8 @@ export ORDAX_SURFACE_MODE=native-graphical
     --bind 127.0.0.1 --port 8765 --directory /srv/ordax-system \
     --user-root /var/lib/ordax-user --power-request /run/ordax-surface/power-request \
     --product-mode "$PRODUCT_MODE" \
+    --distribution-profile "$DISTRIBUTION_PROFILE" \
+    --native-install-capability "$NATIVE_INSTALL_CAPABILITY" \
     --telemetry-config /srv/ordax-system/services/telemetry/relay.json \
     >"$HTTP_LOG" 2>&1 &
 HTTP_PID=$!

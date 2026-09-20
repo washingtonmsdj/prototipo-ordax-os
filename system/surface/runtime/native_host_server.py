@@ -2250,6 +2250,8 @@ class NativeHostServer(ThreadingHTTPServer):
         power_request_path: str,
         network_session_dir: str,
         product_mode: str | None = None,
+        distribution_profile: str = "owner-development",
+        native_install_capability: str = "disabled",
     ):
         super().__init__(server_address, handler_class)
         self.power_token = secrets.token_urlsafe(32)
@@ -2264,8 +2266,20 @@ class NativeHostServer(ThreadingHTTPServer):
         self.native_install_lock = threading.Lock()
         self.user_root = user_root
         self.product_mode = product_mode if product_mode in {"usb", "native-disk"} else None
+        self.distribution_profile = (
+            distribution_profile
+            if distribution_profile in {"owner-development", "stable-mvp"}
+            else "unknown"
+        )
+        self.native_install_capability = (
+            native_install_capability
+            if native_install_capability in {"disabled", "post-mvp-preview"}
+            else "disabled"
+        )
         self.native_install_available = (
-            self.product_mode == "usb"
+            self.distribution_profile == "owner-development"
+            and self.native_install_capability == "post-mvp-preview"
+            and self.product_mode == "usb"
             and native_install_broker_available(self.native_install_paths)
         )
         self.native_install_token = (
@@ -2974,6 +2988,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--power-request", default=DEFAULT_POWER_REQUEST_PATH)
     parser.add_argument("--network-session-dir", default=DEFAULT_NETWORK_SESSION_DIR)
     parser.add_argument("--product-mode", required=True, choices=("usb", "native-disk"))
+    parser.add_argument(
+        "--distribution-profile",
+        default="owner-development",
+        choices=("owner-development", "stable-mvp"),
+    )
+    parser.add_argument(
+        "--native-install-capability",
+        default="disabled",
+        choices=("disabled", "post-mvp-preview"),
+    )
     parser.add_argument("--telemetry-config", default="")
     return parser.parse_args()
 
@@ -3009,6 +3033,8 @@ def main() -> int:
         power_request_path=args.power_request,
         network_session_dir=args.network_session_dir,
         product_mode=args.product_mode,
+        distribution_profile=args.distribution_profile,
+        native_install_capability=args.native_install_capability,
     )
     telemetry_started = start_telemetry_heartbeat(args.telemetry_config)
     print(
