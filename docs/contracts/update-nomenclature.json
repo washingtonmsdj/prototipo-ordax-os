@@ -60,6 +60,7 @@
   "component_version": {
     "declared": true,
     "scheme": "semantic-versioning",
+    "independence_is_per_component": true,
     "identity_independent_from_release_mode": true,
     "version_source": "component-manifests-and-app-owned-version-modules",
     "first_party_pre_1_0_maturity": "beta",
