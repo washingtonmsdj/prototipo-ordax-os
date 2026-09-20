@@ -325,7 +325,12 @@ def create_pool(
         for item in subvolumes:
             run(["btrfs", "subvolume", "create", str(mountpoint / item["name"])])
 
-        logical = target_mode_path.lstrip("/")
+        runtime_prefix = "/ordax/"
+        if not target_mode_path.startswith(runtime_prefix):
+            raise ProofError("Native product-mode path is outside mounted ORDAX pool")
+        logical = target_mode_path[len(runtime_prefix):]
+        if not logical or logical.startswith("/") or ".." in Path(logical).parts:
+            raise ProofError("Native product-mode path is not safely pool-relative")
         marker = mountpoint / logical
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.write_text("native-disk\n", encoding="utf-8")
