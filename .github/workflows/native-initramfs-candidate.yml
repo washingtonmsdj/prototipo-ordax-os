@@ -24,9 +24,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - name: Checkout
+      - name: Checkout exact source commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Resolve immutable environment
@@ -60,7 +61,7 @@ jobs:
           rm -rf out/native-initramfs
           mkdir -p out/native-initramfs
           docker run --rm \
-            -e GITHUB_SHA="$GITHUB_SHA" \
+            -e GITHUB_SHA="${{ github.event.pull_request.head.sha || github.sha }}" \
             -e ORDAX_BASE_IMAGE="$IMAGE" \
             -e ORDAX_APT_SNAPSHOT_ID="$SNAPSHOT_ID" \
             -e SNAPSHOT_ID="$SNAPSHOT_ID" \
@@ -125,7 +126,7 @@ jobs:
       - name: Upload Native initramfs candidate
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: native-initramfs-candidate-${{ github.sha }}
+          name: native-initramfs-candidate-${{ github.event.pull_request.head.sha || github.sha }}
           path: out/native-initramfs/
           if-no-files-found: error
           retention-days: 14

@@ -158,6 +158,15 @@ class NativeBootContractTests(unittest.TestCase):
             self.assertIn('capture(["dpkg-query", "-S", candidate])', text)
             self.assertIn("dict.fromkeys(candidates)", text)
 
+    def test_candidate_workflow_binds_checkout_and_provenance_to_exact_pr_head(self):
+        workflow = (
+            ROOT / ".github/workflows/native-initramfs-candidate.yml"
+        ).read_text(encoding="utf-8")
+        identity = "${{ github.event.pull_request.head.sha || github.sha }}"
+        self.assertIn(f"ref: {identity}", workflow)
+        self.assertIn(f'-e GITHUB_SHA="{identity}"', workflow)
+        self.assertIn(f"native-initramfs-candidate-{identity}", workflow)
+
     def test_native_initramfs_python_sources_contain_no_literal_nul_bytes(self):
         for path in (
             BUILDER,
