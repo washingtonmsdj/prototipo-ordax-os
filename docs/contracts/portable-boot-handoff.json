@@ -73,7 +73,13 @@
     "system_persistent_overlay_allowed": false,
     "stable_base_overlay_required": true,
     "bootstrap_capsule_hash_pin_candidate_implemented": true,
-    "bootstrap_capsule_hash_pin_pid1_enforced": false
+    "bootstrap_capsule_hash_pin_pid1_enforced": false,
+    "stable_base_is_complete_minimal_rootfs": true,
+    "switch_root_target": "stable-base-overlay-root",
+    "system_erofs_switch_root_target": false,
+    "product_system_view": "read-only-bind",
+    "mutable_base_owner": "ext4-persistent-state-image",
+    "mutable_system_owner": null
   },
   "initramfs_integration_requirements": {
     "busybox_losetup_applet_required": true,
@@ -167,15 +173,20 @@
   },
   "boot_sequence_target": [
     "mount-ORDAX-ESP-read-only-for-bootstrap-substrate",
+    "verify-and-mount-bootstrap-capsule",
     "mount-ORDAX-DATA-exfat",
     "attach-persistent-state-img-loop",
     "validate-ext4-state-before-writable-mount",
     "mount-persistent-state-ext4",
     "resolve-current-or-known-good-from-ext4-activation-state",
     "verify-selected-release-exactly-offline",
+    "verify-stable-base-against-initramfs-owned-pin",
+    "attach-stable-base-erofs-read-only",
+    "compose-stable-base-overlay-with-ext4-upper-work",
     "attach-selected-system-erofs-read-only",
     "bind-verified-system-subtree-read-only",
-    "launch-shared-system-entrypoint"
+    "switch-root-into-stable-base-overlay",
+    "launch-ordax-stable-init-with-verified-portable-release-identity"
   ],
   "portable_bootstrap_contract": "docs/contracts/portable-bootstrap-v2.json"
 }

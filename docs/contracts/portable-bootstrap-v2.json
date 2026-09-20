@@ -121,10 +121,12 @@
     "attach-and-mount-persistent-state-ext4",
     "read-current-or-known-good-from-ext4",
     "reverify-selected-release-envelope-manifest-hash-and-erofs-offline",
-    "mount-stable-base-erofs-read-only-and-compose-base-overlay",
+    "verify-stable-base-against-initramfs-owned-pin",
+    "mount-stable-base-erofs-read-only-and-compose-base-overlay-with-ext4-upper-work",
     "mount-selected-system-erofs-read-only",
-    "compose-system-overlay-with-ext4-upper-work",
-    "launch-system-entrypoint-with-stable-mvp-usb-portable-v2-identity"
+    "bind-verified-system-subtree-read-only",
+    "switch-root-into-stable-base-overlay",
+    "launch-ordax-stable-init-with-portable-v2-identity"
   ],
   "migration": {
     "transitional_minimal_bootstrap_contract_unchanged": true,
@@ -163,7 +165,6 @@
       "installed": true,
       "mounts_state_ext4": true,
       "mounts_release_erofs_read_only": true,
-      "composes_overlayfs": true,
       "selects_release": false,
       "verifies_signature": false,
       "writes_activation_state": false,
@@ -171,7 +172,10 @@
       "mounts_bootstrap_capsule_erofs_read_only": true,
       "checks_bootstrap_capsule_payload_shape": true,
       "verifies_capsule_hash": false,
-      "capsule_hash_verification_owner": "busybox-sha256sum-against-initramfs-pin"
+      "capsule_hash_verification_owner": "busybox-sha256sum-against-initramfs-pin",
+      "composes_stable_base_overlayfs": true,
+      "system_runtime_view": "read-only-bind",
+      "system_persistent_overlay": false
     }
   },
   "stable_base": {

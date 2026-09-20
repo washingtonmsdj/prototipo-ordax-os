@@ -81,11 +81,28 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         self.assertTrue(mount["installed"])
         self.assertTrue(mount["mounts_state_ext4"])
         self.assertTrue(mount["mounts_release_erofs_read_only"])
-        self.assertTrue(mount["composes_overlayfs"])
+        self.assertTrue(mount["composes_stable_base_overlayfs"])
+        self.assertEqual(mount["system_runtime_view"], "read-only-bind")
+        self.assertFalse(mount["system_persistent_overlay"])
         self.assertFalse(mount["selects_release"])
         self.assertFalse(mount["verifies_signature"])
         self.assertFalse(mount["writes_activation_state"])
         self.assertFalse(mount["pid1_connected"])
+
+    def test_boot_sequence_mounts_stable_base_before_immutable_system(self):
+        sequence = CONTRACT["boot_sequence_target"]
+        base = sequence.index(
+            "mount-stable-base-erofs-read-only-and-compose-base-overlay-with-ext4-upper-work"
+        )
+        system = sequence.index("mount-selected-system-erofs-read-only")
+        bind = sequence.index("bind-verified-system-subtree-read-only")
+        switch_root = sequence.index("switch-root-into-stable-base-overlay")
+        launch = sequence.index("launch-ordax-stable-init-with-portable-v2-identity")
+        self.assertLess(base, system)
+        self.assertLess(system, bind)
+        self.assertLess(bind, switch_root)
+        self.assertLess(switch_root, launch)
+        self.assertNotIn("compose-system-overlay-with-ext4-upper-work", sequence)
 
     def test_transitional_contract_is_not_silently_reinterpreted(self):
         migration = CONTRACT["migration"]
