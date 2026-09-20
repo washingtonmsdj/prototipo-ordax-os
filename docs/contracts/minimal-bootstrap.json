@@ -213,7 +213,7 @@
         {
           "source_path": "bootstrap/config/product-mode",
           "target_path": "/ordax/bootstrap/config/product-mode",
-          "sha256": "061cf818f40b71172bd25675ca6e55123e561945541bfcab59a861a71b495674",
+          "sha256": "bd40397fe8fdda8c4f9d447f5db0a83a8c69a415be74ff1f78e0fb06654c32d1",
           "mode": "0644",
           "logical_owner": "bootstrap-product-mode",
           "reason": "Explicit execution-mode identity; prepared USB carries usb and a future Native installation must materialize native-disk on the installed target"
