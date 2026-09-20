@@ -91,6 +91,7 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn('"CONFIG_LOSETUP": "y"', BUILDER)
         self.assertIn('"sha256sum"', BUILDER)
         self.assertIn('"CONFIG_SHA256SUM": "y"', BUILDER)
+        self.assertIn('"CONFIG_FEATURE_MD5_SHA1_SUM_CHECK": "y"', BUILDER)
         self.assertIn('"CONFIG_FEATURE_MOUNT_LOOP": "y"', BUILDER)
         self.assertIn('"CONFIG_FEATURE_VOLUMEID_EXFAT": "y"', BUILDER)
         self.assertIn("prepare_kernel_uapi", BUILDER)
@@ -176,6 +177,11 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertEqual(
             capsule["pin_runtime_path"],
             "/etc/ordax/portable-bootstrap-capsule.sha256",
+        )
+        self.assertTrue(capsule["sha256sum_check_mode"])
+        self.assertEqual(
+            capsule["busybox_feature"],
+            "CONFIG_FEATURE_MD5_SHA1_SUM_CHECK=y",
         )
         self.assertEqual(
             capsule["expected_capsule_path"],

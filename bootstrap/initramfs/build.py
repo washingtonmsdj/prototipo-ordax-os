@@ -66,6 +66,7 @@ REQUESTED_CONFIG = {
     "CONFIG_POWEROFF": "y",
     "CONFIG_REBOOT": "y",
     "CONFIG_SHA256SUM": "y",
+    "CONFIG_FEATURE_MD5_SHA1_SUM_CHECK": "y",
     "CONFIG_SLEEP": "y",
     "CONFIG_SWITCH_ROOT": "y",
     "CONFIG_SYNC": "y",

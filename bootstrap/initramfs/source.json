@@ -146,7 +146,9 @@
       "default_candidate_build_pinned": false,
       "physical_boot_authorized": false,
       "sha256sum_applet": true,
-      "pin_format": "sha256sum-check-file"
+      "pin_format": "sha256sum-check-file",
+      "sha256sum_check_mode": true,
+      "busybox_feature": "CONFIG_FEATURE_MD5_SHA1_SUM_CHECK=y"
     },
     "activation_selection_helper_implemented": true,
     "activation_selection_pid1_connected": false
