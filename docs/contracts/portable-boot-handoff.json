@@ -16,7 +16,7 @@
   "proof": {
     "owner": "bootstrap/portable-v2/proof.py",
     "requires_exact_offline_release_verification": true,
-    "release_verifier_command": "ordax-release-agent verify-portable-exact",
+    "release_verifier_command": "ordax-release-agent verify-portable-v3-exact",
     "regular_file_images_only": true,
     "host_loop_devices_only": true,
     "release_mount": {
@@ -147,7 +147,7 @@
     "known_good_exact_resolver_implemented": true,
     "known_good_exact_resolver_verifies_materialized_shape": true,
     "known_good_exact_resolver_verifies_signature": false,
-    "known_good_exact_resolver_signature_handoff": "ordax-release-agent verify-portable-exact",
+    "known_good_exact_resolver_signature_handoff": "ordax-release-agent verify-portable-v3-exact",
     "capsule_hash_verification_helper_installed": true,
     "capsule_hash_verification_helper_path": "/sbin/ordax-portable-capsule-verify",
     "capsule_hash_verification_helper_pid1_connected": true,
@@ -171,7 +171,11 @@
     "surface_runtime_reference_verified": true,
     "surface_runtime_mount_operation": "mount-surface-runtime",
     "surface_runtime_overlay_root": "/run/ordax/runtime/native-surface/rootfs",
-    "surface_runtime_persistent_upper": false
+    "surface_runtime_persistent_upper": false,
+    "known_good_exact_resolver_signature_handoff_compatibility": [
+      "ordax-release-agent verify-portable-v3-exact",
+      "ordax-release-agent verify-portable-exact"
+    ]
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",
