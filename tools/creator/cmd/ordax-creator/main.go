@@ -14,6 +14,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "       ordax-creator prepare-image --seed <regular-file> --out <new-regular-file> --target-bytes <bytes>")
 	fmt.Fprintln(os.Stderr, "       ordax-creator plan-native --target-bytes <bytes>")
 	fmt.Fprintln(os.Stderr, "       ordax-creator plan-native-materialization --target-bytes <bytes>")
+	fmt.Fprintln(os.Stderr, "       ordax-creator plan-native-boot --pool-uuid <luks2-uuid>")
 }
 
 func loadManifest(path string) (creatorcore.Manifest, error) {
@@ -102,6 +103,31 @@ func runPlanNativeMaterialization(args []string) int {
 	return 0
 }
 
+func runPlanNativeBoot(args []string) int {
+	fs := flag.NewFlagSet("plan-native-boot", flag.ContinueOnError)
+	poolUUID := fs.String("pool-uuid", "", "exact public LUKS2 ORDAX-POOL UUID")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 || *poolUUID == "" {
+		usage()
+		return 2
+	}
+
+	plan, err := creatorcore.PlanNativeBootEntries(*poolUUID)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ordax-creator: Native boot plan failed: %v\n", err)
+		return 1
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(plan); err != nil {
+		fmt.Fprintf(os.Stderr, "ordax-creator: encode Native boot plan: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		usage()
@@ -117,6 +143,9 @@ func main() {
 	}
 	if command == "plan-native-materialization" {
 		os.Exit(runPlanNativeMaterialization(os.Args[2:]))
+	}
+	if command == "plan-native-boot" {
+		os.Exit(runPlanNativeBoot(os.Args[2:]))
 	}
 
 	fs := flag.NewFlagSet(command, flag.ContinueOnError)
