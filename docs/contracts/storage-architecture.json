@@ -227,6 +227,8 @@
     "transitional_layout_remains_active_physical_writer": true,
     "portable_release_image_contract": "docs/contracts/portable-release-image.json",
     "portable_release_image_candidate_implemented": true,
-    "portable_release_protocol_v2_implemented": false
+    "portable_release_protocol_v2_implemented": false,
+    "portable_usb_v2_mount_handoff_contract": "docs/contracts/portable-boot-handoff.json",
+    "portable_usb_v2_mount_handoff_disposable_proof_implemented": true
   }
 }

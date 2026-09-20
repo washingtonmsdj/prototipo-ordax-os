@@ -109,5 +109,7 @@
     "product_runtime_backend": "linux-kernel-CONFIG_EXFAT_FS=y",
     "proof_still_formats_real_exfat": true,
     "proof_still_reverifies_real_exfat": true
-  }
+  },
+  "mount_handoff_proof_contract": "docs/contracts/portable-boot-handoff.json",
+  "disposable_mount_handoff_proof_implemented": true
 }

@@ -1,0 +1,76 @@
+{
+  "$schema": "prototype-ordax.portable-boot-handoff/1",
+  "status": "disposable-mount-proof-only",
+  "product_mode": "usb",
+  "storage_profile": "portable-usb-v2",
+  "release_manifest_schema": "prototype-ordax.release-manifest/2",
+  "release_artifact": "system.erofs",
+  "release_root": ".ordax/releases/<source_commit>",
+  "persistent_state": ".ordax/state/persistent-state.img",
+  "physical_boot_connected": false,
+  "bootable_proven": false,
+  "physical_write_authorized": false,
+  "activation_selection_implemented": false,
+  "rollback_selection_implemented": false,
+  "initramfs_integration_implemented": false,
+  "proof": {
+    "owner": "bootstrap/portable-v2/proof.py",
+    "requires_exact_offline_release_verification": true,
+    "release_verifier_command": "ordax-release-agent verify-portable-exact",
+    "regular_file_images_only": true,
+    "host_loop_devices_only": true,
+    "release_mount": {
+      "filesystem": "erofs",
+      "read_only": true
+    },
+    "state_mount": {
+      "filesystem": "ext4",
+      "read_write": true
+    },
+    "runtime_system_view": {
+      "filesystem": "overlayfs",
+      "lower": "<mounted-system.erofs>/system",
+      "upper": "<mounted-persistent-state>/upper",
+      "work": "<mounted-persistent-state>/work",
+      "merged": "temporary-proof-runtime-system"
+    },
+    "checks": [
+      "signed-release-exactly-reverified-offline-before-mount",
+      "erofs-mounted-read-only",
+      "persistent-state-mounted-ext4",
+      "overlay-lower-is-erofs-system-tree",
+      "overlay-upper-and-work-are-ext4",
+      "system-entrypoint-present-and-shell-valid",
+      "runtime-write-lands-in-persistent-state-not-erofs",
+      "runtime-write-survives-unmount-remount",
+      "erofs-release-hash-unchanged-after-runtime-write",
+      "no-current-symlink-created",
+      "no-physical-device-path-accepted"
+    ]
+  },
+  "runtime_boundary": {
+    "system_erofs_is_complete_rootfs": false,
+    "system_erofs_contains_shared_product_system_tree": true,
+    "minimal_os_base_remains_separate": true,
+    "switch_root_to_system_erofs_allowed": false,
+    "direct_exec_of_system_entrypoint_requires_portable_runtime_layout_support": true
+  },
+  "initramfs_integration_requirements": {
+    "busybox_losetup_applet_required": true,
+    "busybox_losetup_applet_currently_enabled": false,
+    "portable_handoff_helper_required": true,
+    "portable_handoff_helper_currently_installed": false,
+    "ordax_data_exfat_mount_required": true,
+    "exact_release_selection_metadata_required": true,
+    "known_good_fallback_metadata_required": true,
+    "selection_anti_rollback_policy_required": true
+  },
+  "forbidden": [
+    "switch-root-directly-to-system.erofs",
+    "trusting-release-filename-without-signed-exact-verification",
+    "using-exfat-as-overlay-upper",
+    "creating-legacy-current-symlink-on-exfat",
+    "claiming-physical-boot-from-disposable-mount-proof",
+    "physical-device-path-input"
+  ]
+}
