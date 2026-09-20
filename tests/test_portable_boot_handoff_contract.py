@@ -49,11 +49,17 @@ class PortableBootHandoffContractTests(unittest.TestCase):
     def test_initramfs_integration_gap_is_explicit(self):
         requirements = self.contract["initramfs_integration_requirements"]
         self.assertTrue(requirements["busybox_losetup_applet_required"])
-        self.assertFalse(requirements["busybox_losetup_applet_currently_enabled"])
+        self.assertTrue(requirements["busybox_losetup_applet_currently_enabled"])
+        self.assertTrue(requirements["busybox_mount_loop_currently_enabled"])
+        self.assertTrue(requirements["busybox_exfat_volume_id_currently_enabled"])
         self.assertTrue(requirements["portable_handoff_helper_required"])
         self.assertFalse(requirements["portable_handoff_helper_currently_installed"])
         initramfs = INITRAMFS_BUILD.read_text(encoding="utf-8")
-        self.assertNotIn('"losetup"', initramfs.split("REQUIRED_APPLETS", 1)[1].split("}", 1)[0])
+        applets = initramfs.split("REQUIRED_APPLETS", 1)[1].split("}", 1)[0]
+        self.assertIn('"losetup"', applets)
+        self.assertIn('"CONFIG_LOSETUP": "y"', initramfs)
+        self.assertIn('"CONFIG_FEATURE_MOUNT_LOOP": "y"', initramfs)
+        self.assertIn('"CONFIG_FEATURE_VOLUMEID_EXFAT": "y"', initramfs)
 
     def test_storage_contract_still_blocks_real_boot_promotion(self):
         storage = json.loads(STORAGE.read_text(encoding="utf-8"))
