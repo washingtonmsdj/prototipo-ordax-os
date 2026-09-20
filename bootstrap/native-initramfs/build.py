@@ -30,6 +30,7 @@ SOURCE_CONTRACT = HERE / "source.json"
 ENV_CONTRACT = ROOT / "docs" / "contracts" / "native-initramfs-build-environment.json"
 BOOT_CONTRACT = ROOT / "docs" / "contracts" / "native-boot.json"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+PACKAGE_RE = re.compile(r"^[a-z0-9][a-z0-9+.-]*$")
 REQUIRED_BUSYBOX_APPLETS = {"sh", "mount", "umount", "cat", "mkdir", "tr"}
 PRIMARY_BINARIES = ("/usr/sbin/cryptsetup", "/usr/bin/btrfs")
 
@@ -214,12 +215,35 @@ def runtime_files(binary: str) -> list[str]:
 
 
 def package_owner(path: str) -> str:
-    output = capture(["dpkg-query", "-S", path])
-    line = output.splitlines()[0]
-    package = line.split(":", 1)[0]
-    if not package:
-        raise BuildError(f"cannot determine package owner for {path}")
-    return package
+    original = Path(path)
+    candidates = []
+    try:
+        resolved = str(original.resolve(strict=True))
+        candidates.append(resolved)
+    except OSError:
+        pass
+    candidates.append(path)
+
+    output = ""
+    selected = ""
+    for candidate in dict.fromkeys(candidates):
+        try:
+            output = capture(["dpkg-query", "-S", candidate])
+            selected = candidate
+            break
+        except BuildError:
+            continue
+    if not output:
+        raise BuildError(f"cannot determine package owner for runtime path: {path}")
+
+    first = output.splitlines()[0]
+    owner, separator, _ = first.partition(": ")
+    if not separator:
+        raise BuildError(f"cannot parse package owner for runtime path: {selected}")
+    owner = owner.split(":", 1)[0]
+    if not PACKAGE_RE.fullmatch(owner):
+        raise BuildError(f"unsafe package owner for runtime path: {selected}")
+    return owner
 
 
 def verify_build_environment(env: dict) -> dict:

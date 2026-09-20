@@ -79,14 +79,34 @@ def runtime_files(binary: str) -> list[str]:
 
 
 def package_owner(path: str) -> str:
-    output = capture(["dpkg-query", "-S", path])
+    original = Path(path)
+    candidates = []
+    try:
+        resolved = str(original.resolve(strict=True))
+        candidates.append(resolved)
+    except OSError:
+        pass
+    candidates.append(path)
+
+    output = ""
+    selected = ""
+    for candidate in dict.fromkeys(candidates):
+        try:
+            output = capture(["dpkg-query", "-S", candidate])
+            selected = candidate
+            break
+        except ObservationError:
+            continue
+    if not output:
+        raise ObservationError(f"cannot determine package owner for runtime path: {path}")
+
     first = output.splitlines()[0]
     owner, separator, _ = first.partition(": ")
     if not separator:
-        raise ObservationError(f"cannot parse package owner for runtime path: {path}")
+        raise ObservationError(f"cannot parse package owner for runtime path: {selected}")
     owner = owner.split(":", 1)[0]
     if not PACKAGE_RE.fullmatch(owner):
-        raise ObservationError(f"unsafe package owner for runtime path: {path}")
+        raise ObservationError(f"unsafe package owner for runtime path: {selected}")
     return owner
 
 

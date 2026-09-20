@@ -121,6 +121,16 @@ class NativeBootContractTests(unittest.TestCase):
         self.assertFalse(data["artifact_build_allowed"])
         self.assertFalse(data["physical_artifact_authorized"])
 
+    def test_environment_owner_resolution_handles_usrmerge_aliases(self):
+        observer = (ROOT / "bootstrap/native-initramfs/observe_environment.py").read_text(
+            encoding="utf-8"
+        )
+        builder = BUILDER.read_text(encoding="utf-8")
+        for text in (observer, builder):
+            self.assertIn("resolve(strict=True)", text)
+            self.assertIn('capture(["dpkg-query", "-S", candidate])', text)
+            self.assertIn("dict.fromkeys(candidates)", text)
+
     def test_native_initramfs_python_sources_contain_no_literal_nul_bytes(self):
         for path in (BUILDER, ROOT / ".github/workflows/native-initramfs-environment.yml"):
             self.assertNotIn(b"\x00", path.read_bytes(), str(path))
