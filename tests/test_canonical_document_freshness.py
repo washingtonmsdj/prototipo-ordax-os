@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CURRENT_STATE = ROOT / "docs" / "CURRENT-STATE.md"
 AGENTS = ROOT / "AGENTS.md"
 UPDATE_DOC = ROOT / "docs" / "UPDATE-NOMENCLATURE.md"
+INTERNET_DOC = ROOT / "docs" / "INTERNET-APP.md"
 UPDATE_CONTRACT = ROOT / "docs" / "contracts" / "update-nomenclature.json"
 PRODUCT_VERSION = ROOT / "system" / "contracts" / "product-version.mjs"
 BUNDLED_APP_MANIFESTS = ROOT / "system" / "services" / "components" / "manifests" / "apps.mjs"
@@ -89,6 +90,13 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
             expected_maturity = "BETA" if int(app["version"].split(".", 1)[0]) == 0 else "STABLE"
             self.assertEqual(state[f"{prefix}_MATURITY"], expected_maturity)
 
+    def test_internet_app_doc_tracks_app_owned_version_and_release_mode(self):
+        internet = app_owned_manifest("internet")
+        document = INTERNET_DOC.read_text(encoding="utf-8")
+        self.assertIn(internet["version"], document)
+        self.assertIn(f'releaseMode: "{internet["release_mode"]}"', document)
+        self.assertNotIn("Internet remains `bundled`", document)
+
     def test_physical_snapshot_distinguishes_seed_from_prepared_usb(self):
         state = assignment_map(CURRENT_STATE.read_text(encoding="utf-8"))
         seed = json.loads(PHYSICAL_SEED.read_text(encoding="utf-8"))
@@ -120,6 +128,7 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
             "continue to share the product version",
             "continues to share the product release/version",
             "currently bundled with the product rather than a Surface/system subsystem",
+            "instead of static placeholders",
         )
         for phrase in forbidden_current:
             self.assertNotIn(phrase, current)
