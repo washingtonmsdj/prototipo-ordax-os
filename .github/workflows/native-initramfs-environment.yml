@@ -1,0 +1,186 @@
+name: Native Initramfs Environment Observation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/contracts/native-initramfs-build-environment.json'
+      - 'docs/contracts/kernel-build-environment.json'
+      - 'bootstrap/native-initramfs/**'
+      - '.github/workflows/native-initramfs-environment.yml'
+  pull_request:
+    paths:
+      - 'docs/contracts/native-initramfs-build-environment.json'
+      - 'docs/contracts/kernel-build-environment.json'
+      - 'bootstrap/native-initramfs/**'
+      - '.github/workflows/native-initramfs-environment.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Resolve immutable environment
+        id: env
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pathlib
+          value = json.loads(pathlib.Path('docs/contracts/native-initramfs-build-environment.json').read_text())
+          image = value['base_image']['repository'] + '@' + value['base_image']['manifest_digest']
+          print('image=' + image)
+          print('snapshot=' + value['apt']['snapshot_id'])
+          print('packages=' + ' '.join(value['apt']['top_level_packages']))
+          PY
+
+      - name: Pull base image by digest
+        env:
+          IMAGE: ${{ steps.env.outputs.image }}
+        run: |
+          set -euo pipefail
+          docker pull "$IMAGE"
+          expected="${IMAGE##*@}"
+          docker image inspect --format '{{json .RepoDigests}}' "$IMAGE" | grep -Fq "@$expected"
+
+      - name: Observe exact snapshot package and runtime closure
+        env:
+          IMAGE: ${{ steps.env.outputs.image }}
+          SNAPSHOT_ID: ${{ steps.env.outputs.snapshot }}
+          PACKAGES: ${{ steps.env.outputs.packages }}
+        run: |
+          set -euo pipefail
+          rm -rf out/native-initramfs-environment
+          mkdir -p out/native-initramfs-environment
+          docker run --rm \
+            -e SNAPSHOT_ID="$SNAPSHOT_ID" \
+            -e PACKAGES="$PACKAGES" \
+            -e HOST_UID="$(id -u)" \
+            -e HOST_GID="$(id -g)" \
+            -v "$PWD:/repo" \
+            -w /repo \
+            "$IMAGE" \
+            bash -lc '
+              set -euo pipefail
+              export DEBIAN_FRONTEND=noninteractive
+              test -s /usr/share/keyrings/ubuntu-archive-keyring.gpg
+              rm -f /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources
+              snapshot_uri="https://snapshot.ubuntu.com/ubuntu/$SNAPSHOT_ID"
+              printf "%s\n" \
+                "Types: deb" \
+                "URIs: $snapshot_uri" \
+                "Suites: noble noble-updates noble-backports noble-security" \
+                "Components: main universe restricted multiverse" \
+                "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" \
+                > /etc/apt/sources.list.d/ordax.sources
+
+              printf "%s\n" \
+                "Acquire::https::snapshot.ubuntu.com::Verify-Peer \"false\";" \
+                > /etc/apt/apt.conf.d/49ordax-ca-bootstrap
+              apt-get update --error-on=any
+              apt-get install -y --no-install-recommends ca-certificates
+              rm -f /etc/apt/apt.conf.d/49ordax-ca-bootstrap
+
+              apt-get update --error-on=any
+              apt-get install -y --no-install-recommends $PACKAGES
+
+              dpkg-query -W -f="${Package}=${Version}\n" $PACKAGES \
+                | LC_ALL=C sort \
+                > /repo/out/native-initramfs-environment/top-level-versions.txt
+
+              : > /repo/out/native-initramfs-environment/runtime-files.txt
+              for binary in /usr/sbin/cryptsetup /usr/bin/btrfs; do
+                test -x "$binary"
+                lddtree -l "$binary"
+              done | LC_ALL=C sort -u \
+                > /repo/out/native-initramfs-environment/runtime-files.txt
+
+              python3 - <<'"'"'PY'"'"'
+          import json
+          from pathlib import Path
+          import subprocess
+
+          out = Path("/repo/out/native-initramfs-environment")
+          files = [
+              line.strip()
+              for line in (out / "runtime-files.txt").read_text().splitlines()
+              if line.strip()
+          ]
+          owners = {}
+          for path in files:
+              result = subprocess.run(
+                  ["dpkg-query", "-S", path],
+                  check=True,
+                  capture_output=True,
+                  text=True,
+              ).stdout.splitlines()[0]
+              package = result.split(":", 1)[0]
+              version = subprocess.run(
+                  ["dpkg-query", "-W", "-f=${Version}", package],
+                  check=True,
+                  capture_output=True,
+                  text=True,
+              ).stdout
+              owners[package] = version
+          (out / "runtime-closure-packages.json").write_text(
+              json.dumps(dict(sorted(owners.items())), indent=2, sort_keys=True) + "\n"
+          )
+          PY
+
+              /bin/busybox --list | LC_ALL=C sort \
+                > /repo/out/native-initramfs-environment/busybox-applets.txt
+              sha256sum /bin/busybox /usr/sbin/cryptsetup /usr/bin/btrfs \
+                > /repo/out/native-initramfs-environment/primary-binaries.sha256
+              chown -R "$HOST_UID:$HOST_GID" /repo/out/native-initramfs-environment
+            '
+
+      - name: Emit machine-readable observation
+        env:
+          IMAGE: ${{ steps.env.outputs.image }}
+          SNAPSHOT_ID: ${{ steps.env.outputs.snapshot }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          root = pathlib.Path('out/native-initramfs-environment')
+          top = {}
+          for line in (root / 'top-level-versions.txt').read_text().splitlines():
+              name, version = line.split('=', 1)
+              top[name] = version
+          closure = json.loads((root / 'runtime-closure-packages.json').read_text())
+          applets = set((root / 'busybox-applets.txt').read_text().splitlines())
+          required = {'sh','mount','umount','cat','findfs','mkdir','tr'}
+          missing = sorted(required - applets)
+          if missing:
+              raise SystemExit(f'BusyBox missing required applets: {missing}')
+          data = {
+              '$schema': 'prototype-ordax.native-initramfs-environment-observation/1',
+              'status': 'observation',
+              'base_image': os.environ['IMAGE'],
+              'apt_snapshot_id': os.environ['SNAPSHOT_ID'],
+              'top_level_versions': dict(sorted(top.items())),
+              'runtime_closure_packages': closure,
+              'required_busybox_applets': sorted(required),
+              'primary_binary_hashes': (root / 'primary-binaries.sha256').read_text().splitlines(),
+          }
+          (root / 'observation.json').write_text(
+              json.dumps(data, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          print('NATIVE_INITRAMFS_ENVIRONMENT_OBSERVATION=' + json.dumps(data, sort_keys=True))
+          print('NATIVE_INITRAMFS_ARTIFACT_BUILD_ALLOWED=NO')
+          PY
+
+      - name: Upload environment observation
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: native-initramfs-environment-${{ github.sha }}
+          path: out/native-initramfs-environment/
+          if-no-files-found: error
+          retention-days: 14
