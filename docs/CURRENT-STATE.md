@@ -1,8 +1,8 @@
 # Current State
 
-Status date: 2026-09-19
+Status date: 2026-09-20
 
-This is the canonical handoff snapshot. Architecture/contracts win if another document conflicts with it. Detailed historical evidence remains under `docs/evidence/`; this file records the current boundary without treating CI proof, development-hardware proof and product-release authorization as interchangeable.
+This is the canonical handoff snapshot. Architecture/contracts win if another document conflicts with it. Detailed historical evidence remains under `docs/evidence/`; this file records the current boundary without treating CI proof, development-hardware proof and product-release authorization as interchangeable. Values that mirror structured source — including product/app versions, component release modes and physical-media geometry — are regression-checked against their owners so this snapshot cannot silently drift from the implementation.
 
 ## Repository
 
@@ -36,6 +36,29 @@ PRODUCT_VERSION=0.1.0
 PRODUCT_VERSION_LABEL=v0.1.0
 PRODUCT_MATURITY=PROTOTYPE
 PRODUCT_V1_RESERVED_FOR_STABLE_RELEASE=YES
+FIRST_PARTY_APP_VERSIONING=PER_COMPONENT
+FIRST_PARTY_APP_PRE_1_0_MATURITY=BETA
+APP_FILES_VERSION=0.1.0
+APP_FILES_MATURITY=BETA
+APP_FILES_RELEASE_MODE=bundled
+APP_SETTINGS_VERSION=0.1.0
+APP_SETTINGS_MATURITY=BETA
+APP_SETTINGS_RELEASE_MODE=bundled
+APP_ACCOUNT_VERSION=0.1.0
+APP_ACCOUNT_MATURITY=BETA
+APP_ACCOUNT_RELEASE_MODE=bundled
+APP_SYSTEM_VERSION=0.1.0
+APP_SYSTEM_MATURITY=BETA
+APP_SYSTEM_RELEASE_MODE=bundled
+APP_INTERNET_VERSION=0.3.0
+APP_INTERNET_MATURITY=BETA
+APP_INTERNET_RELEASE_MODE=git-app
+APP_NOTES_VERSION=0.4.0
+APP_NOTES_MATURITY=BETA
+APP_NOTES_RELEASE_MODE=git-app
+PRODUCTION_INDEPENDENT_APP_UPDATES_ENABLED=NO
+SYSTEM_UPDATE_SCOPE=BASE,SURFACE,SERVICES,SYSTEM
+APPLICATION_UPDATE_SCOPE=FILES,NOTES,INTERNET,SETTINGS,ACCOUNT
 UPDATE_HUMAN_IDENTITY=DELIVERY_NUMBER
 UPDATE_PR_NUMBER_IS_PRODUCT_IDENTITY=NO
 UPDATE_RUNNING_LABEL=EM_EXECUCAO
@@ -62,12 +85,11 @@ GRAPHICAL_SURFACE_COMPLETE=NO
 CANONICAL_SYSTEM_RUNTIME_COMPLETE=NO
 ```
 
-
-The first formal human product version is **OrdaX Prototype v0.1.0**. Product version, Entrega and Git SHA now have separate meanings: v0.1.0 identifies the prototype product milestone, Entrega identifies the notebook-facing delivery sequence, and the SHA remains the exact technical build identity. First-party apps such as Notes and Internet continue to share the product version while they are bundled with OrdaX; they do not receive invented independent versions before signed app packaging/release exists. v1.0 remains reserved for the stable product rather than being inferred from prototype maturity or delivery count.
+The first formal human product version is **OrdaX Prototype v0.1.0**. Product version, Entrega, Git SHA and component/app versions are separate identities: v0.1.0 identifies the prototype product milestone, Entrega identifies the notebook-facing delivery sequence, the SHA remains the exact technical build identity, and each component may evolve its own SemVer. First-party apps on the `0.x` line are **Beta**; `1.0.0` remains reserved for the first stable release of each app. Internet is currently `0.3.0 Beta` and Notes is `0.4.0 Beta`, both using `git-app` in Owner/Development. Arquivos, Ajustes, Conta and Sistema are `0.1.0 Beta` and remain `bundled`. A component having its own version does not mean it already has a production-independent update channel: `git-app` is a development delivery mode, while production-independent activation remains gated behind the signed `component-slot` path with pending health, promotion and rollback. Product v1.0 remains reserved for the stable product rather than being inferred from prototype maturity, component versions or delivery count.
 
 `system/` is the shared product source. The native development path is physically proven through `system/entrypoint (guardian) -> system/supervisor -> system/surface/entrypoint -> system/surface/bin/ordax-surface`; repository CI also proves that the actual `system/` tree can be bundled deterministically as `system.tar`.
 
-The shared graphical source remains under `system/surface/ui/` with platform-neutral contracts, workspace/window lifecycle and capability-driven app availability. Notes is a first-party **application**, currently bundled with the product rather than a Surface/system subsystem: its stable app id is `notes`, Native/USB may enrich it through the optional `filesystem.user-space` capability, and a future signed app-package/store flow can target that same app identity instead of creating a Native-only fork. A general Store/package manager is not implemented yet, so Notes continues to share the product release/version. Notes provides local projects, a visual structured-text editor, editable checklists, real local-file/web references, autosave and device-local Native persistence through a bounded loopback state endpoint; Web uses local browser persistence with an explicit session fallback. Notes stores rich formatting as bounded blocks/marks rather than raw HTML or visible Markdown, keeps a plain-text body for search/import continuity, and migrates existing local snapshot schema v1 state to schema v2 on validation/save. Project organization now has a complete local lifecycle: projects can be renamed, non-base projects can be removed without deleting their notes, selected notes can move between projects, and checklist items can be removed. The stable `Meu espaço` project remains the non-destructive fallback for notes from removed projects. Internet is the first-party browser app with stable id `internet`. Its shared Surface owns the approved concept structure (navigation toolbar, workspace/tab rail, central web viewport and project-context panel), while Native/USB provide `browser.web-content` through a separate unprivileged WebKit context and one external WebView per tab. The native slice supports up to 16 tabs, back/forward/reload, tab search, keyboard accelerators, persisted public tab URLs/order/active tab, project-context selection, explicit saved web references with bounded per-reference notes, automatic reference cleanup after project removal, public-network filtering and an exact loopback Host/browser-provenance boundary. Saved project references are owned by a neutral project-domain runtime and persist in the Native privileged profile with honest session fallback; the external page never receives project storage capability. Web intentionally exposes an unavailable browser-session port rather than pretending arbitrary sites can be safely embedded. Notes web references activate this same `internet` app. Internet also owns bounded device-local favorites through a neutral `ordax.browser-favorites/1` port; the Native privileged profile persists them while external website WebViews receive no access to that store. Native hardware proof for the new WebKit host remains pending, so the browser slice is implemented in source but not yet marked physically proven. Ajustes now owns persisted Surface-level contrast, motion and text-scale preferences; text scale changes the shared typographic base without claiming host-level accessibility control. Platform-specific behavior belongs in adapters/compositions, not in forks of the shared Surface. The normal Home now keeps technical delivery/recovery markers out of the area label; real delivery identity and update details live in Sistema. The visible settings identity is standardized as **Ajustes** while preserving the stable internal app id `settings`.
+The shared graphical source remains under `system/surface/ui/` with platform-neutral contracts, workspace/window lifecycle and capability-driven app availability. Notes is a first-party **application** with stable app id `notes`, version `0.4.0 Beta` and `git-app` delivery in Owner/Development. Native/USB may enrich it through the optional `filesystem.user-space` capability, and a future signed `component-slot`/app-package flow can target that same app identity instead of creating a Native-only fork. A general Store/package manager and production-independent app updater are not implemented yet. Notes provides local projects, a visual structured-text editor, editable checklists, real local-file/web references, autosave and device-local Native persistence through a bounded loopback state endpoint; Web uses local browser persistence with an explicit session fallback. Notes stores rich formatting as bounded blocks/marks rather than raw HTML or visible Markdown, keeps a plain-text body for search/import continuity, and migrates existing local snapshot schema v1 state to schema v2 on validation/save. Project organization now has a complete local lifecycle: projects can be renamed, non-base projects can be removed without deleting their notes, selected notes can move between projects, and checklist items can be removed. The stable `Meu espaço` project remains the non-destructive fallback for notes from removed projects. Internet is the first-party browser app with stable id `internet`, version `0.3.0 Beta` and `git-app` delivery in Owner/Development; this version identity does not claim a production Store/updater. Its shared Surface owns the approved concept structure (navigation toolbar, workspace/tab rail, central web viewport and project-context panel), while Native/USB provide `browser.web-content` through a separate unprivileged WebKit context and one external WebView per tab. The native slice supports up to 16 tabs, back/forward/reload, tab search, keyboard accelerators, persisted public tab URLs/order/active tab, project-context selection, explicit saved web references with bounded per-reference notes, automatic reference cleanup after project removal, public-network filtering and an exact loopback Host/browser-provenance boundary. Saved project references are owned by a neutral project-domain runtime and persist in the Native privileged profile with honest session fallback; the external page never receives project storage capability. Web intentionally exposes an unavailable browser-session port rather than pretending arbitrary sites can be safely embedded. Notes web references activate this same `internet` app. Internet also owns bounded device-local favorites through a neutral `ordax.browser-favorites/1` port; the Native privileged profile persists them while external website WebViews receive no access to that store. Native hardware proof for the new WebKit host remains pending, so the browser slice is implemented in source but not yet marked physically proven. Ajustes now owns persisted Surface-level contrast, motion and text-scale preferences; text scale changes the shared typographic base without claiming host-level accessibility control. Platform-specific behavior belongs in adapters/compositions, not in forks of the shared Surface. The normal Home now keeps technical delivery/recovery markers out of the area label; real delivery identity and update details live in Sistema. The visible settings identity is standardized as **Ajustes** while preserving the stable internal app id `settings`.
 
 On the target notebook, the owner/development USB has physically proven the Git-first native host: Cage/Wayland + Barkery/WebKitGTK renders the shared Surface fullscreen; keyboard and mouse/touchpad work; authenticated native restart and shutdown work; and Git changes can be pulled and applied with a Surface reload while the notebook remains running. The temporary live-update marker appeared and then disappeared automatically in the same running session, proving the rebootless update round trip.
 
@@ -130,18 +152,24 @@ GitHub Actions remains the current build/proof executor; repository recipes are 
 
 ## Physical architecture
 
+The capacity-independent bootstrap seed and the final USB prepared by Creator are different artifacts and must never be collapsed into one partition count:
+
 ```text
-PHYSICAL_PARTITIONS=2
-PARTITION_1=ORDAX-ESP
-PARTITION_1_FILESYSTEM=FAT32
-PARTITION_2=ORDAX
-PARTITION_2_FILESYSTEM=EXT4
+BOOTSTRAP_SEED_PARTITIONS=2
+BOOTSTRAP_SEED_PARTITION_NAMES=ORDAX-ESP,ORDAX
+SEED_PARTITION_1_FILESYSTEM=FAT32
+SEED_PARTITION_2_FILESYSTEM=EXT4
+PREPARED_USB_PARTITIONS=3
+PREPARED_USB_PARTITION_NAMES=ORDAX-ESP,ORDAX,ORDAX-DATA
+PREPARED_PARTITION_1_FILESYSTEM=FAT32
+PREPARED_PARTITION_2_FILESYSTEM=EXT4
+PREPARED_PARTITION_3_FILESYSTEM=EXFAT
 SEPARATE_HOME_PARTITION=NO
 LEGACY_ORDAX_PLATFORM_PARTITION=FORBIDDEN
 LEGACY_ORDAX_HOME_PARTITION=FORBIDDEN
 ```
 
-Canonical geometry remains defined by `docs/contracts/physical-media.json`. The canonical release layout remains `/ordax/bootstrap`, `/ordax/releases/<commit>`, `/ordax/current`, `/ordax/state` and `/ordax/home`.
+`docs/contracts/physical-media.json` is authoritative for the two-partition capacity-independent seed (`ORDAX-ESP` + `ORDAX`). `docs/contracts/physical-prepared-media.json` is authoritative for the final target USB after Creator preparation (`ORDAX-ESP` + bounded `ORDAX` + target-capacity-specific `ORDAX-DATA`). These counts describe different artifacts and are not contradictory. The canonical release layout inside the system side remains `/ordax/bootstrap`, `/ordax/releases/<commit>`, `/ordax/current`, `/ordax/state` and `/ordax/home` where applicable to the current release architecture.
 
 ## Minimal bootstrap and canonical release path
 
@@ -271,13 +299,14 @@ BROADER_HARDWARE_COVERAGE=PENDING_FINAL
 
 ## Current priorities
 
-1. continue the shared Surface and native adapter work without platform forks, exposing only capabilities that are actually implemented/proven by the adapter;
-2. expand first-party apps through neutral contracts, including useful native `Sistema`/`Arquivos` behavior instead of static placeholders;
-3. continue hardening staged/transactional Git-first activation beyond the now-proven guardian, rescue, telemetry and candidate-preflight layers, while keeping normal changes rebootless and avoiding an unnecessary bootstrap dependency;
-4. continue account/cloud preference and workspace continuity through neutral contracts without claiming remote transport before an authenticated provider exists;
-5. in parallel, when the repository owner is ready for the separate trust ceremony, generate the canonical Ed25519 prototype release key outside Git, make the required encrypted offline backup and commit only the matching public trust anchor;
-6. after canonical trust and byte-complete canonical media proof close, keep the tagged native raw writer gated until an explicit public apply boundary and exact-target authorization are deliberately introduced;
-7. leave suspend/resume, audio, acceleration-quality, long-run and broader-hardware exercises for the final physical-validation phase unless a feature specifically depends on them sooner.
+1. prioritize the Stable/MVP **system** update path: official non-Git acquisition, signed verification, staging, controlled activation, health, promotion and rollback without coupling ordinary app changes to a full system reboot;
+2. keep the current first-party apps useful and coherent as Beta components, focusing app work on correctness, regression coverage and genuine MVP gaps instead of rebuilding Arquivos/Sistema behavior that already exists; move an app toward production-independent packaging only when the signed `component-slot` path is actually ready to prove it;
+3. continue hardening staged/transactional Owner/Development Git-first activation beyond the proven guardian, rescue, telemetry and candidate-preflight layers, while keeping it explicitly separate from the Stable/MVP public update channel;
+4. complete integrated Surface physical validation when the source-controlled harness is integrated and executed on the notebook; do not convert CI or an unexecuted runbook into physical PASS;
+5. continue account/cloud preference and workspace continuity through neutral contracts without claiming remote transport before an authenticated provider exists;
+6. in parallel, when the repository owner is ready for the separate trust ceremony, generate the canonical Ed25519 prototype release key outside Git, make the required encrypted offline backup and commit only the matching public trust anchor;
+7. after canonical trust and byte-complete canonical media proof close, keep the tagged native raw writer gated until an explicit public apply boundary and exact-target authorization are deliberately introduced;
+8. leave suspend/resume, audio, acceleration-quality, long-run and broader-hardware exercises for the final physical-validation phase unless a feature specifically depends on them sooner.
 
 ## Autonomous recovery and observation boundary
 
@@ -300,6 +329,10 @@ BASE_UPDATE_PHYSICAL_WRITER=NO
 
 The temporary Supabase project is an operational relay, not product authority. It may be migrated later without changing the device identity or telemetry contract. Git `main` remains product source authority; `ordax-rescue` remains a separate, deliberately narrow recovery path.
 
+## Canonical documentation freshness
+
+The Foundation regression suite compares this snapshot against structured owners for product version, first-party app versions/release modes and bootstrap/prepared-media geometry. A source change that makes those values stale must fail CI until the canonical snapshot and nomenclature contract are updated in the same change. This guardrail does not make prose self-updating; it makes known high-risk drift detectable and establishes the rule that canonical documentation is part of the change, not cleanup after it.
+
 ## Handoff rule
 
-Any new AI/conversation must read `AGENTS.md`, this file and the canonical contracts before changing source. CI alone never proves physical boot, native graphics or destructive safety. For the tested owner/development USB notebook, physical native graphics/input/power/live-update claims are supported by `docs/evidence/physical-native-surface-2026-09-17.md`; those claims still do not promote CI trust, authorize physical mutation, prove canonical signed release acquisition or declare the product complete.
+Any new AI/conversation must read `AGENTS.md`, this file and the canonical contracts before changing source. It must also reconcile current structured source with the snapshot before planning work from a historical statement. CI alone never proves physical boot, native graphics or destructive safety. For the tested owner/development USB notebook, physical native graphics/input/power/live-update claims are supported by `docs/evidence/physical-native-surface-2026-09-17.md`; those claims still do not promote CI trust, authorize physical mutation, prove canonical signed release acquisition or declare the product complete.

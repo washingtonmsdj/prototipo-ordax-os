@@ -61,13 +61,20 @@
     "declared": true,
     "scheme": "semantic-versioning",
     "independence_is_per_component": true,
+    "identity_independent_from_release_mode": true,
+    "version_source": "component-manifests-and-app-owned-version-modules",
+    "first_party_pre_1_0_maturity": "beta",
+    "development_app_release_mode": "git-app",
     "independent_update_release_mode": "component-slot",
     "bundled_release_mode": "bundled",
     "base_release_mode": "base-ab",
     "independent_components_currently_enabled": [],
+    "independent_components_currently_enabled_scope": "production-component-slot-only",
+    "version_identity_requires_independent_packaging": false,
     "invented_component_versions_allowed": false,
     "independent_update_requires_independent_packaging": true,
-    "bundled_version_does_not_imply_independent_update": true
+    "bundled_version_does_not_imply_independent_update": true,
+    "git_app_version_does_not_imply_production_independent_update": true
   },
   "compatibility": {
     "legacy_field": "versionNumber",
