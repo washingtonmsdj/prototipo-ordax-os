@@ -328,5 +328,12 @@
     "workflow": ".github/workflows/surface-runtime-lock-discovery.yml",
     "repeat_digest_required": true,
     "status": "pending-current-head"
+  },
+  "runtime_generated_state": {
+    "machine_identity_baked_into_image": false,
+    "machine_identity_owner": "future-writable-runtime-overlay",
+    "fontconfig_cache_baked_into_image": false,
+    "fontconfig_cache_owner": "writable-runtime-overlay",
+    "reason": "device identity and derived font caches must not make the signed immutable runtime nondeterministic or shared across devices"
   }
 }
