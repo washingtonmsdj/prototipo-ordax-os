@@ -32,6 +32,7 @@ GROW_HELPER_SOURCE = HERE / "grow_ext4.c"
 PORTABLE_STATE_HELPER_SOURCE = HERE / "portable_state.c"
 PORTABLE_MOUNT_HELPER_SOURCE = HERE / "portable_mount.c"
 PORTABLE_CAPSULE_VERIFY_SOURCE = HERE / "portable_capsule_verify.sh"
+PORTABLE_BASE_VERIFY_SOURCE = HERE / "portable_base_verify.sh"
 KERNEL_BUILDER_PATH = ROOT / "bootstrap" / "kernel" / "build.py"
 
 
@@ -151,6 +152,13 @@ def portable_capsule_verify_source_path() -> Path:
     return path
 
 
+def portable_base_verify_source_path() -> Path:
+    path = PORTABLE_BASE_VERIFY_SOURCE.resolve()
+    if ROOT.resolve() not in path.parents or not path.is_file() or path.is_symlink():
+        raise BuildError("portable Stable Base verifier source is missing or unsafe")
+    return path
+
+
 def check_contract() -> dict:
     contract = load_contract()
     init = init_path(contract)
@@ -158,6 +166,7 @@ def check_contract() -> dict:
     portable_state_source = portable_state_helper_source_path()
     portable_mount_source = portable_mount_helper_source_path()
     portable_capsule_verify_source = portable_capsule_verify_source_path()
+    portable_base_verify_source = portable_base_verify_source_path()
     text = init.read_text(encoding="utf-8")
     forbidden = ("ORDAX-HOME", "ORDAX-PLATFORM", "sshd", "remote-core", "control-plane", "codex")
     found = [value for value in forbidden if value.lower() in text.lower()]
@@ -195,6 +204,8 @@ def check_contract() -> dict:
         "portable_mount_helper_source_sha256": sha256_file(portable_mount_source),
         "portable_capsule_verify_source": str(portable_capsule_verify_source.relative_to(ROOT)),
         "portable_capsule_verify_source_sha256": sha256_file(portable_capsule_verify_source),
+        "portable_base_verify_source": str(portable_base_verify_source.relative_to(ROOT)),
+        "portable_base_verify_source_sha256": sha256_file(portable_base_verify_source),
         "main_partition_label": contract["main_partition_label"],
         "portable_v2_prerequisites": contract["portable_v2_prerequisites"],
     }
@@ -497,6 +508,53 @@ def install_portable_capsule_pin(rootfs: Path, pin: dict) -> None:
     os.chmod(target, 0o644)
 
 
+def portable_stable_base_pin(base: Path | None) -> dict:
+    if base is None:
+        return {
+            "provided": False,
+            "expected_path": "/ordax-data/.ordax/base/stable-base.erofs",
+            "sha256": None,
+            "pid1_enforced": False,
+            "physical_boot_authorized": False,
+        }
+    path = base.resolve()
+    try:
+        info = path.lstat()
+    except OSError as exc:
+        raise BuildError(f"cannot stat portable Stable Base: {exc}") from exc
+    if path.is_symlink() or not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+        raise BuildError("portable Stable Base must be a regular non-symlink single-link file")
+    if path.name != "stable-base.erofs" or info.st_size < 4096:
+        raise BuildError("portable Stable Base must be a non-empty stable-base.erofs")
+    with path.open("rb") as handle:
+        handle.seek(1024)
+        magic = handle.read(4)
+    if magic != bytes((0xe2, 0xe1, 0xf5, 0xe0)):
+        raise BuildError("portable Stable Base does not contain an EROFS superblock")
+    return {
+        "provided": True,
+        "expected_path": "/ordax-data/.ordax/base/stable-base.erofs",
+        "sha256": sha256_file(path),
+        "pid1_enforced": False,
+        "physical_boot_authorized": False,
+    }
+
+
+def install_portable_stable_base_pin(rootfs: Path, pin: dict) -> None:
+    if pin.get("provided") is not True:
+        return
+    digest = str(pin.get("sha256", ""))
+    if not _SHA256.fullmatch(digest):
+        raise BuildError("portable Stable Base pin digest is invalid")
+    target = rootfs / "etc" / "ordax" / "portable-stable-base.sha256"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        f"{digest}  /ordax-data/.ordax/base/stable-base.erofs\n",
+        encoding="ascii",
+    )
+    os.chmod(target, 0o644)
+
+
 def build_growth_helper(musl_cc: str, readelf: str, source: Path, destination: Path, env: dict[str, str]) -> None:
     command = [
         musl_cc,
@@ -580,14 +638,22 @@ def build_portable_mount_helper(
         raise BuildError("portable mount helper build did not produce a safe regular binary")
 
 
-def build(work_dir: Path, out_dir: Path, jobs: int, portable_bootstrap_capsule: Path | None = None) -> dict:
+def build(
+    work_dir: Path,
+    out_dir: Path,
+    jobs: int,
+    portable_bootstrap_capsule: Path | None = None,
+    portable_stable_base: Path | None = None,
+) -> dict:
     contract = load_contract()
     init = init_path(contract)
     grow_source = growth_helper_source_path()
     capsule_pin = portable_capsule_pin(portable_bootstrap_capsule)
+    stable_base_pin = portable_stable_base_pin(portable_stable_base)
     portable_state_source = portable_state_helper_source_path()
     portable_mount_source = portable_mount_helper_source_path()
     portable_capsule_verify_source = portable_capsule_verify_source_path()
+    portable_base_verify_source = portable_base_verify_source_path()
     check_contract()
     for name in ("make", "musl-gcc", "readelf"):
         resolve_program(name)
@@ -643,6 +709,7 @@ def build(work_dir: Path, out_dir: Path, jobs: int, portable_bootstrap_capsule: 
     shutil.copy2(init, rootfs / "init")
     os.chmod(rootfs / "init", 0o755)
     install_portable_capsule_pin(rootfs, capsule_pin)
+    install_portable_stable_base_pin(rootfs, stable_base_pin)
     grow_binary = work_dir / "ordax-grow-ext4"
     build_growth_helper(musl_cc, readelf, grow_source, grow_binary, env)
     grow_install = rootfs / "sbin" / "ordax-grow-ext4"
@@ -679,6 +746,10 @@ def build(work_dir: Path, out_dir: Path, jobs: int, portable_bootstrap_capsule: 
     shutil.copy2(portable_capsule_verify_source, portable_capsule_verify_install)
     os.chmod(portable_capsule_verify_install, 0o755)
 
+    portable_base_verify_install = rootfs / "sbin" / "ordax-portable-base-verify"
+    shutil.copy2(portable_base_verify_source, portable_base_verify_install)
+    os.chmod(portable_base_verify_install, 0o755)
+
     final_config = out_dir / "busybox.config"
     shutil.copy2(source / ".config", final_config)
     archive_path = out_dir / "initramfs.cpio.gz"
@@ -700,6 +771,7 @@ def build(work_dir: Path, out_dir: Path, jobs: int, portable_bootstrap_capsule: 
         },
         "root_init_sha256": sha256_file(init),
         "portable_bootstrap_capsule_pin": capsule_pin,
+        "portable_stable_base_pin": stable_base_pin,
         "filesystem_health": {
             "pre_mount_check": True,
             "error_flag_policy": "read-only-recovery",
@@ -737,6 +809,18 @@ def build(work_dir: Path, out_dir: Path, jobs: int, portable_bootstrap_capsule: 
             "user_supplied_path_allowed": False,
             "hash_algorithm": "sha256",
             "mounts_capsule": False,
+            "network_access": False,
+            "pid1_connected": False,
+        },
+        "portable_stable_base_verifier": {
+            "installed": True,
+            "helper_path": "/sbin/ordax-portable-base-verify",
+            "source_sha256": sha256_file(portable_base_verify_source),
+            "pin_path": "/etc/ordax/portable-stable-base.sha256",
+            "base_path": "/ordax-data/.ordax/base/stable-base.erofs",
+            "user_supplied_path_allowed": False,
+            "hash_algorithm": "sha256",
+            "mounts_base": False,
             "network_access": False,
             "pid1_connected": False,
         },
@@ -800,6 +884,18 @@ def verify(out_dir: Path) -> dict:
     elif capsule_pin.get("provided") is not False:
         raise BuildError("initramfs portable bootstrap capsule pin state is invalid")
 
+    stable_base_pin = provenance.get("portable_stable_base_pin", {})
+    if stable_base_pin.get("provided") is True:
+        if (
+            stable_base_pin.get("expected_path") != "/ordax-data/.ordax/base/stable-base.erofs"
+            or not _SHA256.fullmatch(str(stable_base_pin.get("sha256", "")))
+            or stable_base_pin.get("pid1_enforced") is not False
+            or stable_base_pin.get("physical_boot_authorized") is not False
+        ):
+            raise BuildError("initramfs portable Stable Base pin provenance is invalid")
+    elif stable_base_pin.get("provided") is not False:
+        raise BuildError("initramfs portable Stable Base pin state is invalid")
+
     health = provenance.get("filesystem_health", {})
     if (
         health.get("pre_mount_check") is not True
@@ -850,6 +946,21 @@ def verify(out_dir: Path) -> dict:
         or not _SHA256.fullmatch(str(capsule_verifier.get("source_sha256", "")))
     ):
         raise BuildError("initramfs provenance is missing the fixed portable capsule verifier")
+
+    base_verifier = provenance.get("portable_stable_base_verifier", {})
+    if (
+        base_verifier.get("installed") is not True
+        or base_verifier.get("helper_path") != "/sbin/ordax-portable-base-verify"
+        or base_verifier.get("pin_path") != "/etc/ordax/portable-stable-base.sha256"
+        or base_verifier.get("base_path") != "/ordax-data/.ordax/base/stable-base.erofs"
+        or base_verifier.get("user_supplied_path_allowed") is not False
+        or base_verifier.get("hash_algorithm") != "sha256"
+        or base_verifier.get("mounts_base") is not False
+        or base_verifier.get("network_access") is not False
+        or base_verifier.get("pid1_connected") is not False
+        or not _SHA256.fullmatch(str(base_verifier.get("source_sha256", "")))
+    ):
+        raise BuildError("initramfs provenance is missing the fixed portable Stable Base verifier")
 
     state_reader = provenance.get("portable_activation_state_reader", {})
     if (
@@ -903,6 +1014,12 @@ def main() -> int:
         default=None,
         help="optional verified bootstrap.erofs candidate whose SHA-256 is embedded as a non-enforced pin",
     )
+    build_parser.add_argument(
+        "--portable-stable-base",
+        type=Path,
+        default=None,
+        help="optional verified stable-base.erofs candidate whose SHA-256 is embedded as a non-enforced pin",
+    )
     verify_parser = sub.add_parser("verify")
     verify_parser.add_argument("--out-dir", type=Path, default=ROOT / "out" / "initramfs")
     args = parser.parse_args()
@@ -915,6 +1032,7 @@ def main() -> int:
                 args.out_dir,
                 args.jobs,
                 args.portable_bootstrap_capsule,
+                args.portable_stable_base,
             )
         else:
             result = verify(args.out_dir)

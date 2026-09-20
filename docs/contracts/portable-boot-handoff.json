@@ -134,7 +134,13 @@
     "capsule_hash_verification_helper_path": "/sbin/ordax-portable-capsule-verify",
     "capsule_hash_verification_helper_pid1_connected": false,
     "capsule_hash_verification_fixed_paths": true,
-    "capsule_hash_verification_mounts_capsule": false
+    "capsule_hash_verification_mounts_capsule": false,
+    "stable_base_hash_pin_builder_support": true,
+    "stable_base_hash_pin_candidate_implemented": true,
+    "stable_base_hash_verification_helper_installed": true,
+    "stable_base_hash_verification_helper_path": "/sbin/ordax-portable-base-verify",
+    "stable_base_hash_verification_helper_pid1_connected": false,
+    "stable_base_pid1_hash_enforcement_implemented": false
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",

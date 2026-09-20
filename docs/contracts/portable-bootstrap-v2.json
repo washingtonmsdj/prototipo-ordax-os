@@ -201,6 +201,16 @@
     "apk_package_versions_pinned": true,
     "apk_package_lock_count": 40,
     "apk_install_policy": "full-transitive-lock-exact-version-specs",
-    "pinning_evidence_commit": "daf33badda46b82b1d4e3faafcf040ca8dca479c"
+    "pinning_evidence_commit": "daf33badda46b82b1d4e3faafcf040ca8dca479c",
+    "initramfs_hash_pin_builder_support": true,
+    "initramfs_hash_pin_implemented": true,
+    "initramfs_hash_pin_candidate_only": true,
+    "initramfs_hash_pin_default_candidate_build_enabled": false,
+    "expected_runtime_path": "/ordax-data/.ordax/base/stable-base.erofs",
+    "hash_verification_helper_installed": true,
+    "hash_verification_helper_path": "/sbin/ordax-portable-base-verify",
+    "hash_verification_helper_fixed_paths": true,
+    "hash_verification_helper_pid1_connected": false,
+    "pid1_hash_enforcement_implemented": false
   }
 }

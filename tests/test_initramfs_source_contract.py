@@ -11,6 +11,7 @@ GROW_HELPER = (ROOT / "bootstrap/initramfs/grow_ext4.c").read_text(encoding="utf
 PORTABLE_STATE_HELPER = (ROOT / "bootstrap/initramfs/portable_state.c").read_text(encoding="utf-8")
 PORTABLE_MOUNT_HELPER = (ROOT / "bootstrap/initramfs/portable_mount.c").read_text(encoding="utf-8")
 PORTABLE_CAPSULE_VERIFY = (ROOT / "bootstrap/initramfs/portable_capsule_verify.sh").read_text(encoding="utf-8")
+PORTABLE_BASE_VERIFY = (ROOT / "bootstrap/initramfs/portable_base_verify.sh").read_text(encoding="utf-8")
 GROWTH_PROOF = (ROOT / "bootstrap/initramfs/prove_ext4_growth.sh").read_text(encoding="utf-8")
 
 
@@ -218,6 +219,42 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertNotIn("http://", PORTABLE_CAPSULE_VERIFY)
         self.assertNotIn("https://", PORTABLE_CAPSULE_VERIFY)
         self.assertNotIn("ordax-portable-capsule-verify", INIT)
+
+        base_pin = portable["stable_base_pin"]
+        self.assertTrue(base_pin["builder_support"])
+        self.assertEqual(base_pin["optional_build_input"], "--portable-stable-base")
+        self.assertEqual(
+            base_pin["pin_runtime_path"],
+            "/etc/ordax/portable-stable-base.sha256",
+        )
+        self.assertEqual(
+            base_pin["expected_base_path"],
+            "/ordax-data/.ordax/base/stable-base.erofs",
+        )
+        self.assertEqual(base_pin["artifact_name"], "stable-base.erofs")
+        self.assertEqual(base_pin["hash_algorithm"], "sha256")
+        self.assertTrue(base_pin["erofs_magic_checked"])
+        self.assertFalse(base_pin["pid1_enforced"])
+        self.assertFalse(base_pin["default_candidate_build_pinned"])
+        self.assertFalse(base_pin["physical_boot_authorized"])
+        base_verifier = base_pin["verification_helper"]
+        self.assertEqual(
+            base_verifier["runtime_path"],
+            "/sbin/ordax-portable-base-verify",
+        )
+        self.assertFalse(base_verifier["user_supplied_path_allowed"])
+        self.assertTrue(base_verifier["uses_busybox_sha256sum_check_mode"])
+        self.assertFalse(base_verifier["mounts_base"])
+        self.assertFalse(base_verifier["network_access"])
+        self.assertFalse(base_verifier["pid1_connected"])
+        self.assertIn('PIN=/etc/ordax/portable-stable-base.sha256', PORTABLE_BASE_VERIFY)
+        self.assertIn('BASE=/ordax-data/.ordax/base/stable-base.erofs', PORTABLE_BASE_VERIFY)
+        self.assertIn('/bin/busybox sha256sum -c "$PIN"', PORTABLE_BASE_VERIFY)
+        self.assertNotIn("mount ", PORTABLE_BASE_VERIFY)
+        self.assertNotIn("curl", PORTABLE_BASE_VERIFY)
+        self.assertNotIn("wget", PORTABLE_BASE_VERIFY)
+        self.assertNotIn("ordax-portable-base-verify", INIT)
+
         self.assertIn("findfs LABEL=ORDAX", INIT)
         self.assertNotIn("findfs LABEL=ORDAX-DATA", INIT)
 

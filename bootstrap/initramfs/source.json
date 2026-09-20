@@ -164,6 +164,31 @@
       }
     },
     "activation_selection_helper_implemented": true,
-    "activation_selection_pid1_connected": false
+    "activation_selection_pid1_connected": false,
+    "stable_base_pin": {
+      "builder_support": true,
+      "optional_build_input": "--portable-stable-base",
+      "pin_runtime_path": "/etc/ordax/portable-stable-base.sha256",
+      "expected_base_path": "/ordax-data/.ordax/base/stable-base.erofs",
+      "artifact_name": "stable-base.erofs",
+      "hash_algorithm": "sha256",
+      "erofs_magic_checked": true,
+      "pid1_enforced": false,
+      "default_candidate_build_pinned": false,
+      "physical_boot_authorized": false,
+      "verification_helper": {
+        "source": "bootstrap/initramfs/portable_base_verify.sh",
+        "runtime_path": "/sbin/ordax-portable-base-verify",
+        "installed": true,
+        "operation": "verify",
+        "fixed_pin_path": "/etc/ordax/portable-stable-base.sha256",
+        "fixed_base_path": "/ordax-data/.ordax/base/stable-base.erofs",
+        "user_supplied_path_allowed": false,
+        "uses_busybox_sha256sum_check_mode": true,
+        "mounts_base": false,
+        "network_access": false,
+        "pid1_connected": false
+      }
+    }
   }
 }

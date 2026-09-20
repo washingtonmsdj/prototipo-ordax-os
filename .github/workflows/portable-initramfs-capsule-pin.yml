@@ -88,7 +88,17 @@ jobs:
             --out "$work/bootstrap.erofs" \
             > "$work/capsule.json"
 
-      - name: Build initramfs with non-enforced capsule hash pin
+      - name: Build synthetic Stable Base pin fixture
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-pin"
+          mkdir -p "$work/stable-base-root/sbin"
+          printf '#!/bin/sh\nexit 0\n' > "$work/stable-base-root/sbin/ordax-stable-init"
+          chmod 0755 "$work/stable-base-root/sbin/ordax-stable-init"
+          mkfs.erofs -zlz4 -T 0 -L ORDAX-BASE             "$work/stable-base.erofs" "$work/stable-base-root"
+          fsck.erofs "$work/stable-base.erofs"
+
+      - name: Build initramfs with non-enforced capsule and Stable Base hash pins
         env:
           ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -102,18 +112,28 @@ jobs:
             --portable-bootstrap-capsule "$work/bootstrap.erofs"
           python bootstrap/initramfs/build.py verify --out-dir "$work/initramfs"
 
-          python - "$work/bootstrap.erofs" "$work/initramfs/initramfs-provenance.json" <<'PY'
+          python - "$work/bootstrap.erofs" "$work/stable-base.erofs" "$work/initramfs/initramfs-provenance.json" <<'PY'
           import hashlib, json, pathlib, sys
-          image = pathlib.Path(sys.argv[1])
-          provenance = json.loads(pathlib.Path(sys.argv[2]).read_text())
-          expected = hashlib.sha256(image.read_bytes()).hexdigest()
-          pin = provenance['portable_bootstrap_capsule_pin']
-          assert pin['provided'] is True
-          assert pin['sha256'] == expected
-          assert pin['expected_path'] == '/ordax-esp/ordax/bootstrap/bootstrap.erofs'
-          assert pin['pid1_enforced'] is False
-          assert pin['physical_boot_authorized'] is False
+          capsule = pathlib.Path(sys.argv[1])
+          base = pathlib.Path(sys.argv[2])
+          provenance = json.loads(pathlib.Path(sys.argv[3]).read_text())
+
+          capsule_pin = provenance['portable_bootstrap_capsule_pin']
+          assert capsule_pin['provided'] is True
+          assert capsule_pin['sha256'] == hashlib.sha256(capsule.read_bytes()).hexdigest()
+          assert capsule_pin['expected_path'] == '/ordax-esp/ordax/bootstrap/bootstrap.erofs'
+          assert capsule_pin['pid1_enforced'] is False
+          assert capsule_pin['physical_boot_authorized'] is False
+
+          base_pin = provenance['portable_stable_base_pin']
+          assert base_pin['provided'] is True
+          assert base_pin['sha256'] == hashlib.sha256(base.read_bytes()).hexdigest()
+          assert base_pin['expected_path'] == '/ordax-data/.ordax/base/stable-base.erofs'
+          assert base_pin['pid1_enforced'] is False
+          assert base_pin['physical_boot_authorized'] is False
+
           print('PORTABLE_BOOTSTRAP_CAPSULE_PIN_EMBEDDED=PASS')
+          print('PORTABLE_STABLE_BASE_PIN_EMBEDDED=PASS')
           print('PID1_ENFORCEMENT=NO')
           print('PHYSICAL_BOOT_AUTHORIZED=NO')
           PY
@@ -124,10 +144,13 @@ jobs:
           work="$RUNNER_TEMP/portable-pin"
           rootfs="$work/initramfs-work/rootfs"
           expected="$rootfs/ordax-esp/ordax/bootstrap/bootstrap.erofs"
-          mkdir -p "$(dirname "$expected")" "$work/capsule-mount"
+          base_expected="$rootfs/ordax-data/.ordax/base/stable-base.erofs"
+          mkdir -p "$(dirname "$expected")" "$(dirname "$base_expected")" "$work/capsule-mount"
           cp "$work/bootstrap.erofs" "$expected"
+          cp "$work/stable-base.erofs" "$base_expected"
 
           sudo chroot "$rootfs" /sbin/ordax-portable-capsule-verify verify
+          sudo chroot "$rootfs" /sbin/ordax-portable-base-verify verify
 
           helper="$work/initramfs-work/ordax-portable-mount"
           sudo "$helper" mount-capsule "$expected" "$work/capsule-mount"
@@ -148,7 +171,16 @@ jobs:
             exit 1
           fi
 
+          cp "$base_expected" "$work/tampered-stable-base.erofs"
+          printf X | dd of="$work/tampered-stable-base.erofs" bs=1 seek=2048 conv=notrunc status=none
+          cp "$work/tampered-stable-base.erofs" "$base_expected"
+          if sudo chroot "$rootfs" /sbin/ordax-portable-base-verify verify; then
+            echo 'tampered Stable Base passed initramfs hash pin' >&2
+            exit 1
+          fi
+
           echo 'PORTABLE_BOOTSTRAP_CAPSULE_HASH_ENFORCEMENT_PRIMITIVE=PASS'
+          echo 'PORTABLE_STABLE_BASE_HASH_ENFORCEMENT_PRIMITIVE=PASS'
           echo 'PORTABLE_BOOTSTRAP_CAPSULE_READ_ONLY_MOUNT=PASS'
           echo 'TAMPERED_CAPSULE_REJECTED=PASS'
           echo 'PID1_CONNECTED=NO'
