@@ -46,5 +46,17 @@
     "writable_mount_error_policy": "remount-ro",
     "helper_runtime_path": "/sbin/ordax-grow-ext4",
     "automatic_destructive_repair": false
+  },
+  "portable_v2_prerequisites": {
+    "losetup_applet": true,
+    "mount_loop_support": true,
+    "exfat_volume_id": true,
+    "kernel_exfat_required": true,
+    "kernel_erofs_required": true,
+    "kernel_overlayfs_required": true,
+    "boot_path_enabled": false,
+    "handoff_helper_installed": false,
+    "main_partition_label_unchanged": "ORDAX",
+    "physical_boot_promotion_allowed": false
   }
 }

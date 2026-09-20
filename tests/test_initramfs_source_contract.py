@@ -85,6 +85,10 @@ class InitramfsSourceContractTests(unittest.TestCase):
 
     def test_builder_uses_minimal_busybox_and_explicit_musl_target_compiler(self):
         self.assertIn('"CONFIG_BUSYBOX": "y"', BUILDER)
+        self.assertIn('"losetup"', BUILDER)
+        self.assertIn('"CONFIG_LOSETUP": "y"', BUILDER)
+        self.assertIn('"CONFIG_FEATURE_MOUNT_LOOP": "y"', BUILDER)
+        self.assertIn('"CONFIG_FEATURE_VOLUMEID_EXFAT": "y"', BUILDER)
         self.assertNotIn('"CONFIG_TEST": "y"', BUILDER)
         self.assertIn('make = ["make", f"CC={musl_cc}"]', BUILDER)
         self.assertIn('run(make + ["allnoconfig"]', BUILDER)
@@ -126,6 +130,21 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn("read_only_size_unchanged", GROWTH_PROOF)
         self.assertIn('"physical_write_authorized": false', GROWTH_PROOF)
         self.assertIn('"physical_hardware_proven": false', GROWTH_PROOF)
+
+    def test_portable_v2_prerequisites_are_present_without_changing_boot_path(self):
+        portable = CONTRACT["portable_v2_prerequisites"]
+        self.assertTrue(portable["losetup_applet"])
+        self.assertTrue(portable["mount_loop_support"])
+        self.assertTrue(portable["exfat_volume_id"])
+        self.assertTrue(portable["kernel_exfat_required"])
+        self.assertTrue(portable["kernel_erofs_required"])
+        self.assertTrue(portable["kernel_overlayfs_required"])
+        self.assertFalse(portable["boot_path_enabled"])
+        self.assertFalse(portable["handoff_helper_installed"])
+        self.assertEqual(portable["main_partition_label_unchanged"], "ORDAX")
+        self.assertFalse(portable["physical_boot_promotion_allowed"])
+        self.assertIn("findfs LABEL=ORDAX", INIT)
+        self.assertNotIn("findfs LABEL=ORDAX-DATA", INIT)
 
     def test_physical_use_remains_fail_closed(self):
         self.assertFalse(CONTRACT["build"]["physical_artifact_authorized"])

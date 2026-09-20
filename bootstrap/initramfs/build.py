@@ -31,7 +31,7 @@ GROW_HELPER_SOURCE = HERE / "grow_ext4.c"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _SAFE_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 REQUIRED_APPLETS = {
-    "blkid", "cat", "echo", "findfs", "mkdir", "mount", "poweroff",
+    "blkid", "cat", "echo", "findfs", "losetup", "mkdir", "mount", "poweroff",
     "reboot", "sh", "sleep", "switch_root", "sync", "umount",
 }
 REQUESTED_CONFIG = {
@@ -43,8 +43,10 @@ REQUESTED_CONFIG = {
     "CONFIG_CAT": "y",
     "CONFIG_ECHO": "y",
     "CONFIG_FINDFS": "y",
+    "CONFIG_LOSETUP": "y",
     "CONFIG_MKDIR": "y",
     "CONFIG_MOUNT": "y",
+    "CONFIG_FEATURE_MOUNT_LOOP": "y",
     "CONFIG_POWEROFF": "y",
     "CONFIG_REBOOT": "y",
     "CONFIG_SLEEP": "y",
@@ -52,6 +54,7 @@ REQUESTED_CONFIG = {
     "CONFIG_SYNC": "y",
     "CONFIG_UMOUNT": "y",
     "CONFIG_FEATURE_VOLUMEID_EXT": "y",
+    "CONFIG_FEATURE_VOLUMEID_EXFAT": "y",
 }
 FIXED_ENV = {
     "SOURCE_DATE_EPOCH": "0",
@@ -144,6 +147,7 @@ def check_contract() -> dict:
         "ext4_growth_helper_source": str(helper_source.relative_to(ROOT)),
         "ext4_growth_helper_source_sha256": sha256_file(helper_source),
         "main_partition_label": contract["main_partition_label"],
+        "portable_v2_prerequisites": contract["portable_v2_prerequisites"],
     }
 
 
@@ -443,6 +447,13 @@ def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
         },
         "static_userspace": True,
         "network_inside_fixed_initramfs": False,
+        "portable_v2_prerequisites": {
+            "losetup_applet": True,
+            "mount_loop_support": True,
+            "exfat_volume_id": True,
+            "boot_path_enabled": False,
+            "handoff_helper_installed": False,
+        },
         "artifacts": {
             archive_path.name: sha256_file(archive_path),
             final_config.name: sha256_file(final_config),

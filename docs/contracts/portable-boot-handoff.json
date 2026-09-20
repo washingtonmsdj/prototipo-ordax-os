@@ -57,13 +57,15 @@
   },
   "initramfs_integration_requirements": {
     "busybox_losetup_applet_required": true,
-    "busybox_losetup_applet_currently_enabled": false,
+    "busybox_losetup_applet_currently_enabled": true,
     "portable_handoff_helper_required": true,
     "portable_handoff_helper_currently_installed": false,
     "ordax_data_exfat_mount_required": true,
     "exact_release_selection_metadata_required": true,
     "known_good_fallback_metadata_required": true,
-    "selection_anti_rollback_policy_required": true
+    "selection_anti_rollback_policy_required": true,
+    "busybox_mount_loop_currently_enabled": true,
+    "busybox_exfat_volume_id_currently_enabled": true
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",
