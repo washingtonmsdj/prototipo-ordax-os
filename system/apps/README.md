@@ -32,9 +32,37 @@ App definitions contain platform-neutral metadata, capability requirements and d
 
 Application availability is capability-driven. A future app that requires a capability declares that capability in `requiredCapabilities`; the Surface fails closed when the host does not expose it. An app may also declare `optionalCapabilities`: these enrich the same app when a host exposes them without turning that app into a platform fork or making the optional feature a launch requirement.
 
-**Notas is an app, not a Surface/system subsystem.** It is currently bundled as a first-party app and is especially useful on Native/USB because `filesystem.user-space` is available there, but its stable app identity remains `notes` and that filesystem capability is optional. This keeps the application boundary compatible with a future signed app-package/store path without pretending that a general package manager or Store already exists. Until independent app packaging/release is implemented, Notas shares the product release/version instead of inventing a separate app version.
+## Version and update identity
 
-**Internet follows the same app boundary.** Its stable app id is `internet`. The shared app owns browser chrome, workspace/tab organization and project context; Native/USB provide the optional `browser.web-content` capability through an isolated WebKit host, while Web fails closed instead of embedding arbitrary sites. Future desktop/mobile browser engines and signed Store packaging should evolve the same app identity rather than creating a host-specific copy.
+Every first-party app has a component semantic version. This version is different from the OrdaX product version, from the human Entrega number and from the exact Git SHA.
+
+Current app versions are:
+
+```text
+Arquivos  0.1.0
+Ajustes   0.1.0
+Conta     0.1.0
+Sistema   0.1.0
+Internet  0.3.0
+Notas     0.4.0
+```
+
+For first-party apps, OrdaX treats the `0.x` line as **Beta**. `1.0.0` is reserved for the first stable app release. The Beta label is an app maturity convention; it does not claim that independent production distribution is already enabled.
+
+Updating OrdaX does not require every app version to change. Updating an app version does not create a new OrdaX product version automatically.
+
+Current release modes are intentionally mixed while the MVP hardens:
+
+- `bundled`: Arquivos, Ajustes, Conta and Sistema currently update with the OrdaX system delivery;
+- `git-app`: Notas and Internet own explicit app versions while the Owner/Development profile still delivers their code through the ordinary Git checkout/reconcile path;
+- `component-slot`: reserved for an app that has completed the signed independent-package path with verification, pending health, promotion and rollback;
+- `git-app` does not claim a production app updater, Store or app-local rollback.
+
+`system/services/components/update-presentation.mjs` derives two update scopes for Sistema: **system** and **applications**. Base, Surface/services and the Sistema app belong to `system`; the other first-party apps belong to `applications`, even when a current app still arrives bundled with the OrdaX delivery.
+
+**Notas is an app, not a Surface/system subsystem.** Its stable app id is `notes`; Native/USB may enrich it through optional filesystem capabilities without changing its app identity.
+
+**Internet follows the same app boundary.** Its stable app id is `internet`. The shared app owns browser chrome, workspace/tab organization and project context; Native/USB provide the optional browser engine capability through an isolated host, while Web fails closed instead of pretending arbitrary sites can be safely embedded.
 
 ## Boundary
 
