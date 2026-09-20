@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 import unittest
 
@@ -360,6 +361,19 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertNotIn("sha256", PORTABLE_MOUNT_HELPER.lower())
         self.assertNotIn("https://", PORTABLE_MOUNT_HELPER)
         self.assertNotIn("ordax-portable-mount", INIT)
+
+    def test_portable_v2_candidate_pid1_has_valid_posix_shell_syntax(self):
+        result = subprocess.run(
+            ["sh", "-n", str(ROOT / "bootstrap/initramfs/portable_init.sh")],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(
+            'mount -o bind,ro "$NEWROOT/run/ordax/lower/capsule/bootstrap" "$NEWROOT/ordax/bootstrap"',
+            PORTABLE_INIT,
+        )
 
     def test_portable_v2_candidate_pid1_is_installed_but_not_default(self):
         portable = CONTRACT["portable_v2_prerequisites"]

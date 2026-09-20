@@ -119,7 +119,7 @@ mount --move "$RELEASE_MOUNT" "$NEWROOT/run/ordax/lower/release" ||
 mount --move "$CAPSULE_MOUNT" "$NEWROOT/run/ordax/lower/capsule" ||
     rescue "cannot retain bootstrap capsule lower mount"
 
-mount "$NEWROOT/run/ordax/lower/capsule/bootstrap" "$NEWROOT/ordax/bootstrap"     -o bind,ro ||
+mount -o bind,ro "$NEWROOT/run/ordax/lower/capsule/bootstrap" "$NEWROOT/ordax/bootstrap" ||
     rescue "cannot expose verified bootstrap support tree"
 mount -o remount,bind,ro,nodev,nosuid "$NEWROOT/ordax/bootstrap" ||
     rescue "cannot enforce read-only bootstrap support tree"
