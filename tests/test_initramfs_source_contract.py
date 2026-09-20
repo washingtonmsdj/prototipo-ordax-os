@@ -148,7 +148,9 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertTrue(portable["kernel_erofs_required"])
         self.assertTrue(portable["kernel_overlayfs_required"])
         self.assertFalse(portable["boot_path_enabled"])
-        self.assertFalse(portable["handoff_helper_installed"])
+        self.assertTrue(portable["handoff_helper_installed"])
+        self.assertFalse(portable["handoff_helper_pid1_connected"])
+        self.assertFalse(portable["boot_path_enabled"])
         self.assertEqual(portable["main_partition_label_unchanged"], "ORDAX")
         self.assertFalse(portable["physical_boot_promotion_allowed"])
         self.assertEqual(
