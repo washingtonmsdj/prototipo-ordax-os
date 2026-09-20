@@ -226,5 +226,15 @@
     "hash_verification_helper_fixed_paths": true,
     "hash_verification_helper_pid1_connected": false,
     "pid1_hash_enforcement_implemented": false
+  },
+  "pinned_initramfs_composition_proof": {
+    "contract": "docs/contracts/portable-v2-pinned-initramfs-proof.json",
+    "workflow_implemented": true,
+    "proof_passed_on_current_head": false,
+    "capsule_and_stable_base_real_artifacts_required": true,
+    "tamper_rejection_required": true,
+    "pid1_default_changed": false,
+    "physical_boot_connected": false,
+    "public_physical_promotion_allowed": false
   }
 }

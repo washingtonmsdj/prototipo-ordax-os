@@ -207,5 +207,12 @@
     "switch-root-into-stable-base-overlay",
     "launch-ordax-stable-init-with-verified-portable-release-identity"
   ],
-  "portable_bootstrap_contract": "docs/contracts/portable-bootstrap-v2.json"
+  "portable_bootstrap_contract": "docs/contracts/portable-bootstrap-v2.json",
+  "pinned_initramfs_composition_proof": {
+    "contract": "docs/contracts/portable-v2-pinned-initramfs-proof.json",
+    "workflow_implemented": true,
+    "proof_passed_on_current_head": false,
+    "qemu_boot_proven": false,
+    "physical_boot_proven": false
+  }
 }

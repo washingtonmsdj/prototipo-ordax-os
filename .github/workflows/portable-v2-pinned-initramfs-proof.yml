@@ -1,0 +1,284 @@
+name: Portable v2 Pinned Initramfs Proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bootstrap/base/**'
+      - 'bootstrap/kernel/**'
+      - 'bootstrap/stable-base/**'
+      - 'bootstrap/initramfs/**'
+      - 'bootstrap/portable-v2/capsule/**'
+      - 'bootstrap/release-acquisition/**'
+      - 'bootstrap/recovery/entrypoint'
+      - 'bootstrap/config/release-envelope-url'
+      - 'docs/contracts/portable-v2-pinned-initramfs-proof.json'
+      - 'docs/contracts/portable-bootstrap-v2.json'
+      - 'docs/contracts/portable-boot-handoff.json'
+      - 'docs/MINIMAL-USB-BOOTSTRAP.md'
+      - 'tests/test_portable_v2_pinned_initramfs_proof_contract.py'
+      - '.github/workflows/portable-v2-pinned-initramfs-proof.yml'
+  pull_request:
+    paths:
+      - 'bootstrap/base/**'
+      - 'bootstrap/kernel/**'
+      - 'bootstrap/stable-base/**'
+      - 'bootstrap/initramfs/**'
+      - 'bootstrap/portable-v2/capsule/**'
+      - 'bootstrap/release-acquisition/**'
+      - 'bootstrap/recovery/entrypoint'
+      - 'bootstrap/config/release-envelope-url'
+      - 'docs/contracts/portable-v2-pinned-initramfs-proof.json'
+      - 'docs/contracts/portable-bootstrap-v2.json'
+      - 'docs/contracts/portable-boot-handoff.json'
+      - 'docs/MINIMAL-USB-BOOTSTRAP.md'
+      - 'tests/test_portable_v2_pinned_initramfs_proof_contract.py'
+      - '.github/workflows/portable-v2-pinned-initramfs-proof.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-initramfs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          check-latest: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+          cache: false
+
+      - name: Install exact-artifact build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-13 make bc perl bison flex openssl libssl-dev libelf-dev \
+            dwarves kmod xz-utils pkg-config musl-tools binutils bzip2 \
+            e2fsprogs util-linux proot erofs-utils
+          command -v mkfs.erofs
+          command -v fsck.erofs
+          command -v musl-gcc
+          command -v proot
+
+      - name: Validate proof contract
+        run: |
+          set -euo pipefail
+          python -m unittest tests.test_portable_v2_pinned_initramfs_proof_contract -v
+          python bootstrap/initramfs/build.py check
+          python bootstrap/stable-base/build.py check
+
+      - name: Build exact static release agent and bootstrap capsule
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-pinned"
+          mkdir -p "$work/bin" "$work/capsule" "$work/metadata"
+          (
+            cd bootstrap/release-acquisition
+            go test -count=1 ./...
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+              go build -trimpath -buildvcs=false -ldflags='-s -w' \
+              -o "$work/bin/ordax-release-agent" .
+          )
+          python bootstrap/portable-v2/capsule/build.py build \
+            --release-agent "$work/bin/ordax-release-agent" \
+            --out "$work/capsule/bootstrap.erofs" \
+            > "$work/metadata/capsule-build.json"
+          python bootstrap/portable-v2/capsule/build.py verify \
+            --release-agent "$work/bin/ordax-release-agent" \
+            --image "$work/capsule/bootstrap.erofs" \
+            > "$work/metadata/capsule-verify.json"
+
+      - name: Build exact kernel modules
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          python bootstrap/kernel/build.py check
+          python bootstrap/kernel/build.py build \
+            --jobs 4 \
+            --work-dir "$RUNNER_TEMP/portable-v2-pinned/kernel-work" \
+            --out-dir "$RUNNER_TEMP/portable-v2-pinned/kernel"
+          python bootstrap/kernel/verify.py "$RUNNER_TEMP/portable-v2-pinned/kernel"
+          test -s "$RUNNER_TEMP/portable-v2-pinned/kernel/kernel-modules-6.6.52.tar"
+
+      - name: Build and verify exact Stable Base
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-pinned"
+          sudo -E env ORDAX_SOURCE_COMMIT="$ORDAX_SOURCE_COMMIT" \
+            python bootstrap/stable-base/build.py build \
+              --kernel-modules "$work/kernel/kernel-modules-6.6.52.tar" \
+              --out-dir "$work/stable-base" \
+              --cache-dir "$work/stable-base-cache" \
+              > "$work/metadata/stable-base-build.json"
+          sudo chown -R "$(id -u):$(id -g)" "$work/stable-base"
+          python bootstrap/stable-base/build.py verify \
+            --out-dir "$work/stable-base" \
+            > "$work/metadata/stable-base-verify.json"
+          test -s "$work/stable-base/stable-base.erofs"
+
+      - name: Build one initramfs pinned to both real EROFS artifacts
+        env:
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-pinned"
+          python bootstrap/initramfs/build.py build \
+            --jobs 4 \
+            --work-dir "$work/initramfs-work" \
+            --out-dir "$work/initramfs" \
+            --portable-bootstrap-capsule "$work/capsule/bootstrap.erofs" \
+            --portable-stable-base "$work/stable-base/stable-base.erofs" \
+            > "$work/metadata/initramfs-build.json"
+          python bootstrap/initramfs/build.py verify \
+            --out-dir "$work/initramfs" \
+            > "$work/metadata/initramfs-verify.json"
+
+      - name: Verify provenance and in-initramfs pin files match real bytes
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-pinned"
+          python - "$work" <<'PY'
+          import hashlib, json, pathlib, sys
+
+          work = pathlib.Path(sys.argv[1])
+          provenance = json.loads(
+              (work / 'initramfs/initramfs-provenance.json').read_text(encoding='utf-8')
+          )
+          capsule = work / 'capsule/bootstrap.erofs'
+          base = work / 'stable-base/stable-base.erofs'
+
+          def digest(path):
+              h = hashlib.sha256()
+              with path.open('rb') as handle:
+                  for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          capsule_sha = digest(capsule)
+          base_sha = digest(base)
+          capsule_pin = provenance['portable_bootstrap_capsule_pin']
+          base_pin = provenance['portable_stable_base_pin']
+
+          assert capsule_pin['provided'] is True
+          assert capsule_pin['sha256'] == capsule_sha
+          assert capsule_pin['expected_path'] == '/ordax-esp/ordax/bootstrap/bootstrap.erofs'
+          assert capsule_pin['pid1_enforced'] is False
+          assert capsule_pin['physical_boot_authorized'] is False
+
+          assert base_pin['provided'] is True
+          assert base_pin['sha256'] == base_sha
+          assert base_pin['expected_path'] == '/ordax-data/.ordax/base/stable-base.erofs'
+          assert base_pin['pid1_enforced'] is False
+          assert base_pin['physical_boot_authorized'] is False
+
+          rootfs = work / 'initramfs-work/rootfs'
+          capsule_line = (
+              rootfs / 'etc/ordax/portable-bootstrap-capsule.sha256'
+          ).read_text(encoding='ascii')
+          base_line = (
+              rootfs / 'etc/ordax/portable-stable-base.sha256'
+          ).read_text(encoding='ascii')
+          assert capsule_line == (
+              capsule_sha + '  /ordax-esp/ordax/bootstrap/bootstrap.erofs\n'
+          )
+          assert base_line == (
+              base_sha + '  /ordax-data/.ordax/base/stable-base.erofs\n'
+          )
+
+          candidate = provenance['portable_candidate_pid1']
+          assert candidate['installed'] is True
+          assert candidate['default_init'] is False
+          assert candidate['legacy_init_unchanged'] is True
+          assert candidate['physical_boot_authorized'] is False
+          assert provenance['promotable_to_physical'] is False
+
+          print('PORTABLE_V2_REAL_CAPSULE_PIN=PASS')
+          print('PORTABLE_V2_REAL_STABLE_BASE_PIN=PASS')
+          print('PORTABLE_V2_PID1_DEFAULT_CHANGED=NO')
+          print('PORTABLE_V2_PHYSICAL_AUTHORIZED=NO')
+          PY
+
+      - name: Prove exact pins accept real artifacts and reject tampering
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-pinned"
+          root="$work/initramfs-work/rootfs"
+
+          sudo mkdir -p \
+            "$root/ordax-esp/ordax/bootstrap" \
+            "$root/ordax-data/.ordax/base"
+          sudo cp --reflink=auto "$work/capsule/bootstrap.erofs" \
+            "$root/ordax-esp/ordax/bootstrap/bootstrap.erofs"
+          sudo cp --reflink=auto "$work/stable-base/stable-base.erofs" \
+            "$root/ordax-data/.ordax/base/stable-base.erofs"
+
+          sudo chroot "$root" /sbin/ordax-portable-capsule-verify verify
+          sudo chroot "$root" /sbin/ordax-portable-base-verify verify
+
+          sudo cp --reflink=auto \
+            "$root/ordax-esp/ordax/bootstrap/bootstrap.erofs" \
+            "$root/ordax-esp/ordax/bootstrap/bootstrap.erofs.good"
+          printf X | sudo dd \
+            of="$root/ordax-esp/ordax/bootstrap/bootstrap.erofs" \
+            bs=1 seek=4096 conv=notrunc status=none
+          if sudo chroot "$root" /sbin/ordax-portable-capsule-verify verify; then
+            echo 'tampered bootstrap capsule unexpectedly passed pin verification' >&2
+            exit 1
+          fi
+          echo 'CAPSULE_TAMPER_REJECTED=YES'
+          sudo mv \
+            "$root/ordax-esp/ordax/bootstrap/bootstrap.erofs.good" \
+            "$root/ordax-esp/ordax/bootstrap/bootstrap.erofs"
+          sudo chroot "$root" /sbin/ordax-portable-capsule-verify verify
+
+          sudo cp --reflink=auto \
+            "$root/ordax-data/.ordax/base/stable-base.erofs" \
+            "$root/ordax-data/.ordax/base/stable-base.erofs.good"
+          printf X | sudo dd \
+            of="$root/ordax-data/.ordax/base/stable-base.erofs" \
+            bs=1 seek=4096 conv=notrunc status=none
+          if sudo chroot "$root" /sbin/ordax-portable-base-verify verify; then
+            echo 'tampered Stable Base unexpectedly passed pin verification' >&2
+            exit 1
+          fi
+          echo 'STABLE_BASE_TAMPER_REJECTED=YES'
+          sudo mv \
+            "$root/ordax-data/.ordax/base/stable-base.erofs.good" \
+            "$root/ordax-data/.ordax/base/stable-base.erofs"
+          sudo chroot "$root" /sbin/ordax-portable-base-verify verify
+
+          echo 'PORTABLE_V2_PINNED_INITRAMFS_PROOF=PASS'
+          echo 'QEMU_BOOT_PROVEN=NO'
+          echo 'PHYSICAL_DEVICE_TOUCHED=NO'
+          echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
+
+      - name: Upload proof metadata only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: portable-v2-pinned-initramfs-proof-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/portable-v2-pinned/metadata/
+          if-no-files-found: error
+          retention-days: 14

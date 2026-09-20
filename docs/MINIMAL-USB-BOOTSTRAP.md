@@ -319,3 +319,12 @@ current
 Only after a release passes exact signature/hash verification does the candidate compose the Stable Base overlay, bind the verified `system/` subtree read-only, move all required mounts under the new root and invoke `switch_root` into `ordax-stable-init`.
 
 This does not claim a bootable MVP yet. Canonical public trust is still not pinned, the candidate has no physical boot entry, QEMU end-to-end proof is still pending, and the transitional `/init` remains the actual physical boot path.
+
+
+### Pinned portable-v2 initramfs composition proof
+
+Before any portable-v2 QEMU or physical boot promotion, CI must prove that one **real bootstrap capsule** and one **real Stable Base** built from the exact source head are both cryptographically pinned into the same deterministic initramfs candidate.
+
+The proof builds the capsule from the exact static release agent, builds the Stable Base from exact-source kernel modules, passes both EROFS artifacts into `bootstrap/initramfs/build.py`, and verifies that the resulting provenance and in-archive SHA-256 check files match the real bytes.
+
+The two fixed-path verification helpers are then exercised in an isolated initramfs root: exact artifacts must pass and single-byte-tampered copies must fail. This proof does not change the default `/init`, does not promote `ordax-portable-init`, does not boot QEMU and does not authorize physical media. Those remain later gates.

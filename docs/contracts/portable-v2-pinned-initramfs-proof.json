@@ -1,0 +1,55 @@
+{
+  "$schema": "prototype-ordax.portable-v2-pinned-initramfs-proof/1",
+  "status": "candidate-workflow-implemented",
+  "product_scope": "stable-mvp-usb-only",
+  "workflow": ".github/workflows/portable-v2-pinned-initramfs-proof.yml",
+  "physical_write_authorized": false,
+  "physical_device_touched": false,
+  "physical_boot_connected": false,
+  "qemu_boot_proven": false,
+  "pid1_default_changed": false,
+  "candidate_pid1_promoted": false,
+  "inputs": {
+    "bootstrap_capsule": {
+      "artifact": "bootstrap.erofs",
+      "builder": "bootstrap/portable-v2/capsule/build.py",
+      "real_exact_source_artifact_required": true,
+      "initramfs_pin_argument": "--portable-bootstrap-capsule"
+    },
+    "stable_base": {
+      "artifact": "stable-base.erofs",
+      "builder": "bootstrap/stable-base/build.py",
+      "real_exact_source_artifact_required": true,
+      "kernel_modules_from_exact_source_required": true,
+      "initramfs_pin_argument": "--portable-stable-base"
+    },
+    "initramfs": {
+      "builder": "bootstrap/initramfs/build.py",
+      "candidate_pid1_installed": true,
+      "candidate_pid1_default": false,
+      "legacy_init_unchanged": true
+    }
+  },
+  "required_checks": [
+    "capsule-built-and-verified-from-exact-source-release-agent",
+    "stable-base-built-and-verified-from-exact-source-kernel-modules",
+    "initramfs-built-with-both-real-pin-inputs",
+    "initramfs-provenance-capsule-digest-matches-real-artifact",
+    "initramfs-provenance-stable-base-digest-matches-real-artifact",
+    "capsule-pin-file-matches-real-artifact",
+    "stable-base-pin-file-matches-real-artifact",
+    "capsule-verifier-accepts-exact-artifact-in-isolated-root",
+    "stable-base-verifier-accepts-exact-artifact-in-isolated-root",
+    "capsule-verifier-rejects-tampered-artifact",
+    "stable-base-verifier-rejects-tampered-artifact",
+    "initramfs-remains-non-promotable",
+    "pid1-remains-candidate-only",
+    "no-physical-device-path-used"
+  ],
+  "promotion_effect": {
+    "public_physical_promotion_allowed": false,
+    "portable_v2_pid1_integration_implemented": false,
+    "portable_v2_qemu_boot_proven": false,
+    "portable_v2_physical_boot_proven": false
+  }
+}
