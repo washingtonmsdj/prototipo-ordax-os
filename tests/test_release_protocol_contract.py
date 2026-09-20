@@ -36,8 +36,14 @@ class ReleaseProtocolContractTests(unittest.TestCase):
 
     def assert_v1_validator_semantics(self, source):
         self.assertRegex(source, r"len\([A-Za-z_][A-Za-z0-9_]*\.Artifacts\)\s*!=\s*1")
-        self.assertRegex(source, r'[A-Za-z_][A-Za-z0-9_]*\.Name\s*!=\s*"system\.tar"')
-        self.assertRegex(source, r'[A-Za-z_][A-Za-z0-9_]*\.Role\s*!=\s*"system"')
+        self.assertRegex(
+            source,
+            r'[A-Za-z_][A-Za-z0-9_]*\.Artifacts\[0\]\.Name\s*!=\s*"system\.tar"',
+        )
+        self.assertRegex(
+            source,
+            r'[A-Za-z_][A-Za-z0-9_]*\.Artifacts\[0\]\.Role\s*!=\s*"system"',
+        )
         self.assertRegex(
             source,
             r"[A-Za-z_][A-Za-z0-9_]*\.ReleaseID\s*!=\s*[A-Za-z_][A-Za-z0-9_]*\.SourceCommit",
