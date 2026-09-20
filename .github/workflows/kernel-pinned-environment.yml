@@ -70,7 +70,7 @@ jobs:
           PACKAGES: ${{ steps.env.outputs.packages }}
         run: |
           set -euo pipefail
-          rm -rf out/kernel-pinned out/kernel-work-pinned out/kernel-pinned-observation
+          rm -rf out/kernel-pinned out/kernel-work-pinned out/kernel-pinned-repeat out/kernel-work-pinned-repeat out/kernel-pinned-observation
           mkdir -p out/kernel-pinned-observation
           docker run --rm \
             -e GITHUB_SHA="$GITHUB_SHA" \
@@ -128,7 +128,20 @@ jobs:
               python3 bootstrap/kernel/build.py check
               python3 bootstrap/kernel/build.py build --jobs 4 --work-dir out/kernel-work-pinned --out-dir out/kernel-pinned
               python3 bootstrap/kernel/verify.py out/kernel-pinned
-              chown -R "$HOST_UID:$HOST_GID" /repo/out/kernel-pinned /repo/out/kernel-work-pinned /repo/out/kernel-pinned-observation
+
+              # A historical artifact hash cannot remain the oracle after a
+              # legitimate kernel source/config change. Rebuild the same head
+              # from a clean work tree in the exact pinned environment and
+              # compare those two current-source results instead.
+              python3 bootstrap/kernel/build.py build --jobs 4 --work-dir out/kernel-work-pinned-repeat --out-dir out/kernel-pinned-repeat
+              python3 bootstrap/kernel/verify.py out/kernel-pinned-repeat
+
+              chown -R "$HOST_UID:$HOST_GID" \
+                /repo/out/kernel-pinned \
+                /repo/out/kernel-work-pinned \
+                /repo/out/kernel-pinned-repeat \
+                /repo/out/kernel-work-pinned-repeat \
+                /repo/out/kernel-pinned-observation
             '
 
       - name: Verify repeatability against pinned observation
@@ -136,6 +149,7 @@ jobs:
           python bootstrap/kernel/verify_reproducibility.py \
             docs/contracts/kernel-build-environment.json \
             out/kernel-pinned \
+            --repeat-artifact-dir out/kernel-pinned-repeat \
             --ca-bundle-sha-file out/kernel-pinned-observation/ca-bundle.sha256 \
             --out out/kernel-pinned-observation/reproducibility-verification.json
 
