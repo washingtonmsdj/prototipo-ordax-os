@@ -47,6 +47,15 @@ class KernelSourceContractTest(unittest.TestCase):
     def test_required_resolved_selectors_use_linux_6_6_names(self):
         for required in (
             "CONFIG_EFI_STUB=y",
+            "CONFIG_EFI_PARTITION=y",
+            "CONFIG_ATA=y",
+            "CONFIG_ATA_PIIX=y",
+            "CONFIG_SATA_AHCI=y",
+            "CONFIG_BLK_DEV_NVME=y",
+            "CONFIG_SCSI=y",
+            "CONFIG_BLK_DEV_SD=y",
+            "CONFIG_USB_STORAGE=y",
+            "CONFIG_USB_UAS=y",
             "CONFIG_SYSFB_SIMPLEFB=y",
             "CONFIG_FW_LOADER=y",
             "CONFIG_WLAN_VENDOR_MEDIATEK=y",
@@ -85,6 +94,21 @@ class KernelSourceContractTest(unittest.TestCase):
         self.assertIn('head_path = gitdir / "HEAD"', builder)
         self.assertIn('git = shutil.which("git")', builder)
         self.assertIn("actual = repository_head_without_git(ROOT)", builder)
+
+    def test_every_kernel_build_workflow_binds_exact_source_identity(self):
+        identity = "${{ github.event.pull_request.head.sha || github.sha }}"
+        workflow_root = ROOT / ".github/workflows"
+        offenders = []
+        workflows = sorted(workflow_root.glob("*.yml")) + sorted(workflow_root.glob("*.yaml"))
+        for path in workflows:
+            text = path.read_text(encoding="utf-8")
+            if "bootstrap/kernel/build.py build" not in text:
+                continue
+            if f"ref: {identity}" not in text:
+                offenders.append(f"{path.name}:missing-exact-checkout")
+            if f"ORDAX_SOURCE_COMMIT: {identity}" not in text:
+                offenders.append(f"{path.name}:missing-source-identity")
+        self.assertEqual(offenders, [])
 
     def test_environment_is_pinned_but_physical_use_remains_fail_closed(self):
         self.assertTrue(SOURCE["build"]["pinned_environment_resolved"])

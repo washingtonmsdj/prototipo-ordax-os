@@ -30,6 +30,15 @@ class NativeBootContractTests(unittest.TestCase):
         self.assertEqual(
             BOOT["kernel_required_builtins"],
             [
+                "CONFIG_EFI_PARTITION=y",
+                "CONFIG_ATA=y",
+                "CONFIG_ATA_PIIX=y",
+                "CONFIG_SATA_AHCI=y",
+                "CONFIG_BLK_DEV_NVME=y",
+                "CONFIG_SCSI=y",
+                "CONFIG_BLK_DEV_SD=y",
+                "CONFIG_USB_STORAGE=y",
+                "CONFIG_USB_UAS=y",
                 "CONFIG_BLK_DEV_DM=y",
                 "CONFIG_DM_CRYPT=y",
                 "CONFIG_CRYPTO_AES=y",
@@ -38,6 +47,11 @@ class NativeBootContractTests(unittest.TestCase):
                 "CONFIG_BTRFS_FS_POSIX_ACL=y",
             ],
         )
+        storage = BOOT["kernel_boot_storage_policy"]
+        self.assertTrue(storage["root_device_driver_must_be_built_in"])
+        self.assertFalse(storage["initramfs_kernel_modules_required"])
+        self.assertIn("gpt-on-nvme", storage["supported_initial_boot_paths"])
+        self.assertIn("gpt-on-ahci-sata", storage["supported_initial_boot_paths"])
 
     def test_loader_templates_bind_mode_and_exact_public_luks_uuid(self):
         for path, boot_mode in ((NORMAL, "normal"), (RECOVERY, "recovery")):

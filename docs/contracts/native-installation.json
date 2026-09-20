@@ -77,6 +77,15 @@
     "native_boot_kernel_prerequisites": {
       "kernel": "shared-canonical-kernel",
       "built_in": [
+        "CONFIG_EFI_PARTITION=y",
+        "CONFIG_ATA=y",
+        "CONFIG_ATA_PIIX=y",
+        "CONFIG_SATA_AHCI=y",
+        "CONFIG_BLK_DEV_NVME=y",
+        "CONFIG_SCSI=y",
+        "CONFIG_BLK_DEV_SD=y",
+        "CONFIG_USB_STORAGE=y",
+        "CONFIG_USB_UAS=y",
         "CONFIG_BLK_DEV_DM=y",
         "CONFIG_DM_CRYPT=y",
         "CONFIG_CRYPTO_AES=y",
@@ -87,7 +96,9 @@
       "implemented": true,
       "separate_native_kernel": false,
       "ci_resolved_config_proven": true,
-      "exact_source_candidate_provenance": false
+      "exact_source_candidate_provenance": false,
+      "root_device_driver_must_be_built_in": true,
+      "initramfs_kernel_modules_required": false
     },
     "native_boot_initramfs": {
       "source_owner": "bootstrap/native-initramfs",

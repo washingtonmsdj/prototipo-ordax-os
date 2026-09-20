@@ -6,6 +6,15 @@
   "separate_native_kernel": false,
   "kernel_contract": "bootstrap/kernel/source.json",
   "kernel_required_builtins": [
+    "CONFIG_EFI_PARTITION=y",
+    "CONFIG_ATA=y",
+    "CONFIG_ATA_PIIX=y",
+    "CONFIG_SATA_AHCI=y",
+    "CONFIG_BLK_DEV_NVME=y",
+    "CONFIG_SCSI=y",
+    "CONFIG_BLK_DEV_SD=y",
+    "CONFIG_USB_STORAGE=y",
+    "CONFIG_USB_UAS=y",
     "CONFIG_BLK_DEV_DM=y",
     "CONFIG_DM_CRYPT=y",
     "CONFIG_CRYPTO_AES=y",
@@ -164,5 +173,15 @@
       "candidate_artifact_size": 6676736,
       "result": "pass"
     }
+  },
+  "kernel_boot_storage_policy": {
+    "root_device_driver_must_be_built_in": true,
+    "initramfs_kernel_modules_required": false,
+    "supported_initial_boot_paths": [
+      "gpt-on-nvme",
+      "gpt-on-ahci-sata",
+      "gpt-on-scsi-disk",
+      "gpt-on-usb-storage"
+    ]
   }
 }
