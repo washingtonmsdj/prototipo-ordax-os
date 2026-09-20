@@ -15,7 +15,9 @@ The profiles share the same source authority (`main`) and the same principle: or
 
 ## Physical layout model
 
-### Capacity-independent bootstrap seed
+Three contracts coexist during migration and must not be confused.
+
+### Capacity-independent bootstrap seed — transitional source artifact
 
 ```text
 ORDAX-ESP
@@ -24,9 +26,9 @@ ORDAX
 
 Exactly two seed partitions.
 
-The seed is capacity-independent and is the object described by `docs/contracts/physical-media.json`.
+The seed is capacity-independent and remains the source object described by `docs/contracts/physical-media.json`. It is retained while the existing boot chain is proven; it is **not** the durable MVP product layout.
 
-### Final USB prepared by the Creator
+### Current physical owner/development proof — transitional
 
 ```text
 ORDAX-ESP
@@ -36,9 +38,28 @@ ORDAX-DATA
 
 Exactly three prepared-target partitions.
 
-`ORDAX-DATA` is created by the Creator after target capacity is known. It is exFAT portable user-data space and is therefore intentionally absent from the signed/capacity-independent seed. Exact geometry and size policy live in `docs/contracts/physical-prepared-media.json`.
+This is governed by `docs/contracts/physical-prepared-media.json` and remains useful for current real-hardware validation. It must not be promoted as the long-term Stable/MVP storage architecture.
 
-This does **not** introduce a separate HOME partition. `/ordax/home` remains a logical path in `ORDAX`.
+### Durable Stable/MVP USB target — v2
+
+```text
+ORDAX-ESP   FAT32
+ORDAX-DATA  exFAT
+```
+
+Exactly two physical product partitions. There is no fixed physical `ORDAX` system partition.
+
+```text
+ORDAX-DATA/
+├─ user files...
+└─ .ordax/
+   ├─ releases/<version>.erofs
+   └─ state/persistent-state.img   # ext4 inside
+```
+
+The Creator Core geometry is `PlanPortableTargetStorage`. The storage contract is `docs/contracts/portable-usb-v2.json`, backed by `docs/contracts/storage-architecture.json`.
+
+The v2 storage proof is intentionally non-destructive. The physical writer must remain on the transitional profile until v2 storage, kernel prerequisites, boot/initramfs handoff, recovery and physical-write planning have passed their independent gates.
 
 ## Bootstrap seed payload
 
@@ -142,11 +163,14 @@ A valid local checkout may boot when the network is unavailable. A rollback is s
 
 ## Canonical signed-release first boot
 
+### Current transitional path
+
 ```text
 UEFI
  -> kernel/initramfs
+ -> mount ORDAX ext4
  -> minimal bootstrap
- -> network
+ -> network when no known-good release exists
  -> acquire release envelope/artifacts over HTTPS
  -> verify integrity/authenticity
  -> materialize /ordax/releases/<commit>
@@ -154,7 +178,24 @@ UEFI
  -> launch OrdaX
 ```
 
-Remote access is not needed for this path.
+### Durable portable-v2 target
+
+The final MVP path removes the physical `ORDAX` partition. The future v2 initramfs handoff must instead:
+
+```text
+UEFI
+ -> kernel/initramfs with exFAT + EROFS + loop + ext4 + OverlayFS built in
+ -> mount ORDAX-DATA
+ -> resolve verified current/known-good release image
+ -> attach immutable EROFS release
+ -> attach Linux-native ext4 persistent-state image
+ -> compose writable runtime without using exFAT as OverlayFS upper
+ -> launch verified OrdaX release
+```
+
+This v2 handoff is not considered implemented merely because the storage layout proof passes. Until its own boot/recovery proof is green, the current transitional boot path remains the hardware validation path.
+
+Remote access is not needed for either Stable/MVP path.
 
 ## After acquisition
 
@@ -225,7 +266,10 @@ Canonical public release acquisition remains blocked until the user-controlled r
 ```text
 GIT_MAIN_IS_SOURCE_AUTHORITY=YES
 BOOTSTRAP_SEED_PARTITIONS=2
-PREPARED_USB_PARTITIONS=3
+TRANSITIONAL_PREPARED_USB_PARTITIONS=3
+MVP_TARGET_PREPARED_USB_PARTITIONS=2
+MVP_TARGET_PORTABLE_LAYOUT=ORDAX-ESP+ORDAX-DATA
+MVP_TARGET_BOOT_HANDOFF_IMPLEMENTED=NO
 SEPARATE_HOME_PARTITION=NO
 REMOTE_CONTROL_PRESEEDED=NO
 SSH_PRESEEDED=NO
