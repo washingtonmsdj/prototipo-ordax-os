@@ -17,6 +17,14 @@ is_sha() {
     esac
 }
 
+is_sha256() {
+    value=${1:-}
+    [ "${#value}" -eq 64 ] || return 1
+    case "$value" in
+        ''|*[!0-9a-f]*) return 1 ;;
+    esac
+}
+
 [ "${ORDAX_DISTRIBUTION_PROFILE:-}" = "stable-mvp" ] ||
     fail "distribution profile must be stable-mvp"
 [ "${ORDAX_PRODUCT_MODE:-}" = "usb" ] ||
@@ -27,6 +35,26 @@ is_sha "${ORDAX_SOURCE_SHA:-}" ||
     fail "verified source identity is missing or invalid"
 [ -x /system/entrypoint ] ||
     fail "verified product system entrypoint is missing"
+
+case "${ORDAX_RELEASE_MANIFEST_SCHEMA:-}" in
+    2)
+        ;;
+    3)
+        [ "${ORDAX_SURFACE_RUNTIME_MODE:-}" = "verified-erofs-overlay" ] ||
+            fail "portable v3 Surface runtime mode is missing"
+        [ "${ORDAX_SURFACE_RUNTIME_ROOT:-}" = "/run/ordax/runtime/native-surface/rootfs" ] ||
+            fail "portable v3 Surface runtime root is invalid"
+        is_sha256 "${ORDAX_SURFACE_RUNTIME_SHA256:-}" ||
+            fail "portable v3 Surface runtime digest is missing or invalid"
+        [ -x "$ORDAX_SURFACE_RUNTIME_ROOT/usr/bin/cage" ] ||
+            fail "portable v3 Surface runtime handoff is incomplete"
+        [ -x "$ORDAX_SURFACE_RUNTIME_ROOT/usr/bin/python3" ] ||
+            fail "portable v3 Surface runtime Python is missing"
+        ;;
+    *)
+        fail "verified portable release manifest schema is missing or unsupported"
+        ;;
+esac
 
 echo "ORDAX_STABLE_INIT_HANDOFF=VERIFIED"
 echo "ORDAX_STABLE_INIT_SOURCE_SHA=$ORDAX_SOURCE_SHA"
