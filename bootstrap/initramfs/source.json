@@ -78,6 +78,7 @@
       "activation_performed": false,
       "operations": [
         "read-slot",
+        "resolve",
         "select"
       ],
       "selection_order": [
@@ -91,7 +92,15 @@
       "selection_output": "slot-space-commit",
       "verifies_signature": false,
       "writes_activation_state": false,
-      "pid1_connected": false
+      "pid1_connected": false,
+      "resolve_boot_slots": [
+        "current",
+        "known-good"
+      ],
+      "resolve_candidate_allowed": false,
+      "resolve_requires_materialized_release_shape": true,
+      "resolve_verifies_signature": false,
+      "resolve_is_for_exact_release_agent_handoff": true
     },
     "activation_state_reader_installed": true,
     "portable_mount_helper": {

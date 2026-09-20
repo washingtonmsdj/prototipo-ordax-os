@@ -141,6 +141,11 @@ jobs:
           }
 
           materialize_fixture "$known"
+          test "$("$helper" resolve "$state" "$portable" known-good)" = "$known"
+          if "$helper" resolve "$state" "$portable" candidate; then
+            echo 'candidate incorrectly resolved as boot slot' >&2
+            exit 1
+          fi
           selection="$("$helper" select "$state" "$portable")"
           test "$selection" = "known-good $known"
 
@@ -164,6 +169,7 @@ jobs:
           test "$("$helper" "$state" candidate)" = "$candidate"
           echo 'PORTABLE_RELEASE_SELECTION=PASS'
           echo 'CURRENT_FALLBACK_TO_KNOWN_GOOD=PASS'
+          echo 'KNOWN_GOOD_EXACT_RESOLUTION=PASS'
           echo 'CANDIDATE_BOOT_AUTHORITY=NO'
           echo 'SIGNATURE_VERIFICATION_DELEGATED_TO_RELEASE_AGENT=YES'
           echo 'PID1_CONNECTED=NO'

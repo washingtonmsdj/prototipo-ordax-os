@@ -17,6 +17,7 @@ static void die_usage(void) {
     fputs(
         "usage:\n"
         "  ordax-portable-state <state-root> <current|known-good|candidate>\n"
+        "  ordax-portable-state resolve <state-root> <portable-root> <current|known-good>\n"
         "  ordax-portable-state select <state-root> <portable-root>\n",
         stderr
     );
@@ -229,6 +230,58 @@ static int read_slot_command(const char *state_root, const char *slot) {
     return 0;
 }
 
+static int boot_slot(const char *slot) {
+    return strcmp(slot, "current") == 0 || strcmp(slot, "known-good") == 0;
+}
+
+static int resolve_command(
+    const char *state_root,
+    const char *portable_root,
+    const char *slot
+) {
+    if (!boot_slot(slot)) {
+        return EXIT_USAGE;
+    }
+
+    int release_state = open_release_state_root(state_root);
+    if (release_state < 0) {
+        if (errno == ENOENT) {
+            return EXIT_ABSENT;
+        }
+        fputs("ordax-portable-state: unsafe portable release state root\n", stderr);
+        return EXIT_INVALID;
+    }
+    int releases = open_materialized_releases(portable_root);
+    if (releases < 0) {
+        close(release_state);
+        if (errno == ENOENT) {
+            return EXIT_ABSENT;
+        }
+        fputs("ordax-portable-state: unsafe materialized releases root\n", stderr);
+        return EXIT_INVALID;
+    }
+
+    char commit[41];
+    int rc = read_commit(release_state, slot, commit);
+    if (rc == 0 && !release_materialized_safely(releases, commit)) {
+        rc = EXIT_INVALID;
+    }
+    close(releases);
+    close(release_state);
+
+    if (rc != 0) {
+        if (rc == EXIT_INVALID) {
+            fprintf(stderr, "ordax-portable-state: %s is not safely materialized\n", slot);
+        }
+        return rc;
+    }
+    if (print_commit(commit) != 0) {
+        fputs("ordax-portable-state: cannot write resolved identity\n", stderr);
+        return EXIT_INVALID;
+    }
+    return 0;
+}
+
 static int select_command(const char *state_root, const char *portable_root) {
     int release_state = open_release_state_root(state_root);
     if (release_state < 0) {
@@ -281,6 +334,9 @@ static int select_command(const char *state_root, const char *portable_root) {
 }
 
 int main(int argc, char **argv) {
+    if (argc == 5 && strcmp(argv[1], "resolve") == 0) {
+        return resolve_command(argv[2], argv[3], argv[4]);
+    }
     if (argc == 4 && strcmp(argv[1], "select") == 0) {
         return select_command(argv[2], argv[3]);
     }

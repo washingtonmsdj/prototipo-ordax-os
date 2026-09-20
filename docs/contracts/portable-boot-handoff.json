@@ -102,6 +102,7 @@
     ],
     "activation_state_reader_operations": [
       "read-slot",
+      "resolve",
       "select"
     ],
     "activation_selection_helper_implemented": true,
@@ -118,7 +119,11 @@
     "bootstrap_capsule_mount_helper_implemented": true,
     "bootstrap_capsule_mount_read_only": true,
     "bootstrap_capsule_payload_shape_checked": true,
-    "bootstrap_capsule_pid1_connected": false
+    "bootstrap_capsule_pid1_connected": false,
+    "known_good_exact_resolver_implemented": true,
+    "known_good_exact_resolver_verifies_materialized_shape": true,
+    "known_good_exact_resolver_verifies_signature": false,
+    "known_good_exact_resolver_signature_handoff": "ordax-release-agent verify-portable-exact"
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",
@@ -152,7 +157,13 @@
       "known-good"
     ],
     "selection_helper_candidate_ignored": true,
-    "selection_helper_signature_authority": false
+    "selection_helper_signature_authority": false,
+    "exact_boot_slot_resolver_implemented": true,
+    "exact_boot_slot_resolver_slots": [
+      "current",
+      "known-good"
+    ],
+    "exact_boot_slot_resolver_candidate_allowed": false
   },
   "boot_sequence_target": [
     "mount-ORDAX-ESP-read-only-for-bootstrap-substrate",
