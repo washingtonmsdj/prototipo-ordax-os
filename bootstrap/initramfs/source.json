@@ -75,7 +75,23 @@
       ],
       "identity": "lowercase-40-hex-source-commit",
       "nofollow_directory_walk": true,
-      "activation_performed": false
+      "activation_performed": false,
+      "operations": [
+        "read-slot",
+        "select"
+      ],
+      "selection_order": [
+        "current",
+        "known-good"
+      ],
+      "candidate_is_boot_authority": false,
+      "requires_materialized_release_directory": true,
+      "requires_system_erofs_magic": true,
+      "requires_manifest_and_envelope_files": true,
+      "selection_output": "slot-space-commit",
+      "verifies_signature": false,
+      "writes_activation_state": false,
+      "pid1_connected": false
     },
     "activation_state_reader_installed": true,
     "portable_mount_helper": {
@@ -114,6 +130,8 @@
       "pid1_enforced": false,
       "default_candidate_build_pinned": false,
       "physical_boot_authorized": false
-    }
+    },
+    "activation_selection_helper_implemented": true,
+    "activation_selection_pid1_connected": false
   }
 }

@@ -14,7 +14,12 @@ enum {
 };
 
 static void die_usage(void) {
-    fputs("usage: ordax-portable-state <state-root> <current|known-good|candidate>\n", stderr);
+    fputs(
+        "usage:\n"
+        "  ordax-portable-state <state-root> <current|known-good|candidate>\n"
+        "  ordax-portable-state select <state-root> <portable-root>\n",
+        stderr
+    );
     exit(EXIT_USAGE);
 }
 
@@ -97,6 +102,85 @@ static int read_commit(int parent, const char *slot, char out[41]) {
     return 0;
 }
 
+static int safe_regular_at(int parent, const char *name, off_t minimum_size) {
+    int fd = openat(parent, name, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    if (fd < 0) {
+        return -1;
+    }
+    struct stat st;
+    if (fstat(fd, &st) != 0 ||
+        !S_ISREG(st.st_mode) ||
+        st.st_nlink != 1 ||
+        st.st_size < minimum_size) {
+        close(fd);
+        errno = EINVAL;
+        return -1;
+    }
+    return fd;
+}
+
+static int erofs_magic_ok(int fd) {
+    unsigned char magic[4];
+    ssize_t n = pread(fd, magic, sizeof(magic), 1024);
+    return n == 4 &&
+           magic[0] == 0xe2 &&
+           magic[1] == 0xe1 &&
+           magic[2] == 0xf5 &&
+           magic[3] == 0xe0;
+}
+
+static int release_materialized_safely(int releases, const char *commit) {
+    int release = safe_dir_at(releases, commit);
+    if (release < 0) {
+        return 0;
+    }
+
+    int image = safe_regular_at(release, "system.erofs", 4096);
+    int manifest = safe_regular_at(release, "release-manifest.json", 2);
+    int envelope = safe_regular_at(release, "release-envelope.json", 2);
+    int ok = image >= 0 &&
+             manifest >= 0 &&
+             envelope >= 0 &&
+             erofs_magic_ok(image);
+
+    if (image >= 0) {
+        close(image);
+    }
+    if (manifest >= 0) {
+        close(manifest);
+    }
+    if (envelope >= 0) {
+        close(envelope);
+    }
+    close(release);
+    return ok;
+}
+
+static int open_release_state_root(const char *state_root) {
+    int root = safe_root(state_root);
+    if (root < 0) {
+        return -1;
+    }
+    int ordax = safe_dir_at(root, "ordax");
+    close(root);
+    if (ordax < 0) {
+        return -1;
+    }
+    int release = safe_dir_at(ordax, "portable-release");
+    close(ordax);
+    return release;
+}
+
+static int open_materialized_releases(const char *portable_root) {
+    int root = safe_root(portable_root);
+    if (root < 0) {
+        return -1;
+    }
+    int releases = safe_dir_at(root, "releases");
+    close(root);
+    return releases;
+}
+
 static int write_all(const char *value, size_t length) {
     while (length > 0) {
         ssize_t n = write(STDOUT_FILENO, value, length);
@@ -112,48 +196,97 @@ static int write_all(const char *value, size_t length) {
     return 0;
 }
 
-int main(int argc, char **argv) {
-    if (argc != 3 || !valid_slot(argv[2])) {
-        die_usage();
-    }
+static int print_commit(const char *commit) {
+    return write_all(commit, 40) == 0 && write_all("\n", 1) == 0 ? 0 : -1;
+}
 
-    int root = safe_root(argv[1]);
-    if (root < 0) {
-        fprintf(stderr, "ordax-portable-state: unsafe state root: %s\n", strerror(errno));
-        return EXIT_INVALID;
+static int read_slot_command(const char *state_root, const char *slot) {
+    if (!valid_slot(slot)) {
+        return EXIT_USAGE;
     }
-    int ordax = safe_dir_at(root, "ordax");
-    close(root);
-    if (ordax < 0) {
-        if (errno == ENOENT) {
-            return EXIT_ABSENT;
-        }
-        fprintf(stderr, "ordax-portable-state: unsafe ordax state directory\n");
-        return EXIT_INVALID;
-    }
-    int release = safe_dir_at(ordax, "portable-release");
-    close(ordax);
+    int release = open_release_state_root(state_root);
     if (release < 0) {
         if (errno == ENOENT) {
             return EXIT_ABSENT;
         }
-        fprintf(stderr, "ordax-portable-state: unsafe portable release state directory\n");
+        fputs("ordax-portable-state: unsafe portable release state root\n", stderr);
         return EXIT_INVALID;
     }
 
     char commit[41];
-    int rc = read_commit(release, argv[2], commit);
+    int rc = read_commit(release, slot, commit);
     close(release);
     if (rc != 0) {
         if (rc == EXIT_INVALID) {
-            fprintf(stderr, "ordax-portable-state: invalid %s identity\n", argv[2]);
+            fprintf(stderr, "ordax-portable-state: invalid %s identity\n", slot);
         }
         return rc;
     }
-
-    if (write_all(commit, 40) != 0 || write_all("\n", 1) != 0) {
-        fprintf(stderr, "ordax-portable-state: cannot write result\n");
+    if (print_commit(commit) != 0) {
+        fputs("ordax-portable-state: cannot write result\n", stderr);
         return EXIT_INVALID;
     }
     return 0;
+}
+
+static int select_command(const char *state_root, const char *portable_root) {
+    int release_state = open_release_state_root(state_root);
+    if (release_state < 0) {
+        if (errno == ENOENT) {
+            return EXIT_ABSENT;
+        }
+        fputs("ordax-portable-state: unsafe portable release state root\n", stderr);
+        return EXIT_INVALID;
+    }
+
+    int releases = open_materialized_releases(portable_root);
+    if (releases < 0) {
+        close(release_state);
+        if (errno == ENOENT) {
+            return EXIT_ABSENT;
+        }
+        fputs("ordax-portable-state: unsafe materialized releases root\n", stderr);
+        return EXIT_INVALID;
+    }
+
+    const char *slots[] = {"current", "known-good"};
+    char commit[41];
+    for (size_t index = 0; index < sizeof(slots) / sizeof(slots[0]); index++) {
+        const char *slot = slots[index];
+        int rc = read_commit(release_state, slot, commit);
+        if (rc != 0) {
+            continue;
+        }
+        if (!release_materialized_safely(releases, commit)) {
+            continue;
+        }
+
+        if (write_all(slot, strlen(slot)) != 0 ||
+            write_all(" ", 1) != 0 ||
+            print_commit(commit) != 0) {
+            close(releases);
+            close(release_state);
+            fputs("ordax-portable-state: cannot write selection\n", stderr);
+            return EXIT_INVALID;
+        }
+        close(releases);
+        close(release_state);
+        return 0;
+    }
+
+    close(releases);
+    close(release_state);
+    fputs("ordax-portable-state: no safely materialized current or known-good release\n", stderr);
+    return EXIT_ABSENT;
+}
+
+int main(int argc, char **argv) {
+    if (argc == 4 && strcmp(argv[1], "select") == 0) {
+        return select_command(argv[2], argv[3]);
+    }
+    if (argc == 3 && valid_slot(argv[2])) {
+        return read_slot_command(argv[1], argv[2]);
+    }
+    die_usage();
+    return EXIT_USAGE;
 }

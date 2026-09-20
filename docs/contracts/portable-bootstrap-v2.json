@@ -136,7 +136,18 @@
       "path": "/sbin/ordax-portable-state",
       "installed": true,
       "read_only": true,
-      "pid1_connected": false
+      "pid1_connected": false,
+      "operations": [
+        "read-slot",
+        "select"
+      ],
+      "selection_order": [
+        "current",
+        "known-good"
+      ],
+      "selects_materialized_release_shape": true,
+      "verifies_signature": false,
+      "candidate_is_boot_authority": false
     },
     "portable_mount_helper": {
       "path": "/sbin/ordax-portable-mount",

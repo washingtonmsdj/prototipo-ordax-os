@@ -116,6 +116,58 @@ jobs:
           echo 'PID1_CONNECTED=NO'
           echo 'PHYSICAL_DEVICE_TOUCHED=NO'
 
+      - name: Prove portable current and known-good selection helper
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-selector"
+          helper="$PWD/out/initramfs-work/ordax-portable-state"
+          current="1111111111111111111111111111111111111111"
+          known="2222222222222222222222222222222222222222"
+          candidate="3333333333333333333333333333333333333333"
+          state="$work/state"
+          portable="$work/portable"
+          mkdir -p "$state/ordax/portable-release" "$portable/releases"
+          printf '%s\n' "$current" > "$state/ordax/portable-release/current"
+          printf '%s\n' "$known" > "$state/ordax/portable-release/known-good"
+          printf '%s\n' "$candidate" > "$state/ordax/portable-release/candidate"
+
+          materialize_fixture() {
+            commit="$1"
+            dir="$portable/releases/$commit"
+            mkdir -p "$dir"
+            cp "$RUNNER_TEMP/portable-mount-helper/system.erofs" "$dir/system.erofs"
+            printf '{}\n' > "$dir/release-manifest.json"
+            printf '{}\n' > "$dir/release-envelope.json"
+          }
+
+          materialize_fixture "$known"
+          selection="$("$helper" select "$state" "$portable")"
+          test "$selection" = "known-good $known"
+
+          materialize_fixture "$current"
+          selection="$("$helper" select "$state" "$portable")"
+          test "$selection" = "current $current"
+
+          rm -rf "$portable/releases/$current"
+          ln -s "$portable/releases/$known" "$portable/releases/$current"
+          selection="$("$helper" select "$state" "$portable")"
+          test "$selection" = "known-good $known"
+          rm "$portable/releases/$current"
+
+          rm -rf "$portable/releases/$known"
+          materialize_fixture "$candidate"
+          if "$helper" select "$state" "$portable"; then
+            echo 'candidate incorrectly became boot authority' >&2
+            exit 1
+          fi
+
+          test "$("$helper" "$state" candidate)" = "$candidate"
+          echo 'PORTABLE_RELEASE_SELECTION=PASS'
+          echo 'CURRENT_FALLBACK_TO_KNOWN_GOOD=PASS'
+          echo 'CANDIDATE_BOOT_AUTHORITY=NO'
+          echo 'SIGNATURE_VERIFICATION_DELEGATED_TO_RELEASE_AGENT=YES'
+          echo 'PID1_CONNECTED=NO'
+
       - name: Prove ext4 online growth and read-only refusal
         run: |
           bash bootstrap/initramfs/prove_ext4_growth.sh \
