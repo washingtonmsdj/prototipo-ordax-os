@@ -60,7 +60,7 @@
       "signed_release_discovery_requires_trust": true,
       "signed_release_discovery_source_implemented": true,
       "signed_release_discovery_physical_agent_ready": false,
-      "signed_release_discovery_physical_agent_target_sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+      "signed_release_discovery_physical_agent_target_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
       "signed_release_discovery_physical_agent_delivery": "hash-addressed-release-agent-refresh-or-new-creator-media",
       "signed_release_discovery_asset_published": true,
       "signed_release_discovery_asset_sha256": "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
@@ -97,8 +97,8 @@
       "exact_release_activation_preserves_previous_commit_in_receipt": true,
       "exact_release_activation_atomic_current_swap": true,
       "exact_release_activation_supervisor_connected": true,
-      "signed_release_seed_media_agent_sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
-      "exact_release_activation_physical_agent_target_sha256": "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+      "signed_release_seed_media_agent_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+      "exact_release_activation_physical_agent_target_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
       "exact_release_activation_seed_media_includes_primitive": true,
       "exact_release_activation_asset_published": true,
       "exact_release_activation_asset_publish_gate": "release-agent-refresh-main-push",
@@ -143,7 +143,9 @@
       "stable_base_source_checkout_embedded": false,
       "stable_base_physical_boot_connected": false,
       "stable_base_alpine_hash_pinned": false,
-      "stable_base_apk_versions_pinned": false
+      "stable_base_apk_versions_pinned": false,
+      "portable_v2_release_agent_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+      "portable_v2_release_agent_supports_offline_exact_verification": true
     }
   },
   "invariants": {

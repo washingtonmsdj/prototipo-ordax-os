@@ -246,7 +246,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertTrue(stable["exact_release_activation_seed_media_includes_primitive"])
         self.assertEqual(
             stable["exact_release_activation_physical_agent_target_sha256"],
-            "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
+            "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
         )
         self.assertTrue(stable["exact_release_activation_asset_published"])
         self.assertTrue(stable["activation_requires_staged_sha_equals_health_ready_sha"])
