@@ -40,6 +40,26 @@ OrdaX Desktop is not the OrdaX operating system and must never own raw host hard
 
 Boots the real OrdaX operating system from removable media. It owns the machine while booted and therefore has substantially broader capabilities than Web, Mobile or Desktop.
 
+### Runtime mode identity
+
+USB and Native Disk deliberately share the same signed `system.tar`, Surface source and Native adapter. Their execution mode is **not** inferred from bus type, filesystem layout or the presence of an installer helper.
+
+The bootstrap carries one explicit, hash-pinned marker:
+
+```text
+/ordax/bootstrap/config/product-mode
+```
+
+Allowed values are exactly:
+
+```text
+usb
+native-disk
+```
+
+The bootstrap exports that value as `ORDAX_PRODUCT_MODE`; guardian, supervisor and Surface preserve it. A Stable USB may expose the privileged Native installation capability when the signed helper/broker boundary is available. An installed Native Disk runtime must never expose that installer capability.
+
+The future installer writes `native-disk` into the target bootstrap as part of installation materialization. This is configuration of one product mode, not a code or release fork.
 ### 5. OrdaX Native
 
 Installs the OrdaX operating system to internal SSD/HD. It is the most persistent deployment mode, but consumes the same release model as OrdaX USB rather than becoming a fork.
