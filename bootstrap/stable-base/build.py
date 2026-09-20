@@ -85,8 +85,31 @@ def load_contract() -> dict:
     if value.get("build", {}).get("physical_artifact_authorized") is not False:
         raise StableBaseError("Stable Base physical artifact must remain unauthorized")
     pinned = alpine.get("archive_sha256")
-    if pinned is not None and not re.fullmatch(r"[0-9a-f]{64}", str(pinned)):
-        raise StableBaseError("Stable Base pinned Alpine SHA-256 is malformed")
+    if not re.fullmatch(r"[0-9a-f]{64}", str(pinned or "")):
+        raise StableBaseError("Stable Base Alpine SHA-256 must be pinned before candidate build")
+    if alpine.get("archive_hash_pin_status", "").startswith("pinned-from-verified-candidate-") is not True:
+        raise StableBaseError("Stable Base Alpine pin provenance is missing")
+
+    package_lock = value.get("apk_package_lock")
+    if value.get("apk_package_versions_pinned") is not True:
+        raise StableBaseError("Stable Base APK versions must be pinned before candidate build")
+    if not isinstance(package_lock, dict) or not package_lock:
+        raise StableBaseError("Stable Base full transitive APK lock is missing")
+    if value.get("apk_package_lock_count") != len(package_lock):
+        raise StableBaseError("Stable Base APK lock count disagrees with the lock")
+    if value.get("apk_install_policy") != "full-transitive-lock-exact-version-specs":
+        raise StableBaseError("Stable Base APK install policy is not fail-closed")
+    for name, version in package_lock.items():
+        if (
+            not isinstance(name, str)
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+_.-]*", name)
+            or not isinstance(version, str)
+            or not version
+            or any(ch.isspace() for ch in version)
+        ):
+            raise StableBaseError("Stable Base APK lock contains an unsafe name/version")
+    if not set(value["packages"]).issubset(package_lock):
+        raise StableBaseError("Stable Base requested packages are not all present in the full lock")
     return value
 
 
@@ -170,6 +193,13 @@ def verify_apk_lock(contract: dict, installed: dict[str, str]) -> None:
             "Stable Base APK lock mismatch: "
             f"missing={missing[:8]} extra={extra[:8]} changed={changed[:8]}"
         )
+
+
+def exact_apk_install_specs(contract: dict) -> list[str]:
+    lock = contract.get("apk_package_lock")
+    if contract.get("apk_package_versions_pinned") is not True or not isinstance(lock, dict) or not lock:
+        raise StableBaseError("Stable Base exact APK install requested without a full pinned lock")
+    return [f"{name}={version}" for name, version in sorted(lock.items())]
 
 
 def install_stable_runtime(rootfs: Path, kernel_modules: Path, contract: dict) -> set[str]:
@@ -360,7 +390,8 @@ def build(kernel_modules: Path, out_dir: Path, cache_dir: Path) -> dict:
         (rootfs / "dev").mkdir(parents=True, exist_ok=True)
 
         stage("install-packages")
-        CORE.proot_rootfs(rootfs, "apk add --no-cache " + " ".join(contract["packages"]))
+        package_specs = exact_apk_install_specs(contract)
+        CORE.proot_rootfs(rootfs, "apk add --no-cache " + " ".join(package_specs))
         installed_packages = installed_apk_lock(rootfs)
         verify_apk_lock(contract, installed_packages)
         stage("install-runtime")
@@ -409,6 +440,8 @@ def build(kernel_modules: Path, out_dir: Path, cache_dir: Path) -> dict:
             "apk_package_versions_pinned": bool(contract["apk_package_versions_pinned"]),
             "kernel_modules_sha256": sha256_file(kernel_modules.resolve()),
             "packages": contract["packages"],
+            "apk_install_policy": contract["apk_install_policy"],
+            "exact_package_spec_count": len(package_specs),
             "installed_packages": installed_packages,
             "installed_package_count": len(installed_packages),
             "apk_package_lock_matches_contract": contract.get("apk_package_lock") is not None,

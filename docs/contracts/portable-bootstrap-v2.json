@@ -197,7 +197,10 @@
     "signed_update_integration_implemented": false,
     "qemu_boot_proven": false,
     "physical_boot_proven": false,
-    "alpine_archive_sha256_pinned": false,
-    "apk_package_versions_pinned": false
+    "alpine_archive_sha256_pinned": true,
+    "apk_package_versions_pinned": true,
+    "apk_package_lock_count": 40,
+    "apk_install_policy": "full-transitive-lock-exact-version-specs",
+    "pinning_evidence_commit": "daf33badda46b82b1d4e3faafcf040ca8dca479c"
   }
 }

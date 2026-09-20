@@ -53,19 +53,35 @@ class StableBaseContractTests(unittest.TestCase):
         self.assertIn("FIRMWARE.available_firmware_names", text)
         self.assertIn("RUNTIME.prune_build_only_runtime", text)
 
-    def test_upstream_and_package_locks_are_explicit_promotion_blockers(self):
+    def test_upstream_and_full_transitive_package_lock_are_pinned(self):
         alpine = self.source["alpine"]
-        self.assertIsNone(alpine["archive_sha256"])
-        self.assertEqual(alpine["archive_hash_pin_status"], "pending-from-verified-candidate")
-        self.assertFalse(self.source["apk_package_versions_pinned"])
-        self.assertEqual(self.source["apk_package_lock_status"], "pending-before-promotion")
-        self.assertIsNone(self.source["apk_package_lock"])
+        self.assertRegex(alpine["archive_sha256"], r"^[0-9a-f]{64}$")
+        self.assertTrue(
+            alpine["archive_hash_pin_status"].startswith(
+                "pinned-from-verified-candidate-"
+            )
+        )
+        self.assertTrue(self.source["apk_package_versions_pinned"])
+        self.assertTrue(
+            self.source["apk_package_lock_status"].startswith(
+                "pinned-from-verified-candidate-"
+            )
+        )
+        lock = self.source["apk_package_lock"]
+        self.assertIsInstance(lock, dict)
+        self.assertEqual(len(lock), 40)
+        self.assertEqual(self.source["apk_package_lock_count"], len(lock))
         self.assertEqual(
             self.source["apk_package_lock_scope"],
             "all-installed-packages-including-transitive-dependencies",
         )
-        self.assertIn("pin-alpine-minirootfs-sha256", self.source["promotion_blockers"])
-        self.assertIn("lock-exact-apk-package-versions", self.source["promotion_blockers"])
+        self.assertEqual(
+            self.source["apk_install_policy"],
+            "full-transitive-lock-exact-version-specs",
+        )
+        self.assertTrue(set(self.source["packages"]).issubset(lock))
+        self.assertNotIn("pin-alpine-minirootfs-sha256", self.source["promotion_blockers"])
+        self.assertNotIn("lock-exact-apk-package-versions", self.source["promotion_blockers"])
 
     def test_stable_base_is_complete_os_base_but_not_product_release(self):
         rootfs = self.source["rootfs"]
@@ -88,13 +104,17 @@ class StableBaseContractTests(unittest.TestCase):
         self.assertIn("exec /system/entrypoint", text)
         self.assertNotIn("git", text.lower())
 
-    def test_builder_records_and_can_enforce_full_transitive_apk_lock(self):
+    def test_builder_records_and_enforces_full_transitive_apk_lock(self):
         text = BUILDER.read_text(encoding="utf-8")
         self.assertIn("def installed_apk_lock(", text)
         self.assertIn("lib/apk/db/installed", text)
         self.assertIn("def verify_apk_lock(", text)
+        self.assertIn("def exact_apk_install_specs(", text)
+        self.assertIn('f"{name}={version}"', text)
+        self.assertIn('"apk add --no-cache " + " ".join(package_specs)', text)
         self.assertIn('"installed_packages": installed_packages', text)
         self.assertIn('"apk_package_lock_matches_contract"', text)
+        self.assertIn('"exact_package_spec_count": len(package_specs)', text)
         self.assertIn("dereference=True", text)
 
     def test_normalized_tar_serializes_hardlinks_as_regular_files(self):
