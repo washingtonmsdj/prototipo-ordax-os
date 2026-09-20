@@ -3,6 +3,7 @@ set -eu
 
 SYSTEM_ROOT=${ORDAX_SYSTEM_ROOT:-}
 DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}
+PRODUCT_MODE=${ORDAX_PRODUCT_MODE:-}
 SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
 SOURCE_SHA=unknown
 STATE_ROOT=${ORDAX_STATE_DIR:-/state/ordax}
@@ -74,6 +75,11 @@ chmod 700 "$SESSION_DIR" "$PERSISTENT_NATIVE_STATE" "$PERSISTENT_USER_HOME" "$RE
 : > "$HOST_LOG"
 : > "$TIME_SYNC_LOG"
 : > "$NETWORK_LOG"
+
+case "$PRODUCT_MODE" in
+    usb|native-disk) ;;
+    *) echo "ordax-surface: product mode identity is missing or invalid" >&2; exit 1 ;;
+esac
 
 case "$RUNTIME_INSTALL_TIMEOUT" in
     ''|*[!0-9]*) RUNTIME_INSTALL_TIMEOUT=180 ;;
@@ -1046,6 +1052,7 @@ export ORDAX_SURFACE_MODE=native-graphical
     /usr/bin/python3 /srv/ordax-system/surface/runtime/native_host_server.py \
     --bind 127.0.0.1 --port 8765 --directory /srv/ordax-system \
     --user-root /var/lib/ordax-user --power-request /run/ordax-surface/power-request \
+    --product-mode "$PRODUCT_MODE" \
     --telemetry-config /srv/ordax-system/services/telemetry/relay.json \
     >"$HTTP_LOG" 2>&1 &
 HTTP_PID=$!
