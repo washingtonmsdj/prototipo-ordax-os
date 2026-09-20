@@ -152,6 +152,14 @@ jobs:
               '$schema': 'prototype-ordax.windows-prototype-toolkit/2',
               'status': 'candidate',
               'source_commit': os.environ['GITHUB_SHA'],
+              'source_repository': os.environ['GITHUB_REPOSITORY'],
+              'source_ref': os.environ['GITHUB_REF'],
+              'source_event': os.environ['GITHUB_EVENT_NAME'],
+              'canonical_trust_ceremony_eligible': (
+                  os.environ['GITHUB_REPOSITORY'] == 'washingtonmsdj/prototipo-ordax-os'
+                  and os.environ['GITHUB_EVENT_NAME'] == 'push'
+                  and os.environ['GITHUB_REF'] == 'refs/heads/main'
+              ),
               'go_version': subprocess.check_output(['go', 'version'], text=True).strip(),
               'native_windows_raw_disk_backend_source_implemented': True,
               'native_windows_raw_disk_backend_build_tag': 'ordax_raw_backend',
@@ -194,6 +202,15 @@ jobs:
           assert provenance['canonical_trust_included'] is False
           assert provenance['private_key_included'] is False
           assert provenance['key_generation_requires_local_user_action'] is True
+          assert provenance['source_repository'] == os.environ['GITHUB_REPOSITORY']
+          assert provenance['source_ref'] == os.environ['GITHUB_REF']
+          assert provenance['source_event'] == os.environ['GITHUB_EVENT_NAME']
+          expected_ceremony_eligibility = (
+              os.environ['GITHUB_REPOSITORY'] == 'washingtonmsdj/prototipo-ordax-os'
+              and os.environ['GITHUB_EVENT_NAME'] == 'push'
+              and os.environ['GITHUB_REF'] == 'refs/heads/main'
+          )
+          assert provenance['canonical_trust_ceremony_eligible'] is expected_ceremony_eligibility
           print('TOOLKIT_SECRET_MATERIAL=NONE')
           print('TOOLKIT_PUBLIC_PHYSICAL_APPLY=BLOCKED')
           print('TOOLKIT_RAW_BACKEND_IN_PUBLIC_BUILD=NO')
