@@ -21,6 +21,18 @@ def test_trust_ceremony_binds_proof_to_toolkit_source_commit():
     assert "(root / 'provenance.json').write_text" in TOOLKIT
 
 
+def test_trust_ceremony_verifies_toolkit_components_before_key_generation():
+    assert "$ToolkitProvenance.components.release_signer.sha256" in INITIALIZER
+    assert "$ToolkitProvenance.components.trust_initializer.sha256" in INITIALIZER
+    assert "Get-FileHash -Algorithm SHA256 -LiteralPath $Signer" in INITIALIZER
+    assert "Get-FileHash -Algorithm SHA256 -LiteralPath $ScriptPath" in INITIALIZER
+    assert "Release signer bytes do not match toolkit provenance." in INITIALIZER
+    assert "Trust initializer bytes do not match toolkit provenance." in INITIALIZER
+    assert "TOOLKIT_COMPONENT_HASHES_VERIFIED=YES" in INITIALIZER
+    assert "'release_signer': {'name': 'ordax-release-signing.exe', 'sha256': digest('ordax-release-signing.exe')}" in TOOLKIT
+    assert "'trust_initializer': {'name': 'Initialize-OrdaXReleaseTrust.ps1', 'sha256': digest('Initialize-OrdaXReleaseTrust.ps1')}" in TOOLKIT
+
+
 def test_trust_ceremony_still_requires_local_private_custody():
     assert "The private key must be outside the downloaded toolkit/repository directory." in INITIALIZER
     assert "ready_to_pin_public_anchor = $false" in INITIALIZER
