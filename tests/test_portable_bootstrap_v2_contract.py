@@ -66,6 +66,22 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         self.assertFalse(CONTRACT["physical_write_authorized"])
         self.assertFalse(CONTRACT["physical_boot_proven"])
 
+    def test_initramfs_helpers_are_installed_but_not_pid1_connected(self):
+        helpers = CONTRACT["initramfs_helpers"]
+        state = helpers["portable_state_reader"]
+        mount = helpers["portable_mount_helper"]
+        self.assertTrue(state["installed"])
+        self.assertTrue(state["read_only"])
+        self.assertFalse(state["pid1_connected"])
+        self.assertTrue(mount["installed"])
+        self.assertTrue(mount["mounts_state_ext4"])
+        self.assertTrue(mount["mounts_release_erofs_read_only"])
+        self.assertTrue(mount["composes_overlayfs"])
+        self.assertFalse(mount["selects_release"])
+        self.assertFalse(mount["verifies_signature"])
+        self.assertFalse(mount["writes_activation_state"])
+        self.assertFalse(mount["pid1_connected"])
+
     def test_transitional_contract_is_not_silently_reinterpreted(self):
         migration = CONTRACT["migration"]
         self.assertTrue(migration["transitional_minimal_bootstrap_contract_unchanged"])

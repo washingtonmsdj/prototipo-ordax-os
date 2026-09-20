@@ -54,6 +54,9 @@ class PortableBootHandoffContractTests(unittest.TestCase):
         self.assertTrue(requirements["busybox_exfat_volume_id_currently_enabled"])
         self.assertTrue(requirements["portable_handoff_helper_required"])
         self.assertTrue(requirements["portable_handoff_helper_currently_installed"])
+        self.assertTrue(requirements["activation_state_reader_required"])
+        self.assertTrue(requirements["activation_state_reader_currently_installed"])
+        self.assertEqual(requirements["activation_state_reader_path"], "/sbin/ordax-portable-state")
         self.assertFalse(requirements["portable_handoff_helper_pid1_connected"])
         initramfs = INITRAMFS_BUILD.read_text(encoding="utf-8")
         applets = initramfs.split("REQUIRED_APPLETS", 1)[1].split("}", 1)[0]

@@ -118,5 +118,24 @@
     "portable_v2_writer_migration_implemented": false,
     "portable_v2_pid1_integration_implemented": false,
     "public_physical_promotion_allowed": false
+  },
+  "initramfs_helpers": {
+    "portable_state_reader": {
+      "path": "/sbin/ordax-portable-state",
+      "installed": true,
+      "read_only": true,
+      "pid1_connected": false
+    },
+    "portable_mount_helper": {
+      "path": "/sbin/ordax-portable-mount",
+      "installed": true,
+      "mounts_state_ext4": true,
+      "mounts_release_erofs_read_only": true,
+      "composes_overlayfs": true,
+      "selects_release": false,
+      "verifies_signature": false,
+      "writes_activation_state": false,
+      "pid1_connected": false
+    }
   }
 }
