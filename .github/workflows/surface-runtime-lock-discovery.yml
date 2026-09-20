@@ -128,6 +128,10 @@ jobs:
           assert a['apk_package_lock_count'] == b['apk_package_lock_count'] == 253
           assert a['first_boot_offline_required'] is True
           assert a['network_package_install_during_stable_boot_allowed'] is False
+          assert a['machine_identity_baked_into_image'] is False
+          assert b['machine_identity_baked_into_image'] is False
+          assert a['fontconfig_cache_baked_into_image'] is False
+          assert b['fontconfig_cache_baked_into_image'] is False
           assert a['physical_artifact_authorized'] is False
           assert a['portable_v2_boot_connected'] is False
           PY
