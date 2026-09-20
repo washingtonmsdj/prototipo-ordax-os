@@ -60,7 +60,9 @@ class NativeDisposableProofContractTests(unittest.TestCase):
             "/ordax/bootstrap/config/product-mode",
         )
         self.assertIn('runtime_prefix = "/ordax/"', SCRIPT)
-        self.assertIn('logical = target_mode_path[len(runtime_prefix):]', SCRIPT)
+        self.assertIn('expected_relative = target_mode_path[len(runtime_prefix):]', SCRIPT)
+        self.assertIn('logical = target_mode_pool_relative_path', SCRIPT)
+        self.assertIn('logical != expected_relative', SCRIPT)
         self.assertNotIn('logical = target_mode_path.lstrip("/")', SCRIPT)
         self.assertIn('marker = mountpoint / logical', SCRIPT)
 
