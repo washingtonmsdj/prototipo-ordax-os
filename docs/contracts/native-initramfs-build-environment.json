@@ -1,0 +1,43 @@
+{
+  "$schema": "prototype-ordax.native-initramfs-build-environment/1",
+  "status": "observation-required",
+  "architecture": "linux/amd64",
+  "inherits_pinned_environment_from": "docs/contracts/kernel-build-environment.json",
+  "base_image": {
+    "repository": "docker.io/library/ubuntu",
+    "manifest_digest": "sha256:a61567bd31828687156d735ea8eb01ba4e37636e225dd6a48ba94136a70d9d61"
+  },
+  "apt": {
+    "snapshot_id": "20260910T000000Z",
+    "top_level_packages": [
+      "busybox-static",
+      "cryptsetup-bin",
+      "btrfs-progs",
+      "pax-utils",
+      "cpio",
+      "gzip",
+      "ca-certificates",
+      "python3"
+    ],
+    "expected_top_level_versions": {},
+    "runtime_closure_expected_packages": {},
+    "runtime_closure_binaries": [
+      "/usr/sbin/cryptsetup",
+      "/usr/bin/btrfs"
+    ]
+  },
+  "artifact_policy": {
+    "package_manager_copied_into_initramfs": false,
+    "network_client_copied_into_initramfs": false,
+    "busybox_static_required": true,
+    "dynamic_runtime_closure_copied_exactly": true,
+    "runtime_file_hash_manifest_required": true,
+    "deterministic_newc_gzip_required": true
+  },
+  "gate": {
+    "environment_observation_complete": false,
+    "versions_pinned": false,
+    "artifact_build_allowed": false,
+    "physical_artifact_authorized": false
+  }
+}
