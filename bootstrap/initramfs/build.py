@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import importlib.util
 import hashlib
 import io
 import json
@@ -28,6 +29,19 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = ROOT / "bootstrap" / "initramfs"
 CONTRACT = HERE / "source.json"
 GROW_HELPER_SOURCE = HERE / "grow_ext4.c"
+KERNEL_BUILDER_PATH = ROOT / "bootstrap" / "kernel" / "build.py"
+
+
+def _load_repo_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load repository module: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+KERNEL_BUILD = _load_repo_module("ordax_kernel_build_for_initramfs", KERNEL_BUILDER_PATH)
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _SAFE_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 REQUIRED_APPLETS = {
@@ -194,6 +208,72 @@ def musl_identity(musl_cc: str) -> dict:
         "wrapper_sha256": sha256_file(wrapper),
         "specs_sha256": sha256_file(specs),
         "musl_specs_verified": True,
+    }
+
+
+def sha256_tree(root: Path) -> str:
+    digest = hashlib.sha256()
+    files = sorted(
+        (path for path in root.rglob("*") if path.is_file() and not path.is_symlink()),
+        key=lambda path: path.relative_to(root).as_posix(),
+    )
+    if not files:
+        raise BuildError("kernel UAPI header tree is empty")
+    for path in files:
+        relative = path.relative_to(root).as_posix().encode("utf-8")
+        digest.update(len(relative).to_bytes(4, "big"))
+        digest.update(relative)
+        data = path.read_bytes()
+        digest.update(len(data).to_bytes(8, "big"))
+        digest.update(data)
+    return digest.hexdigest()
+
+
+def prepare_kernel_uapi(work_dir: Path, env: dict[str, str]) -> dict:
+    contract = KERNEL_BUILD.load_contract()
+    archive = KERNEL_BUILD.download_archive(contract, work_dir / "kernel-uapi-cache")
+    source = KERNEL_BUILD.extract_archive(
+        archive,
+        work_dir / "kernel-uapi-source",
+        contract["version"],
+    )
+    install_root = work_dir / "kernel-uapi-install"
+    shutil.rmtree(install_root, ignore_errors=True)
+    install_root.mkdir(parents=True)
+
+    run(
+        [
+            "make",
+            "-C",
+            str(source),
+            "ARCH=x86",
+            f"INSTALL_HDR_PATH={install_root}",
+            "headers_install",
+        ],
+        cwd=ROOT,
+        env=env,
+    )
+
+    include = install_root / "include"
+    required = (
+        include / "linux" / "version.h",
+        include / "linux" / "loop.h",
+        include / "linux" / "types.h",
+        include / "asm" / "unistd.h",
+    )
+    for header in required:
+        if not header.is_file() or header.is_symlink():
+            raise BuildError(
+                f"pinned kernel headers_install did not produce required UAPI header: {header}"
+            )
+    return {
+        "include": include,
+        "kernel_version": contract["version"],
+        "kernel_archive_sha256": sha256_file(archive),
+        "kernel_source_contract_sha256": sha256_file(KERNEL_BUILD.SOURCE_CONTRACT),
+        "headers_tree_sha256": sha256_tree(include),
+        "linux_version_h_sha256": sha256_file(include / "linux" / "version.h"),
+        "linux_loop_h_sha256": sha256_file(include / "linux" / "loop.h"),
     }
 
 
@@ -378,7 +458,13 @@ def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
     musl_cc = resolve_program("musl-gcc")
     readelf = resolve_program("readelf")
     toolchain = musl_identity(musl_cc)
-    make = ["make", f"CC={musl_cc}"]
+    kernel_uapi = prepare_kernel_uapi(work_dir, env)
+    uapi_include = kernel_uapi["include"]
+    make = [
+        "make",
+        f"CC={musl_cc}",
+        f"EXTRA_CFLAGS=-I{uapi_include}",
+    ]
     run(make + ["allnoconfig"], cwd=source, env=env)
     set_config(source / ".config", REQUESTED_CONFIG)
     run(make + ["oldconfig"], cwd=source, env=env)
@@ -430,6 +516,11 @@ def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
         "busybox_applet_count": len(applets),
         "busybox_sha256": sha256_file(busybox),
         "toolchain": toolchain,
+        "kernel_uapi": {
+            key: str(value) if isinstance(value, Path) else value
+            for key, value in kernel_uapi.items()
+            if key != "include"
+        },
         "root_init_sha256": sha256_file(init),
         "filesystem_health": {
             "pre_mount_check": True,
@@ -488,6 +579,17 @@ def verify(out_dir: Path) -> dict:
         or health.get("helper_path") != "/sbin/ordax-grow-ext4"
     ):
         raise BuildError("initramfs provenance is missing the canonical ext4 health policy")
+    kernel_uapi = provenance.get("kernel_uapi", {})
+    if (
+        kernel_uapi.get("kernel_version") != load_contract()["portable_v2_prerequisites"]["kernel_uapi_version"]
+        or not _SHA256.fullmatch(str(kernel_uapi.get("kernel_archive_sha256", "")))
+        or not _SHA256.fullmatch(str(kernel_uapi.get("kernel_source_contract_sha256", "")))
+        or not _SHA256.fullmatch(str(kernel_uapi.get("headers_tree_sha256", "")))
+        or not _SHA256.fullmatch(str(kernel_uapi.get("linux_version_h_sha256", "")))
+        or not _SHA256.fullmatch(str(kernel_uapi.get("linux_loop_h_sha256", "")))
+    ):
+        raise BuildError("initramfs provenance is missing the pinned kernel UAPI identity")
+
     growth = provenance.get("filesystem_growth", {})
     if growth.get("mode") != "online-ext4-kernel-ioctl" or growth.get("helper_path") != "/sbin/ordax-grow-ext4":
         raise BuildError("initramfs provenance is missing the canonical ext4 growth helper")

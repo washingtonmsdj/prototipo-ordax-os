@@ -89,6 +89,11 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn('"CONFIG_LOSETUP": "y"', BUILDER)
         self.assertIn('"CONFIG_FEATURE_MOUNT_LOOP": "y"', BUILDER)
         self.assertIn('"CONFIG_FEATURE_VOLUMEID_EXFAT": "y"', BUILDER)
+        self.assertIn("prepare_kernel_uapi", BUILDER)
+        self.assertIn("KERNEL_BUILD.download_archive", BUILDER)
+        self.assertIn("KERNEL_BUILD.extract_archive", BUILDER)
+        self.assertIn('"headers_install"', BUILDER)
+        self.assertIn('f"EXTRA_CFLAGS=-I{uapi_include}"', BUILDER)
         self.assertNotIn('"CONFIG_TEST": "y"', BUILDER)
         self.assertIn('make = ["make", f"CC={musl_cc}"]', BUILDER)
         self.assertIn('run(make + ["allnoconfig"]', BUILDER)
@@ -143,6 +148,17 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertFalse(portable["handoff_helper_installed"])
         self.assertEqual(portable["main_partition_label_unchanged"], "ORDAX")
         self.assertFalse(portable["physical_boot_promotion_allowed"])
+        self.assertEqual(
+            portable["kernel_uapi_source_contract"],
+            "bootstrap/kernel/source.json",
+        )
+        self.assertEqual(portable["kernel_uapi_version"], "6.6.52")
+        self.assertTrue(portable["kernel_uapi_headers_install"])
+        self.assertFalse(portable["host_linux_headers_required"])
+        self.assertEqual(
+            portable["busybox_extra_cflags_policy"],
+            "pinned-kernel-uapi-include-only",
+        )
         self.assertIn("findfs LABEL=ORDAX", INIT)
         self.assertNotIn("findfs LABEL=ORDAX-DATA", INIT)
 
