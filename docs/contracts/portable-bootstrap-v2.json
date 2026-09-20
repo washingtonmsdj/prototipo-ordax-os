@@ -27,15 +27,27 @@
     "network_required": false,
     "offline_capable_required": true,
     "creator_must_preseed_verified_release": true,
-    "release_schema": "prototype-ordax.release-manifest/2",
-    "release_artifact": "system.erofs",
-    "release_bundle_layout": ".ordax/releases/<source_commit>/{system.erofs,release-manifest.json,release-envelope.json}",
+    "release_schema": "prototype-ordax.release-manifest/3",
+    "release_bundle_layout": ".ordax/releases/<source_commit>/{system.erofs,surface-runtime.sha256,release-manifest.json,release-envelope.json}",
     "persistent_state_image": ".ordax/state/persistent-state.img",
     "initial_current_equals_known_good": true,
     "initial_candidate_absent": true,
     "initial_transaction_absent": true,
     "boot_must_reverify_exact_release_offline": true,
-    "fallback_must_not_require_network": true
+    "fallback_must_not_require_network": true,
+    "compatible_release_schemas": [
+      "prototype-ordax.release-manifest/2",
+      "prototype-ordax.release-manifest/3"
+    ],
+    "release_artifacts": [
+      "system.erofs",
+      "native-surface-runtime.erofs"
+    ],
+    "surface_runtime_store_layout": ".ordax/runtimes/sha256/<runtime-sha256>/native-surface-runtime.erofs",
+    "surface_runtime_content_addressed": true,
+    "surface_runtime_ephemeral_overlay": "/run/ordax/runtime/native-surface/rootfs",
+    "stable_boot_package_download_allowed": false,
+    "stable_boot_package_install_allowed": false
   },
   "esp_substrate": {
     "system_or_apps_preinstalled": false,
@@ -77,18 +89,18 @@
       ],
       "hash_pin_required_before_pid1_use": true,
       "hash_pin_owner": "initramfs-build-provenance",
-      "implemented": false,
+      "implemented": true,
       "contract": "docs/contracts/portable-bootstrap-capsule.json",
       "candidate_builder_implemented": true,
       "deterministic_proof_implemented": true,
       "esp_materialization_implemented": false,
       "initramfs_hash_pin_implemented": true,
-      "pid1_verified_mount_implemented": false,
+      "pid1_verified_mount_implemented": true,
       "initramfs_hash_pin_builder_support": true,
       "initramfs_hash_pin_disposable_proof_implemented": true,
       "initramfs_hash_pin_candidate_only": true,
       "initramfs_hash_pin_default_candidate_build_enabled": false,
-      "pid1_hash_enforcement_implemented": false,
+      "pid1_hash_enforcement_implemented": true,
       "hash_verification_primitive_implemented": true,
       "read_only_mount_helper_implemented": true,
       "hash_verification_helper_installed": true,
@@ -116,7 +128,9 @@
     "post_write_readback_required": true,
     "internal_disk_write_allowed": false,
     "native_install_exposed": false,
-    "physical_apply_enabled": false
+    "physical_apply_enabled": false,
+    "preseed_surface_runtime_before_success": true,
+    "surface_runtime_content_addressed": true
   },
   "boot_sequence_target": [
     "uefi-load-from-ORDAX-ESP",
@@ -130,15 +144,17 @@
     "verify-stable-base-against-initramfs-owned-pin",
     "mount-stable-base-erofs-read-only-and-compose-base-overlay-with-ext4-upper-work",
     "mount-selected-system-erofs-read-only",
+    "resolve-selected-surface-runtime-digest-from-signed-v3-release",
+    "mount-selected-surface-runtime-erofs-read-only-and-compose-ephemeral-overlay",
     "bind-verified-system-subtree-read-only",
     "switch-root-into-stable-base-overlay",
-    "launch-ordax-stable-init-with-portable-v2-identity"
+    "launch-ordax-stable-init-with-verified-portable-release-and-surface-runtime-identity"
   ],
   "migration": {
     "transitional_minimal_bootstrap_contract_unchanged": true,
     "transitional_three_partition_writer_unchanged": true,
     "portable_v2_writer_migration_implemented": false,
-    "portable_v2_pid1_integration_implemented": false,
+    "portable_v2_pid1_integration_implemented": true,
     "public_physical_promotion_allowed": false,
     "portable_v2_pid1_candidate_installed": true
   },
@@ -147,7 +163,7 @@
       "path": "/sbin/ordax-portable-state",
       "installed": true,
       "read_only": true,
-      "pid1_connected": false,
+      "pid1_connected": true,
       "operations": [
         "read-slot",
         "resolve",
@@ -175,14 +191,17 @@
       "selects_release": false,
       "verifies_signature": false,
       "writes_activation_state": false,
-      "pid1_connected": false,
+      "pid1_connected": true,
       "mounts_bootstrap_capsule_erofs_read_only": true,
       "checks_bootstrap_capsule_payload_shape": true,
       "verifies_capsule_hash": false,
       "capsule_hash_verification_owner": "busybox-sha256sum-against-initramfs-pin",
       "composes_stable_base_overlayfs": true,
       "system_runtime_view": "read-only-bind",
-      "system_persistent_overlay": false
+      "system_persistent_overlay": false,
+      "mounts_surface_runtime_erofs_read_only": true,
+      "surface_runtime_view": "overlayfs-ephemeral-run",
+      "surface_runtime_persistent_upper": false
     },
     "portable_candidate_pid1": {
       "path": "/sbin/ordax-portable-init",
@@ -195,7 +214,11 @@
       "candidate_boot_authority": false,
       "network_required": false,
       "switches_root_to": "stable-base-overlay",
-      "physical_boot_authorized": false
+      "physical_boot_authorized": false,
+      "release_manifest_v3_supported": true,
+      "surface_runtime_verified_handoff": true,
+      "surface_runtime_overlay": "ephemeral-run",
+      "stable_boot_package_install_allowed": false
     }
   },
   "stable_base": {
@@ -207,7 +230,7 @@
     "git_client_embedded": false,
     "product_system_tree_embedded": false,
     "physical_materialization_implemented": false,
-    "initramfs_base_handoff_implemented": false,
+    "initramfs_base_handoff_implemented": true,
     "signed_update_integration_implemented": false,
     "qemu_boot_proven": false,
     "physical_boot_proven": false,
@@ -224,8 +247,8 @@
     "hash_verification_helper_installed": true,
     "hash_verification_helper_path": "/sbin/ordax-portable-base-verify",
     "hash_verification_helper_fixed_paths": true,
-    "hash_verification_helper_pid1_connected": false,
-    "pid1_hash_enforcement_implemented": false
+    "hash_verification_helper_pid1_connected": true,
+    "pid1_hash_enforcement_implemented": true
   },
   "pinned_initramfs_composition_proof": {
     "contract": "docs/contracts/portable-v2-pinned-initramfs-proof.json",
