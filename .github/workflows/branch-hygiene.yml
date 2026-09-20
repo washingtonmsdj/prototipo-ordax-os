@@ -261,6 +261,7 @@ jobs:
             echo "Deleted fully-contained branch: $ref"
           done < "$temp_dir/contained.txt"
 
+
   prune-reviewed-superseded-heads:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -274,27 +275,28 @@ jobs:
           set -euo pipefail
 
           reviewed=(
-            "feat/stable-release-inspection"
-            "feat/esp-bootloader-candidate-binding"
-            "feat/systemd-boot-counting-proof"
-            "refactor/notes-editor-save"
-            "work/internet-browser-foundation"
-            "feat/autonomous-base-stage-only-v2"
-            "feat/autonomous-base-stage-only"
-            "feat/pinned-release-agent-refresh"
-            "fix/honest-base-refresh-restart-proof"
-            "feature/base-update-fat32-proof"
-            "feature/kernel-acpi-battery-support"
-            "test/lightweight-live-latency-probe-v2"
-            "feature/fast-lightweight-staging-metrics"
-            "feature/surface-ui-heartbeat-v2"
-            "fix/markdown-no-runtime-apply"
-            "fix/dev-base-module-budget"
+            "feat/stable-release-inspection|350"
+            "feat/esp-bootloader-candidate-binding|340"
+            "feat/systemd-boot-counting-proof|335"
+            "refactor/notes-editor-save|283"
+            "work/internet-browser-foundation|227"
+            "feat/autonomous-base-stage-only-v2|215"
+            "feat/autonomous-base-stage-only|213"
+            "feat/pinned-release-agent-refresh|191"
+            "fix/honest-base-refresh-restart-proof|184"
+            "feature/base-update-fat32-proof|141"
+            "feature/kernel-acpi-battery-support|135"
+            "test/lightweight-live-latency-probe-v2|114"
+            "feature/fast-lightweight-staging-metrics|110"
+            "feature/surface-ui-heartbeat-v2|100"
+            "fix/markdown-no-runtime-apply|99"
+            "fix/dev-base-module-budget|7"
           )
 
-          owner="${REPOSITORY%%/*}"
+          for item in "${reviewed[@]}"; do
+            ref="${item%%|*}"
+            pr_number="${item##*|}"
 
-          for ref in "${reviewed[@]}"; do
             current_sha="$(
               gh api "repos/$REPOSITORY/branches/$ref" --jq '.commit.sha' 2>/dev/null || true
             )"
@@ -303,47 +305,28 @@ jobs:
               continue
             fi
 
-            open_count="$(
-              gh api "repos/$REPOSITORY/pulls?state=open&head=$owner:$ref&per_page=1" --jq 'length'
-            )"
-            if [[ "$open_count" != "0" ]]; then
-              echo "Preserving $ref because it has an open PR"
+            pr_json="$(gh api "repos/$REPOSITORY/pulls/$pr_number")"
+
+            state="$(jq -r '.state' <<<"$pr_json")"
+            merged_at="$(jq -r '.merged_at // ""' <<<"$pr_json")"
+            pr_ref="$(jq -r '.head.ref' <<<"$pr_json")"
+            expected_sha="$(jq -r '.head.sha' <<<"$pr_json")"
+
+            if [[ "$state" != "closed" || -n "$merged_at" || "$pr_ref" != "$ref" ]]; then
+              echo "Preserving $ref because PR #$pr_number no longer matches the reviewed closed-unmerged state"
               continue
             fi
 
-            closed_json="$(
-              gh api --paginate "repos/$REPOSITORY/pulls?state=closed&head=$owner:$ref&per_page=100"
+            if [[ "$current_sha" != "$expected_sha" ]]; then
+              echo "Preserving $ref because it changed after PR #$pr_number was closed"
+              continue
+            fi
+
+            open_count="$(
+              gh api "repos/$REPOSITORY/pulls?state=open&per_page=100"                 --jq "[.[] | select(.head.ref == \"$ref\" and .head.repo.full_name == \"$REPOSITORY\")] | length"
             )"
-
-            expected_sha="$(
-              CLOSED_JSON="$closed_json" REF="$ref" python <<'PY'
-          import json
-          import os
-
-          pages = json.loads(os.environ["CLOSED_JSON"])
-          if isinstance(pages, dict):
-              pages = [pages]
-
-          prs = []
-          for page in pages:
-              if isinstance(page, list):
-                  prs.extend(page)
-
-          ref = os.environ["REF"]
-          matches = [
-              pr for pr in prs
-              if pr.get("head", {}).get("ref") == ref
-              and pr.get("merged_at") is None
-              and pr.get("closed_at")
-          ]
-          matches.sort(key=lambda pr: pr["closed_at"])
-          if matches:
-              print(matches[-1]["head"]["sha"])
-          PY
-            )"
-
-            if [[ -z "$expected_sha" || "$current_sha" != "$expected_sha" ]]; then
-              echo "Preserving $ref because its tip no longer matches the reviewed closed PR"
+            if [[ "$open_count" != "0" ]]; then
+              echo "Preserving $ref because it now has an open PR"
               continue
             fi
 
@@ -351,5 +334,5 @@ jobs:
               REF="$ref" python -c 'import os, urllib.parse; print(urllib.parse.quote("heads/" + os.environ["REF"], safe=""))'
             )"
             gh api --method DELETE "repos/$REPOSITORY/git/refs/$encoded_ref"
-            echo "Deleted reviewed superseded branch: $ref"
+            echo "Deleted reviewed superseded branch: $ref (PR #$pr_number)"
           done
