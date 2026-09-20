@@ -217,7 +217,8 @@ Estado atual do caminho v2:
 - seleção read-only `current -> known-good`: implementada como helper e permanece desconectada do PID1 até os gates de boot;
 - bootstrap capsule EROFS: candidata determinística e reprodutível;
 - pin SHA-256 da bootstrap capsule dentro de initramfs candidato: implementado/provado, mas ainda não enforced pelo PID1;
-- Stable Base EROFS: builder candidato existente; locks de upstream/pacotes e integração de boot ainda são gates;
+- Stable Base EROFS: Alpine e conjunto APK transitivo pinados; builder candidato verificável; integração final de boot continua em gate QEMU/UEFI/físico;
+- runtime gráfico offline: lock exato de 253 pacotes e EROFS byte-reprodutível provados em CI; artifact ainda não conectado ao handoff Portable v2;
 - writer físico v2: desativado;
 - boot físico v2: não provado;
 - canonical release trust público: pendente;
