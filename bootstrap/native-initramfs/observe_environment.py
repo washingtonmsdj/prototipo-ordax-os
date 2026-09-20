@@ -78,19 +78,35 @@ def runtime_files(binary: str) -> list[str]:
     return sorted(files)
 
 
-def package_owner(path: str) -> str:
+def package_path_candidates(path: str) -> list[str]:
+    candidates: list[str] = []
     original = Path(path)
-    candidates = []
     try:
-        resolved = str(original.resolve(strict=True))
-        candidates.append(resolved)
+        candidates.append(str(original.resolve(strict=True)))
     except OSError:
         pass
     candidates.append(path)
 
+    aliases: list[str] = []
+    for candidate in list(candidates):
+        for left, right in (
+            ("/usr/bin/", "/bin/"),
+            ("/usr/sbin/", "/sbin/"),
+            ("/usr/lib/", "/lib/"),
+            ("/usr/lib64/", "/lib64/"),
+        ):
+            if candidate.startswith(left):
+                aliases.append(right + candidate[len(left):])
+            elif candidate.startswith(right):
+                aliases.append(left + candidate[len(right):])
+    candidates.extend(aliases)
+    return list(dict.fromkeys(candidates))
+
+
+def package_owner(path: str) -> str:
     output = ""
     selected = ""
-    for candidate in dict.fromkeys(candidates):
+    for candidate in package_path_candidates(path):
         try:
             output = capture(["dpkg-query", "-S", candidate])
             selected = candidate

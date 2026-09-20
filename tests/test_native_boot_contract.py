@@ -127,7 +127,11 @@ class NativeBootContractTests(unittest.TestCase):
         )
         builder = BUILDER.read_text(encoding="utf-8")
         for text in (observer, builder):
+            self.assertIn("def package_path_candidates(path: str)", text)
             self.assertIn("resolve(strict=True)", text)
+            self.assertIn('("/usr/bin/", "/bin/")', text)
+            self.assertIn('("/usr/sbin/", "/sbin/")', text)
+            self.assertIn('("/usr/lib/", "/lib/")', text)
             self.assertIn('capture(["dpkg-query", "-S", candidate])', text)
             self.assertIn("dict.fromkeys(candidates)", text)
 
