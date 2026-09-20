@@ -343,7 +343,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         "exact_target_layout": False,
         "readback_sha256": False,
         "portable_usb_entries_absent": False,
-        "physical_device_touched": False,
+        "physical_device_untouched": False,
         "image_destroyed": False,
     }
     try:
@@ -363,7 +363,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         observed = readback_image(image, staged_hashes, readback)
         checks["readback_sha256"] = observed == staged_hashes
         checks["portable_usb_entries_absent"] = True
-        checks["physical_device_touched"] = False
+        checks["physical_device_untouched"] = True
 
         image.unlink()
         checks["image_destroyed"] = not image.exists()

@@ -55,9 +55,16 @@ class NativeESPProofContractTests(unittest.TestCase):
             'mtype',
             'source_commit',
             'physical_device_touched',
+            'physical_device_untouched',
             'image_destroyed',
         ):
             self.assertIn(marker, SCRIPT)
+
+    def test_boolean_checks_encode_success_not_negative_safety_state(self):
+        self.assertIn('"physical_device_untouched": False', SCRIPT)
+        self.assertIn('checks["physical_device_untouched"] = True', SCRIPT)
+        self.assertNotIn('"physical_device_touched": False,\n        "image_destroyed"', SCRIPT)
+        self.assertIn('"physical_device_touched": False', SCRIPT)
 
     def test_workflow_uses_creator_core_render_and_exact_source_identity(self):
         identity = "${{ github.event.pull_request.head.sha || github.sha }}"
