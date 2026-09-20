@@ -51,6 +51,12 @@ if ($ToolkitProvenance.'$schema' -ne 'prototype-ordax.windows-prototype-toolkit/
     $ToolkitProvenance.status -ne 'candidate') {
     throw 'Toolkit provenance schema or status is invalid.'
 }
+if ($ToolkitProvenance.source_repository -ne 'washingtonmsdj/prototipo-ordax-os' -or
+    $ToolkitProvenance.source_event -ne 'push' -or
+    $ToolkitProvenance.source_ref -ne 'refs/heads/main' -or
+    $ToolkitProvenance.canonical_trust_ceremony_eligible -ne $true) {
+    throw 'Canonical trust ceremony requires a toolkit produced by a push of the canonical main branch.'
+}
 $ToolkitSourceCommit = [string]$ToolkitProvenance.source_commit
 if ($ToolkitSourceCommit -notmatch '^[0-9a-f]{40}$') {
     throw 'Toolkit provenance source_commit must be exactly 40 lowercase hexadecimal characters.'
