@@ -65,6 +65,7 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         self.assertTrue(capsule["pid1_hash_enforcement_implemented"])
         self.assertTrue(capsule["pid1_verified_mount_implemented"])
         self.assertTrue(capsule["implemented"])
+        self.assertTrue(capsule["hash_verification_helper_pid1_connected"])
 
     def test_release_trust_is_bootstrap_owned_and_private_key_never_on_media(self):
         trust = CONTRACT["release_trust"]
@@ -88,7 +89,7 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         self.assertFalse(CONTRACT["physical_write_authorized"])
         self.assertFalse(CONTRACT["physical_boot_proven"])
 
-    def test_initramfs_helpers_are_installed_but_not_pid1_connected(self):
+    def test_initramfs_helpers_are_connected_to_candidate_pid1_without_extra_authority(self):
         helpers = CONTRACT["initramfs_helpers"]
         state = helpers["portable_state_reader"]
         mount = helpers["portable_mount_helper"]
