@@ -262,11 +262,12 @@ jobs:
           done < "$temp_dir/contained.txt"
 
 
-  prune-reviewed-superseded-heads:
+
+  prune-reviewed-duplicate-aliases:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - name: Delete explicitly reviewed superseded closed PR branches
+      - name: Delete reviewed aliases that point to an identical preserved tip
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
@@ -274,65 +275,45 @@ jobs:
         run: |
           set -euo pipefail
 
-          reviewed=(
-            "feat/stable-release-inspection|350"
-            "feat/esp-bootloader-candidate-binding|340"
-            "feat/systemd-boot-counting-proof|335"
-            "refactor/notes-editor-save|283"
-            "work/internet-browser-foundation|227"
-            "feat/autonomous-base-stage-only-v2|215"
-            "feat/autonomous-base-stage-only|213"
-            "feat/pinned-release-agent-refresh|191"
-            "fix/honest-base-refresh-restart-proof|184"
-            "feature/base-update-fat32-proof|141"
-            "feature/kernel-acpi-battery-support|135"
-            "test/lightweight-live-latency-probe-v2|114"
-            "feature/fast-lightweight-staging-metrics|110"
-            "feature/surface-ui-heartbeat-v2|100"
-            "fix/markdown-no-runtime-apply|99"
-            "fix/dev-base-module-budget|7"
+          aliases=(
+            "feat/stable-base-signed-acquisition|feat/stable-base-signed-assets"
+            "fix/initramfs-enable-ash-command-final|fix/initramfs-enable-ash-command"
+            "tmp/noop|fix/initramfs-enable-ash-command"
+            "tmp/noop2|fix/initramfs-enable-ash-command"
+            "tmp/stop|fix/initramfs-enable-ash-command"
           )
 
-          for item in "${reviewed[@]}"; do
-            ref="${item%%|*}"
-            pr_number="${item##*|}"
+          for item in "${aliases[@]}"; do
+            alias_ref="${item%%|*}"
+            keeper_ref="${item##*|}"
 
-            current_sha="$(
-              gh api "repos/$REPOSITORY/branches/$ref" --jq '.commit.sha' 2>/dev/null || true
+            alias_sha="$(
+              gh api "repos/$REPOSITORY/branches/$alias_ref" --jq '.commit.sha' 2>/dev/null || true
             )"
-            if [[ -z "$current_sha" ]]; then
-              echo "Already absent: $ref"
+            keeper_sha="$(
+              gh api "repos/$REPOSITORY/branches/$keeper_ref" --jq '.commit.sha' 2>/dev/null || true
+            )"
+
+            if [[ -z "$alias_sha" ]]; then
+              echo "Alias already absent: $alias_ref"
               continue
             fi
-
-            pr_json="$(gh api "repos/$REPOSITORY/pulls/$pr_number")"
-
-            state="$(jq -r '.state' <<<"$pr_json")"
-            merged_at="$(jq -r '.merged_at // ""' <<<"$pr_json")"
-            pr_ref="$(jq -r '.head.ref' <<<"$pr_json")"
-            expected_sha="$(jq -r '.head.sha' <<<"$pr_json")"
-
-            if [[ "$state" != "closed" || -n "$merged_at" || "$pr_ref" != "$ref" ]]; then
-              echo "Preserving $ref because PR #$pr_number no longer matches the reviewed closed-unmerged state"
-              continue
-            fi
-
-            if [[ "$current_sha" != "$expected_sha" ]]; then
-              echo "Preserving $ref because it changed after PR #$pr_number was closed"
+            if [[ -z "$keeper_sha" || "$alias_sha" != "$keeper_sha" ]]; then
+              echo "Preserving $alias_ref because keeper $keeper_ref is absent or no longer identical"
               continue
             fi
 
             open_count="$(
-              gh api "repos/$REPOSITORY/pulls?state=open&per_page=100"                 --jq "[.[] | select(.head.ref == \"$ref\" and .head.repo.full_name == \"$REPOSITORY\")] | length"
+              gh api "repos/$REPOSITORY/pulls?state=open&per_page=100"                 --jq "[.[] | select(.head.ref == \"$alias_ref\" and .head.repo.full_name == \"$REPOSITORY\")] | length"
             )"
             if [[ "$open_count" != "0" ]]; then
-              echo "Preserving $ref because it now has an open PR"
+              echo "Preserving $alias_ref because it has an open PR"
               continue
             fi
 
             encoded_ref="$(
-              REF="$ref" python -c 'import os, urllib.parse; print(urllib.parse.quote("heads/" + os.environ["REF"], safe=""))'
+              REF="$alias_ref" python -c 'import os, urllib.parse; print(urllib.parse.quote("heads/" + os.environ["REF"], safe=""))'
             )"
             gh api --method DELETE "repos/$REPOSITORY/git/refs/$encoded_ref"
-            echo "Deleted reviewed superseded branch: $ref (PR #$pr_number)"
+            echo "Deleted duplicate alias: $alias_ref; preserved $keeper_ref at $keeper_sha"
           done
