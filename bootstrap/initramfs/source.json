@@ -62,6 +62,21 @@
     "kernel_uapi_version": "6.6.52",
     "kernel_uapi_headers_install": true,
     "host_linux_headers_required": false,
-    "busybox_extra_cflags_policy": "pinned-kernel-uapi-include-only"
+    "busybox_extra_cflags_policy": "pinned-kernel-uapi-include-only",
+    "activation_state_reader": {
+      "source": "bootstrap/initramfs/portable_state.c",
+      "runtime_path": "/sbin/ordax-portable-state",
+      "static": true,
+      "read_only": true,
+      "accepted_slots": [
+        "current",
+        "known-good",
+        "candidate"
+      ],
+      "identity": "lowercase-40-hex-source-commit",
+      "nofollow_directory_walk": true,
+      "activation_performed": false
+    },
+    "activation_state_reader_installed": true
   }
 }

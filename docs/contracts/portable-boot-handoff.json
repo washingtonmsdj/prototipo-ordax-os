@@ -67,7 +67,8 @@
     "busybox_mount_loop_currently_enabled": true,
     "busybox_exfat_volume_id_currently_enabled": true,
     "activation_state_reader_required": true,
-    "activation_state_reader_currently_installed": false
+    "activation_state_reader_currently_installed": true,
+    "activation_state_reader_path": "/sbin/ordax-portable-state"
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",

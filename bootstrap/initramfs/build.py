@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = ROOT / "bootstrap" / "initramfs"
 CONTRACT = HERE / "source.json"
 GROW_HELPER_SOURCE = HERE / "grow_ext4.c"
+PORTABLE_STATE_HELPER_SOURCE = HERE / "portable_state.c"
 KERNEL_BUILDER_PATH = ROOT / "bootstrap" / "kernel" / "build.py"
 
 
@@ -125,10 +126,18 @@ def growth_helper_source_path() -> Path:
     return path
 
 
+def portable_state_helper_source_path() -> Path:
+    path = PORTABLE_STATE_HELPER_SOURCE.resolve()
+    if ROOT.resolve() not in path.parents or not path.is_file() or path.is_symlink():
+        raise BuildError("portable activation-state helper source is missing or unsafe")
+    return path
+
+
 def check_contract() -> dict:
     contract = load_contract()
     init = init_path(contract)
     helper_source = growth_helper_source_path()
+    portable_state_source = portable_state_helper_source_path()
     text = init.read_text(encoding="utf-8")
     forbidden = ("ORDAX-HOME", "ORDAX-PLATFORM", "sshd", "remote-core", "control-plane", "codex")
     found = [value for value in forbidden if value.lower() in text.lower()]
@@ -160,6 +169,8 @@ def check_contract() -> dict:
         "root_init_sha256": sha256_file(init),
         "ext4_growth_helper_source": str(helper_source.relative_to(ROOT)),
         "ext4_growth_helper_source_sha256": sha256_file(helper_source),
+        "portable_state_helper_source": str(portable_state_source.relative_to(ROOT)),
+        "portable_state_helper_source_sha256": sha256_file(portable_state_source),
         "main_partition_label": contract["main_partition_label"],
         "portable_v2_prerequisites": contract["portable_v2_prerequisites"],
     }
@@ -438,10 +449,40 @@ def build_growth_helper(musl_cc: str, readelf: str, source: Path, destination: P
         raise BuildError("ext4 growth helper build did not produce a safe regular binary")
 
 
+def build_portable_state_helper(
+    musl_cc: str,
+    readelf: str,
+    source: Path,
+    destination: Path,
+    env: dict[str, str],
+) -> None:
+    command = [
+        musl_cc,
+        "-static",
+        "-Os",
+        "-s",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-Wl,--build-id=none",
+        f"-ffile-prefix-map={ROOT}=.",
+        "-o",
+        str(destination),
+        str(source),
+    ]
+    run(command, cwd=ROOT, env=env)
+    elf = capture([readelf, "-l", str(destination)])
+    if "Requesting program interpreter" in elf:
+        raise BuildError("portable state helper is dynamically linked")
+    if not destination.is_file() or destination.is_symlink():
+        raise BuildError("portable state helper build did not produce a safe regular binary")
+
+
 def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
     contract = load_contract()
     init = init_path(contract)
     grow_source = growth_helper_source_path()
+    portable_state_source = portable_state_helper_source_path()
     check_contract()
     for name in ("make", "musl-gcc", "readelf"):
         resolve_program(name)
@@ -502,6 +543,19 @@ def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
     grow_install.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(grow_binary, grow_install)
     os.chmod(grow_install, 0o755)
+
+    portable_state_binary = work_dir / "ordax-portable-state"
+    build_portable_state_helper(
+        musl_cc,
+        readelf,
+        portable_state_source,
+        portable_state_binary,
+        env,
+    )
+    portable_state_install = rootfs / "sbin" / "ordax-portable-state"
+    shutil.copy2(portable_state_binary, portable_state_install)
+    os.chmod(portable_state_install, 0o755)
+
     final_config = out_dir / "busybox.config"
     shutil.copy2(source / ".config", final_config)
     archive_path = out_dir / "initramfs.cpio.gz"
@@ -536,6 +590,17 @@ def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
             "normal_boot_best_effort": True,
             "recovery_mode_allowed": False,
         },
+        "portable_activation_state_reader": {
+            "installed": True,
+            "helper_path": "/sbin/ordax-portable-state",
+            "source_sha256": sha256_file(portable_state_source),
+            "binary_sha256": sha256_file(portable_state_binary),
+            "read_only": True,
+            "accepted_slots": ["current", "known-good", "candidate"],
+            "identity": "lowercase-40-hex-source-commit",
+            "symlink_traversal_allowed": False,
+            "activation_performed": False,
+        },
         "static_userspace": True,
         "network_inside_fixed_initramfs": False,
         "portable_v2_prerequisites": {
@@ -544,6 +609,7 @@ def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
             "exfat_volume_id": True,
             "boot_path_enabled": False,
             "handoff_helper_installed": False,
+            "activation_state_reader_installed": True,
         },
         "artifacts": {
             archive_path.name: sha256_file(archive_path),
@@ -589,6 +655,18 @@ def verify(out_dir: Path) -> dict:
         or not _SHA256.fullmatch(str(kernel_uapi.get("linux_loop_h_sha256", "")))
     ):
         raise BuildError("initramfs provenance is missing the pinned kernel UAPI identity")
+
+    state_reader = provenance.get("portable_activation_state_reader", {})
+    if (
+        state_reader.get("installed") is not True
+        or state_reader.get("helper_path") != "/sbin/ordax-portable-state"
+        or state_reader.get("read_only") is not True
+        or state_reader.get("activation_performed") is not False
+        or state_reader.get("symlink_traversal_allowed") is not False
+        or not _SHA256.fullmatch(str(state_reader.get("source_sha256", "")))
+        or not _SHA256.fullmatch(str(state_reader.get("binary_sha256", "")))
+    ):
+        raise BuildError("initramfs provenance is missing the portable activation-state reader")
 
     growth = provenance.get("filesystem_growth", {})
     if growth.get("mode") != "online-ext4-kernel-ioctl" or growth.get("helper_path") != "/sbin/ordax-grow-ext4":

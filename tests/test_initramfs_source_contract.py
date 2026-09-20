@@ -8,6 +8,7 @@ INIT = (ROOT / CONTRACT["root_init"]).read_text(encoding="utf-8")
 DEV_BOOTSTRAP = (ROOT / "bootstrap/dev/entrypoint").read_text(encoding="utf-8")
 BUILDER = (ROOT / "bootstrap/initramfs/build.py").read_text(encoding="utf-8")
 GROW_HELPER = (ROOT / "bootstrap/initramfs/grow_ext4.c").read_text(encoding="utf-8")
+PORTABLE_STATE_HELPER = (ROOT / "bootstrap/initramfs/portable_state.c").read_text(encoding="utf-8")
 GROWTH_PROOF = (ROOT / "bootstrap/initramfs/prove_ext4_growth.sh").read_text(encoding="utf-8")
 
 
@@ -161,6 +162,27 @@ class InitramfsSourceContractTests(unittest.TestCase):
         )
         self.assertIn("findfs LABEL=ORDAX", INIT)
         self.assertNotIn("findfs LABEL=ORDAX-DATA", INIT)
+
+    def test_portable_activation_state_reader_is_static_read_only_and_nofollow(self):
+        reader = CONTRACT["portable_v2_prerequisites"]["activation_state_reader"]
+        self.assertEqual(reader["source"], "bootstrap/initramfs/portable_state.c")
+        self.assertEqual(reader["runtime_path"], "/sbin/ordax-portable-state")
+        self.assertTrue(reader["static"])
+        self.assertTrue(reader["read_only"])
+        self.assertEqual(reader["accepted_slots"], ["current", "known-good", "candidate"])
+        self.assertEqual(reader["identity"], "lowercase-40-hex-source-commit")
+        self.assertTrue(reader["nofollow_directory_walk"])
+        self.assertFalse(reader["activation_performed"])
+        self.assertIn("openat(parent, name", PORTABLE_STATE_HELPER)
+        self.assertIn("O_NOFOLLOW", PORTABLE_STATE_HELPER)
+        self.assertIn("O_DIRECTORY", PORTABLE_STATE_HELPER)
+        self.assertIn("st.st_nlink != 1", PORTABLE_STATE_HELPER)
+        self.assertIn("ch >= 'a' && ch <= 'f'", PORTABLE_STATE_HELPER)
+        self.assertNotIn("rename(", PORTABLE_STATE_HELPER)
+        self.assertNotIn("unlink(", PORTABLE_STATE_HELPER)
+        self.assertNotIn("O_WRONLY", PORTABLE_STATE_HELPER)
+        self.assertNotIn("O_CREAT", PORTABLE_STATE_HELPER)
+        self.assertNotIn("ordax-portable-state", INIT)
 
     def test_physical_use_remains_fail_closed(self):
         self.assertFalse(CONTRACT["build"]["physical_artifact_authorized"])
