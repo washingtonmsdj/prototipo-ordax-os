@@ -105,14 +105,16 @@ jobs:
           assert p['signed_update_integration_implemented'] is False
           assert p['qemu_boot_proven'] is False
           assert p['physical_boot_proven'] is False
-          assert p['alpine_archive_sha256_pinned_in_contract'] is False
-          assert p['apk_package_versions_pinned'] is False
+          assert p['alpine_archive_sha256_pinned_in_contract'] is True
+          assert p['apk_package_versions_pinned'] is True
+          assert p['apk_package_lock_matches_contract'] is True
+          assert p['exact_package_spec_count'] == p['installed_package_count']
           print('STABLE_BASE_CANDIDATE=PASS')
           print('STABLE_BASE_GIT=NO')
-          print('STABLE_BASE_ALPINE_PINNED=NO')
-          print('STABLE_BASE_APK_LOCKED=NO')
+          print('STABLE_BASE_ALPINE_PINNED=YES')
+          print('STABLE_BASE_APK_LOCKED=YES')
           print('STABLE_BASE_PHYSICAL_AUTHORIZED=NO')
-          print('DISCOVERED_ALPINE_SHA256=' + p['alpine_archive_sha256'])
+          print('PINNED_ALPINE_SHA256=' + p['alpine_archive_sha256'])
           PY
 
       - name: Upload candidate and provenance for review only
