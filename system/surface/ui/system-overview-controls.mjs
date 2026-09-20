@@ -20,6 +20,7 @@ import {
   validateUpdateStatusSnapshot,
 } from "../../contracts/update-status.mjs";
 import { PRODUCT_VERSION, productVersionLabel } from "../../contracts/product-version.mjs";
+import { createComponentUpdateScopes } from "../../services/components/update-presentation.mjs";
 import {
   deliveryLabel,
   formatUpdateTimestamp,
@@ -599,6 +600,118 @@ export function mountSystemOverviewControls(
     unknown: "Não observado",
   }[health] ?? health);
 
+  const renderComponentUpdateScopes = (view) => {
+    const section = node(documentObject, "section", "ordax-system-section");
+    const heading = node(documentObject, "div", "ordax-system-section-heading");
+    const headingCopy = node(documentObject, "div");
+    headingCopy.append(
+      node(documentObject, "span", "ordax-system-section-kicker", "Escopo"),
+      node(documentObject, "h4", "ordax-system-section-title", "OrdaX e aplicativos"),
+    );
+    heading.append(headingCopy);
+    section.append(heading);
+
+    if (!componentSnapshot) {
+      section.append(
+        node(
+          documentObject,
+          "p",
+          "ordax-system-placeholder",
+          "O catálogo de componentes não está disponível nesta composição.",
+        ),
+      );
+      view.append(section);
+      return;
+    }
+
+    const scopes = createComponentUpdateScopes(componentSnapshot);
+    section.append(
+      node(
+        documentObject,
+        "p",
+        "ordax-system-section-copy",
+        "A versão de cada componente e o canal que o entrega são informações separadas. Apps Beta podem ter versão própria mesmo quando ainda atualizam junto com o OrdaX ou, no ambiente de desenvolvimento, diretamente pelo Git.",
+      ),
+      node(
+        documentObject,
+        "p",
+        "ordax-system-section-copy",
+        "Esta tela descreve os canais realmente habilitados; ela não representa uma Loja nem libera atualização independente de produção quando o componente ainda não usa slot assinado.",
+      ),
+    );
+
+    const renderScope = (title, components, scopeId) => {
+      const group = node(documentObject, "div", "ordax-system-history");
+      group.dataset.updateScope = scopeId;
+      group.append(node(documentObject, "h5", "ordax-system-history-title", title));
+      const list = node(documentObject, "div", "ordax-system-version-grid");
+
+      for (const component of components) {
+        const item = node(documentObject, "div", "ordax-system-version-item");
+        item.dataset.componentId = component.id;
+        item.dataset.releaseMode = component.releaseMode;
+        item.dataset.updateChannel = component.updateChannel.id;
+        const maturity = component.versionStage === "beta"
+          ? " · Beta"
+          : component.versionStage === "stable"
+            ? " · Estável"
+            : "";
+        item.append(
+          node(documentObject, "strong", "", component.title),
+          node(
+            documentObject,
+            "span",
+            "",
+            `v${component.version}${maturity} · ${component.updateChannel.label}`,
+          ),
+          node(
+            documentObject,
+            "small",
+            "ordax-system-component-health",
+            `Saúde: ${componentHealthLabel(component.health)}`,
+          ),
+        );
+
+        const detail = component.releaseMode === "base-ab"
+          ? "A Base usa o ciclo A/B do OrdaX; não é um app independente."
+          : component.releaseMode === "component-slot"
+            ? "Atualização independente exige pacote assinado, saúde, promoção e rollback."
+            : component.releaseMode === "git-app"
+              ? "Canal de desenvolvimento via Git; não é o atualizador de produção do app."
+              : "Atualiza junto com a entrega do OrdaX; rollback individual não está habilitado.";
+        item.append(node(documentObject, "small", "ordax-system-component-slots", detail));
+
+        if (component.independentUpdate) {
+          item.append(
+            node(
+              documentObject,
+              "small",
+              "ordax-system-component-slots",
+              `Anterior: ${component.previousVersion ? `v${component.previousVersion}` : "—"} · Pendente: ${component.pendingVersion ? `v${component.pendingVersion}` : "—"}`,
+            ),
+          );
+        }
+        list.append(item);
+      }
+      group.append(list);
+      section.append(group);
+    };
+
+    renderScope("OrdaX e sistema", scopes.system, "system");
+    renderScope("Aplicativos", scopes.applications, "applications");
+    section.append(
+      node(
+        documentObject,
+        "p",
+        "ordax-system-section-copy",
+        scopes.persistence === "device"
+          ? "Estado de componentes e saúde persistido neste dispositivo."
+          : "Catálogo disponível; estado de componentes permanece somente nesta sessão.",
+      ),
+    );
+    view.append(section);
+  };
+
   const renderComponentVersions = (view) => {
     const versionSection = node(documentObject, "section", "ordax-system-section");
     const versionHeading = node(documentObject, "div", "ordax-system-section-heading");
@@ -870,6 +983,7 @@ export function mountSystemOverviewControls(
       renderMemory(view);
     } else if (activeSection === "updates") {
       renderUpdateDetails(view);
+      renderComponentUpdateScopes(view);
       renderHistory(view);
     } else if (activeSection === "storage") {
       renderStorage(view);

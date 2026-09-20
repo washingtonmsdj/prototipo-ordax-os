@@ -106,7 +106,7 @@ system/surface/runtime/browser_session_store.py
 
 The shared app does not import native/Web adapters, call loopback control endpoints directly, or create an iframe for arbitrary sites.
 
-The Surface composition no longer loads Internet JavaScript or CSS as a static boot dependency. The version-checked optional component runtime owns the browser UI lifecycle and loads its own stylesheet only after the Surface health boundary. A runtime or stylesheet failure marks Internet unhealthy without converting the Surface into a failed cold boot. Internet remains `bundled` until an immutable physical component slot is implemented; this isolation must not be confused with independent delivery yet.
+The Surface composition no longer loads Internet JavaScript or CSS as a static boot dependency. The version-checked optional component runtime owns the browser UI lifecycle and loads its own stylesheet only after the Surface health boundary. A runtime or stylesheet failure marks Internet unhealthy without converting the Surface into a failed cold boot. Internet is currently **`0.3.0 Beta` with `releaseMode: "git-app"`**: in Owner/Development its app-owned version is delivered through the ordinary Git checkout/reconcile path. This runtime isolation and version identity must not be confused with a production-independent updater, Store or component-local rollback. The production-independent path remains `component-slot`, gated on signed verification, pending health, promotion and rollback.
 
 ## Capability
 
@@ -183,15 +183,15 @@ Download and offline-copy semantics remain separate operations and still need se
 
 ## Native delivery to the notebook
 
-The notebook already materializes the Surface from the checked-out OrdaX source. This browser change replaces the generic Barkery host dependency with explicit GTK/WebKitGTK runtime packages and starts the OrdaX-owned graphical/browser host under Cage.
+The notebook already materializes the Surface from the checked-out OrdaX source. Internet's current `git-app` mode means Owner/Development receives its app/runtime source through that Git-first path; this does not define the Stable/MVP production channel.
 
-Normal delivery remains:
+Normal Owner/Development delivery remains:
 
 ```text
 main
  -> ordax-pull / normal update path
  -> affected Surface/native-host materialization
- -> Surface restart when required
+ -> Surface/component restart when required
 ```
 
 No kernel rebuild or USB reflash is required solely for this application/runtime source change.

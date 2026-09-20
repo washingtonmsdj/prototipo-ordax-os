@@ -2,7 +2,7 @@
 
 Status: CANÔNICO PARA O PROTÓTIPO
 
-Este documento separa os identificadores internos de desenvolvimento dos identificadores que aparecem para quem usa o OrdaX.
+Este documento separa os identificadores internos de desenvolvimento dos identificadores que aparecem para quem usa o OrdaX. **Versão própria de um componente e capacidade de atualizá-lo independentemente são eixos diferentes.**
 
 ## Regra principal
 
@@ -20,18 +20,21 @@ Um número de PR nunca é o número de uma atualização do notebook.
 
 ## Identidades
 
-| Conceito | Exemplo | Uso |
+| Conceito | Exemplo atual | Uso |
 |---|---|---|
-| PR | `#155` | revisão e integração de desenvolvimento no GitHub; não é identidade de produto |
-| Commit técnico | `68e1380e…` | identidade exata do código-fonte |
-| Entrega | `Entrega 74` | sequência humana das mudanças aplicáveis ao dispositivo |
-| Aplicação | `Entrega 74 · Aplicada` | registro local de quando aquele notebook aplicou a entrega |
-| Versão de produto | futura, por exemplo `OrdaX 1.0` | release comercial/produto; não deve ser inferida de PR nem de entrega |
-| Versão de componente | SemVer próprio | identidade do componente; não implica atualização independente |
+| PR | `#369` | revisão e integração de desenvolvimento no GitHub; não é identidade de produto |
+| Commit técnico | SHA Git de 40 hex | identidade exata do código-fonte |
+| Entrega | `Entrega N` | sequência humana das mudanças aplicáveis ao dispositivo |
+| Aplicação | `Entrega N · Aplicada` | registro local de quando aquele dispositivo aplicou a entrega |
+| Versão de produto | `OrdaX Prototype v0.1.0` | marco humano do produto; não é inferido de PR nem de Entrega |
+| Versão de componente/app | SemVer próprio | identidade daquele componente; não implica atualização independente |
+| Maturidade de app | `Beta` para first-party `0.x` | estágio do app; `1.0.0` fica reservado para a primeira versão estável daquele app |
+
+A versão do produto, a Entrega, o SHA técnico e a versão de cada componente **não devem ser colapsados em um único número**.
 
 ## Sequência de Entrega
 
-Enquanto o protótipo usa a `main` como fonte de atualização do notebook, o número de Entrega é derivado da sequência first-parent de mudanças que realmente atingem o dispositivo.
+Enquanto o protótipo usa a `main` como fonte de atualização do notebook Owner/Development, o número de Entrega é derivado da sequência first-parent de mudanças que realmente atingem o dispositivo.
 
 A sequência atual tem uma âncora explícita: o commit `2361b9e7…` é **Entrega 220**. Depois dessa âncora, contam mudanças em `system/`, `boot/` e `bootstrap/`, mas não contam:
 
@@ -52,27 +55,53 @@ O SHA continua sendo a identidade técnica exata. O número de Entrega existe ap
 Exemplos:
 
 ```text
-Entrega 74 disponível
+Entrega N disponível
 Atualizando…
-Entrega 74 aplicada
-Entrega 74 revertida
+Entrega N aplicada
+Entrega N revertida
 ```
 
 Uma mudança em `sites/public/` pode avançar a `main` sem produzir uma nova Entrega para o notebook.
 
-## Componentes
+## Componentes e aplicativos
 
-Enquanto Surface, Arquivos, Ajustes, Conta, Sistema, Rede e Atualizador forem distribuídos no mesmo pacote do sistema, eles não devem repetir artificialmente o número da Entrega como se fosse uma versão própria.
+Todo componente pode ter uma versão SemVer própria mesmo quando ainda é distribuído junto com outro componente. O `releaseMode` diz **como ele é entregue/ativado**, não se ele merece ou não uma identidade de versão.
 
-A UI pode dizer:
+Modos atuais do contrato:
+
+- `base-ab`: exclusivo da Base crítica, com semântica A/B e reboot;
+- `bundled`: acompanha a entrega conjunta; ter versão própria não cria rollback individual;
+- `git-app`: app com versão própria entregue diretamente pelo checkout/reconcile no perfil Owner/Development; **não é** Store/updater independente de produção;
+- `component-slot`: caminho reservado para atualização independente de produção, com pacote verificado/assinado, candidato pendente, health, promoção e rollback individual.
+
+### Apps first-party atuais
+
+Os valores abaixo refletem os manifests/fontes da `main` e devem mudar junto com eles:
 
 ```text
-Surface      v0.1.0 · distribuição conjunta
-Arquivos     v0.1.0 · distribuição conjunta
-Conta        v0.1.0 · distribuição conjunta
+Arquivos  0.1.0  Beta  bundled
+Ajustes   0.1.0  Beta  bundled
+Conta     0.1.0  Beta  bundled
+Sistema   0.1.0  Beta  bundled
+Internet  0.3.0  Beta  git-app
+Notas     0.4.0  Beta  git-app
 ```
 
-Cada componente possui uma versão declarada no manifesto canônico. A independência de atualização é outro eixo: `bundled` acompanha a entrega conjunta, `component-slot` possui `current/previous/pending` e rollback individual, e `base-ab` pertence exclusivamente à Base crítica. Não inferir independência apenas porque existe um número de versão.
+`Internet` e `Notas` já possuem versões próprias sem que isso declare atualização independente de produção. Arquivos, Ajustes, Conta e Sistema também possuem identidade de componente mesmo enquanto seguem `bundled`.
+
+O estágio **Beta** vem da convenção first-party `0.x`; não vem do canal de entrega. `1.0.0` é reservado para a primeira versão estável daquele app.
+
+O Stable/MVP deve evoluir componentes apropriados para `component-slot` somente depois que verificação assinada, pending health, promoção e rollback estiverem implementados e provados. Até lá, não apresentar `git-app` como mecanismo público de atualização independente.
+
+## Fonte dos valores atuais e prevenção de documentação obsoleta
+
+- `system/contracts/product-version.mjs` é a fonte runtime da versão do produto;
+- os manifests/component owners em `system/` são a fonte das versões e `releaseMode` dos componentes;
+- `docs/CURRENT-STATE.md` registra o snapshot humano canônico desses valores;
+- `docs/contracts/update-nomenclature.json` registra as regras de identidade e distribuição;
+- testes do Foundation devem falhar quando esses valores canônicos divergirem.
+
+Uma alteração de versão/modo de release que deixe `CURRENT-STATE`, este documento ou o contrato de nomenclatura contraditórios é uma alteração incompleta.
 
 ## Compatibilidade do contrato atual
 

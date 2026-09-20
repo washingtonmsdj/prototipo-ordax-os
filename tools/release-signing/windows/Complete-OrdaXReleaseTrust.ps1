@@ -11,7 +11,9 @@ $ErrorActionPreference = 'Stop'
 
 $KeyId = 'ordax-prototype-release-v1'
 $ScriptRoot = [IO.Path]::GetFullPath($PSScriptRoot)
+$FinalizerPath = [IO.Path]::GetFullPath($PSCommandPath)
 $Signer = Join-Path $ScriptRoot 'ordax-release-signing.exe'
+$ToolkitProvenancePath = Join-Path $ScriptRoot 'provenance.json'
 
 if ([string]::IsNullOrWhiteSpace($PrimaryPrivateKeyPath)) {
     if ([string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
@@ -49,10 +51,42 @@ function Assert-PrivateOutsideToolkit([string]$Path, [string]$Label) {
 }
 
 Assert-RegularFile $Signer 'release signer'
+Assert-RegularFile $ToolkitProvenancePath 'toolkit provenance'
+Assert-RegularFile $FinalizerPath 'trust recovery finalizer'
 Assert-RegularFile $PrimaryPrivateKeyPath 'primary private key'
 Assert-RegularFile $RecoveredPrivateKeyPath 'recovered private key'
 Assert-PrivateOutsideToolkit $PrimaryPrivateKeyPath 'Primary private key'
 Assert-PrivateOutsideToolkit $RecoveredPrivateKeyPath 'Recovered private key'
+
+$ToolkitProvenance = Get-Content -LiteralPath $ToolkitProvenancePath -Raw | ConvertFrom-Json
+if ($ToolkitProvenance.'$schema' -ne 'prototype-ordax.windows-prototype-toolkit/2' -or
+    $ToolkitProvenance.status -ne 'candidate') {
+    throw 'Toolkit provenance schema or status is invalid.'
+}
+if ($ToolkitProvenance.source_repository -ne 'washingtonmsdj/prototipo-ordax-os' -or
+    $ToolkitProvenance.source_event -ne 'push' -or
+    $ToolkitProvenance.source_ref -ne 'refs/heads/main' -or
+    $ToolkitProvenance.canonical_trust_ceremony_eligible -ne $true) {
+    throw 'Canonical trust ceremony requires a toolkit produced by a push of the canonical main branch.'
+}
+$ToolkitSourceCommit = [string]$ToolkitProvenance.source_commit
+if ($ToolkitSourceCommit -notmatch '^[0-9a-f]{40}$') {
+    throw 'Toolkit provenance source_commit must be exactly 40 lowercase hexadecimal characters.'
+}
+$ExpectedSignerSha256 = [string]$ToolkitProvenance.components.release_signer.sha256
+$ExpectedFinalizerSha256 = [string]$ToolkitProvenance.components.trust_recovery_finalizer.sha256
+if ($ExpectedSignerSha256 -notmatch '^[0-9a-f]{64}$' -or
+    $ExpectedFinalizerSha256 -notmatch '^[0-9a-f]{64}$') {
+    throw 'Toolkit provenance component hashes are invalid.'
+}
+$ActualSignerSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $Signer).Hash.ToLowerInvariant()
+$ActualFinalizerSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $FinalizerPath).Hash.ToLowerInvariant()
+if ($ActualSignerSha256 -ne $ExpectedSignerSha256) {
+    throw 'Release signer bytes do not match toolkit provenance.'
+}
+if ($ActualFinalizerSha256 -ne $ExpectedFinalizerSha256) {
+    throw 'Trust recovery finalizer bytes do not match toolkit provenance.'
+}
 
 $TrustPath = Join-Path $ReviewDirectory 'release-ed25519.json'
 $PrimaryDerivedPath = Join-Path $ReviewDirectory 'release-ed25519-derived.json'
@@ -78,6 +112,17 @@ if ($InitialResult.'$schema' -ne 'prototype-ordax.release-trust-ceremony-result/
     $InitialResult.offline_encrypted_backup_required -ne $true -or
     $InitialResult.ready_to_pin_public_anchor -ne $false) {
     throw 'Initial trust ceremony result is not the expected fail-closed pre-recovery state.'
+}
+$InitialSourceCommit = [string]$InitialResult.source_commit
+if ($InitialSourceCommit -ne $ToolkitSourceCommit) {
+    throw 'Initial trust ceremony source_commit does not match toolkit provenance.'
+}
+$ProofManifest = Get-Content -LiteralPath $ProofManifestPath -Raw | ConvertFrom-Json
+if ($ProofManifest.'$schema' -ne 'prototype-ordax.release-manifest/1' -or
+    $ProofManifest.source_repository -ne 'washingtonmsdj/prototipo-ordax-os' -or
+    [string]$ProofManifest.source_commit -ne $ToolkitSourceCommit -or
+    [string]$ProofManifest.release_id -ne $ToolkitSourceCommit) {
+    throw 'Trust proof manifest source identity does not match toolkit provenance.'
 }
 foreach ($path in @(
     $RecoveryDerivedPath,
@@ -258,6 +303,9 @@ finally {
 
 Write-Host ''
 Write-Host 'OFFLINE_RECOVERY_VERIFIED=YES'
+Write-Host "SOURCE_COMMIT=$ToolkitSourceCommit"
+Write-Host 'TOOLKIT_COMPONENT_HASHES_VERIFIED=YES'
+Write-Host 'TRUST_PROOF_SOURCE_IDENTITY_MATCH=YES'
 Write-Host 'PRIMARY_PUBLIC_DERIVATION_MATCH=YES'
 Write-Host 'RECOVERED_PUBLIC_DERIVATION_MATCH=YES'
 Write-Host 'RECOVERED_PRIVATE_PATH_DISTINCT=YES'
