@@ -40,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m unittest tests.test_surface_runtime_source_contract -v
-          python -m py_compile bootstrap/surface-runtime/discover_lock.py
+          python -m py_compile bootstrap/surface-runtime/discover_lock.py bootstrap/surface-runtime/build.py
 
       - name: Resolve full transitive Alpine package lock
         run: |
