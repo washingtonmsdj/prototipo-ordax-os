@@ -179,3 +179,177 @@ jobs:
           done < "$temp_dir/candidates.txt"
 
           echo "Cleanup complete. Deleted=$deleted skipped=$failed"
+
+
+  prune-fully-contained-heads:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete branches with no commits outside main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+
+          gh api --paginate --slurp "repos/$REPOSITORY/pulls?state=open&per_page=100" > "$temp_dir/open.json"
+          gh api --paginate --slurp "repos/$REPOSITORY/branches?per_page=100" > "$temp_dir/branches.json"
+
+          REPOSITORY="$REPOSITORY" TEMP_DIR="$temp_dir" python <<'PY'
+          import json
+          import os
+          import subprocess
+          import urllib.parse
+          from pathlib import Path
+
+          repo = os.environ["REPOSITORY"]
+          root = Path(os.environ["TEMP_DIR"])
+
+          def load_pages(name):
+              pages = json.loads((root / name).read_text(encoding="utf-8"))
+              return [item for page in pages for item in page]
+
+          open_prs = load_pages("open.json")
+          branches = load_pages("branches.json")
+
+          open_heads = {
+              pr["head"]["ref"]
+              for pr in open_prs
+              if pr.get("head", {}).get("repo")
+              and pr["head"]["repo"].get("full_name") == repo
+          }
+
+          preserve = {"main", "ordax-rescue"} | open_heads
+          candidates = []
+
+          for branch in branches:
+              ref = branch["name"]
+              if ref in preserve:
+                  continue
+
+              encoded_compare = urllib.parse.quote(f"main...{ref}", safe=".")
+              result = subprocess.run(
+                  ["gh", "api", f"repos/{repo}/compare/{encoded_compare}"],
+                  capture_output=True,
+                  text=True,
+              )
+              if result.returncode != 0:
+                  print(f"Preserving {ref}: compare failed")
+                  continue
+
+              compare = json.loads(result.stdout)
+              if int(compare.get("ahead_by", 1)) == 0:
+                  candidates.append(ref)
+
+          (root / "contained.txt").write_text(
+              "".join(f"{ref}\n" for ref in candidates),
+              encoding="utf-8",
+          )
+          print(f"Fully contained branches eligible for deletion: {len(candidates)}")
+          PY
+
+          while IFS= read -r ref; do
+            [[ -n "$ref" ]] || continue
+            encoded_ref="$(
+              REF="$ref" python -c 'import os, urllib.parse; print(urllib.parse.quote("heads/" + os.environ["REF"], safe=""))'
+            )"
+            gh api --method DELETE "repos/$REPOSITORY/git/refs/$encoded_ref"
+            echo "Deleted fully-contained branch: $ref"
+          done < "$temp_dir/contained.txt"
+
+  prune-reviewed-superseded-heads:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete explicitly reviewed superseded closed PR branches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          reviewed=(
+            "feat/stable-release-inspection"
+            "feat/esp-bootloader-candidate-binding"
+            "feat/systemd-boot-counting-proof"
+            "refactor/notes-editor-save"
+            "work/internet-browser-foundation"
+            "feat/autonomous-base-stage-only-v2"
+            "feat/autonomous-base-stage-only"
+            "feat/pinned-release-agent-refresh"
+            "fix/honest-base-refresh-restart-proof"
+            "feature/base-update-fat32-proof"
+            "feature/kernel-acpi-battery-support"
+            "test/lightweight-live-latency-probe-v2"
+            "feature/fast-lightweight-staging-metrics"
+            "feature/surface-ui-heartbeat-v2"
+            "fix/markdown-no-runtime-apply"
+            "fix/dev-base-module-budget"
+          )
+
+          owner="${REPOSITORY%%/*}"
+
+          for ref in "${reviewed[@]}"; do
+            current_sha="$(
+              gh api "repos/$REPOSITORY/branches/$ref" --jq '.commit.sha' 2>/dev/null || true
+            )"
+            if [[ -z "$current_sha" ]]; then
+              echo "Already absent: $ref"
+              continue
+            fi
+
+            open_count="$(
+              gh api "repos/$REPOSITORY/pulls?state=open&head=$owner:$ref&per_page=1" --jq 'length'
+            )"
+            if [[ "$open_count" != "0" ]]; then
+              echo "Preserving $ref because it has an open PR"
+              continue
+            fi
+
+            closed_json="$(
+              gh api --paginate "repos/$REPOSITORY/pulls?state=closed&head=$owner:$ref&per_page=100"
+            )"
+
+            expected_sha="$(
+              CLOSED_JSON="$closed_json" REF="$ref" python <<'PY'
+          import json
+          import os
+
+          pages = json.loads(os.environ["CLOSED_JSON"])
+          if isinstance(pages, dict):
+              pages = [pages]
+
+          prs = []
+          for page in pages:
+              if isinstance(page, list):
+                  prs.extend(page)
+
+          ref = os.environ["REF"]
+          matches = [
+              pr for pr in prs
+              if pr.get("head", {}).get("ref") == ref
+              and pr.get("merged_at") is None
+              and pr.get("closed_at")
+          ]
+          matches.sort(key=lambda pr: pr["closed_at"])
+          if matches:
+              print(matches[-1]["head"]["sha"])
+          PY
+            )"
+
+            if [[ -z "$expected_sha" || "$current_sha" != "$expected_sha" ]]; then
+              echo "Preserving $ref because its tip no longer matches the reviewed closed PR"
+              continue
+            fi
+
+            encoded_ref="$(
+              REF="$ref" python -c 'import os, urllib.parse; print(urllib.parse.quote("heads/" + os.environ["REF"], safe=""))'
+            )"
+            gh api --method DELETE "repos/$REPOSITORY/git/refs/$encoded_ref"
+            echo "Deleted reviewed superseded branch: $ref"
+          done
