@@ -46,7 +46,12 @@ class NativeQemuBootProofContractTests(unittest.TestCase):
     def test_proof_uses_exact_verified_artifacts_and_real_boot_boundary(self):
         for marker in (
             "verify_inputs(args)",
-            '"sgdisk", "--new=1:2048:+1G"',
+            '"sgdisk"',
+            '"--new=1:2048:+1G"',
+            '"--new=2:0:0"',
+            '"--change-name=1:ORDAX-ESP"',
+            '"--change-name=2:ORDAX-POOL"',
+            '"losetup", "--find", "--show", "--partscan"',
             '"cryptsetup", "luksFormat"',
             '"mkfs.btrfs"',
             '"qemu-system-x86_64"',
