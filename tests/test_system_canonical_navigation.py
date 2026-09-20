@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SYSTEM = ROOT / "system" / "surface" / "ui" / "system-overview-controls.mjs"
 UPDATE = ROOT / "system" / "surface" / "ui" / "update-controls.mjs"
 PRESENTATION = ROOT / "system" / "services" / "update" / "presentation.mjs"
+COMPONENT_PRESENTATION = ROOT / "system" / "services" / "components" / "update-presentation.mjs"
 SURFACE = ROOT / "system" / "surface" / "ui" / "surface.mjs"
 CSS = ROOT / "system" / "surface" / "ui" / "system.css"
 NATIVE = ROOT / "system" / "composition" / "native" / "main.mjs"
@@ -56,6 +57,21 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
         self.assertIn("readableUpdatePhase", presentation)
         self.assertIn("readableUpdateMode", presentation)
         self.assertIn("America/Bahia", presentation)
+
+    def test_component_update_scopes_are_visible_in_system_updates(self):
+        system = SYSTEM.read_text(encoding="utf-8")
+        component_presentation = COMPONENT_PRESENTATION.read_text(encoding="utf-8")
+        self.assertIn("services/components/update-presentation.mjs", system)
+        self.assertIn("createComponentUpdateScopes(componentSnapshot)", system)
+        self.assertIn("renderComponentUpdateScopes(view)", system)
+        self.assertIn('"OrdaX e sistema"', system)
+        self.assertIn('"Aplicativos"', system)
+        self.assertIn('" · Beta"', system)
+        self.assertIn("component.updateChannel.label", system)
+        self.assertIn("não representa uma Loja", system)
+        self.assertIn('"development-git"', component_presentation)
+        self.assertIn('"system-bundle"', component_presentation)
+        self.assertIn('"independent-component"', component_presentation)
 
     def test_transaction_details_remain_in_system_updates(self):
         system = SYSTEM.read_text(encoding="utf-8")
