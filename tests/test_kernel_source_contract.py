@@ -76,7 +76,7 @@ class KernelSourceContractTest(unittest.TestCase):
         builder = (ROOT / "bootstrap/kernel/build.py").read_text(encoding="utf-8")
         self.assertIn('os.environ.get("ORDAX_SOURCE_COMMIT"', builder)
         self.assertIn("reserved GITHUB_SHA is not provenance authority", builder)
-        self.assertIn("git\", \"rev-parse\", \"HEAD", builder)
+        self.assertIn('[git, "rev-parse", "HEAD"]', builder)
         self.assertNotIn('os.environ.get("GITHUB_SHA")', builder)
 
     def test_kernel_builder_can_verify_detached_head_without_git_binary(self):
