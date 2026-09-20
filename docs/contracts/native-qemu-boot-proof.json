@@ -86,5 +86,9 @@
     "physical-native-boot-proven",
     "physical-apply-authorized",
     "qemu-required-for-end-users"
-  ]
+  ],
+  "product_scope": "post-mvp-foundation",
+  "mvp_blocker": false,
+  "mvp_user_facing": false,
+  "foundation_retained": true
 }

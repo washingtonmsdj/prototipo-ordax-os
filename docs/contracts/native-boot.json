@@ -186,5 +186,10 @@
       "gpt-on-scsi-disk",
       "gpt-on-usb-storage"
     ]
-  }
+  },
+  "product_scope": "post-mvp-foundation",
+  "mvp_blocker": false,
+  "mvp_user_facing": false,
+  "foundation_retained": true,
+  "physical_write_authorized": false
 }

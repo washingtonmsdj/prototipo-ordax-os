@@ -4,7 +4,7 @@
 
 The permanent end-user experience belongs inside OrdaX Desktop, but the prototype may publish a small `ordax-creator.exe` shell before the complete Desktop UI exists. Both must use the same Creator Core; a second flasher policy implementation is forbidden.
 
-Goal: prepare USB media and the MVP Native SSD/NVMe/HD installation path without requiring Codex, WSL, QEMU or a kernel toolchain on the user's machine.
+Goal: prepare verified **USB media for the public MVP** without requiring Codex, WSL, QEMU or a kernel toolchain on the user's machine. Native SSD/NVMe/HDD work is retained as a post-MVP foundation and is not a public MVP capability.
 
 ```text
 tools/creator/
@@ -138,6 +138,9 @@ NATIVE_INSTALL_READ_ONLY_BROKER=IMPLEMENTED
 NATIVE_INSTALL_SURFACE_DISCOVERY_PORT=IMPLEMENTED
 NATIVE_INSTALL_PHYSICAL_APPLY=PENDING
 NATIVE_INSTALL_FIRST_BOOT_HEALTH=PENDING
+MVP_NATIVE_INSTALL_CAPABILITY=DISABLED
+MVP_INTERNAL_DISK_WRITE=FORBIDDEN
+NATIVE_INSTALL_FOUNDATION_PHASE=POST_MVP
 ```
 
 The development `OrdaX-Creator.exe` is intentionally useful for the graphical workflow, automatic development updates and safe USB discovery, but it cannot acquire a raw writer because its physical trust binding is unresolved. This separation prevents an ordinary development build from becoming destructive by accident.
@@ -173,6 +176,11 @@ ordax-creator stage-tree \
 
 See `docs/CREATOR-INSTALLATION.md`, `docs/PHYSICAL-MEDIA.md`, `docs/RELEASE-TRUST-CEREMONY.md` and `docs/PROMOTION-GATES.md`.
 
-## Native installation MVP
+## Native installation foundation — post-MVP
 
-The durable Native target geometry is already implemented by `PlanNativeDiskTargetStorage`. The first installer slice is now exposed as `ordax-creator plan-native --target-bytes <bytes>`, backed by `PlanNativeInstallation`. It is deliberately plan-only: it touches no device and cannot authorize physical APPLY. See `docs/NATIVE-INSTALLATION.md` and `docs/contracts/native-installation.json`.
+The durable Native target geometry, target-identity binding, boot assets and non-destructive planners remain implemented and covered by engineering proofs.
+
+`ordax-creator plan-native` and related Native commands belong to the **engineering CLI/proof surface**, not to the public Stable/MVP Creator experience. The official MVP Creator UI prepares removable OrdaX USB media only and must not advertise or authorize internal-disk installation.
+
+Native code remains in the same Creator Core so a later product promotion can activate it deliberately without creating a second installer or divergent storage policy.
+

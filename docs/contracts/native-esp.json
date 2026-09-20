@@ -60,5 +60,9 @@
     "qemu-uefi-boot": "pending",
     "physical-native-boot": "pending",
     "disposable_esp_contract": "docs/contracts/native-esp-proof.json"
-  }
+  },
+  "product_scope": "post-mvp-foundation",
+  "mvp_blocker": false,
+  "mvp_user_facing": false,
+  "foundation_retained": true
 }
