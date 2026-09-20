@@ -90,23 +90,25 @@ type PortableApplicationPlan struct {
 
 type portableMediaTarget struct {
 	partition string
-	target func(string) string
+	target func(string, string) string
 }
 
 var portableMediaTargets = map[string]portableMediaTarget{
-	"systemd-boot": {"ORDAX-ESP", func(string) string { return "/EFI/BOOT/BOOTX64.EFI" }},
-	"loader-config": {"ORDAX-ESP", func(string) string { return "/loader/loader.conf" }},
-	"loader-normal": {"ORDAX-ESP", func(string) string { return "/loader/entries/ordax-portable.conf" }},
-	"loader-recovery": {"ORDAX-ESP", func(string) string { return "/loader/entries/ordax-portable-recovery.conf" }},
-	"kernel": {"ORDAX-ESP", func(string) string { return "/ordax/vmlinuz" }},
-	"initramfs": {"ORDAX-ESP", func(string) string { return "/ordax/initrd.gz" }},
-	"bootstrap-capsule": {"ORDAX-ESP", func(string) string { return "/ordax/bootstrap/bootstrap.erofs" }},
-	"release-trust": {"ORDAX-ESP", func(string) string { return "/ordax/bootstrap/trust/release-ed25519.json" }},
-	"stable-base": {"ORDAX-DATA", func(string) string { return "/.ordax/base/stable-base.erofs" }},
-	"persistent-state": {"ORDAX-DATA", func(string) string { return "/.ordax/state/persistent-state.img" }},
-	"system-image": {"ORDAX-DATA", func(commit string) string { return "/.ordax/releases/" + commit + "/system.erofs" }},
-	"release-manifest": {"ORDAX-DATA", func(commit string) string { return "/.ordax/releases/" + commit + "/release-manifest.json" }},
-	"release-envelope": {"ORDAX-DATA", func(commit string) string { return "/.ordax/releases/" + commit + "/release-envelope.json" }},
+	"systemd-boot": {"ORDAX-ESP", func(string, string) string { return "/EFI/BOOT/BOOTX64.EFI" }},
+	"loader-config": {"ORDAX-ESP", func(string, string) string { return "/loader/loader.conf" }},
+	"loader-normal": {"ORDAX-ESP", func(string, string) string { return "/loader/entries/ordax-portable.conf" }},
+	"loader-recovery": {"ORDAX-ESP", func(string, string) string { return "/loader/entries/ordax-portable-recovery.conf" }},
+	"kernel": {"ORDAX-ESP", func(string, string) string { return "/ordax/vmlinuz" }},
+	"initramfs": {"ORDAX-ESP", func(string, string) string { return "/ordax/initrd.gz" }},
+	"bootstrap-capsule": {"ORDAX-ESP", func(string, string) string { return "/ordax/bootstrap/bootstrap.erofs" }},
+	"release-trust": {"ORDAX-ESP", func(string, string) string { return "/ordax/bootstrap/trust/release-ed25519.json" }},
+	"stable-base": {"ORDAX-DATA", func(string, string) string { return "/.ordax/base/stable-base.erofs" }},
+	"persistent-state": {"ORDAX-DATA", func(string, string) string { return "/.ordax/state/persistent-state.img" }},
+	"system-image": {"ORDAX-DATA", func(commit, _ string) string { return "/.ordax/releases/" + commit + "/system.erofs" }},
+	"surface-runtime-image": {"ORDAX-DATA", func(_, digest string) string { return "/.ordax/runtimes/sha256/" + digest + "/native-surface-runtime.erofs" }},
+	"surface-runtime-ref": {"ORDAX-DATA", func(commit, _ string) string { return "/.ordax/releases/" + commit + "/surface-runtime.sha256" }},
+	"release-manifest": {"ORDAX-DATA", func(commit, _ string) string { return "/.ordax/releases/" + commit + "/release-manifest.json" }},
+	"release-envelope": {"ORDAX-DATA", func(commit, _ string) string { return "/.ordax/releases/" + commit + "/release-envelope.json" }},
 }
 
 func ParsePortableMediaBindings(data []byte) (PortableMediaBindings, error) {
@@ -179,7 +181,7 @@ func PlanPortableMedia(targetBytes uint64, sourceCommit string, bindings Portabl
 		seen[binding.ID] = true
 		if !validPortableMediaSHA256(binding.SHA256) { return PortableMediaPlan{}, fmt.Errorf("portable media artifact %q has invalid SHA-256", binding.ID) }
 		if binding.SizeBytes == 0 || binding.SizeBytes > portableMediaMaxArtifact { return PortableMediaPlan{}, fmt.Errorf("portable media artifact %q size is outside allowed range", binding.ID) }
-		artifacts = append(artifacts, PortableMediaArtifactPlan{ID: binding.ID, Partition: target.partition, TargetPath: target.target(sourceCommit), SHA256: binding.SHA256, SizeBytes: binding.SizeBytes})
+		artifacts = append(artifacts, PortableMediaArtifactPlan{ID: binding.ID, Partition: target.partition, TargetPath: target.target(sourceCommit, binding.SHA256), SHA256: binding.SHA256, SizeBytes: binding.SizeBytes})
 	}
 	for id := range portableMediaTargets { if !seen[id] { return PortableMediaPlan{}, fmt.Errorf("missing portable media artifact id %q", id) } }
 	sort.Slice(artifacts, func(i, j int) bool {
@@ -228,7 +230,7 @@ func validatePortableMediaPlanForApplication(plan PortableMediaPlan) (TargetStor
 			return TargetStorageProfile{}, fmt.Errorf("portable application artifact identity is invalid: %q", artifact.ID)
 		}
 		seen[artifact.ID] = true
-		expectedPath := target.target(plan.SourceCommit)
+		expectedPath := target.target(plan.SourceCommit, artifact.SHA256)
 		if artifact.Partition != target.partition || artifact.TargetPath != expectedPath {
 			return TargetStorageProfile{}, fmt.Errorf("portable application artifact %q destination differs from Core policy", artifact.ID)
 		}
