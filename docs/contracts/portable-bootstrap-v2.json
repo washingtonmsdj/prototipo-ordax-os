@@ -108,7 +108,7 @@
       "hash_verification_helper_fixed_paths": true,
       "hash_verification_helper_provenance_recorded": true,
       "hash_verification_helper_mounts_capsule": false,
-      "hash_verification_helper_pid1_connected": false
+      "hash_verification_helper_pid1_connected": true
     }
   },
   "release_trust": {
