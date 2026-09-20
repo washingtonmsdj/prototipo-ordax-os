@@ -9,6 +9,7 @@ NETWORK_BRINGUP=/ordax/bootstrap/network/bring-up
 RELEASE_AGENT=/ordax/bootstrap/release-acquisition/ordax-release-agent
 RELEASE_TRUST=/ordax/bootstrap/trust/release-ed25519.json
 RELEASE_CHANNEL=/ordax/bootstrap/config/release-envelope-url
+PRODUCT_MODE_FILE=/ordax/bootstrap/config/product-mode
 RECOVERY_ENTRYPOINT=/ordax/bootstrap/recovery/entrypoint
 
 log() {
@@ -33,6 +34,19 @@ is_sha() {
     return 0
 }
 
+product_mode() {
+    [ -f "$PRODUCT_MODE_FILE" ] && [ ! -L "$PRODUCT_MODE_FILE" ] || return 1
+    value=$(/bin/busybox cat "$PRODUCT_MODE_FILE" 2>/dev/null || true)
+    case "$value" in
+        usb|native-disk)
+            printf '%s' "$value"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 current_release_sha() {
     [ -L /ordax/current ] || return 1
     target=$(/bin/busybox readlink /ordax/current 2>/dev/null || true)
@@ -55,8 +69,10 @@ current_release_sha() {
 boot_current() {
     [ -x "$CURRENT_ENTRYPOINT" ] || return 1
     source_sha=$(current_release_sha) || recovery "current release identity is invalid"
+    mode=$(product_mode) || recovery "product mode identity is missing or invalid"
     log "booting current verified release without requiring network"
     ORDAX_DISTRIBUTION_PROFILE=stable-mvp \
+    ORDAX_PRODUCT_MODE="$mode" \
     ORDAX_SOURCE_SHA="$source_sha" \
         exec "$CURRENT_ENTRYPOINT"
 }
@@ -69,6 +85,7 @@ boot_current || true
 [ -x "$RELEASE_AGENT" ] || recovery "release acquisition agent is missing"
 [ -f "$RELEASE_TRUST" ] || recovery "release trust anchor is missing"
 [ -f "$RELEASE_CHANNEL" ] || recovery "release channel configuration is missing"
+product_mode >/dev/null || recovery "product mode identity is missing or invalid"
 
 log "no active release; bringing up minimum network for first acquisition"
 "$NETWORK_BRINGUP" || recovery "minimum network bring-up failed"
