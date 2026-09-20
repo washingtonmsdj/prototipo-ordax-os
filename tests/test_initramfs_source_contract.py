@@ -296,6 +296,9 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertFalse(reader["verifies_signature"])
         self.assertFalse(reader["writes_activation_state"])
         self.assertTrue(reader["pid1_connected"])
+        self.assertTrue(
+            CONTRACT["portable_v2_prerequisites"]["activation_selection_pid1_connected"]
+        )
         self.assertTrue(reader["static"])
         self.assertTrue(reader["read_only"])
         self.assertEqual(reader["accepted_slots"], ["current", "known-good", "candidate"])
