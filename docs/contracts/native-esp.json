@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.native-esp/1",
-  "status": "plan-only-artifacts-pending",
+  "status": "candidate-proof-defined-execution-pending",
   "physical_write_authorized": false,
   "bootloader": {
     "shared_source_contract": "boot/esp/source.json",
@@ -54,10 +54,11 @@
     "portable-usb-entry-reuse"
   ],
   "proof": {
-    "entry-rendering": "pending",
-    "artifact-byte-verification": "pending",
-    "fat32-disposable-materialization": "pending",
+    "entry-rendering": "pending-ci",
+    "artifact-byte-verification": "pending-ci",
+    "fat32-disposable-materialization": "pending-ci",
     "qemu-uefi-boot": "pending",
-    "physical-native-boot": "pending"
+    "physical-native-boot": "pending",
+    "disposable_esp_contract": "docs/contracts/native-esp-proof.json"
   }
 }
