@@ -22,7 +22,8 @@
     "release-acquisition",
     "release-trust",
     "release-channel",
-    "recovery-maintenance"
+    "recovery-maintenance",
+    "product-mode-identity"
   ],
   "optional_after_first_release": [
     "stable-device-identity",
@@ -120,10 +121,10 @@
         {
           "source_path": "bootstrap/entrypoint",
           "target_path": "/ordax/bootstrap/entrypoint",
-          "sha256": "2bc4c9fe80f17a19e37376fd7a0736b396b102dba620e2de4fb3fd02e5f80bb9",
+          "sha256": "b8f1410cddc3e4102b4e45e49318ed8d0258d63d93eec064201bb1692ce5645a",
           "mode": "0755",
           "logical_owner": "bootstrap-orchestrator",
-          "reason": "Prefer known-good offline current release, otherwise acquire the first signed release through bounded network/bootstrap owners"
+          "reason": "Prefer known-good offline current release, bind explicit USB/native-disk product mode, otherwise acquire the first signed release through bounded network/bootstrap owners"
         }
       ]
     },
@@ -199,6 +200,23 @@
           "mode": "0644",
           "logical_owner": "bootstrap-release-channel",
           "reason": "Stable HTTPS pointer to the latest published signed release envelope on GitHub Releases; signature verification remains authoritative"
+        }
+      ]
+    },
+    {
+      "id": "bootstrap-product-mode",
+      "partition": "ORDAX",
+      "target_root": "/ordax/bootstrap/config",
+      "source_owner": "bootstrap/config",
+      "resolved": true,
+      "artifacts": [
+        {
+          "source_path": "bootstrap/config/product-mode",
+          "target_path": "/ordax/bootstrap/config/product-mode",
+          "sha256": "061cf818f40b71172bd25675ca6e55123e561945541bfcab59a861a71b495674",
+          "mode": "0644",
+          "logical_owner": "bootstrap-product-mode",
+          "reason": "Explicit execution-mode identity; prepared USB carries usb and a future Native installation must materialize native-disk on the installed target"
         }
       ]
     },
