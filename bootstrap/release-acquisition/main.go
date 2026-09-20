@@ -27,6 +27,7 @@ const (
 	envelopeSchema   = "prototype-ordax.release-envelope/1"
 	manifestSchema   = "prototype-ordax.release-manifest/1"
 	manifestSchemaV2 = "prototype-ordax.release-manifest/2"
+	manifestSchemaV3 = "prototype-ordax.release-manifest/3"
 	trustSchema      = "prototype-ordax.release-trust/1"
 	defaultRepo    = "washingtonmsdj/prototipo-ordax-os"
 	maxEnvelope    = 1 << 20
@@ -105,7 +106,8 @@ type InspectReceipt struct {
 	ArtifactRole        string `json:"artifact_role"`
 	ArtifactURL         string `json:"artifact_url"`
 	ArtifactSHA256      string `json:"artifact_sha256"`
-	ArtifactSize        int64  `json:"artifact_size"`
+	ArtifactSize        int64      `json:"artifact_size"`
+	Artifacts           []Artifact `json:"artifacts,omitempty"`
 }
 
 type ExactActivationReceipt struct {
@@ -122,6 +124,8 @@ type PortableMaterializeReceipt struct {
 	SourceCommit      string `json:"source_commit"`
 	ReleasePath       string `json:"release_path"`
 	ArtifactPath      string `json:"artifact_path"`
+	RuntimePath       string `json:"runtime_path,omitempty"`
+	RuntimeReused     bool   `json:"runtime_reused,omitempty"`
 	Idempotent        bool   `json:"idempotent"`
 	ActivationAllowed bool   `json:"activation_allowed"`
 }
@@ -131,6 +135,7 @@ type PortableVerifyReceipt struct {
 	SourceCommit      string `json:"source_commit"`
 	ReleasePath       string `json:"release_path"`
 	ArtifactPath      string `json:"artifact_path"`
+	RuntimePath       string `json:"runtime_path,omitempty"`
 	ActivationAllowed bool   `json:"activation_allowed"`
 }
 
@@ -219,51 +224,61 @@ func validateManifest(m Manifest, expectedRepo string) error {
 	if !recipePattern.MatchString(m.CreatedFromCIRecipe) {
 		return errors.New("invalid created_from_ci_recipe")
 	}
-	if len(m.Artifacts) != 1 {
-		switch m.Schema {
-		case manifestSchema:
-			return errors.New("release-manifest/1 requires exactly one system.tar artifact")
-		case manifestSchemaV2:
-			return errors.New("release-manifest/2 requires exactly one system.erofs artifact")
-		default:
-			return errors.New("unsupported release manifest schema")
-		}
-	}
 
-	a := m.Artifacts[0]
 	switch m.Schema {
 	case manifestSchema:
+		if len(m.Artifacts) != 1 {
+			return errors.New("release-manifest/1 requires exactly one system.tar artifact")
+		}
 		if m.ProductMode != "" || m.StorageProfile != "" || m.RuntimeFormat != "" {
 			return errors.New("release-manifest/1 forbids portable-v2 identity fields")
 		}
-		if a.Name != "system.tar" || a.Role != "system" {
+		if m.Artifacts[0].Name != "system.tar" || m.Artifacts[0].Role != "system" {
 			return errors.New("release-manifest/1 artifact must be system.tar with role=system")
 		}
 	case manifestSchemaV2:
+		if len(m.Artifacts) != 1 {
+			return errors.New("release-manifest/2 requires exactly one system.erofs artifact")
+		}
 		if m.ProductMode != "usb" || m.StorageProfile != "portable-usb-v2" || m.RuntimeFormat != "erofs" {
 			return errors.New("release-manifest/2 requires usb portable-usb-v2 erofs identity")
 		}
-		if a.Name != "system.erofs" || a.Role != "system-image" {
+		if m.Artifacts[0].Name != "system.erofs" || m.Artifacts[0].Role != "system-image" {
 			return errors.New("release-manifest/2 artifact must be system.erofs with role=system-image")
+		}
+	case manifestSchemaV3:
+		if len(m.Artifacts) != 2 {
+			return errors.New("release-manifest/3 requires exactly system.erofs and native-surface-runtime.erofs")
+		}
+		if m.ProductMode != "usb" || m.StorageProfile != "portable-usb-v2" || m.RuntimeFormat != "erofs" {
+			return errors.New("release-manifest/3 requires usb portable-usb-v2 erofs identity")
+		}
+		if m.Artifacts[0].Name != "system.erofs" || m.Artifacts[0].Role != "system-image" {
+			return errors.New("release-manifest/3 first artifact must be system.erofs with role=system-image")
+		}
+		if m.Artifacts[1].Name != "native-surface-runtime.erofs" || m.Artifacts[1].Role != "surface-runtime" {
+			return errors.New("release-manifest/3 second artifact must be native-surface-runtime.erofs with role=surface-runtime")
 		}
 	default:
 		return errors.New("unsupported release manifest schema")
 	}
 
-	if !namePattern.MatchString(a.Name) || filepath.Base(a.Name) != a.Name || strings.ContainsAny(a.Name, `/\\`) {
-		return fmt.Errorf("unsafe artifact name: %q", a.Name)
-	}
-	if !rolePattern.MatchString(a.Role) {
-		return fmt.Errorf("invalid artifact role: %q", a.Role)
-	}
-	if !shaPattern.MatchString(a.SHA256) {
-		return fmt.Errorf("invalid artifact SHA-256 for %q", a.Name)
-	}
-	if a.Size <= 0 || a.Size > maxArtifact {
-		return fmt.Errorf("artifact size outside allowed range for %q", a.Name)
-	}
-	if err := validateHTTPSURL(a.URL); err != nil {
-		return fmt.Errorf("artifact %q: %w", a.Name, err)
+	for _, a := range m.Artifacts {
+		if !namePattern.MatchString(a.Name) || filepath.Base(a.Name) != a.Name || strings.ContainsAny(a.Name, `/\\`) {
+			return fmt.Errorf("unsafe artifact name: %q", a.Name)
+		}
+		if !rolePattern.MatchString(a.Role) {
+			return fmt.Errorf("invalid artifact role: %q", a.Role)
+		}
+		if !shaPattern.MatchString(a.SHA256) {
+			return fmt.Errorf("invalid artifact SHA-256 for %q", a.Name)
+		}
+		if a.Size <= 0 || a.Size > maxArtifact {
+			return fmt.Errorf("artifact size outside allowed range for %q", a.Name)
+		}
+		if err := validateHTTPSURL(a.URL); err != nil {
+			return fmt.Errorf("artifact %q: %w", a.Name, err)
+		}
 	}
 	return nil
 }
@@ -1051,7 +1066,7 @@ func inspectRelease(client *http.Client, envelopeURL string, trust TrustAnchor, 
 		return InspectReceipt{}, err
 	}
 	artifact := manifest.Artifacts[0]
-	return InspectReceipt{
+	receipt := InspectReceipt{
 		Status:              "verified",
 		ManifestSchema:      manifest.Schema,
 		SourceCommit:        manifest.SourceCommit,
@@ -1065,7 +1080,11 @@ func inspectRelease(client *http.Client, envelopeURL string, trust TrustAnchor, 
 		ArtifactURL:         artifact.URL,
 		ArtifactSHA256:      artifact.SHA256,
 		ArtifactSize:        artifact.Size,
-	}, nil
+	}
+	if manifest.Schema == manifestSchemaV3 {
+		receipt.Artifacts = append([]Artifact(nil), manifest.Artifacts...)
+	}
+	return receipt, nil
 }
 
 func materialize(client *http.Client, envelopeURL, root string, trust TrustAnchor, key ed25519.PublicKey, expectedRepo, expectedCommit string) (MaterializeReceipt, error) {
