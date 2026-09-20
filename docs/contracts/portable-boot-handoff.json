@@ -96,6 +96,7 @@
     "portable_handoff_helper_writes_activation_state": false,
     "portable_handoff_helper_operations": [
       "mount-state",
+      "mount-capsule",
       "mount-base",
       "mount-system"
     ],
@@ -111,7 +112,13 @@
     ],
     "candidate_is_boot_authority": false,
     "selection_requires_materialized_release_shape": true,
-    "selection_signature_verification_delegated_to_release_agent": true
+    "selection_signature_verification_delegated_to_release_agent": true,
+    "bootstrap_capsule_hash_check_primitive_implemented": true,
+    "bootstrap_capsule_hash_check_owner": "busybox-sha256sum",
+    "bootstrap_capsule_mount_helper_implemented": true,
+    "bootstrap_capsule_mount_read_only": true,
+    "bootstrap_capsule_payload_shape_checked": true,
+    "bootstrap_capsule_pid1_connected": false
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",

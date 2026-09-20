@@ -100,6 +100,7 @@
       "static": true,
       "operations": [
         "mount-state",
+        "mount-capsule",
         "mount-base",
         "mount-system"
       ],
@@ -117,7 +118,12 @@
       "base_runtime_view": "overlayfs",
       "base_overlay_state_root": "/ordax/base",
       "system_persistent_overlay": false,
-      "base_read_only_lower": true
+      "base_read_only_lower": true,
+      "capsule_filesystem": "erofs",
+      "capsule_read_only": true,
+      "capsule_payload_shape_checked": true,
+      "capsule_hash_verification_performed_by_mount_helper": false,
+      "capsule_hash_verification_owner": "busybox-sha256sum-against-initramfs-pin"
     },
     "handoff_helper_pid1_connected": false,
     "bootstrap_capsule_pin": {
@@ -129,7 +135,9 @@
       "capsule_erofs_magic_checked": true,
       "pid1_enforced": false,
       "default_candidate_build_pinned": false,
-      "physical_boot_authorized": false
+      "physical_boot_authorized": false,
+      "sha256sum_applet": true,
+      "pin_format": "sha256sum-check-file"
     },
     "activation_selection_helper_implemented": true,
     "activation_selection_pid1_connected": false

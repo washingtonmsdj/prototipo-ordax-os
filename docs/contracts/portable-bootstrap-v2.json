@@ -88,7 +88,9 @@
       "initramfs_hash_pin_disposable_proof_implemented": true,
       "initramfs_hash_pin_candidate_only": true,
       "initramfs_hash_pin_default_candidate_build_enabled": false,
-      "pid1_hash_enforcement_implemented": false
+      "pid1_hash_enforcement_implemented": false,
+      "hash_verification_primitive_implemented": true,
+      "read_only_mount_helper_implemented": true
     }
   },
   "release_trust": {
@@ -158,7 +160,11 @@
       "selects_release": false,
       "verifies_signature": false,
       "writes_activation_state": false,
-      "pid1_connected": false
+      "pid1_connected": false,
+      "mounts_bootstrap_capsule_erofs_read_only": true,
+      "checks_bootstrap_capsule_payload_shape": true,
+      "verifies_capsule_hash": false,
+      "capsule_hash_verification_owner": "busybox-sha256sum-against-initramfs-pin"
     }
   },
   "stable_base": {

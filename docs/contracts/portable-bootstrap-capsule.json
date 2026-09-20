@@ -68,7 +68,10 @@
     "capsule_hash_pin_disposable_proof_workflow": ".github/workflows/portable-initramfs-capsule-pin.yml",
     "pid1_hash_enforcement_implemented": false,
     "capsule_hash_pin_candidate_only": true,
-    "capsule_hash_pin_default_candidate_build_enabled": false
+    "capsule_hash_pin_default_candidate_build_enabled": false,
+    "hash_check_primitive_implemented": true,
+    "hash_check_primitive": "busybox-sha256sum",
+    "read_only_mount_helper_implemented": true
   },
   "proof": {
     "workflow": ".github/workflows/portable-bootstrap-capsule.yml",

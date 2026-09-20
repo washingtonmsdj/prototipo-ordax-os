@@ -114,6 +114,42 @@ jobs:
           print('PHYSICAL_BOOT_AUTHORIZED=NO')
           PY
 
+      - name: Prove pinned capsule hash and isolated read-only mount
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-pin"
+          rootfs="$work/initramfs-work/rootfs"
+          expected="$rootfs/ordax-esp/ordax/bootstrap/bootstrap.erofs"
+          mkdir -p "$(dirname "$expected")" "$work/capsule-mount"
+          cp "$work/bootstrap.erofs" "$expected"
+
+          sudo chroot "$rootfs" /bin/busybox sha256sum -c             /etc/ordax/portable-bootstrap-capsule.sha256
+
+          helper="$work/initramfs-work/ordax-portable-mount"
+          sudo "$helper" mount-capsule "$expected" "$work/capsule-mount"
+          test -x "$work/capsule-mount/bootstrap/release-acquisition/ordax-release-agent"
+          test -x "$work/capsule-mount/bootstrap/recovery/entrypoint"
+          test -s "$work/capsule-mount/bootstrap/config/release-envelope-url"
+          if printf 'forbidden\n' | sudo tee "$work/capsule-mount/.write-proof" >/dev/null 2>&1; then
+            echo 'bootstrap capsule unexpectedly accepted a write' >&2
+            exit 1
+          fi
+          sudo umount "$work/capsule-mount"
+
+          cp "$expected" "$work/tampered-bootstrap.erofs"
+          printf X | dd of="$work/tampered-bootstrap.erofs" bs=1 seek=2048 conv=notrunc status=none
+          cp "$work/tampered-bootstrap.erofs" "$expected"
+          if sudo chroot "$rootfs" /bin/busybox sha256sum -c               /etc/ordax/portable-bootstrap-capsule.sha256; then
+            echo 'tampered bootstrap capsule passed initramfs hash pin' >&2
+            exit 1
+          fi
+
+          echo 'PORTABLE_BOOTSTRAP_CAPSULE_HASH_ENFORCEMENT_PRIMITIVE=PASS'
+          echo 'PORTABLE_BOOTSTRAP_CAPSULE_READ_ONLY_MOUNT=PASS'
+          echo 'TAMPERED_CAPSULE_REJECTED=PASS'
+          echo 'PID1_CONNECTED=NO'
+          echo 'PHYSICAL_BOOT_AUTHORIZED=NO'
+
       - name: Upload proof metadata only
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:

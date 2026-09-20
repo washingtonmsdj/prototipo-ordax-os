@@ -31,6 +31,7 @@ static void usage(void) {
     fputs(
         "usage:\n"
         "  ordax-portable-mount mount-state <state.img> <state-mount>\n"
+        "  ordax-portable-mount mount-capsule <bootstrap.erofs> <capsule-mount>\n"
         "  ordax-portable-mount mount-base <stable-base.erofs> <state-mount> <base-mount> <root-mount>\n"
         "  ordax-portable-mount mount-system <system.erofs> <release-mount> <system-mount>\n",
         stderr
@@ -272,6 +273,76 @@ static int safe_executable_below(const char *root, const char *relative) {
     return 1;
 }
 
+static int safe_regular_below(const char *root, const char *relative) {
+    char path[PATH_MAX];
+    if (!safe_overlay_path(root) ||
+        relative == NULL ||
+        relative[0] == '\0' ||
+        relative[0] == '/' ||
+        strstr(relative, "..") != NULL) {
+        return 0;
+    }
+    int written = snprintf(path, sizeof(path), "%s/%s", root, relative);
+    if (written <= 0 || written >= (int)sizeof(path)) {
+        return 0;
+    }
+    struct stat st;
+    if (lstat(path, &st) != 0 ||
+        !S_ISREG(st.st_mode) ||
+        S_ISLNK(st.st_mode) ||
+        st.st_nlink != 1 ||
+        st.st_size <= 0) {
+        return 0;
+    }
+    return 1;
+}
+
+static int mount_capsule(const char *capsule_image, const char *capsule_mount) {
+    if (!safe_overlay_path(capsule_mount) || !real_directory(capsule_mount)) {
+        fputs("ordax-portable-mount: capsule mount path is unsafe\n", stderr);
+        return EXIT_UNSAFE;
+    }
+
+    struct loop_binding capsule;
+    if (loop_attach(&capsule, capsule_image, 0, 0, 1) != 0) {
+        fprintf(stderr, "ordax-portable-mount: cannot attach bootstrap capsule EROFS: %s\n", strerror(errno));
+        return EXIT_LOOP;
+    }
+
+    unsigned long flags = MS_RDONLY | MS_NODEV | MS_NOSUID;
+    if (mount(capsule.device, capsule_mount, "erofs", flags, NULL) != 0) {
+        fprintf(stderr, "ordax-portable-mount: cannot mount bootstrap capsule EROFS: %s\n", strerror(errno));
+        loop_binding_cleanup(&capsule);
+        return EXIT_MOUNT;
+    }
+
+    if (!safe_executable_below(
+            capsule_mount,
+            "bootstrap/release-acquisition/ordax-release-agent"
+        ) ||
+        !safe_executable_below(
+            capsule_mount,
+            "bootstrap/recovery/entrypoint"
+        ) ||
+        !safe_regular_below(
+            capsule_mount,
+            "bootstrap/config/release-envelope-url"
+        )) {
+        fputs("ordax-portable-mount: bootstrap capsule payload is incomplete or unsafe\n", stderr);
+        (void)umount2(capsule_mount, MNT_DETACH);
+        loop_binding_cleanup(&capsule);
+        return EXIT_UNSAFE;
+    }
+
+    capsule.attached = 0;
+    close(capsule.backing_fd);
+    close(capsule.loop_fd);
+    close(capsule.control_fd);
+    printf("ORDAX_PORTABLE_CAPSULE_LOOP=%s\n", capsule.device);
+    printf("ORDAX_PORTABLE_CAPSULE_ROOT=%s\n", capsule_mount);
+    return 0;
+}
+
 static int state_base_overlay_dirs(
     const char *state_mount,
     char upper[PATH_MAX],
@@ -423,6 +494,9 @@ static int mount_system(
 int main(int argc, char **argv) {
     if (argc == 4 && strcmp(argv[1], "mount-state") == 0) {
         return mount_state(argv[2], argv[3]);
+    }
+    if (argc == 4 && strcmp(argv[1], "mount-capsule") == 0) {
+        return mount_capsule(argv[2], argv[3]);
     }
     if (argc == 6 && strcmp(argv[1], "mount-base") == 0) {
         return mount_base(argv[2], argv[3], argv[4], argv[5]);

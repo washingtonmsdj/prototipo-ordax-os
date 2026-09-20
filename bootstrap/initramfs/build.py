@@ -48,7 +48,7 @@ _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _SAFE_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 REQUIRED_APPLETS = {
     "blkid", "cat", "echo", "findfs", "losetup", "mkdir", "mount", "poweroff",
-    "reboot", "sh", "sleep", "switch_root", "sync", "umount",
+    "reboot", "sh", "sha256sum", "sleep", "switch_root", "sync", "umount",
 }
 REQUESTED_CONFIG = {
     "CONFIG_BUSYBOX": "y",
@@ -65,6 +65,7 @@ REQUESTED_CONFIG = {
     "CONFIG_FEATURE_MOUNT_LOOP": "y",
     "CONFIG_POWEROFF": "y",
     "CONFIG_REBOOT": "y",
+    "CONFIG_SHA256SUM": "y",
     "CONFIG_SLEEP": "y",
     "CONFIG_SWITCH_ROOT": "y",
     "CONFIG_SYNC": "y",

@@ -89,6 +89,8 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn('"CONFIG_BUSYBOX": "y"', BUILDER)
         self.assertIn('"losetup"', BUILDER)
         self.assertIn('"CONFIG_LOSETUP": "y"', BUILDER)
+        self.assertIn('"sha256sum"', BUILDER)
+        self.assertIn('"CONFIG_SHA256SUM": "y"', BUILDER)
         self.assertIn('"CONFIG_FEATURE_MOUNT_LOOP": "y"', BUILDER)
         self.assertIn('"CONFIG_FEATURE_VOLUMEID_EXFAT": "y"', BUILDER)
         self.assertIn("prepare_kernel_uapi", BUILDER)
@@ -231,9 +233,17 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertTrue(helper["static"])
         self.assertEqual(
             helper["operations"],
-            ["mount-state", "mount-base", "mount-system"],
+            ["mount-state", "mount-capsule", "mount-base", "mount-system"],
         )
         self.assertEqual(helper["state_filesystem"], "ext4")
+        self.assertEqual(helper["capsule_filesystem"], "erofs")
+        self.assertTrue(helper["capsule_read_only"])
+        self.assertTrue(helper["capsule_payload_shape_checked"])
+        self.assertFalse(helper["capsule_hash_verification_performed_by_mount_helper"])
+        self.assertEqual(
+            helper["capsule_hash_verification_owner"],
+            "busybox-sha256sum-against-initramfs-pin",
+        )
         self.assertEqual(helper["base_filesystem"], "erofs")
         self.assertEqual(helper["base_runtime_view"], "overlayfs")
         self.assertEqual(helper["base_overlay_state_root"], "/ordax/base")
@@ -254,6 +264,10 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn("LO_FLAGS_AUTOCLEAR", PORTABLE_MOUNT_HELPER)
         self.assertIn("LO_FLAGS_READ_ONLY", PORTABLE_MOUNT_HELPER)
         self.assertIn('mount(state.device, state_mount, "ext4"', PORTABLE_MOUNT_HELPER)
+        self.assertIn('mount(capsule.device, capsule_mount, "erofs"', PORTABLE_MOUNT_HELPER)
+        self.assertIn('"bootstrap/release-acquisition/ordax-release-agent"', PORTABLE_MOUNT_HELPER)
+        self.assertIn('"bootstrap/recovery/entrypoint"', PORTABLE_MOUNT_HELPER)
+        self.assertIn('"bootstrap/config/release-envelope-url"', PORTABLE_MOUNT_HELPER)
         self.assertIn('mount(base.device, base_mount, "erofs"', PORTABLE_MOUNT_HELPER)
         self.assertIn('mount("overlay", root_mount, "overlay"', PORTABLE_MOUNT_HELPER)
         self.assertIn('mount(release.device, release_mount, "erofs"', PORTABLE_MOUNT_HELPER)
