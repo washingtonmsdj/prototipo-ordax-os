@@ -13,12 +13,14 @@ class SurfaceRuntimeSourceContractTests(unittest.TestCase):
     def test_candidate_requires_offline_first_boot_and_remains_unpromotable(self):
         contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(contract["$schema"], "prototype-ordax.surface-runtime-source/1")
-        self.assertEqual(contract["status"], "lock-discovery-required")
+        self.assertEqual(contract["status"], "candidate-not-promotable")
         self.assertEqual(contract["product_scope"], "stable-mvp-usb-only")
         self.assertTrue(contract["first_boot_offline_required"])
         self.assertFalse(contract["network_package_install_during_stable_boot_allowed"])
-        self.assertFalse(contract["apk_package_versions_pinned"])
-        self.assertIsNone(contract["apk_package_lock"])
+        self.assertTrue(contract["apk_package_versions_pinned"])
+        self.assertIsInstance(contract["apk_package_lock"], dict)
+        self.assertEqual(contract["apk_package_lock_count"], len(contract["apk_package_lock"]))
+        self.assertEqual(contract["apk_package_lock_count"], 253)
         self.assertFalse(contract["artifact"]["physical_artifact_authorized"])
         self.assertFalse(contract["artifact"]["portable_v2_boot_connected"])
         self.assertIn("prove-stable-first-surface-boot-with-network-disabled", contract["promotion_blockers"])
@@ -31,7 +33,8 @@ class SurfaceRuntimeSourceContractTests(unittest.TestCase):
 
     def test_discovery_is_lock_only_and_forbids_physical_promotion(self):
         text = DISCOVERY.read_text(encoding="utf-8")
-        self.assertIn('"status": "discovered-not-promotable"', text)
+        self.assertIn('"status": "verified-pinned-lock" if isinstance(expected_lock, dict) else "discovered-not-promotable"', text)
+        self.assertIn("resolved package lock differs from committed candidate lock", text)
         self.assertIn('"physical_artifact_created": False', text)
         self.assertIn('"physical_write_authorized": False', text)
         self.assertIn('"portable_v2_boot_connected": False', text)
