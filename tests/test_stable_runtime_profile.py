@@ -64,14 +64,14 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn('current=$STABLE_ROOT/current', resolver)
         self.assertIn('[ -L "$current" ]', resolver)
         self.assertIn('releases/*)', resolver)
-        stable_runtime = text.split("stable_runtime_source_sha() {", 1)[1].split("\n}", 1)[0]
+        stable_runtime = text.split("stable_release_identity_sha() {", 1)[1].split("\n}", 1)[0]
         self.assertIn("legacy-tree)", stable_runtime)
         self.assertIn("stable_current_release_sha", stable_runtime)
         self.assertIn("portable-v2)", stable_runtime)
         self.assertIn("portable_stable_source_sha", stable_runtime)
         runtime = text.split("runtime_source_sha() {", 1)[1].split("\n}", 1)[0]
         self.assertIn("stable-mvp)", runtime)
-        self.assertIn("stable_runtime_source_sha", runtime)
+        self.assertIn("stable_release_identity_sha", runtime)
         heartbeat = text.split("write_base_update_heartbeat() {", 1)[1].split("\n}", 1)[0]
         self.assertIn("runtime_source_sha", heartbeat)
         refresh = text.split('if [ "$supervisor_rc" -eq 75 ]; then', 1)[1].split("\n    fi", 1)[0]
@@ -86,8 +86,8 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn('DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}', text)
         current = text.split("current_sha() {", 1)[1].split("\n}", 1)[0]
         self.assertIn("stable-mvp)", current)
-        self.assertIn("stable_runtime_source_sha", current)
-        layout = text.split("stable_runtime_source_sha() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("stable_release_identity_sha", current)
+        layout = text.split("stable_release_identity_sha() {", 1)[1].split("\n}", 1)[0]
         self.assertIn("legacy-tree)", layout)
         self.assertIn("stable_current_release_sha", layout)
         self.assertIn("portable-v2)", layout)

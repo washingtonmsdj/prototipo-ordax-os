@@ -613,7 +613,7 @@ portable_stable_source_sha() {
     printf '%s\n' "$SOURCE_SHA_HINT"
 }
 
-stable_runtime_source_sha() {
+stable_release_identity_sha() {
     case "$STABLE_LAYOUT" in
         legacy-tree)
             stable_current_release_sha
@@ -630,7 +630,7 @@ stable_runtime_source_sha() {
 current_sha() {
     case "$DISTRIBUTION_PROFILE" in
         stable-mvp)
-            stable_runtime_source_sha 2>/dev/null || printf 'unknown\n'
+            stable_release_identity_sha 2>/dev/null || printf 'unknown\n'
             ;;
         owner-development)
             "$GIT_BIN" -C "$WORKTREE" rev-parse HEAD 2>/dev/null || printf 'unknown\n'

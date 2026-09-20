@@ -30,14 +30,14 @@ class StableReleaseActivationTransactionTests(unittest.TestCase):
         self.assertIn('releases/*)', resolver)
         self.assertIn('[ -x "$STABLE_ROOT/releases/$value/system/entrypoint" ]', resolver)
 
-        stable_runtime = function_body(text, "stable_runtime_source_sha")
+        stable_runtime = function_body(text, "stable_release_identity_sha")
         self.assertIn("legacy-tree)", stable_runtime)
         self.assertIn("stable_current_release_sha", stable_runtime)
         self.assertIn("portable-v2)", stable_runtime)
         self.assertIn("portable_stable_source_sha", stable_runtime)
 
         runtime = function_body(text, "runtime_source_sha")
-        self.assertIn("stable_runtime_source_sha", runtime)
+        self.assertIn("stable_release_identity_sha", runtime)
 
         refresh = text.split('if [ "$supervisor_rc" -eq 75 ]; then', 1)[1].split(
             "\n    fi",
@@ -56,9 +56,9 @@ class StableReleaseActivationTransactionTests(unittest.TestCase):
         resolver = function_body(text, "stable_current_release_sha")
         self.assertIn("current=$STABLE_ROOT/current", resolver)
         current = function_body(text, "current_sha")
-        self.assertIn("stable_runtime_source_sha", current)
+        self.assertIn("stable_release_identity_sha", current)
 
-        stable_runtime = function_body(text, "stable_runtime_source_sha")
+        stable_runtime = function_body(text, "stable_release_identity_sha")
         legacy_case = stable_runtime.split("legacy-tree)", 1)[1].split(";;", 1)[0]
         portable_case = stable_runtime.split("portable-v2)", 1)[1].split(";;", 1)[0]
         self.assertIn("stable_current_release_sha", legacy_case)
@@ -76,10 +76,12 @@ class StableReleaseActivationTransactionTests(unittest.TestCase):
             self.assertNotIn("readlink", portable)
 
         guardian = ENTRYPOINT.read_text(encoding="utf-8")
-        stable_profile = guardian.split("stable-mvp)", 1)[1].split("\n    *)", 1)[0]
+        startup = guardian.split('case "$PRODUCT_MODE" in', 1)[1]
+        stable_profile = startup.split("stable-mvp)", 1)[1].split("\n    *)", 1)[0]
         self.assertIn("portable-v2)", stable_profile)
         self.assertIn("portable_stable_source_sha", stable_profile)
-        self.assertNotIn("SYSTEM_ROOT=$STABLE_ROOT/current/system", stable_profile.split("portable-v2)", 1)[1])
+        portable_branch = stable_profile.split("portable-v2)", 1)[1].split(";;", 1)[0]
+        self.assertNotIn("SYSTEM_ROOT=$STABLE_ROOT/current/system", portable_branch)
 
         supervisor = SUPERVISOR.read_text(encoding="utf-8")
         update = function_body(supervisor, "check_for_update")
