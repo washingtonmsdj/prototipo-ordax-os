@@ -40,14 +40,14 @@ Responsibilities:
 4. create the canonical two-partition layout;
 5. materialize the bootstrap and selected release;
 6. verify writes;
-7. prepare the MVP Native SSD/NVMe/HD installation path when that mode is selected;
+7. preserve the Native SSD/NVMe/HDD installation foundation for explicit post-MVP activation, without exposing it in the Stable/MVP product;
 8. never depend on WSL or a user-installed Linux environment.
 
 Different host builds may use different OS APIs internally, but they expose the same behavior and consume the same contracts.
 
 ## Build independence
 
-A user installing OrdaX must not need a kernel toolchain, WSL or QEMU.
+A user preparing the MVP OrdaX USB must not need a kernel toolchain, WSL or QEMU. Future Native installation must preserve the same host-independence rule when activated post-MVP.
 
 Official kernel/initramfs artifacts can be built by reproducible CI/build infrastructure from source contracts, signed, and then consumed by OrdaX Creator.
 
