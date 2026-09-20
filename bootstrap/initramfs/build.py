@@ -65,6 +65,7 @@ REQUESTED_CONFIG = {
     "CONFIG_LOSETUP": "y",
     "CONFIG_MKDIR": "y",
     "CONFIG_MOUNT": "y",
+    "CONFIG_FEATURE_MOUNT_FLAGS": "y",
     "CONFIG_FEATURE_MOUNT_LOOP": "y",
     "CONFIG_POWEROFF": "y",
     "CONFIG_REBOOT": "y",
@@ -888,6 +889,7 @@ def build(
         "portable_v2_prerequisites": {
             "losetup_applet": True,
             "mount_loop_support": True,
+            "mount_security_flags": True,
             "exfat_volume_id": True,
             "boot_path_enabled": False,
             "handoff_helper_installed": True,
