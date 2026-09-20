@@ -33,6 +33,9 @@ func TestPlanNativeMaterializationMatchesCanonicalGeometry(t *testing.T) {
 	if plan.TargetProductModePath != "/ordax/bootstrap/config/product-mode" {
 		t.Fatalf("unexpected product-mode target path: %s", plan.TargetProductModePath)
 	}
+	if plan.TargetProductModePoolRelativePath != "bootstrap/config/product-mode" {
+		t.Fatalf("unexpected pool-relative product-mode path: %s", plan.TargetProductModePoolRelativePath)
+	}
 	if len(plan.Subvolumes) != 5 {
 		t.Fatalf("expected canonical Btrfs subvolume set, got %d", len(plan.Subvolumes))
 	}
