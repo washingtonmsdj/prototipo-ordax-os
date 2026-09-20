@@ -50,6 +50,17 @@ class SurfaceRuntimeSourceContractTests(unittest.TestCase):
         self.assertIn('"physical_artifact_authorized": False', text)
         self.assertIn('"portable_v2_boot_connected": False', text)
 
+
+    def test_immutable_runtime_excludes_device_identity_and_derived_font_cache(self):
+        contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+        generated = contract["runtime_generated_state"]
+        self.assertFalse(generated["machine_identity_baked_into_image"])
+        self.assertFalse(generated["fontconfig_cache_baked_into_image"])
+        text = BUILDER.read_text(encoding="utf-8")
+        self.assertIn('for relative in ("etc/machine-id", "var/lib/dbus/machine-id")', text)
+        self.assertIn('cache = rootfs / "var/cache/fontconfig"', text)
+        self.assertIn("prune_generated_runtime_state(rootfs)", text)
+
     def test_existing_owner_runtime_path_is_not_silently_removed(self):
         surface = SURFACE.read_text(encoding="utf-8")
         self.assertIn("install_runtime()", surface)
