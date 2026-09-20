@@ -25,6 +25,13 @@ class CreatorPortablePreparedMediaTests(unittest.TestCase):
         self.assertTrue(contract["disposable_materializer_implemented"])
         self.assertFalse(contract["disposable_materializer_physical_device_allowed"])
         self.assertTrue(contract["disposable_materializer_readback_verification"])
+        self.assertEqual(contract["artifact_count"], 15)
+        runtime = contract["surface_runtime_preseed"]
+        self.assertTrue(runtime["implemented"])
+        self.assertTrue(runtime["content_addressed"])
+        self.assertFalse(runtime["physical_write_authorized"])
+        self.assertIn("/.ordax/runtimes/sha256/", runtime["image_target"])
+        self.assertTrue(runtime["reference_target"].endswith("/surface-runtime.sha256"))
         self.assertFalse(contract["physical_writer_v2_implemented"])
         self.assertFalse(contract["public_mvp_default_enabled"])
         application = contract["application_planner"]
@@ -66,15 +73,15 @@ class CreatorPortablePreparedMediaTests(unittest.TestCase):
                         "sha256": module.sha256_file(source),
                         "size_bytes": source.stat().st_size,
                     }
-                    for index in range(13)
+                    for index in range(15)
                 ],
             }
             parsed = module.load_plan(
                 self._write_json(root / "plan.json", plan)
             )
-            sources = [f"id-{index}={source}" for index in range(13)]
+            sources = [f"id-{index}={source}" for index in range(15)]
             result = module.parse_sources(sources, parsed)
-            self.assertEqual(len(result), 13)
+            self.assertEqual(len(result), 15)
 
             source.write_bytes(b"tampered")
             with self.assertRaisesRegex(module.ProofError, "size mismatch|digest mismatch"):
