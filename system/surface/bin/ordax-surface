@@ -38,6 +38,13 @@ NETWORK_SCAN_RAW=$SESSION_DIR/network-scan.raw
 NETWORK_LINK_RAW=$SESSION_DIR/network-link.raw
 NETWORK_SAVED_SSID=$SESSION_DIR/network-saved-ssid
 NETWORK_BROKER_SOURCE=$SYSTEM_ROOT/surface/runtime/network_broker.sh
+NATIVE_INSTALL_BROKER_SOURCE=$SYSTEM_ROOT/surface/runtime/native_install_broker.sh
+NATIVE_INSTALL_HELPER=$SYSTEM_ROOT/bin/ordax-native-install-targets
+NATIVE_INSTALL_LOG=$SESSION_DIR/native-install-broker.log
+NATIVE_INSTALL_CONTROL=$SESSION_DIR/native-install-control
+NATIVE_INSTALL_REQUEST=$SESSION_DIR/native-install-request
+NATIVE_INSTALL_RESPONSE=$SESSION_DIR/native-install-response
+NATIVE_INSTALL_SNAPSHOT=$SESSION_DIR/native-install-targets.json
 POWER_REQUEST=$SESSION_DIR/power-request
 POWER_STATE_DIR=$STATE_ROOT/power
 POWER_LAST_REQUEST=$POWER_STATE_DIR/last-request
@@ -56,6 +63,7 @@ HTTP_PID=""
 GRAPHICS_PID=""
 POWER_BROKER_PID=""
 NETWORK_BROKER_PID=""
+NATIVE_INSTALL_BROKER_PID=""
 TIME_SYNC_PID=""
 STAGING_DIR=""
 DEV_BOUND=0
@@ -75,6 +83,7 @@ chmod 700 "$SESSION_DIR" "$PERSISTENT_NATIVE_STATE" "$PERSISTENT_USER_HOME" "$RE
 : > "$HOST_LOG"
 : > "$TIME_SYNC_LOG"
 : > "$NETWORK_LOG"
+: > "$NATIVE_INSTALL_LOG"
 
 case "$PRODUCT_MODE" in
     usb|native-disk) ;;
@@ -422,6 +431,11 @@ remove_stale_seatd_socket() {
 }
 
 cleanup() {
+    if [ -n "$NATIVE_INSTALL_BROKER_PID" ]; then
+        terminate_child "$NATIVE_INSTALL_BROKER_PID" "Native install broker"
+        NATIVE_INSTALL_BROKER_PID=""
+    fi
+    rm -f "$NATIVE_INSTALL_CONTROL" "$NATIVE_INSTALL_REQUEST" "$NATIVE_INSTALL_RESPONSE" "$NATIVE_INSTALL_SNAPSHOT" >/dev/null 2>&1 || true
     if [ -n "$NETWORK_BROKER_PID" ]; then
         terminate_child "$NETWORK_BROKER_PID" "network broker"
         NETWORK_BROKER_PID=""
@@ -829,6 +843,31 @@ start_network_broker() {
     return 1
 }
 
+start_native_install_broker() {
+    [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] || return 0
+    [ "$PRODUCT_MODE" = "usb" ] || return 0
+    [ -f "$NATIVE_INSTALL_BROKER_SOURCE" ] && [ ! -L "$NATIVE_INSTALL_BROKER_SOURCE" ] || return 1
+    [ -x "$NATIVE_INSTALL_HELPER" ] && [ ! -L "$NATIVE_INSTALL_HELPER" ] || {
+        echo "ordax-surface: signed Native install helper unavailable; installer remains disabled" >>"$NATIVE_INSTALL_LOG"
+        return 0
+    }
+
+    rm -f "$NATIVE_INSTALL_CONTROL" "$NATIVE_INSTALL_REQUEST" "$NATIVE_INSTALL_RESPONSE" "$NATIVE_INSTALL_SNAPSHOT" >/dev/null 2>&1 || true
+    ORDAX_NATIVE_INSTALL_SESSION_DIR="$SESSION_DIR" \
+    ORDAX_NATIVE_INSTALL_HELPER="$NATIVE_INSTALL_HELPER" \
+        /bin/sh "$NATIVE_INSTALL_BROKER_SOURCE" >>"$NATIVE_INSTALL_LOG" 2>&1 &
+    NATIVE_INSTALL_BROKER_PID=$!
+
+    remaining=20
+    while [ "$remaining" -gt 0 ]; do
+        kill -0 "$NATIVE_INSTALL_BROKER_PID" >/dev/null 2>&1 || return 1
+        [ -p "$NATIVE_INSTALL_CONTROL" ] && return 0
+        /bin/busybox sleep 0.1
+        remaining=$((remaining - 1))
+    done
+    return 1
+}
+
 start_time_sync_agent() {
     /bin/busybox ntpd -n \
         -p time.cloudflare.com \
@@ -1021,6 +1060,7 @@ ensure_base_telemetry_agent || echo "ordax-surface: base telemetry bootstrap fai
 ensure_rescue_agent || echo "ordax-surface: rescue agent bootstrap failed; continuing Surface startup" >>"$HOST_LOG"
 start_time_sync_agent || echo "ordax-surface: automatic time synchronization unavailable; continuing Surface startup" >>"$HOST_LOG"
 start_network_broker || echo "ordax-surface: native Wi-Fi management broker unavailable; continuing without network management" >>"$HOST_LOG"
+start_native_install_broker || echo "ordax-surface: Native install discovery broker unavailable; installer remains disabled" >>"$HOST_LOG"
 [ -f "$SYSTEM_ROOT/composition/native/index.html" ] || fallback_with_reason "native Surface composition is missing: $SYSTEM_ROOT/composition/native/index.html"
 [ -f "$SYSTEM_ROOT/surface/runtime/native_host_server.py" ] || fallback_with_reason "native Surface host server is missing: $SYSTEM_ROOT/surface/runtime/native_host_server.py"
 [ -f "$SYSTEM_ROOT/surface/runtime/ordax_browser_host.py" ] || fallback_with_reason "native browser host is missing: $SYSTEM_ROOT/surface/runtime/ordax_browser_host.py"
