@@ -69,7 +69,12 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
             "bootstrap/portable-v2/qemu_boot.py",
         ):
             self.assertIn(marker, WORKFLOW)
-        self.assertNotIn("OVMF", WORKFLOW)
+        direct = SCRIPT.read_text(encoding="utf-8")
+        self.assertNotIn("OVMF", direct)
+        self.assertIn("Boot portable-v2 candidate PID1 in QEMU", WORKFLOW)
+        self.assertIn("Build pinned systemd-boot for portable UEFI proof", WORKFLOW)
+        self.assertIn("Boot same portable-v2 disk through OVMF and systemd-boot", WORKFLOW)
+        self.assertIn("bootstrap/portable-v2/uefi_boot.py", WORKFLOW)
         self.assertNotIn("/dev/sd", WORKFLOW)
         self.assertNotIn("PhysicalDrive", WORKFLOW)
 
