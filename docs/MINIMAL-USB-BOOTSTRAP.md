@@ -193,6 +193,8 @@ UEFI
  -> launch verified OrdaX release
 ```
 
+Activation metadata for the durable USB is intentionally **not** stored as a symlink or mutable pointer directly on exFAT. The fixed ext4 persistent-state image owns `current`, `known-good`, `candidate` and the activation transaction. This keeps Linux activation/rollback state on a Linux-native filesystem with atomic replacement and fsync semantics, while exFAT remains a byte store for immutable releases and user-visible files.
+
 The repository now also has a disposable **mount-handoff proof** for this graph. It re-verifies a signed portable release offline, mounts the real EROFS system tree read-only, mounts the ext4 persistent-state image, composes an OverlayFS runtime system view and proves persistent writes do not mutate EROFS.
 
 That still does **not** mean the v2 boot handoff is implemented. The current fixed initramfs does not yet contain the required `losetup` capability or portable handoff helper, and release selection/known-good fallback metadata has not yet been connected. Until those boot/recovery gates are green, the current transitional boot path remains the hardware validation path.

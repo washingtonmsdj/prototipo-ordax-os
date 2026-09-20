@@ -52,6 +52,15 @@
       "size_bytes": 268435456,
       "mounted_through_loop_device_in_runtime": true,
       "overlayfs_upper_owner": true
+    },
+    "activation_state": {
+      "filesystem_owner": "persistent-state.img",
+      "not_stored_directly_on_exfat": true,
+      "root_inside_ext4": "/ordax/portable-release",
+      "current": "/ordax/portable-release/current",
+      "known_good": "/ordax/portable-release/known-good",
+      "candidate": "/ordax/portable-release/candidate",
+      "transaction": "/ordax/portable-release/activation-transaction.json"
     }
   },
   "user_data": {
@@ -81,7 +90,8 @@
     "direct-exfat-overlayfs-upper",
     "physical-device-path-input",
     "claiming-bootable-proof-from-storage-only-proof",
-    "enabling-public-physical-write"
+    "enabling-public-physical-write",
+    "activation-current-pointer-directly-on-exfat"
   ],
   "kernel_prerequisites": {
     "source": "bootstrap/kernel/config/ordax.fragment",

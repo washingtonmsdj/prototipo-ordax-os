@@ -65,7 +65,9 @@
     "known_good_fallback_metadata_required": true,
     "selection_anti_rollback_policy_required": true,
     "busybox_mount_loop_currently_enabled": true,
-    "busybox_exfat_volume_id_currently_enabled": true
+    "busybox_exfat_volume_id_currently_enabled": true,
+    "activation_state_reader_required": true,
+    "activation_state_reader_currently_installed": false
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",
@@ -74,5 +76,35 @@
     "creating-legacy-current-symlink-on-exfat",
     "claiming-physical-boot-from-disposable-mount-proof",
     "physical-device-path-input"
+  ],
+  "activation_state": {
+    "owner_filesystem": "ext4-persistent-state-image",
+    "exfat_activation_pointer_allowed": false,
+    "legacy_symlink_allowed": false,
+    "root_after_state_mount": "/state/ordax/portable-release",
+    "current_file": "/state/ordax/portable-release/current",
+    "known_good_file": "/state/ordax/portable-release/known-good",
+    "candidate_file": "/state/ordax/portable-release/candidate",
+    "transaction_file": "/state/ordax/portable-release/activation-transaction.json",
+    "identity_format": "lowercase-40-hex-source-commit",
+    "writes_require_fsync": true,
+    "directory_fsync_required": true,
+    "atomic_replace_required": true,
+    "current_must_reference_exact_verified_materialized_release": true,
+    "known_good_must_reference_exact_verified_materialized_release": true,
+    "candidate_is_not_boot_authority_until_promoted": true,
+    "rollback_must_not_require_network": true
+  },
+  "boot_sequence_target": [
+    "mount-ORDAX-ESP-read-only-for-bootstrap-substrate",
+    "mount-ORDAX-DATA-exfat",
+    "attach-persistent-state-img-loop",
+    "validate-ext4-state-before-writable-mount",
+    "mount-persistent-state-ext4",
+    "resolve-current-or-known-good-from-ext4-activation-state",
+    "verify-selected-release-exactly-offline",
+    "attach-selected-system-erofs-read-only",
+    "compose-overlay-system-view-with-ext4-upper-work",
+    "launch-shared-system-entrypoint"
   ]
 }
