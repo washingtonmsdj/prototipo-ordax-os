@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Resolve the full Alpine package lock for the offline Stable/MVP Surface runtime.
+"""Resolve or revalidate the full Alpine package lock for the offline Surface runtime.
 
-This is a discovery-only tool. It may use the network in CI to resolve package
-metadata, but it never creates a promotable runtime artifact and never touches a
-physical device. The resulting lock must be reviewed and committed before the
-offline runtime builder can exist.
+The tool may use the network in CI to resolve package metadata, but it never
+creates a promotable runtime artifact and never touches a physical device. Once
+the reviewed full transitive lock is committed, the same resolver must reproduce
+that exact lock or fail closed.
 """
 
 from __future__ import annotations
@@ -54,14 +54,23 @@ def validate_contract() -> tuple[dict, dict]:
     stable = load_json(STABLE)
     if contract.get("$schema") != "prototype-ordax.surface-runtime-source/1":
         raise DiscoveryError("unexpected Surface runtime contract schema")
-    if contract.get("status") != "lock-discovery-required":
-        raise DiscoveryError("lock discovery must fail closed once the contract leaves discovery status")
+    status = contract.get("status")
+    if status not in {"lock-discovery-required", "candidate-not-promotable"}:
+        raise DiscoveryError("unsupported Surface runtime contract status")
     if contract.get("first_boot_offline_required") is not True:
         raise DiscoveryError("Stable/MVP Surface first boot must remain offline-capable")
     if contract.get("network_package_install_during_stable_boot_allowed") is not False:
         raise DiscoveryError("Stable/MVP runtime contract may not permit boot-time package downloads")
-    if contract.get("apk_package_versions_pinned") is not False or contract.get("apk_package_lock") is not None:
-        raise DiscoveryError("discovery contract unexpectedly claims a committed APK lock")
+    pinned = contract.get("apk_package_versions_pinned")
+    lock = contract.get("apk_package_lock")
+    if status == "lock-discovery-required":
+        if pinned is not False or lock is not None:
+            raise DiscoveryError("discovery contract unexpectedly claims a committed APK lock")
+    else:
+        if pinned is not True or not isinstance(lock, dict) or not lock:
+            raise DiscoveryError("candidate contract requires the reviewed full APK lock")
+        if contract.get("apk_package_lock_count") != len(lock):
+            raise DiscoveryError("candidate APK lock count disagrees with committed lock")
     artifact = contract.get("artifact", {})
     if artifact.get("physical_artifact_authorized") is not False or artifact.get("portable_v2_boot_connected") is not False:
         raise DiscoveryError("discovery contract may not authorize or connect a physical artifact")
@@ -148,9 +157,25 @@ def discover(out: Path, cache: Path) -> dict:
         if missing:
             raise DiscoveryError(f"requested packages missing from resolved lock: {missing}")
 
+        expected_lock = contract.get("apk_package_lock")
+        if isinstance(expected_lock, dict):
+            normalized_expected = dict(sorted((str(k), str(v)) for k, v in expected_lock.items()))
+            if lock != normalized_expected:
+                missing = sorted(set(normalized_expected) - set(lock))
+                extra = sorted(set(lock) - set(normalized_expected))
+                changed = sorted(
+                    name
+                    for name in set(normalized_expected) & set(lock)
+                    if normalized_expected[name] != lock[name]
+                )
+                raise DiscoveryError(
+                    "resolved package lock differs from committed candidate lock: "
+                    f"missing={missing[:8]} extra={extra[:8]} changed={changed[:8]}"
+                )
+
         result = {
             "$schema": "prototype-ordax.surface-runtime-apk-lock-discovery/1",
-            "status": "discovered-not-promotable",
+            "status": "verified-pinned-lock" if isinstance(expected_lock, dict) else "discovered-not-promotable",
             "alpine_version": contract["alpine"]["version"],
             "alpine_archive_sha256": actual_sha,
             "requested_packages": requested,
@@ -179,7 +204,7 @@ def main() -> int:
         print(f"surface-runtime-lock-discovery: ERROR: {exc}", file=__import__("sys").stderr)
         return 1
     print(json.dumps(result, indent=2, sort_keys=True))
-    print("SURFACE_RUNTIME_APK_LOCK_DISCOVERY=PASS")
+    print("SURFACE_RUNTIME_APK_LOCK_RESOLUTION=PASS")
     print("SURFACE_RUNTIME_PROMOTABLE=NO")
     print("PHYSICAL_WRITE_AUTHORIZED=NO")
     return 0
