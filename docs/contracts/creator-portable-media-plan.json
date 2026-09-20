@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.creator-portable-media-plan/1",
-  "status": "core-policy-implemented-disposable-materialization-pending",
+  "status": "core-policy-and-disposable-materializer-implemented",
   "product_scope": "stable-mvp-usb-only",
   "core_owner": "tools/creator/core/portable_media.go",
   "cli_command": "ordax-creator plan-portable-media",
@@ -17,7 +17,10 @@
   "size_required_per_artifact": true,
   "physical_write_authorized": false,
   "physical_device_paths_allowed": false,
-  "disposable_materializer_implemented": false,
+  "disposable_materializer_implemented": true,
   "physical_writer_v2_implemented": false,
-  "public_mvp_default_enabled": false
+  "public_mvp_default_enabled": false,
+  "disposable_materializer": "tools/creator/proof/portable_prepared_media.py",
+  "disposable_materializer_physical_device_allowed": false,
+  "disposable_materializer_readback_verification": true
 }
