@@ -45,13 +45,15 @@ PACKAGES = [
 MAX_ROOTFS_BYTES = 220 * 1024 * 1024
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 FIRMWARE_FIELD_RE = re.compile(rb"(?:^|\x00)firmware=([^\x00]+)")
-DEV_MODULE_BASENAMES = {
+WIFI_MODULE_BASENAMES = {
     "iwlwifi",
     "iwlmvm",
     "rtl8xxxu",
     "mt76x2u",
     "ath9k_htc",
 }
+# Compatibility alias for existing owner/development consumers.
+DEV_MODULE_BASENAMES = WIFI_MODULE_BASENAMES
 
 
 class BuildError(RuntimeError):
@@ -216,7 +218,12 @@ def resolve_rootfs_symlink(rootfs: Path, link: Path) -> Path | None:
     return None
 
 
-def prune_firmware(rootfs: Path, required: set[str]) -> None:
+def prune_firmware(
+    rootfs: Path,
+    required: set[str],
+    *,
+    log_prefix: str = "ORDAX_DEV_BASE",
+) -> None:
     firmware = rootfs / "lib" / "firmware"
     if not firmware.is_dir():
         raise BuildError("firmware directory is missing")
@@ -327,7 +334,7 @@ def prune_firmware(rootfs: Path, required: set[str]) -> None:
 
     firmware_bytes = sum((firmware / name).stat().st_size for name in required)
     print(
-        f"ORDAX_DEV_BASE_FIRMWARE_SELECTED={len(required)} bytes={firmware_bytes}",
+        f"{log_prefix}_FIRMWARE_SELECTED={len(required)} bytes={firmware_bytes}",
         flush=True,
     )
 
@@ -384,7 +391,12 @@ def module_basename(path: str) -> str:
     return name.replace("-", "_")
 
 
-def select_dev_module_members(archive: tarfile.TarFile) -> list[tarfile.TarInfo]:
+def select_module_members(
+    archive: tarfile.TarFile,
+    target_basenames: set[str],
+    *,
+    log_prefix: str,
+) -> list[tarfile.TarInfo]:
     members = archive.getmembers()
     regular = {member.name: member for member in members if member.isfile()}
     dep_names = [
@@ -393,7 +405,9 @@ def select_dev_module_members(archive: tarfile.TarFile) -> list[tarfile.TarInfo]
         if name.startswith("lib/modules/") and name.endswith("/modules.dep")
     ]
     if len(dep_names) != 1:
-        raise BuildError(f"kernel modules archive must contain one modules.dep, found {len(dep_names)}")
+        raise BuildError(
+            f"kernel modules archive must contain one modules.dep, found {len(dep_names)}"
+        )
 
     dep_name = dep_names[0]
     prefix = dep_name[: -len("modules.dep")]
@@ -412,11 +426,11 @@ def select_dev_module_members(archive: tarfile.TarFile) -> list[tarfile.TarInfo]
     targets: dict[str, str] = {}
     for module_path in dependencies:
         basename = module_basename(module_path)
-        if basename in DEV_MODULE_BASENAMES:
+        if basename in target_basenames:
             targets[basename] = module_path
-    missing = sorted(DEV_MODULE_BASENAMES - targets.keys())
+    missing = sorted(target_basenames - targets.keys())
     if missing:
-        raise BuildError(f"development Wi-Fi modules missing from archive: {missing}")
+        raise BuildError(f"required base modules missing from archive: {missing}")
 
     selected_paths = set(targets.values())
     pending = list(selected_paths)
@@ -440,18 +454,24 @@ def select_dev_module_members(archive: tarfile.TarFile) -> list[tarfile.TarInfo]
         and Path(name).name.startswith("modules.")
     }
     selected_names.update(metadata_names)
-
     missing_files = sorted(name for name in selected_names if name not in regular)
     if missing_files:
         raise BuildError(f"kernel module files missing from archive: {missing_files[:10]}")
 
-    selected = [regular[name] for name in sorted(selected_names)]
     print(
-        "ORDAX_DEV_BASE_KERNEL_MODULES_SELECTED="
+        f"{log_prefix}_KERNEL_MODULES_SELECTED="
         f"{len(selected_paths)} metadata={len(metadata_names)}",
         flush=True,
     )
-    return selected
+    return [regular[name] for name in sorted(selected_names)]
+
+
+def select_dev_module_members(archive: tarfile.TarFile) -> list[tarfile.TarInfo]:
+    return select_module_members(
+        archive,
+        DEV_MODULE_BASENAMES,
+        log_prefix="ORDAX_DEV_BASE",
+    )
 
 
 def install_runtime(rootfs: Path, kernel_modules: Path) -> None:

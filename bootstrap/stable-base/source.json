@@ -1,0 +1,92 @@
+{
+  "$schema": "prototype-ordax.stable-base-source/1",
+  "status": "candidate-not-promotable",
+  "product_scope": "stable-mvp-usb-only",
+  "alpine": {
+    "version": "3.22.5",
+    "branch": "v3.22",
+    "arch": "x86_64",
+    "archive_url": "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/x86_64/alpine-minirootfs-3.22.5-x86_64.tar.gz",
+    "checksum_sidecar_url": "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/x86_64/alpine-minirootfs-3.22.5-x86_64.tar.gz.sha256",
+    "archive_sha256": null,
+    "archive_hash_pin_status": "pending-from-verified-candidate",
+    "checksum_sidecar_must_match_download": true
+  },
+  "packages": [
+    "ca-certificates",
+    "kmod",
+    "iproute2",
+    "iw",
+    "wpa_supplicant",
+    "zstd",
+    "linux-firmware-other",
+    "linux-firmware-rtlwifi",
+    "linux-firmware-mediatek",
+    "linux-firmware-ath9k_htc"
+  ],
+  "build_only_packages": [
+    "zstd"
+  ],
+  "apk_package_versions_pinned": false,
+  "apk_package_lock_status": "pending-before-promotion",
+  "git_client_allowed": false,
+  "source_checkout_allowed": false,
+  "development_helpers_allowed": false,
+  "runtime_package_client_retained": true,
+  "runtime_package_trust_keys_retained": true,
+  "kernel_modules": {
+    "source": "bootstrap/kernel",
+    "required_basenames": [
+      "iwlwifi",
+      "iwlmvm",
+      "rtl8xxxu",
+      "mt76x2u",
+      "ath9k_htc"
+    ],
+    "selected_with_dependencies": true
+  },
+  "rootfs": {
+    "format": "erofs",
+    "artifact_name": "stable-base.erofs",
+    "target_path": ".ordax/base/stable-base.erofs",
+    "read_only": true,
+    "compression": "lz4",
+    "volume_label": "ORDAX-BASE",
+    "complete_minimal_os_userspace": true,
+    "product_system_tree_embedded": false,
+    "surface_runtime_embedded": false,
+    "mutable_state_embedded": false,
+    "maximum_unique_regular_bytes": 230686720
+  },
+  "entrypoint": {
+    "source": "bootstrap/stable-base/ordax-stable-init",
+    "path": "/sbin/ordax-stable-init",
+    "requires_distribution_profile": "stable-mvp",
+    "requires_product_mode": "usb",
+    "requires_runtime_layout": "portable-v2"
+  },
+  "state_overlay": {
+    "owner": "persistent-state.img",
+    "upper": "/ordax/base/upper",
+    "work": "/ordax/base/work",
+    "base_root_immutable": true
+  },
+  "build": {
+    "canonical_entrypoint": "bootstrap/stable-base/build.py",
+    "shared_alpine_core": "bootstrap/base/alpine_core.py",
+    "shared_firmware_policy": "bootstrap/base/firmware_policy.py",
+    "shared_runtime_policy": "bootstrap/base/runtime_policy.py",
+    "physical_artifact_authorized": false,
+    "signed_update_integration_implemented": false,
+    "qemu_boot_proven": false,
+    "physical_boot_proven": false
+  },
+  "promotion_blockers": [
+    "pin-alpine-minirootfs-sha256",
+    "lock-exact-apk-package-versions",
+    "bind-stable-base-into-portable-boot-contract",
+    "signed-stable-base-update-protocol",
+    "qemu-portable-v2-boot-proof",
+    "physical-usb-boot-proof"
+  ]
+}

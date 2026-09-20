@@ -1,0 +1,31 @@
+#!/bin/sh
+set -eu
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+export PATH
+
+fail() {
+    echo "ordax-stable-init: $*" >&2
+    exit 1
+}
+
+is_sha() {
+    value=${1:-}
+    [ "${#value}" -eq 40 ] || return 1
+    case "$value" in
+        ''|*[!0-9a-f]*) return 1 ;;
+    esac
+}
+
+[ "${ORDAX_DISTRIBUTION_PROFILE:-}" = "stable-mvp" ] ||
+    fail "distribution profile must be stable-mvp"
+[ "${ORDAX_PRODUCT_MODE:-}" = "usb" ] ||
+    fail "product mode must be usb"
+[ "${ORDAX_STABLE_LAYOUT:-}" = "portable-v2" ] ||
+    fail "runtime layout must be portable-v2"
+is_sha "${ORDAX_SOURCE_SHA:-}" ||
+    fail "verified source identity is missing or invalid"
+[ -x /system/entrypoint ] ||
+    fail "verified product system entrypoint is missing"
+
+exec /system/entrypoint

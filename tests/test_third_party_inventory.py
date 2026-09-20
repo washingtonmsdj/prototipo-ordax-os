@@ -10,6 +10,7 @@ KERNEL_SOURCE = ROOT / "bootstrap" / "kernel" / "source.json"
 DEV_CORE = ROOT / "bootstrap" / "base" / "alpine_core.py"
 BASE_RUNTIME_POLICY = ROOT / "bootstrap" / "base" / "runtime_policy.py"
 DEV_BUILD = ROOT / "bootstrap" / "dev-base" / "build.py"
+STABLE_SOURCE = ROOT / "bootstrap" / "stable-base" / "source.json"
 SURFACE = ROOT / "system" / "surface" / "bin" / "ordax-surface"
 
 
@@ -58,6 +59,20 @@ class ThirdPartyInventoryTests(unittest.TestCase):
         self.assertEqual(
             item["build_only_packages"],
             list(runtime["BUILD_ONLY_PACKAGES"]),
+        )
+
+    def test_stable_mvp_base_input_matches_candidate_contract(self):
+        source = json.loads(STABLE_SOURCE.read_text(encoding="utf-8"))
+        item = self.by_id["alpine-stable-mvp-base"]
+        self.assertEqual(item["version"], source["alpine"]["version"])
+        self.assertEqual(item["branch"], source["alpine"]["branch"])
+        self.assertEqual(item["arch"], source["alpine"]["arch"])
+        self.assertEqual(item["packages"], source["packages"])
+        self.assertEqual(item["build_only_packages"], source["build_only_packages"])
+        self.assertNotIn("git", item["packages"])
+        self.assertEqual(
+            item["promotion_status"],
+            "blocked-until-source-and-package-locks",
         )
 
     def test_native_surface_runtime_matches_apk_request(self):

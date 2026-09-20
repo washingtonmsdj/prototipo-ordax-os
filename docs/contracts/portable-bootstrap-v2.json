@@ -116,6 +116,7 @@
     "attach-and-mount-persistent-state-ext4",
     "read-current-or-known-good-from-ext4",
     "reverify-selected-release-envelope-manifest-hash-and-erofs-offline",
+    "mount-stable-base-erofs-read-only-and-compose-base-overlay",
     "mount-selected-system-erofs-read-only",
     "compose-system-overlay-with-ext4-upper-work",
     "launch-system-entrypoint-with-stable-mvp-usb-portable-v2-identity"
@@ -145,5 +146,21 @@
       "writes_activation_state": false,
       "pid1_connected": false
     }
+  },
+  "stable_base": {
+    "contract": "bootstrap/stable-base/source.json",
+    "artifact_name": "stable-base.erofs",
+    "target_path": ".ordax/base/stable-base.erofs",
+    "candidate_builder_implemented": true,
+    "complete_minimal_os_userspace": true,
+    "git_client_embedded": false,
+    "product_system_tree_embedded": false,
+    "physical_materialization_implemented": false,
+    "initramfs_base_handoff_implemented": false,
+    "signed_update_integration_implemented": false,
+    "qemu_boot_proven": false,
+    "physical_boot_proven": false,
+    "alpine_archive_sha256_pinned": false,
+    "apk_package_versions_pinned": false
   }
 }

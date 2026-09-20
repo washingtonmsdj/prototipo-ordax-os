@@ -136,7 +136,14 @@
       "portable_v2_update_activation_connected": false,
       "portable_v2_guardian_refresh_via_legacy_swap_allowed": false,
       "portable_v2_activation_state_owner": "ext4-persistent-state-image",
-      "portable_v2_physical_boot_connected": false
+      "portable_v2_physical_boot_connected": false,
+      "stable_base_candidate_contract": "bootstrap/stable-base/source.json",
+      "stable_base_candidate_implemented": true,
+      "stable_base_git_client_embedded": false,
+      "stable_base_source_checkout_embedded": false,
+      "stable_base_physical_boot_connected": false,
+      "stable_base_alpine_hash_pinned": false,
+      "stable_base_apk_versions_pinned": false
     }
   },
   "invariants": {
@@ -156,7 +163,7 @@
   },
   "next_gate": {
     "id": "stable-base-signed-update-integration",
-    "description": "Connect Stable/MVP Base kernel/initramfs/rootfs delivery to the official signed release path and existing A/B one-shot health/rollback machinery without enabling the Owner/Development Git candidate channel.",
+    "description": "Promote the Stable/MVP Base only after its Alpine source digest and exact APK package set are pinned, then connect signed kernel/initramfs/rootfs delivery to the existing A/B health/rollback machinery without enabling the Owner/Development Git candidate channel.",
     "implemented": false
   }
 }

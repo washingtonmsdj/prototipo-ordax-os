@@ -96,7 +96,11 @@ def resolve_firmware_source(firmware_root: Path, name: str) -> Path | None:
     raise FirmwareSelectionError(f"firmware symlink depth exceeded: {name}")
 
 
-def available_firmware_names(rootfs: Path) -> set[str]:
+def available_firmware_names(
+    rootfs: Path,
+    *,
+    log_prefix: str = "ORDAX_DEV_BASE",
+) -> set[str]:
     firmware_root = rootfs / "lib" / "firmware"
     if not firmware_root.is_dir():
         raise FirmwareSelectionError("firmware directory is missing")
@@ -123,10 +127,10 @@ def available_firmware_names(rootfs: Path) -> set[str]:
             continue
         selected.update(available)
 
-    print(f"ORDAX_DEV_BASE_FIRMWARE_DECLARED={len(declared_names)}", flush=True)
-    print(f"ORDAX_DEV_BASE_FIRMWARE_MODULES_REQUIRING={len(requiring)}", flush=True)
+    print(f"{log_prefix}_FIRMWARE_DECLARED={len(declared_names)}", flush=True)
+    print(f"{log_prefix}_FIRMWARE_MODULES_REQUIRING={len(requiring)}", flush=True)
     print(
-        "ORDAX_DEV_BASE_FIRMWARE_AVAILABLE="
+        f"{log_prefix}_FIRMWARE_AVAILABLE="
         f"{len(selected)} unavailable_alternatives={unavailable_alternatives}",
         flush=True,
     )
