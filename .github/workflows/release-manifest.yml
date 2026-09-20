@@ -79,6 +79,48 @@ jobs:
           echo 'RELEASE_PUBLISHED=NO'
           echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
 
+      - name: Prove portable v3 manifest pins system and Surface runtime
+        run: |
+          set -euo pipefail
+          tool="$PWD/out/release-manifest/ordax-release-manifest-linux-amd64"
+          work="$RUNNER_TEMP/release-manifest-v3-proof"
+          mkdir -p "$work"
+          printf 'ci-system-erofs\n' > "$work/system.erofs"
+          printf 'ci-surface-runtime-erofs\n' > "$work/native-surface-runtime.erofs"
+          "$tool" \
+            --manifest-schema 3 \
+            --artifact "$work/system.erofs" \
+            --runtime-artifact "$work/native-surface-runtime.erofs" \
+            --source-commit 0123456789abcdef0123456789abcdef01234567 \
+            --artifact-url https://example.invalid/system.erofs \
+            --runtime-artifact-url https://example.invalid/native-surface-runtime.erofs \
+            --out "$work/release-manifest-v3.json" | tee "$work/output-v3.txt"
+          python - "$work/release-manifest-v3.json" "$work/system.erofs" "$work/native-surface-runtime.erofs" <<'PY'
+          import hashlib, json, pathlib, sys
+          manifest = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          system = pathlib.Path(sys.argv[2]).read_bytes()
+          runtime = pathlib.Path(sys.argv[3]).read_bytes()
+          artifacts = manifest['artifacts']
+          assert manifest['$schema'] == 'prototype-ordax.release-manifest/3'
+          assert manifest['source_commit'] == '0123456789abcdef0123456789abcdef01234567'
+          assert manifest['release_id'] == manifest['source_commit']
+          assert manifest['product_mode'] == 'usb'
+          assert manifest['storage_profile'] == 'portable-usb-v2'
+          assert manifest['runtime_format'] == 'erofs'
+          assert [(a['name'], a['role']) for a in artifacts] == [
+              ('system.erofs', 'system-image'),
+              ('native-surface-runtime.erofs', 'surface-runtime'),
+          ]
+          assert artifacts[0]['size'] == len(system)
+          assert artifacts[0]['sha256'] == hashlib.sha256(system).hexdigest()
+          assert artifacts[1]['size'] == len(runtime)
+          assert artifacts[1]['sha256'] == hashlib.sha256(runtime).hexdigest()
+          print('RELEASE_MANIFEST_V3_IDENTITY=PASS')
+          PY
+          echo 'RELEASE_SIGNED=NO'
+          echo 'RELEASE_PUBLISHED=NO'
+          echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
+
       - name: Upload public tooling candidates only
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
