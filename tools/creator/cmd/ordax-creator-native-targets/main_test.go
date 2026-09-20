@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestReadSourceBootDeviceRequiresProtectedStyleDevPath(t *testing.T) {
+func TestReadSourceBootDeviceOverrideRequiresDevPath(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "source-block-device")
 	if err := os.WriteFile(path, []byte("/dev/sdb2\n"), 0o400); err != nil {
@@ -21,7 +21,7 @@ func TestReadSourceBootDeviceRequiresProtectedStyleDevPath(t *testing.T) {
 	}
 }
 
-func TestReadSourceBootDeviceRejectsNonDevPath(t *testing.T) {
+func TestReadSourceBootDeviceOverrideRejectsNonDevPath(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "source-block-device")
 	if err := os.WriteFile(path, []byte("/tmp/fake\n"), 0o400); err != nil {
