@@ -42,6 +42,7 @@
     "prepare-ordax-esp",
     "prepare-luks2-ordax-pool",
     "prepare-btrfs-subvolumes",
+    "materialize-native-product-mode",
     "materialize-verified-release",
     "install-signed-boot-and-recovery-assets",
     "verify-installation",
@@ -81,7 +82,8 @@
     "never-claim-install-complete-before-readback-and-first-boot-health",
     "never-simulate-dual-boot-or-partition-resize",
     "never-authorize-a-target-whose-identity-changed-after-selection",
-    "never-enable-native-installer-when-product-mode-is-native-disk"
+    "never-enable-native-installer-when-product-mode-is-native-disk",
+    "never-complete-install-with-target-product-mode-still-usb"
   ],
   "target_identity": {
     "owner": "tools/creator/core/native_install_target.go",
@@ -106,5 +108,12 @@
       "ambiguous_or_missing_behavior": "fail-closed-no-target-selection",
       "fixed_initramfs_change_required": false
     }
+  },
+  "target_bootstrap": {
+    "product_mode_path": "/ordax/bootstrap/config/product-mode",
+    "source_media_value": "usb",
+    "installed_target_value": "native-disk",
+    "same_signed_system_release": true,
+    "target_value_must_be_verified_before_first_boot": true
   }
 }
