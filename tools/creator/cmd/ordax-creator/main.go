@@ -13,6 +13,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "usage: ordax-creator <check|verify-payload|stage-tree|plan> --manifest <path> [--payload-root <dir>] [--output-root <dir>]")
 	fmt.Fprintln(os.Stderr, "       ordax-creator prepare-image --seed <regular-file> --out <new-regular-file> --target-bytes <bytes>")
 	fmt.Fprintln(os.Stderr, "       ordax-creator plan-native --target-bytes <bytes>")
+	fmt.Fprintln(os.Stderr, "       ordax-creator plan-native-materialization --target-bytes <bytes>")
 }
 
 func loadManifest(path string) (creatorcore.Manifest, error) {
@@ -76,6 +77,31 @@ func runPlanNative(args []string) int {
 	return 0
 }
 
+func runPlanNativeMaterialization(args []string) int {
+	fs := flag.NewFlagSet("plan-native-materialization", flag.ContinueOnError)
+	targetBytes := fs.Uint64("target-bytes", 0, "exact disposable Native target capacity in bytes; must be 512-byte aligned")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 || *targetBytes == 0 {
+		usage()
+		return 2
+	}
+
+	plan, err := creatorcore.PlanNativeMaterialization(*targetBytes)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ordax-creator: Native materialization plan failed: %v\n", err)
+		return 1
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(plan); err != nil {
+		fmt.Fprintf(os.Stderr, "ordax-creator: encode Native materialization plan: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		usage()
@@ -88,6 +114,9 @@ func main() {
 	}
 	if command == "plan-native" {
 		os.Exit(runPlanNative(os.Args[2:]))
+	}
+	if command == "plan-native-materialization" {
+		os.Exit(runPlanNativeMaterialization(os.Args[2:]))
 	}
 
 	fs := flag.NewFlagSet(command, flag.ContinueOnError)
