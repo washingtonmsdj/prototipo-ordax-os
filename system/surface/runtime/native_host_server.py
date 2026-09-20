@@ -50,6 +50,7 @@ POWER_STATUS_PATH = "/__ordax/native/power-status"
 NETWORK_STATUS_PATH = "/__ordax/native/network-status"
 NETWORK_MANAGEMENT_PATH = "/__ordax/native/network-management"
 UPDATE_HISTORY_PATH = "/__ordax/native/update-history"
+NATIVE_INSTALL_TARGETS_PATH = "/__ordax/native/native-install-targets"
 UPDATE_STATE_FILE = "/run/ordax-update/state.json"
 HEALTH_STATE_FILE = "/run/ordax-update/healthy-sha"
 PREFERENCES_FILE = "/var/lib/ordax/preferences.json"
@@ -2084,6 +2085,7 @@ class NativeHostServer(ThreadingHTTPServer):
         user_root: str,
         power_request_path: str,
         network_session_dir: str,
+        product_mode: str | None = None,
     ):
         super().__init__(server_address, handler_class)
         self.power_token = secrets.token_urlsafe(32)
@@ -2095,6 +2097,7 @@ class NativeHostServer(ThreadingHTTPServer):
         self.network_paths = network_broker_paths(network_session_dir)
         self.network_lock = threading.Lock()
         self.user_root = user_root
+        self.product_mode = product_mode if product_mode in {"usb", "native-disk"} else None
 
 
 class NativeHostHandler(SimpleHTTPRequestHandler):
@@ -2341,6 +2344,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                     "token": self.server.power_token,
                     "networkToken": self.server.network_token,
                     "diagnosticToken": self.server.diagnostic_token,
+                    "productMode": self.server.product_mode,
                     "supportedActions": list(self.server.supported_actions),
                 },
             )
@@ -2774,6 +2778,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--user-root", default="/var/lib/ordax-user")
     parser.add_argument("--power-request", default=DEFAULT_POWER_REQUEST_PATH)
     parser.add_argument("--network-session-dir", default=DEFAULT_NETWORK_SESSION_DIR)
+    parser.add_argument("--product-mode", required=True, choices=("usb", "native-disk"))
     parser.add_argument("--telemetry-config", default="")
     return parser.parse_args()
 
@@ -2808,6 +2813,7 @@ def main() -> int:
         user_root=args.user_root,
         power_request_path=args.power_request,
         network_session_dir=args.network_session_dir,
+        product_mode=args.product_mode,
     )
     telemetry_started = start_telemetry_heartbeat(args.telemetry_config)
     print(
