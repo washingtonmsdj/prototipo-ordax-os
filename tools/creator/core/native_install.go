@@ -7,6 +7,10 @@ type NativeInstallationPlan struct {
 	Schema string `json:"schema"`
 	Status string `json:"status"`
 
+	SourceProductMode      string `json:"source_product_mode"`
+	TargetProductMode      string `json:"target_product_mode"`
+	TargetProductModePath  string `json:"target_product_mode_path"`
+
 	Storage TargetStorageProfile `json:"storage"`
 
 	WholeDiskInstall             bool `json:"whole_disk_install"`
@@ -35,6 +39,9 @@ func PlanNativeInstallation(targetBytes uint64) (NativeInstallationPlan, error) 
 	return NativeInstallationPlan{
 		Schema:                       "prototype-ordax.native-install-plan/1",
 		Status:                       "plan-only",
+		SourceProductMode:            "usb",
+		TargetProductMode:            "native-disk",
+		TargetProductModePath:        "/ordax/bootstrap/config/product-mode",
 		Storage:                      storage,
 		WholeDiskInstall:             true,
 		ExistingTargetDataErased:     true,
