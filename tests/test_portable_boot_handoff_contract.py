@@ -41,6 +41,22 @@ class PortableBootHandoffContractTests(unittest.TestCase):
             "prototype-ordax.release-manifest/2",
             self.contract["compatible_release_manifest_schemas"],
         )
+        self.assertEqual(
+            self.contract["proof"]["release_verifier_command"],
+            "ordax-release-agent verify-portable-v3-exact",
+        )
+        handoff = self.contract["initramfs_integration_requirements"]
+        self.assertEqual(
+            handoff["known_good_exact_resolver_signature_handoff"],
+            "ordax-release-agent verify-portable-v3-exact",
+        )
+        self.assertEqual(
+            handoff["known_good_exact_resolver_signature_handoff_compatibility"],
+            [
+                "ordax-release-agent verify-portable-v3-exact",
+                "ordax-release-agent verify-portable-exact",
+            ],
+        )
 
     def test_release_is_system_tree_not_a_fake_rootfs(self):
         boundary = self.contract["runtime_boundary"]
