@@ -154,8 +154,12 @@ jobs:
           work="$RUNNER_TEMP/portable-handoff"
           truncate -s 268435456 "$work/persistent-state.img"
           mkfs.ext4 -q -F -L ORDAX-STATE "$work/persistent-state.img"
-          debugfs -w -R 'mkdir /upper' "$work/persistent-state.img"
-          debugfs -w -R 'mkdir /work' "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /ordax' "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /ordax/base' "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /ordax/base/upper' "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /ordax/base/work' "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /ordax/portable-release' "$work/persistent-state.img"
+          debugfs -w -R 'mkdir /ordax/runtime' "$work/persistent-state.img"
           debugfs -w -R 'mkdir /home' "$work/persistent-state.img"
           e2fsck -fn "$work/persistent-state.img"
 
@@ -180,7 +184,7 @@ jobs:
           assert proof['release_verified_exact_offline'] is True
           assert proof['release_mount_read_only'] is True
           assert proof['state_filesystem'] == 'ext4'
-          assert proof['runtime_system_view'] == 'overlayfs'
+          assert proof['runtime_system_view'] == 'read-only-bind'
           assert proof['persistent_write_survived_remount'] is True
           assert proof['erofs_unchanged_after_runtime_write'] is True
           assert proof['legacy_current_pointer_created'] is False

@@ -374,9 +374,16 @@ def build_proof(contract_path: Path, plan_path: Path, output_root: Path) -> dict
             handle.truncate(state_bytes)
         run(["mkfs.ext4", "-q", "-F", "-L", "ORDAX-STATE", str(state_image)])
         state_marker.write_text("ORDAX_PORTABLE_USB_V2_STATE=PASS\n", encoding="utf-8")
-        run(["debugfs", "-w", "-R", "mkdir /upper", str(state_image)])
-        run(["debugfs", "-w", "-R", "mkdir /work", str(state_image)])
-        run(["debugfs", "-w", "-R", "mkdir /home", str(state_image)])
+        for directory in (
+            "/ordax",
+            "/ordax/base",
+            "/ordax/base/upper",
+            "/ordax/base/work",
+            "/ordax/portable-release",
+            "/ordax/runtime",
+            "/home",
+        ):
+            run(["debugfs", "-w", "-R", f"mkdir {directory}", str(state_image)])
         run([
             "debugfs",
             "-w",

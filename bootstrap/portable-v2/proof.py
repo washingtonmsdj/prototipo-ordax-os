@@ -177,18 +177,11 @@ def mount_graph(
         state_mounted = True
 
         lower = release_mount / "system"
-        upper = state_mount / "upper"
-        overlay_work = state_mount / "work"
         if not lower.is_dir():
             raise ProofError("EROFS release does not contain system/")
-        if not upper.is_dir() or not overlay_work.is_dir():
-            raise ProofError("persistent state is missing upper/work directories")
 
-        run([
-            "mount", "-t", "overlay", "overlay",
-            "-o", f"lowerdir={lower},upperdir={upper},workdir={overlay_work}",
-            str(merged_mount),
-        ])
+        run(["mount", "--bind", str(lower), str(merged_mount)])
+        run(["mount", "-o", "remount,bind,ro,nodev,nosuid", str(merged_mount)])
         overlay_mounted = True
 
         entrypoint = merged_mount / "entrypoint"
@@ -198,26 +191,27 @@ def mount_graph(
             raise ProofError("runtime system/entrypoint is not executable")
         run(["sh", "-n", str(entrypoint)])
 
-        lower_marker = lower / ".ordax-portable-state-proof"
-        merged_marker = merged_mount / ".ordax-portable-state-proof"
-        upper_marker = upper / ".ordax-portable-state-proof"
+        lower_marker = lower / ".ordax-system-write-proof"
+        merged_marker = merged_mount / ".ordax-system-write-proof"
         if lower_marker.exists():
-            raise ProofError("immutable lower release unexpectedly contains state proof marker")
-
-        if write_marker:
-            merged_marker.write_text("ORDAX_PORTABLE_STATE=PERSISTENT\n", encoding="utf-8")
-            os.sync()
-            if not upper_marker.is_file():
-                raise ProofError("OverlayFS write did not land in ext4 persistent state")
+            raise ProofError("immutable release unexpectedly contains system write marker")
+        try:
+            merged_marker.write_text("FORBIDDEN\n", encoding="utf-8")
+        except OSError:
+            pass
         else:
-            if not merged_marker.is_file():
-                raise ProofError("persistent runtime marker did not survive remount")
-            if merged_marker.read_text(encoding="utf-8") != "ORDAX_PORTABLE_STATE=PERSISTENT\n":
-                raise ProofError("persistent runtime marker changed after remount")
-            if not upper_marker.is_file():
-                raise ProofError("persistent state marker is missing from ext4 upper layer")
-            if lower_marker.exists():
-                raise ProofError("persistent marker leaked into immutable EROFS lower layer")
+            raise ProofError("read-only system view unexpectedly accepted a write")
+
+        state_marker = state_mount / "ordax" / "state-proof"
+        if write_marker:
+            state_marker.parent.mkdir(parents=True, exist_ok=True)
+            state_marker.write_text("ORDAX_PORTABLE_STATE=PERSISTENT\n", encoding="utf-8")
+            os.sync()
+        else:
+            if not state_marker.is_file():
+                raise ProofError("persistent ext4 state marker did not survive remount")
+            if state_marker.read_text(encoding="utf-8") != "ORDAX_PORTABLE_STATE=PERSISTENT\n":
+                raise ProofError("persistent ext4 state marker changed after remount")
 
         return {
             "entrypoint": str(entrypoint),
@@ -291,7 +285,7 @@ def prove(
             "release_filesystem": "erofs",
             "release_mount_read_only": True,
             "state_filesystem": "ext4",
-            "runtime_system_view": "overlayfs",
+            "runtime_system_view": "read-only-bind",
             "system_entrypoint_shell_valid": True,
             "persistent_write_survived_remount": True,
             "erofs_unchanged_after_runtime_write": True,

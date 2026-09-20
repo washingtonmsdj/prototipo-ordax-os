@@ -28,24 +28,24 @@
       "read_write": true
     },
     "runtime_system_view": {
-      "filesystem": "overlayfs",
+      "filesystem": "read-only-bind",
       "lower": "<mounted-system.erofs>/system",
-      "upper": "<mounted-persistent-state>/upper",
-      "work": "<mounted-persistent-state>/work",
-      "merged": "temporary-proof-runtime-system"
+      "merged": "temporary-proof-runtime-system",
+      "persistent_upper": false
     },
     "checks": [
       "signed-release-exactly-reverified-offline-before-mount",
       "erofs-mounted-read-only",
       "persistent-state-mounted-ext4",
-      "overlay-lower-is-erofs-system-tree",
-      "overlay-upper-and-work-are-ext4",
       "system-entrypoint-present-and-shell-valid",
-      "runtime-write-lands-in-persistent-state-not-erofs",
       "runtime-write-survives-unmount-remount",
       "erofs-release-hash-unchanged-after-runtime-write",
       "no-current-symlink-created",
-      "no-physical-device-path-accepted"
+      "no-physical-device-path-accepted",
+      "system-subtree-bind-mounted-read-only",
+      "system-write-is-rejected",
+      "persistent-ext4-state-survives-remount",
+      "erofs-release-hash-unchanged-after-runtime-write-attempt"
     ]
   },
   "runtime_boundary": {
@@ -68,7 +68,10 @@
     "bootstrap_capsule_verified_mount_implemented": false,
     "bootstrap_capsule_candidate_builder_implemented": true,
     "bootstrap_capsule_hash_pin_builder_support": true,
-    "bootstrap_capsule_hash_pin_disposable_proof_implemented": true
+    "bootstrap_capsule_hash_pin_disposable_proof_implemented": true,
+    "system_runtime_mutability": "immutable-release-tree",
+    "system_persistent_overlay_allowed": false,
+    "stable_base_overlay_required": true
   },
   "initramfs_integration_requirements": {
     "busybox_losetup_applet_required": true,
@@ -88,7 +91,12 @@
     "portable_handoff_helper_pid1_connected": false,
     "portable_handoff_helper_selects_release": false,
     "portable_handoff_helper_verifies_signature": false,
-    "portable_handoff_helper_writes_activation_state": false
+    "portable_handoff_helper_writes_activation_state": false,
+    "portable_handoff_helper_operations": [
+      "mount-state",
+      "mount-base",
+      "mount-system"
+    ]
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",
@@ -125,7 +133,7 @@
     "resolve-current-or-known-good-from-ext4-activation-state",
     "verify-selected-release-exactly-offline",
     "attach-selected-system-erofs-read-only",
-    "compose-overlay-system-view-with-ext4-upper-work",
+    "bind-verified-system-subtree-read-only",
     "launch-shared-system-entrypoint"
   ],
   "portable_bootstrap_contract": "docs/contracts/portable-bootstrap-v2.json"

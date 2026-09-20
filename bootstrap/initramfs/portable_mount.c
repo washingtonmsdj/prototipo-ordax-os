@@ -31,7 +31,8 @@ static void usage(void) {
     fputs(
         "usage:\n"
         "  ordax-portable-mount mount-state <state.img> <state-mount>\n"
-        "  ordax-portable-mount mount-system <system.erofs> <state-mount> <release-mount> <system-mount>\n",
+        "  ordax-portable-mount mount-base <stable-base.erofs> <state-mount> <base-mount> <root-mount>\n"
+        "  ordax-portable-mount mount-system <system.erofs> <release-mount> <system-mount>\n",
         stderr
     );
 }
@@ -226,20 +227,38 @@ static int mount_state(const char *state_image, const char *state_mount) {
     return 0;
 }
 
-static int safe_child_directory(const char *root, const char *child, char output[PATH_MAX]) {
-    if (!safe_overlay_path(root) || strchr(child, '/') != NULL) {
+static int safe_nested_directory(
+    const char *root,
+    const char *relative,
+    char output[PATH_MAX]
+) {
+    if (!safe_overlay_path(root) ||
+        relative == NULL ||
+        relative[0] == '\0' ||
+        relative[0] == '/' ||
+        strstr(relative, "..") != NULL ||
+        strchr(relative, ',') != NULL ||
+        strchr(relative, ':') != NULL ||
+        strchr(relative, '\\') != NULL) {
         return 0;
     }
-    int written = snprintf(output, PATH_MAX, "%s/%s", root, child);
+    int written = snprintf(output, PATH_MAX, "%s/%s", root, relative);
     if (written <= 0 || written >= PATH_MAX) {
         return 0;
     }
     return real_directory(output);
 }
 
-static int safe_entrypoint(const char *system_root) {
+static int safe_executable_below(const char *root, const char *relative) {
     char path[PATH_MAX];
-    int written = snprintf(path, sizeof(path), "%s/entrypoint", system_root);
+    if (!safe_overlay_path(root) ||
+        relative == NULL ||
+        relative[0] == '\0' ||
+        relative[0] == '/' ||
+        strstr(relative, "..") != NULL) {
+        return 0;
+    }
+    int written = snprintf(path, sizeof(path), "%s/%s", root, relative);
     if (written <= 0 || written >= (int)sizeof(path)) {
         return 0;
     }
@@ -253,27 +272,100 @@ static int safe_entrypoint(const char *system_root) {
     return 1;
 }
 
-static int mount_system(
-    const char *release_image,
+static int state_base_overlay_dirs(
     const char *state_mount,
-    const char *release_mount,
-    const char *system_mount
+    char upper[PATH_MAX],
+    char work[PATH_MAX]
+) {
+    return safe_nested_directory(state_mount, "ordax/base/upper", upper) &&
+           safe_nested_directory(state_mount, "ordax/base/work", work);
+}
+
+static int mount_base(
+    const char *base_image,
+    const char *state_mount,
+    const char *base_mount,
+    const char *root_mount
 ) {
     if (!safe_overlay_path(state_mount) ||
-        !safe_overlay_path(release_mount) ||
-        !safe_overlay_path(system_mount) ||
+        !safe_overlay_path(base_mount) ||
+        !safe_overlay_path(root_mount) ||
         !real_directory(state_mount) ||
-        !real_directory(release_mount) ||
-        !real_directory(system_mount)) {
-        fputs("ordax-portable-mount: system mount path is unsafe\n", stderr);
+        !real_directory(base_mount) ||
+        !real_directory(root_mount) ||
+        strcmp(base_mount, root_mount) == 0) {
+        fputs("ordax-portable-mount: base mount path is unsafe\n", stderr);
         return EXIT_UNSAFE;
     }
 
     char upper[PATH_MAX];
     char work[PATH_MAX];
-    if (!safe_child_directory(state_mount, "upper", upper) ||
-        !safe_child_directory(state_mount, "work", work)) {
-        fputs("ordax-portable-mount: ext4 state lacks safe upper/work directories\n", stderr);
+    if (!state_base_overlay_dirs(state_mount, upper, work)) {
+        fputs("ordax-portable-mount: ext4 state lacks safe ordax/base upper/work directories\n", stderr);
+        return EXIT_UNSAFE;
+    }
+
+    struct loop_binding base;
+    if (loop_attach(&base, base_image, 0, 0, 1) != 0) {
+        fprintf(stderr, "ordax-portable-mount: cannot attach Stable Base EROFS: %s\n", strerror(errno));
+        return EXIT_LOOP;
+    }
+
+    unsigned long ro_flags = MS_RDONLY | MS_NODEV | MS_NOSUID;
+    if (mount(base.device, base_mount, "erofs", ro_flags, NULL) != 0) {
+        fprintf(stderr, "ordax-portable-mount: cannot mount Stable Base EROFS: %s\n", strerror(errno));
+        loop_binding_cleanup(&base);
+        return EXIT_MOUNT;
+    }
+    if (!safe_executable_below(base_mount, "sbin/ordax-stable-init")) {
+        fputs("ordax-portable-mount: Stable Base lacks safe sbin/ordax-stable-init\n", stderr);
+        (void)umount2(base_mount, MNT_DETACH);
+        loop_binding_cleanup(&base);
+        return EXIT_UNSAFE;
+    }
+
+    char options[PATH_MAX * 3];
+    int written = snprintf(
+        options,
+        sizeof(options),
+        "lowerdir=%s,upperdir=%s,workdir=%s",
+        base_mount,
+        upper,
+        work
+    );
+    if (written <= 0 || written >= (int)sizeof(options)) {
+        fputs("ordax-portable-mount: Stable Base overlay option path is too long\n", stderr);
+        (void)umount2(base_mount, MNT_DETACH);
+        loop_binding_cleanup(&base);
+        return EXIT_UNSAFE;
+    }
+    if (mount("overlay", root_mount, "overlay", MS_NODEV | MS_NOSUID, options) != 0) {
+        fprintf(stderr, "ordax-portable-mount: cannot mount Stable Base overlay: %s\n", strerror(errno));
+        (void)umount2(base_mount, MNT_DETACH);
+        loop_binding_cleanup(&base);
+        return EXIT_MOUNT;
+    }
+
+    base.attached = 0;
+    close(base.backing_fd);
+    close(base.loop_fd);
+    close(base.control_fd);
+    printf("ORDAX_PORTABLE_BASE_LOOP=%s\n", base.device);
+    printf("ORDAX_PORTABLE_BASE_ROOT=%s\n", root_mount);
+    return 0;
+}
+
+static int mount_system(
+    const char *release_image,
+    const char *release_mount,
+    const char *system_mount
+) {
+    if (!safe_overlay_path(release_mount) ||
+        !safe_overlay_path(system_mount) ||
+        !real_directory(release_mount) ||
+        !real_directory(system_mount) ||
+        strcmp(release_mount, system_mount) == 0) {
+        fputs("ordax-portable-mount: system mount path is unsafe\n", stderr);
         return EXIT_UNSAFE;
     }
 
@@ -291,31 +383,29 @@ static int mount_system(
     }
 
     char lower[PATH_MAX];
-    if (!safe_child_directory(release_mount, "system", lower) || !safe_entrypoint(lower)) {
+    if (!safe_nested_directory(release_mount, "system", lower) ||
+        !safe_executable_below(lower, "entrypoint")) {
         fputs("ordax-portable-mount: EROFS release lacks a safe executable system/entrypoint\n", stderr);
         (void)umount2(release_mount, MNT_DETACH);
         loop_binding_cleanup(&release);
         return EXIT_UNSAFE;
     }
 
-    char options[PATH_MAX * 3];
-    int written = snprintf(
-        options,
-        sizeof(options),
-        "lowerdir=%s,upperdir=%s,workdir=%s",
-        lower,
-        upper,
-        work
-    );
-    if (written <= 0 || written >= (int)sizeof(options)) {
-        fputs("ordax-portable-mount: overlay option path is too long\n", stderr);
+    if (mount(lower, system_mount, NULL, MS_BIND, NULL) != 0) {
+        fprintf(stderr, "ordax-portable-mount: cannot bind immutable system tree: %s\n", strerror(errno));
         (void)umount2(release_mount, MNT_DETACH);
         loop_binding_cleanup(&release);
-        return EXIT_UNSAFE;
+        return EXIT_MOUNT;
     }
-
-    if (mount("overlay", system_mount, "overlay", MS_NODEV | MS_NOSUID, options) != 0) {
-        fprintf(stderr, "ordax-portable-mount: cannot mount OverlayFS system view: %s\n", strerror(errno));
+    if (mount(
+            NULL,
+            system_mount,
+            NULL,
+            MS_BIND | MS_REMOUNT | MS_RDONLY | MS_NODEV | MS_NOSUID,
+            NULL
+        ) != 0) {
+        fprintf(stderr, "ordax-portable-mount: cannot remount system tree read-only: %s\n", strerror(errno));
+        (void)umount2(system_mount, MNT_DETACH);
         (void)umount2(release_mount, MNT_DETACH);
         loop_binding_cleanup(&release);
         return EXIT_MOUNT;
@@ -334,8 +424,11 @@ int main(int argc, char **argv) {
     if (argc == 4 && strcmp(argv[1], "mount-state") == 0) {
         return mount_state(argv[2], argv[3]);
     }
-    if (argc == 6 && strcmp(argv[1], "mount-system") == 0) {
-        return mount_system(argv[2], argv[3], argv[4], argv[5]);
+    if (argc == 6 && strcmp(argv[1], "mount-base") == 0) {
+        return mount_base(argv[2], argv[3], argv[4], argv[5]);
+    }
+    if (argc == 5 && strcmp(argv[1], "mount-system") == 0) {
+        return mount_system(argv[2], argv[3], argv[4]);
     }
     usage();
     return EXIT_USAGE;

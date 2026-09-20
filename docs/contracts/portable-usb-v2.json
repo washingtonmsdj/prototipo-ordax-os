@@ -51,7 +51,22 @@
       "filesystem_label": "ORDAX-STATE",
       "size_bytes": 268435456,
       "mounted_through_loop_device_in_runtime": true,
-      "overlayfs_upper_owner": true
+      "overlayfs_upper_owner": true,
+      "overlayfs_scope": "stable-base-only",
+      "layout": {
+        "base_overlay": {
+          "upper": "/ordax/base/upper",
+          "work": "/ordax/base/work",
+          "persistent": true
+        },
+        "product_system": {
+          "persistent_overlay": false,
+          "mount_policy": "verified-erofs-system-subtree-read-only"
+        },
+        "activation_state_root": "/ordax/portable-release",
+        "runtime_state_root": "/ordax/runtime",
+        "user_home_root": "/home"
+      }
     },
     "activation_state": {
       "filesystem_owner": "persistent-state.img",
@@ -91,7 +106,9 @@
     "physical-device-path-input",
     "claiming-bootable-proof-from-storage-only-proof",
     "enabling-public-physical-write",
-    "activation-current-pointer-directly-on-exfat"
+    "activation-current-pointer-directly-on-exfat",
+    "persistent-overlay-over-system-erofs",
+    "cross-release-system-upperdir"
   ],
   "kernel_prerequisites": {
     "source": "bootstrap/kernel/config/ordax.fragment",

@@ -42,9 +42,17 @@ class PortableBootHandoffContractTests(unittest.TestCase):
         self.assertEqual(proof["release_mount"]["filesystem"], "erofs")
         self.assertTrue(proof["release_mount"]["read_only"])
         self.assertEqual(proof["state_mount"]["filesystem"], "ext4")
-        self.assertEqual(proof["runtime_system_view"]["filesystem"], "overlayfs")
-        self.assertIn("persistent-state", proof["runtime_system_view"]["upper"])
-        self.assertIn("persistent-state", proof["runtime_system_view"]["work"])
+        self.assertEqual(
+            proof["runtime_system_view"]["filesystem"],
+            "read-only-bind",
+        )
+        self.assertFalse(proof["runtime_system_view"]["persistent_upper"])
+        self.assertFalse(
+            self.contract["runtime_boundary"]["system_persistent_overlay_allowed"]
+        )
+        self.assertTrue(
+            self.contract["runtime_boundary"]["stable_base_overlay_required"]
+        )
 
     def test_initramfs_integration_gap_is_explicit(self):
         requirements = self.contract["initramfs_integration_requirements"]
@@ -78,7 +86,9 @@ class PortableBootHandoffContractTests(unittest.TestCase):
         self.assertIn('"verify-portable-exact"', text)
         self.assertIn('"mount", "-t", "erofs"', text)
         self.assertIn('"mount", "-t", "ext4"', text)
-        self.assertIn('"mount", "-t", "overlay"', text)
+        self.assertIn('"mount", "--bind"', text)
+        self.assertIn('"remount,bind,ro,nodev,nosuid"', text)
+        self.assertNotIn('"mount", "-t", "overlay"', text)
         self.assertNotIn("switch_root", text)
         self.assertNotIn("PhysicalDrive", text)
 
