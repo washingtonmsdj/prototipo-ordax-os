@@ -101,6 +101,8 @@ class StableBaseContractTests(unittest.TestCase):
         self.assertIn('ORDAX_STABLE_LAYOUT:-}" = "portable-v2"', text)
         self.assertIn('ORDAX_SOURCE_SHA', text)
         self.assertIn("[ -x /system/entrypoint ]", text)
+        self.assertIn('ORDAX_STABLE_INIT_HANDOFF=VERIFIED', text)
+        self.assertIn('ORDAX_STABLE_INIT_SOURCE_SHA=$ORDAX_SOURCE_SHA', text)
         self.assertIn("exec /system/entrypoint", text)
         self.assertNotIn("git", text.lower())
 

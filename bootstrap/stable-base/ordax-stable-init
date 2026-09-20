@@ -28,4 +28,7 @@ is_sha "${ORDAX_SOURCE_SHA:-}" ||
 [ -x /system/entrypoint ] ||
     fail "verified product system entrypoint is missing"
 
+echo "ORDAX_STABLE_INIT_HANDOFF=VERIFIED"
+echo "ORDAX_STABLE_INIT_SOURCE_SHA=$ORDAX_SOURCE_SHA"
+
 exec /system/entrypoint
