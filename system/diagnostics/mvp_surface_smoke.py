@@ -12,6 +12,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 SCHEMA = "ordax.mvp-surface-smoke/1"
+COMPARE_SCHEMA = "ordax.mvp-surface-smoke-comparison/1"
 SOURCE_ROOT = Path("/srv/ordax-system")
 RUN_ROOT = Path("/run/ordax-surface")
 EVIDENCE_ROOT = Path("/var/lib/ordax/mvp-smoke")
@@ -19,6 +20,7 @@ PROC_ROOT = Path("/proc")
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 MAX_BODY = 2 * 1024 * 1024
+MAX_REPORT = 4 * 1024 * 1024
 UPDATE_PHASES = frozenset({
     "idle",
     "checking",
@@ -417,8 +419,109 @@ def collect(
     return report
 
 
-def write_report(report: dict, output: Path | None) -> Path:
-    path = output or (EVIDENCE_ROOT / f"mvp-smoke-{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}.json")
+def _valid_sha256(value: object) -> bool:
+    return isinstance(value, str) and len(value) == 64 and all(char in "0123456789abcdef" for char in value)
+
+
+def _source_identity(report: dict) -> dict[str, tuple[int, str]] | None:
+    source = report.get("source")
+    files = source.get("files") if isinstance(source, dict) else None
+    if not isinstance(files, dict) or set(files) != set(REQUIRED_SOURCE_FILES):
+        return None
+    result = {}
+    for path in REQUIRED_SOURCE_FILES:
+        item = files.get(path)
+        if not isinstance(item, dict):
+            return None
+        size = item.get("size")
+        digest = item.get("sha256")
+        if not isinstance(size, int) or isinstance(size, bool) or size < 0 or not _valid_sha256(digest):
+            return None
+        result[path] = (size, digest)
+    return result
+
+
+def _updater_identity(report: dict) -> tuple[str, bool] | None:
+    observed = report.get("observed")
+    update = observed.get("update_status") if isinstance(observed, dict) else None
+    if not isinstance(update, dict):
+        return None
+    digest = update.get("source_identity_sha256")
+    runtime_matches = update.get("runtime_surface_matches_source")
+    if not _valid_sha256(digest) or not isinstance(runtime_matches, bool):
+        return None
+    return digest, runtime_matches
+
+
+def _report_has_no_failures(report: dict) -> bool:
+    summary = report.get("summary")
+    if not isinstance(summary, dict):
+        return False
+    fail = summary.get("fail")
+    return isinstance(fail, int) and not isinstance(fail, bool) and fail == 0
+
+
+def compare_reports(baseline: dict, after: dict, label: str = "mvp-surface-comparison") -> dict:
+    checks = []
+    schemas_ok = baseline.get("schema") == SCHEMA and after.get("schema") == SCHEMA
+    checks.append(_check("report_schema", schemas_ok, "relatórios usam o schema esperado" if schemas_ok else "schema de relatório incompatível"))
+
+    baseline_clean = _report_has_no_failures(baseline)
+    after_clean = _report_has_no_failures(after)
+    checks.append(_check("baseline_failures", baseline_clean, "baseline sem FAIL" if baseline_clean else "baseline contém FAIL ou summary inválido"))
+    checks.append(_check("after_tour_failures", after_clean, "pós-tour sem FAIL" if after_clean else "pós-tour contém FAIL ou summary inválido"))
+
+    baseline_boot = baseline.get("boot_id")
+    after_boot = after.get("boot_id")
+    same_boot = isinstance(baseline_boot, str) and bool(baseline_boot) and baseline_boot == after_boot
+    checks.append(_check("same_boot", same_boot, "mesmo boot confirmado" if same_boot else "boot ausente ou diferente entre as coletas"))
+
+    baseline_source = _source_identity(baseline)
+    after_source = _source_identity(after)
+    same_source = baseline_source is not None and baseline_source == after_source
+    checks.append(_check("same_source", same_source, "mesmas fontes compartilhadas" if same_source else "fontes ausentes, inválidas ou diferentes"))
+
+    baseline_updater = _updater_identity(baseline)
+    after_updater = _updater_identity(after)
+    updater_valid = baseline_updater is not None and after_updater is not None
+    same_updater = updater_valid and baseline_updater[0] == after_updater[0]
+    checks.append(_check("same_updater_source", same_updater, "mesma identidade de source do updater" if same_updater else "identidade do updater ausente ou diferente"))
+
+    runtime_aligned = updater_valid and baseline_updater[1] and after_updater[1]
+    checks.append(_check("runtime_surface_aligned", runtime_aligned, "Surface alinhada ao source nas duas coletas" if runtime_aligned else "Surface não está alinhada ao source em uma das coletas"))
+
+    report = {
+        "schema": COMPARE_SCHEMA,
+        "captured_at": _timestamp(),
+        "label": label,
+        "baseline_label": baseline.get("label") if isinstance(baseline.get("label"), str) else "",
+        "after_label": after.get("label") if isinstance(after.get("label"), str) else "",
+        "checks": checks,
+    }
+    report["summary"] = _summary(checks)
+    return report
+
+
+def load_report(path: Path) -> dict:
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        raise ValueError(f"report unavailable: {exc}") from exc
+    if len(data) > MAX_REPORT:
+        raise ValueError(f"report exceeds {MAX_REPORT} bytes")
+    try:
+        value = json.loads(data.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("report is not valid UTF-8 JSON") from exc
+    if not isinstance(value, dict):
+        raise ValueError("report must be a JSON object")
+    if value.get("schema") != SCHEMA:
+        raise ValueError("report schema is incompatible")
+    return value
+
+
+def write_report(report: dict, output: Path | None, *, prefix: str = "mvp-smoke") -> Path:
+    path = output or (EVIDENCE_ROOT / f"{prefix}-{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}.json")
     path.parent.mkdir(parents=True, exist_ok=True)
     serialized = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     path.write_text(serialized, encoding="utf-8")
@@ -433,16 +536,32 @@ def _print_summary(report: dict, path: Path) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("collect", nargs="?", default="collect", choices=["collect"])
+    parser.add_argument("command", nargs="?", default="collect", choices=["collect", "compare"])
     parser.add_argument("--label", default="mvp-surface-smoke")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--timeout", type=float, default=1.5)
+    parser.add_argument("--baseline", type=Path)
+    parser.add_argument("--after", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
 
-    report = collect(args.label, host=args.host, port=args.port, timeout=args.timeout)
-    path = write_report(report, args.output)
+    if args.command == "compare":
+        if args.baseline is None or args.after is None:
+            parser.error("compare requires --baseline and --after")
+        try:
+            baseline = load_report(args.baseline)
+            after = load_report(args.after)
+        except ValueError as exc:
+            parser.error(str(exc))
+        report = compare_reports(baseline, after, args.label)
+        path = write_report(report, args.output, prefix="mvp-smoke-comparison")
+    else:
+        if args.baseline is not None or args.after is not None:
+            parser.error("--baseline/--after are only valid with compare")
+        report = collect(args.label, host=args.host, port=args.port, timeout=args.timeout)
+        path = write_report(report, args.output)
+
     _print_summary(report, path)
     return 1 if report["summary"]["fail"] else 0
 
