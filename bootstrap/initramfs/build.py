@@ -31,6 +31,7 @@ CONTRACT = HERE / "source.json"
 GROW_HELPER_SOURCE = HERE / "grow_ext4.c"
 PORTABLE_STATE_HELPER_SOURCE = HERE / "portable_state.c"
 PORTABLE_MOUNT_HELPER_SOURCE = HERE / "portable_mount.c"
+PORTABLE_CAPSULE_VERIFY_SOURCE = HERE / "portable_capsule_verify.sh"
 KERNEL_BUILDER_PATH = ROOT / "bootstrap" / "kernel" / "build.py"
 
 
@@ -143,12 +144,20 @@ def portable_mount_helper_source_path() -> Path:
     return path
 
 
+def portable_capsule_verify_source_path() -> Path:
+    path = PORTABLE_CAPSULE_VERIFY_SOURCE.resolve()
+    if ROOT.resolve() not in path.parents or not path.is_file() or path.is_symlink():
+        raise BuildError("portable capsule verifier source is missing or unsafe")
+    return path
+
+
 def check_contract() -> dict:
     contract = load_contract()
     init = init_path(contract)
     helper_source = growth_helper_source_path()
     portable_state_source = portable_state_helper_source_path()
     portable_mount_source = portable_mount_helper_source_path()
+    portable_capsule_verify_source = portable_capsule_verify_source_path()
     text = init.read_text(encoding="utf-8")
     forbidden = ("ORDAX-HOME", "ORDAX-PLATFORM", "sshd", "remote-core", "control-plane", "codex")
     found = [value for value in forbidden if value.lower() in text.lower()]
@@ -184,6 +193,8 @@ def check_contract() -> dict:
         "portable_state_helper_source_sha256": sha256_file(portable_state_source),
         "portable_mount_helper_source": str(portable_mount_source.relative_to(ROOT)),
         "portable_mount_helper_source_sha256": sha256_file(portable_mount_source),
+        "portable_capsule_verify_source": str(portable_capsule_verify_source.relative_to(ROOT)),
+        "portable_capsule_verify_source_sha256": sha256_file(portable_capsule_verify_source),
         "main_partition_label": contract["main_partition_label"],
         "portable_v2_prerequisites": contract["portable_v2_prerequisites"],
     }
@@ -576,6 +587,7 @@ def build(work_dir: Path, out_dir: Path, jobs: int, portable_bootstrap_capsule: 
     capsule_pin = portable_capsule_pin(portable_bootstrap_capsule)
     portable_state_source = portable_state_helper_source_path()
     portable_mount_source = portable_mount_helper_source_path()
+    portable_capsule_verify_source = portable_capsule_verify_source_path()
     check_contract()
     for name in ("make", "musl-gcc", "readelf"):
         resolve_program(name)
@@ -663,6 +675,10 @@ def build(work_dir: Path, out_dir: Path, jobs: int, portable_bootstrap_capsule: 
     shutil.copy2(portable_mount_binary, portable_mount_install)
     os.chmod(portable_mount_install, 0o755)
 
+    portable_capsule_verify_install = rootfs / "sbin" / "ordax-portable-capsule-verify"
+    shutil.copy2(portable_capsule_verify_source, portable_capsule_verify_install)
+    os.chmod(portable_capsule_verify_install, 0o755)
+
     final_config = out_dir / "busybox.config"
     shutil.copy2(source / ".config", final_config)
     archive_path = out_dir / "initramfs.cpio.gz"
@@ -710,6 +726,18 @@ def build(work_dir: Path, out_dir: Path, jobs: int, portable_bootstrap_capsule: 
             "selects_release": False,
             "verifies_signature": False,
             "writes_activation_state": False,
+            "pid1_connected": False,
+        },
+        "portable_bootstrap_capsule_verifier": {
+            "installed": True,
+            "helper_path": "/sbin/ordax-portable-capsule-verify",
+            "source_sha256": sha256_file(portable_capsule_verify_source),
+            "pin_path": "/etc/ordax/portable-bootstrap-capsule.sha256",
+            "capsule_path": "/ordax-esp/ordax/bootstrap/bootstrap.erofs",
+            "user_supplied_path_allowed": False,
+            "hash_algorithm": "sha256",
+            "mounts_capsule": False,
+            "network_access": False,
             "pid1_connected": False,
         },
         "portable_activation_state_reader": {
@@ -807,6 +835,21 @@ def verify(out_dir: Path) -> dict:
         or not _SHA256.fullmatch(str(mount_helper.get("binary_sha256", "")))
     ):
         raise BuildError("initramfs provenance is missing the isolated portable mount helper")
+
+    capsule_verifier = provenance.get("portable_bootstrap_capsule_verifier", {})
+    if (
+        capsule_verifier.get("installed") is not True
+        or capsule_verifier.get("helper_path") != "/sbin/ordax-portable-capsule-verify"
+        or capsule_verifier.get("pin_path") != "/etc/ordax/portable-bootstrap-capsule.sha256"
+        or capsule_verifier.get("capsule_path") != "/ordax-esp/ordax/bootstrap/bootstrap.erofs"
+        or capsule_verifier.get("user_supplied_path_allowed") is not False
+        or capsule_verifier.get("hash_algorithm") != "sha256"
+        or capsule_verifier.get("mounts_capsule") is not False
+        or capsule_verifier.get("network_access") is not False
+        or capsule_verifier.get("pid1_connected") is not False
+        or not _SHA256.fullmatch(str(capsule_verifier.get("source_sha256", "")))
+    ):
+        raise BuildError("initramfs provenance is missing the fixed portable capsule verifier")
 
     state_reader = provenance.get("portable_activation_state_reader", {})
     if (

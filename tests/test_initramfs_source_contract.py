@@ -10,6 +10,7 @@ BUILDER = (ROOT / "bootstrap/initramfs/build.py").read_text(encoding="utf-8")
 GROW_HELPER = (ROOT / "bootstrap/initramfs/grow_ext4.c").read_text(encoding="utf-8")
 PORTABLE_STATE_HELPER = (ROOT / "bootstrap/initramfs/portable_state.c").read_text(encoding="utf-8")
 PORTABLE_MOUNT_HELPER = (ROOT / "bootstrap/initramfs/portable_mount.c").read_text(encoding="utf-8")
+PORTABLE_CAPSULE_VERIFY = (ROOT / "bootstrap/initramfs/portable_capsule_verify.sh").read_text(encoding="utf-8")
 GROWTH_PROOF = (ROOT / "bootstrap/initramfs/prove_ext4_growth.sh").read_text(encoding="utf-8")
 
 
@@ -192,6 +193,31 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertFalse(capsule["pid1_enforced"])
         self.assertFalse(capsule["default_candidate_build_pinned"])
         self.assertFalse(capsule["physical_boot_authorized"])
+        verifier = capsule["verification_helper"]
+        self.assertEqual(
+            verifier["source"],
+            "bootstrap/initramfs/portable_capsule_verify.sh",
+        )
+        self.assertEqual(
+            verifier["runtime_path"],
+            "/sbin/ordax-portable-capsule-verify",
+        )
+        self.assertTrue(verifier["installed"])
+        self.assertEqual(verifier["operation"], "verify")
+        self.assertFalse(verifier["user_supplied_path_allowed"])
+        self.assertTrue(verifier["uses_busybox_sha256sum_check_mode"])
+        self.assertFalse(verifier["mounts_capsule"])
+        self.assertFalse(verifier["network_access"])
+        self.assertFalse(verifier["pid1_connected"])
+        self.assertIn('PIN=/etc/ordax/portable-bootstrap-capsule.sha256', PORTABLE_CAPSULE_VERIFY)
+        self.assertIn('CAPSULE=/ordax-esp/ordax/bootstrap/bootstrap.erofs', PORTABLE_CAPSULE_VERIFY)
+        self.assertIn('/bin/busybox sha256sum -c "$PIN"', PORTABLE_CAPSULE_VERIFY)
+        self.assertNotIn("mount ", PORTABLE_CAPSULE_VERIFY)
+        self.assertNotIn("curl", PORTABLE_CAPSULE_VERIFY)
+        self.assertNotIn("wget", PORTABLE_CAPSULE_VERIFY)
+        self.assertNotIn("http://", PORTABLE_CAPSULE_VERIFY)
+        self.assertNotIn("https://", PORTABLE_CAPSULE_VERIFY)
+        self.assertNotIn("ordax-portable-capsule-verify", INIT)
         self.assertIn("findfs LABEL=ORDAX", INIT)
         self.assertNotIn("findfs LABEL=ORDAX-DATA", INIT)
 

@@ -127,7 +127,7 @@ jobs:
           mkdir -p "$(dirname "$expected")" "$work/capsule-mount"
           cp "$work/bootstrap.erofs" "$expected"
 
-          sudo chroot "$rootfs" /bin/busybox sha256sum -c             /etc/ordax/portable-bootstrap-capsule.sha256
+          sudo chroot "$rootfs" /sbin/ordax-portable-capsule-verify verify
 
           helper="$work/initramfs-work/ordax-portable-mount"
           sudo "$helper" mount-capsule "$expected" "$work/capsule-mount"
@@ -143,7 +143,7 @@ jobs:
           cp "$expected" "$work/tampered-bootstrap.erofs"
           printf X | dd of="$work/tampered-bootstrap.erofs" bs=1 seek=2048 conv=notrunc status=none
           cp "$work/tampered-bootstrap.erofs" "$expected"
-          if sudo chroot "$rootfs" /bin/busybox sha256sum -c               /etc/ordax/portable-bootstrap-capsule.sha256; then
+          if sudo chroot "$rootfs" /sbin/ordax-portable-capsule-verify verify; then
             echo 'tampered bootstrap capsule passed initramfs hash pin' >&2
             exit 1
           fi

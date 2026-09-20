@@ -148,7 +148,20 @@
       "sha256sum_applet": true,
       "pin_format": "sha256sum-check-file",
       "sha256sum_check_mode": true,
-      "busybox_feature": "CONFIG_FEATURE_MD5_SHA1_SUM_CHECK=y"
+      "busybox_feature": "CONFIG_FEATURE_MD5_SHA1_SUM_CHECK=y",
+      "verification_helper": {
+        "source": "bootstrap/initramfs/portable_capsule_verify.sh",
+        "runtime_path": "/sbin/ordax-portable-capsule-verify",
+        "installed": true,
+        "operation": "verify",
+        "fixed_pin_path": "/etc/ordax/portable-bootstrap-capsule.sha256",
+        "fixed_capsule_path": "/ordax-esp/ordax/bootstrap/bootstrap.erofs",
+        "user_supplied_path_allowed": false,
+        "uses_busybox_sha256sum_check_mode": true,
+        "mounts_capsule": false,
+        "network_access": false,
+        "pid1_connected": false
+      }
     },
     "activation_selection_helper_implemented": true,
     "activation_selection_pid1_connected": false
