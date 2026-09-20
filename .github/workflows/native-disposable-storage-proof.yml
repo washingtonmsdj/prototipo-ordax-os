@@ -1,0 +1,158 @@
+name: Native Disposable Storage Proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/creator/core/native_*.go'
+      - 'tools/creator/core/storage_*.go'
+      - 'tools/creator/cmd/ordax-creator/**'
+      - 'tools/creator/proof/native_disposable.py'
+      - 'docs/contracts/native-installation.json'
+      - 'docs/contracts/native-disposable-proof.json'
+      - 'docs/contracts/storage-architecture.json'
+      - 'docs/NATIVE-INSTALLATION.md'
+      - '.github/workflows/native-disposable-storage-proof.yml'
+  pull_request:
+    paths:
+      - 'tools/creator/core/native_*.go'
+      - 'tools/creator/core/storage_*.go'
+      - 'tools/creator/cmd/ordax-creator/**'
+      - 'tools/creator/proof/native_disposable.py'
+      - 'docs/contracts/native-installation.json'
+      - 'docs/contracts/native-disposable-proof.json'
+      - 'docs/contracts/storage-architecture.json'
+      - 'docs/NATIVE-INSTALLATION.md'
+      - '.github/workflows/native-disposable-storage-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  disposable-native-storage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+          cache: false
+
+      - name: Install disposable proof tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gdisk \
+            dosfstools \
+            cryptsetup \
+            btrfs-progs
+          command -v sgdisk
+          command -v mkfs.vfat
+          command -v cryptsetup
+          command -v mkfs.btrfs
+          command -v btrfs
+          command -v blkid
+
+      - name: Test Creator Native planning
+        run: |
+          set -euo pipefail
+          cd tools/creator
+          go test -count=1 ./core ./host/linux ./cmd/ordax-creator
+
+      - name: Generate canonical Native materialization plan
+        run: |
+          set -euo pipefail
+          target_bytes="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          contract = json.loads(Path('docs/contracts/native-disposable-proof.json').read_text())
+          print(contract['target_bytes'])
+          PY
+          )"
+          (
+            cd tools/creator
+            go run ./cmd/ordax-creator plan-native-materialization \
+              --target-bytes "$target_bytes"
+          ) > "$RUNNER_TEMP/native-materialization-plan.json"
+
+          python3 - "$RUNNER_TEMP/native-materialization-plan.json" <<'PY'
+          import json, pathlib, sys
+          plan = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert plan['schema'] == 'prototype-ordax.native-materialization-plan/1'
+          assert plan['status'] == 'plan-only'
+          assert plan['physical_write_allowed'] is False
+          assert plan['disposable_proof_only'] is True
+          assert plan['boot_integration_status'] == 'pending-native-luks2-btrfs-bootstrap'
+          assert [p['name'] for p in plan['partitions']] == ['ORDAX-ESP', 'ORDAX-POOL']
+          assert plan['partitions'][1]['encryption'] == 'luks2'
+          assert plan['partitions'][1]['filesystem'] == 'btrfs'
+          print('NATIVE_MATERIALIZATION_PLAN=PASS')
+          print('NATIVE_PHYSICAL_WRITE_AUTHORIZED=NO')
+          PY
+
+      - name: Prove disposable GPT FAT32 LUKS2 Btrfs layout
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/native-storage-proof"
+          sudo -E python3 tools/creator/proof/native_disposable.py \
+            --contract docs/contracts/native-disposable-proof.json \
+            --plan "$RUNNER_TEMP/native-materialization-plan.json" \
+            --output-root "$output"
+
+          sudo chmod 0644 "$output/proof.json"
+          python3 - "$output/proof.json" <<'PY'
+          import json, pathlib, sys
+          proof = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert proof['status'] == 'pass'
+          assert proof['physical_write_authorized'] is False
+          assert proof['physical_device_touched'] is False
+          assert proof['bootable_proven'] is False
+          assert proof['boot_integration_status'] == 'pending-native-luks2-btrfs-bootstrap'
+          assert [p['name'] for p in proof['partitions']] == ['ORDAX-ESP', 'ORDAX-POOL']
+          assert proof['partitions'][0]['filesystem'] == {'type': 'vfat', 'label': 'ORDAX-ESP'}
+          pool = proof['partitions'][1]
+          assert pool['type_guid'] == 'ca7d7ccb-63ed-4c53-861c-1742536059cc'
+          assert pool['encryption'] == 'luks2'
+          assert pool['filesystem']['type'] == 'btrfs'
+          assert pool['filesystem']['label'] == 'ORDAX-POOL'
+          assert pool['product_mode'] == 'native-disk'
+          assert all(proof['checks'].values())
+          print('NATIVE_DISPOSABLE_STORAGE_PROOF=PASS')
+          print('NATIVE_BOOTABLE_PROOF=NO')
+          print('NATIVE_PHYSICAL_WRITE_AUTHORIZED=NO')
+          PY
+
+      - name: Destroy disposable bytes and ephemeral secrets
+        if: always()
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/native-storage-proof"
+          if [ -d "$output" ]; then
+            test ! -e "$output/.ephemeral-luks-key"
+            sudo rm -f \
+              "$output/ordax-native-disposable.raw" \
+              "$output/ordax-esp.img" \
+              "$output/ordax-pool.luks2"
+            test ! -e "$output/ordax-native-disposable.raw"
+            test ! -e "$output/ordax-esp.img"
+            test ! -e "$output/ordax-pool.luks2"
+          fi
+          echo 'NATIVE_DISPOSABLE_RAW_RETAINED=NO'
+          echo 'NATIVE_LUKS_KEY_RETAINED=NO'
+
+      - name: Upload proof metadata only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: native-disposable-storage-proof-${{ github.sha }}
+          path: ${{ runner.temp }}/native-storage-proof/proof.json
+          if-no-files-found: error
+          retention-days: 14
