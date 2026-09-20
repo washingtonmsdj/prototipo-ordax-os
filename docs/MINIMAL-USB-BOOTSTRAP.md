@@ -300,3 +300,22 @@ The durable USB now has a deterministic bootstrap-capsule candidate at `/ordax/b
 The capsule is deliberately small: the static release agent, local recovery entrypoint and official release-channel pointer. It excludes Surface, normal apps, user data, Git, build tools and every private signing key. The canonical public release trust anchor remains a separate bootstrap-owned object.
 
 CI builds the EROFS capsule twice from normalized tar metadata and requires byte-identical output plus EROFS integrity verification. This proves the candidate format only. The capsule is **not yet materialized into the physical ESP**, its hash is not yet pinned inside the fixed initramfs, and PID1 does not mount or execute it. Those remain independent promotion gates.
+
+
+### Portable-v2 candidate PID1
+
+The fixed initramfs now carries an isolated candidate orchestrator at `/sbin/ordax-portable-init`. It is **not** the default `/init`, and no physical systemd-boot entry points to it.
+
+The candidate path is intended only for disposable boot proof through `rdinit=/sbin/ordax-portable-init`. It mounts the ESP read-only, verifies the bootstrap capsule against the initramfs-owned hash, mounts `ORDAX-DATA`, verifies the pinned Stable Base, attaches the ext4 state image, and then evaluates boot slots in this order:
+
+```text
+current
+ -> exact signed offline verification
+ -> if invalid: known-good
+ -> exact signed offline verification
+ -> candidate is never boot authority
+```
+
+Only after a release passes exact signature/hash verification does the candidate compose the Stable Base overlay, bind the verified `system/` subtree read-only, move all required mounts under the new root and invoke `switch_root` into `ordax-stable-init`.
+
+This does not claim a bootable MVP yet. Canonical public trust is still not pinned, the candidate has no physical boot entry, QEMU end-to-end proof is still pending, and the transitional `/init` remains the actual physical boot path.

@@ -139,7 +139,8 @@
     "transitional_three_partition_writer_unchanged": true,
     "portable_v2_writer_migration_implemented": false,
     "portable_v2_pid1_integration_implemented": false,
-    "public_physical_promotion_allowed": false
+    "public_physical_promotion_allowed": false,
+    "portable_v2_pid1_candidate_installed": true
   },
   "initramfs_helpers": {
     "portable_state_reader": {
@@ -182,6 +183,19 @@
       "composes_stable_base_overlayfs": true,
       "system_runtime_view": "read-only-bind",
       "system_persistent_overlay": false
+    },
+    "portable_candidate_pid1": {
+      "path": "/sbin/ordax-portable-init",
+      "installed": true,
+      "default_init": false,
+      "invocation_for_disposable_proof": "rdinit=/sbin/ordax-portable-init",
+      "physical_boot_entry_implemented": false,
+      "current_then_known_good": true,
+      "exact_signed_release_verification": true,
+      "candidate_boot_authority": false,
+      "network_required": false,
+      "switches_root_to": "stable-base-overlay",
+      "physical_boot_authorized": false
     }
   },
   "stable_base": {

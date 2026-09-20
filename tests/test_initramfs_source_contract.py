@@ -12,6 +12,7 @@ PORTABLE_STATE_HELPER = (ROOT / "bootstrap/initramfs/portable_state.c").read_tex
 PORTABLE_MOUNT_HELPER = (ROOT / "bootstrap/initramfs/portable_mount.c").read_text(encoding="utf-8")
 PORTABLE_CAPSULE_VERIFY = (ROOT / "bootstrap/initramfs/portable_capsule_verify.sh").read_text(encoding="utf-8")
 PORTABLE_BASE_VERIFY = (ROOT / "bootstrap/initramfs/portable_base_verify.sh").read_text(encoding="utf-8")
+PORTABLE_INIT = (ROOT / "bootstrap/initramfs/portable_init.sh").read_text(encoding="utf-8")
 GROWTH_PROOF = (ROOT / "bootstrap/initramfs/prove_ext4_growth.sh").read_text(encoding="utf-8")
 
 
@@ -359,6 +360,47 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertNotIn("sha256", PORTABLE_MOUNT_HELPER.lower())
         self.assertNotIn("https://", PORTABLE_MOUNT_HELPER)
         self.assertNotIn("ordax-portable-mount", INIT)
+
+    def test_portable_v2_candidate_pid1_is_installed_but_not_default(self):
+        portable = CONTRACT["portable_v2_prerequisites"]
+        pid1 = portable["candidate_pid1"]
+        self.assertEqual(pid1["source"], "bootstrap/initramfs/portable_init.sh")
+        self.assertEqual(pid1["runtime_path"], "/sbin/ordax-portable-init")
+        self.assertTrue(pid1["installed"])
+        self.assertFalse(pid1["default_init"])
+        self.assertTrue(pid1["legacy_init_unchanged"])
+        self.assertEqual(
+            pid1["invocation_for_disposable_proof"],
+            "rdinit=/sbin/ordax-portable-init",
+        )
+        self.assertFalse(pid1["physical_boot_entry_implemented"])
+        self.assertFalse(pid1["network_required"])
+        self.assertFalse(pid1["recovery_network_started"])
+        self.assertTrue(pid1["requires_capsule_hash_verification"])
+        self.assertTrue(pid1["requires_stable_base_hash_verification"])
+        self.assertTrue(pid1["requires_bootstrap_owned_release_trust"])
+        self.assertEqual(pid1["release_selection"], ["current", "known-good"])
+        self.assertFalse(pid1["candidate_slot_boot_authority"])
+        self.assertTrue(pid1["selected_release_exact_signature_verification"])
+        self.assertEqual(pid1["switch_root_target"], "stable-base-overlay")
+        self.assertEqual(pid1["product_system_mount"], "read-only-bind")
+        self.assertFalse(pid1["pid1_promotion_allowed"])
+        self.assertFalse(pid1["physical_boot_authorized"])
+
+        self.assertIn('findfs LABEL=ORDAX-ESP', PORTABLE_INIT)
+        self.assertIn('findfs LABEL=ORDAX-DATA', PORTABLE_INIT)
+        self.assertIn('/sbin/ordax-portable-capsule-verify verify', PORTABLE_INIT)
+        self.assertIn('/sbin/ordax-portable-base-verify verify', PORTABLE_INIT)
+        self.assertIn('for slot in current known-good', PORTABLE_INIT)
+        self.assertIn('verify-portable-exact', PORTABLE_INIT)
+        self.assertIn('mount-base', PORTABLE_INIT)
+        self.assertIn('mount-system', PORTABLE_INIT)
+        self.assertIn('exec switch_root "$NEWROOT" /sbin/ordax-stable-init', PORTABLE_INIT)
+        self.assertNotIn('materialize-portable', PORTABLE_INIT)
+        self.assertNotIn('candidate known-good', PORTABLE_INIT)
+        self.assertNotIn('ordax-portable-init', INIT)
+        self.assertIn('findfs LABEL=ORDAX', INIT)
+        self.assertNotIn('findfs LABEL=ORDAX-DATA', INIT)
 
     def test_physical_use_remains_fail_closed(self):
         self.assertFalse(CONTRACT["build"]["physical_artifact_authorized"])

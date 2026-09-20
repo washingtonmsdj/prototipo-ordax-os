@@ -33,6 +33,7 @@ PORTABLE_STATE_HELPER_SOURCE = HERE / "portable_state.c"
 PORTABLE_MOUNT_HELPER_SOURCE = HERE / "portable_mount.c"
 PORTABLE_CAPSULE_VERIFY_SOURCE = HERE / "portable_capsule_verify.sh"
 PORTABLE_BASE_VERIFY_SOURCE = HERE / "portable_base_verify.sh"
+PORTABLE_INIT_SOURCE = HERE / "portable_init.sh"
 KERNEL_BUILDER_PATH = ROOT / "bootstrap" / "kernel" / "build.py"
 
 
@@ -159,6 +160,13 @@ def portable_base_verify_source_path() -> Path:
     return path
 
 
+def portable_init_source_path() -> Path:
+    path = PORTABLE_INIT_SOURCE.resolve()
+    if ROOT.resolve() not in path.parents or not path.is_file() or path.is_symlink():
+        raise BuildError("portable-v2 candidate PID1 source is missing or unsafe")
+    return path
+
+
 def check_contract() -> dict:
     contract = load_contract()
     init = init_path(contract)
@@ -167,6 +175,7 @@ def check_contract() -> dict:
     portable_mount_source = portable_mount_helper_source_path()
     portable_capsule_verify_source = portable_capsule_verify_source_path()
     portable_base_verify_source = portable_base_verify_source_path()
+    portable_init_source = portable_init_source_path()
     text = init.read_text(encoding="utf-8")
     forbidden = ("ORDAX-HOME", "ORDAX-PLATFORM", "sshd", "remote-core", "control-plane", "codex")
     found = [value for value in forbidden if value.lower() in text.lower()]
@@ -206,6 +215,8 @@ def check_contract() -> dict:
         "portable_capsule_verify_source_sha256": sha256_file(portable_capsule_verify_source),
         "portable_base_verify_source": str(portable_base_verify_source.relative_to(ROOT)),
         "portable_base_verify_source_sha256": sha256_file(portable_base_verify_source),
+        "portable_init_source": str(portable_init_source.relative_to(ROOT)),
+        "portable_init_source_sha256": sha256_file(portable_init_source),
         "main_partition_label": contract["main_partition_label"],
         "portable_v2_prerequisites": contract["portable_v2_prerequisites"],
     }
@@ -654,6 +665,7 @@ def build(
     portable_mount_source = portable_mount_helper_source_path()
     portable_capsule_verify_source = portable_capsule_verify_source_path()
     portable_base_verify_source = portable_base_verify_source_path()
+    portable_init_source = portable_init_source_path()
     check_contract()
     for name in ("make", "musl-gcc", "readelf"):
         resolve_program(name)
@@ -750,6 +762,10 @@ def build(
     shutil.copy2(portable_base_verify_source, portable_base_verify_install)
     os.chmod(portable_base_verify_install, 0o755)
 
+    portable_init_install = rootfs / "sbin" / "ordax-portable-init"
+    shutil.copy2(portable_init_source, portable_init_install)
+    os.chmod(portable_init_install, 0o755)
+
     final_config = out_dir / "busybox.config"
     shutil.copy2(source / ".config", final_config)
     archive_path = out_dir / "initramfs.cpio.gz"
@@ -811,6 +827,21 @@ def build(
             "mounts_capsule": False,
             "network_access": False,
             "pid1_connected": False,
+        },
+        "portable_candidate_pid1": {
+            "installed": True,
+            "helper_path": "/sbin/ordax-portable-init",
+            "source_sha256": sha256_file(portable_init_source),
+            "default_init": False,
+            "legacy_init_unchanged": True,
+            "candidate_invocation": "rdinit=/sbin/ordax-portable-init",
+            "requires_capsule_pin": True,
+            "requires_stable_base_pin": True,
+            "requires_bootstrap_owned_trust": True,
+            "current_then_known_good_exact_verification": True,
+            "candidate_slot_boot_authority": False,
+            "network_required": False,
+            "physical_boot_authorized": False,
         },
         "portable_stable_base_verifier": {
             "installed": True,
@@ -946,6 +977,24 @@ def verify(out_dir: Path) -> dict:
         or not _SHA256.fullmatch(str(capsule_verifier.get("source_sha256", "")))
     ):
         raise BuildError("initramfs provenance is missing the fixed portable capsule verifier")
+
+    candidate_pid1 = provenance.get("portable_candidate_pid1", {})
+    if (
+        candidate_pid1.get("installed") is not True
+        or candidate_pid1.get("helper_path") != "/sbin/ordax-portable-init"
+        or candidate_pid1.get("default_init") is not False
+        or candidate_pid1.get("legacy_init_unchanged") is not True
+        or candidate_pid1.get("candidate_invocation") != "rdinit=/sbin/ordax-portable-init"
+        or candidate_pid1.get("requires_capsule_pin") is not True
+        or candidate_pid1.get("requires_stable_base_pin") is not True
+        or candidate_pid1.get("requires_bootstrap_owned_trust") is not True
+        or candidate_pid1.get("current_then_known_good_exact_verification") is not True
+        or candidate_pid1.get("candidate_slot_boot_authority") is not False
+        or candidate_pid1.get("network_required") is not False
+        or candidate_pid1.get("physical_boot_authorized") is not False
+        or not _SHA256.fullmatch(str(candidate_pid1.get("source_sha256", "")))
+    ):
+        raise BuildError("initramfs provenance is missing the isolated portable-v2 candidate PID1")
 
     base_verifier = provenance.get("portable_stable_base_verifier", {})
     if (

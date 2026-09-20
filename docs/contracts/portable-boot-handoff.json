@@ -140,7 +140,15 @@
     "stable_base_hash_verification_helper_installed": true,
     "stable_base_hash_verification_helper_path": "/sbin/ordax-portable-base-verify",
     "stable_base_hash_verification_helper_pid1_connected": false,
-    "stable_base_pid1_hash_enforcement_implemented": false
+    "stable_base_pid1_hash_enforcement_implemented": false,
+    "portable_candidate_pid1_installed": true,
+    "portable_candidate_pid1_path": "/sbin/ordax-portable-init",
+    "portable_candidate_pid1_default": false,
+    "portable_candidate_pid1_disposable_invocation": "rdinit=/sbin/ordax-portable-init",
+    "portable_candidate_pid1_physical_entry_implemented": false,
+    "portable_candidate_pid1_current_then_known_good": true,
+    "portable_candidate_pid1_exact_signature_verification": true,
+    "portable_candidate_pid1_network_required": false
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",
