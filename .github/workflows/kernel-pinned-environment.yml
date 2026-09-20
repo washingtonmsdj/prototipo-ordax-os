@@ -159,6 +159,7 @@ jobs:
         env:
           IMAGE: ${{ steps.env.outputs.image }}
           SNAPSHOT_ID: ${{ steps.env.outputs.snapshot }}
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           python - <<'PY'
           import hashlib, json, os, pathlib
