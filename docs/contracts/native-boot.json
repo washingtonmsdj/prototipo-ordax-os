@@ -1,0 +1,124 @@
+{
+  "$schema": "prototype-ordax.native-boot/1",
+  "status": "contract-defined-initramfs-build-pending",
+  "product_mode": "native-disk",
+  "shared_kernel": true,
+  "separate_native_kernel": false,
+  "kernel_contract": "bootstrap/kernel/source.json",
+  "kernel_required_builtins": [
+    "CONFIG_BLK_DEV_DM=y",
+    "CONFIG_DM_CRYPT=y",
+    "CONFIG_CRYPTO_AES=y",
+    "CONFIG_CRYPTO_XTS=y",
+    "CONFIG_BTRFS_FS=y",
+    "CONFIG_BTRFS_FS_POSIX_ACL=y"
+  ],
+  "bootloader": {
+    "implementation": "systemd-boot",
+    "shared_bootloader_source_contract": "boot/esp/source.json",
+    "native_entry_template": "boot/native/loader/ordax-native.conf.in",
+    "native_recovery_entry_template": "boot/native/loader/ordax-native-recovery.conf.in",
+    "required_cmdline": {
+      "normal": [
+        "ordax.mode=normal",
+        "ordax.product_mode=native-disk",
+        "ordax.pool_uuid=@ORDAX_POOL_UUID@"
+      ],
+      "recovery": [
+        "ordax.mode=recovery",
+        "ordax.product_mode=native-disk",
+        "ordax.pool_uuid=@ORDAX_POOL_UUID@"
+      ]
+    },
+    "pool_uuid_is_secret": false,
+    "pool_uuid_must_be_exact_luks_uuid": true,
+    "duplicate_identity_tokens": "fail-closed"
+  },
+  "initramfs": {
+    "owner": "bootstrap/native-initramfs",
+    "source_contract": "bootstrap/native-initramfs/source.json",
+    "entrypoint": "bootstrap/native-initramfs/root/init",
+    "network_allowed": false,
+    "operational_git_allowed": false,
+    "physical_write_authorized": false,
+    "normal_pool_unlock": "interactive-passphrase-or-recovery-key",
+    "tpm2_auto_unlock_implemented": false,
+    "recovery_pool_open": "read-only",
+    "normal_pool_open": "read-write",
+    "mapper_name": "ordax-pool",
+    "pool_filesystem": "btrfs",
+    "pool_top_level_mount": "/ordax"
+  },
+  "secret_policy": {
+    "luks_passphrase_in_kernel_cmdline": false,
+    "luks_key_in_esp": false,
+    "luks_key_in_repository": false,
+    "luks_key_in_release_artifact": false,
+    "interactive_secret_echo": false,
+    "tpm2_future_allowed": true,
+    "tpm2_requires_recovery_key": true
+  },
+  "persistent_mounts": [
+    {
+      "subvolume": "ordax-state",
+      "mount": "/var",
+      "writable": true
+    },
+    {
+      "subvolume": "ordax-home",
+      "mount": "/var/home",
+      "writable": true,
+      "exposed_as": "/home"
+    },
+    {
+      "subvolume": "ordax-apps",
+      "mount": "/var/lib/ordax/apps",
+      "writable": true
+    },
+    {
+      "subvolume": "ordax-containers",
+      "mount": "/var/lib/containers",
+      "writable": true
+    },
+    {
+      "subvolume": "ordax-snapshots",
+      "mount": "/.ordax-snapshots",
+      "writable": true
+    }
+  ],
+  "runtime_environment": {
+    "ORDAX_STATE_DIR": "/var/lib/ordax",
+    "ORDAX_USER_HOME": "/var/home"
+  },
+  "post_unlock_validation": [
+    "luks-device-uuid-equals-exact-boot-identity",
+    "btrfs-top-level-mount-succeeds",
+    "product-mode-file-is-regular-not-symlink",
+    "product-mode-file-equals-native-disk",
+    "bootstrap-entrypoint-is-executable",
+    "required-btrfs-subvolumes-exist"
+  ],
+  "normal_handoff": "/ordax/bootstrap/entrypoint",
+  "recovery_handoff": "/ordax/bootstrap/recovery/entrypoint",
+  "fail_closed": [
+    "missing-or-duplicate-product-mode-cmdline",
+    "product-mode-not-native-disk",
+    "missing-or-duplicate-pool-uuid",
+    "invalid-pool-uuid-syntax",
+    "pool-uuid-not-found",
+    "selected-device-not-luks2",
+    "unlock-failure",
+    "btrfs-mount-failure",
+    "persistent-product-mode-mismatch",
+    "required-subvolume-missing",
+    "bootstrap-entrypoint-missing"
+  ],
+  "proof_state": {
+    "kernel_prerequisite_ci": "pending",
+    "native_initramfs_artifact": "pending",
+    "disposable_unlock_mount_proof": "pending",
+    "qemu_uefi_boot_proof": "pending",
+    "physical_native_boot_proof": "pending",
+    "physical_apply_authorized": false
+  }
+}
