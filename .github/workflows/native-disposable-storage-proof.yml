@@ -103,13 +103,18 @@ jobs:
         run: |
           set -euo pipefail
           output="$RUNNER_TEMP/native-storage-proof"
+          metadata="$RUNNER_TEMP/native-storage-proof-metadata"
+          mkdir -p "$metadata"
           sudo -E python3 tools/creator/proof/native_disposable.py \
             --contract docs/contracts/native-disposable-proof.json \
             --plan "$RUNNER_TEMP/native-materialization-plan.json" \
             --output-root "$output"
 
-          sudo chmod 0644 "$output/proof.json"
-          python3 - "$output/proof.json" <<'PY'
+          # Keep RAW/container bytes inside the root-only proof directory. Export
+          # only immutable proof metadata into an ordinary runner-owned path.
+          sudo install -o "$(id -u)" -g "$(id -g)" -m 0644 \
+            "$output/proof.json" "$metadata/proof.json"
+          python3 - "$metadata/proof.json" <<'PY'
           import json, pathlib, sys
           proof = json.loads(pathlib.Path(sys.argv[1]).read_text())
           assert proof['status'] == 'pass'
@@ -136,23 +141,23 @@ jobs:
         run: |
           set -euo pipefail
           output="$RUNNER_TEMP/native-storage-proof"
-          if [ -d "$output" ]; then
-            test ! -e "$output/.ephemeral-luks-key"
-            sudo rm -f \
-              "$output/ordax-native-disposable.raw" \
-              "$output/ordax-esp.img" \
-              "$output/ordax-pool.luks2"
-            test ! -e "$output/ordax-native-disposable.raw"
-            test ! -e "$output/ordax-esp.img"
-            test ! -e "$output/ordax-pool.luks2"
+          metadata="$RUNNER_TEMP/native-storage-proof-metadata/proof.json"
+          if sudo test -d "$output"; then
+            sudo test ! -e "$output/.ephemeral-luks-key"
+            sudo rm -rf "$output"
+          fi
+          test ! -e "$output"
+          if [ -e "$metadata" ]; then
+            test "$(stat -c '%a' "$metadata")" = "644"
           fi
           echo 'NATIVE_DISPOSABLE_RAW_RETAINED=NO'
           echo 'NATIVE_LUKS_KEY_RETAINED=NO'
+          echo 'NATIVE_PROOF_METADATA_ONLY=YES'
 
       - name: Upload proof metadata only
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: native-disposable-storage-proof-${{ github.sha }}
-          path: ${{ runner.temp }}/native-storage-proof/proof.json
+          path: ${{ runner.temp }}/native-storage-proof-metadata/proof.json
           if-no-files-found: error
           retention-days: 14
