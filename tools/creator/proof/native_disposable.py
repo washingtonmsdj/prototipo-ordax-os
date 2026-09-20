@@ -62,6 +62,14 @@ def run(args: list[str], *, text: bool = True) -> subprocess.CompletedProcess[An
 
 def load_json(path: Path, label: str) -> dict[str, Any]:
     try:
+        info = path.lstat()
+    except OSError as exc:
+        raise ProofError(f"cannot stat {label}: {exc}") from exc
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise ProofError(f"{label} must be a regular non-symlink file")
+    if info.st_size <= 0 or info.st_size > 1024 * 1024:
+        raise ProofError(f"{label} has an invalid size")
+    try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ProofError(f"cannot load {label}: {exc}") from exc
