@@ -48,7 +48,7 @@ jobs:
 
       - name: Build kernel candidate with provenance
         env:
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python bootstrap/kernel/build.py build --jobs 4
 
       - name: Verify kernel candidate artifacts

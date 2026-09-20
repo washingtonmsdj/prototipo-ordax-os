@@ -351,16 +351,38 @@ def package_modules(stage: Path, destination: Path) -> set[str]:
     return module_basenames
 
 
-def git_head() -> str:
-    env_sha = os.environ.get("GITHUB_SHA")
-    if env_sha and re.fullmatch(r"[0-9a-fA-F]{40}", env_sha):
-        return env_sha.lower()
+def repository_source_commit() -> str:
+    expected = os.environ.get("ORDAX_SOURCE_COMMIT", "").strip().lower()
+    if expected and re.fullmatch(r"[0-9a-f]{40}", expected) is None:
+        raise BuildError("ORDAX_SOURCE_COMMIT must be an exact 40-hex commit")
+
     try:
-        return subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, capture_output=True, text=True
-        ).stdout.strip()
-    except Exception:
-        return "unknown"
+        actual = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip().lower()
+    except Exception as exc:
+        raise BuildError("cannot resolve checked-out OrdaX source commit") from exc
+
+    if re.fullmatch(r"[0-9a-f]{40}", actual) is None:
+        raise BuildError("checked-out OrdaX source commit is invalid")
+
+    if expected:
+        if actual != expected:
+            raise BuildError(
+                "checked-out OrdaX source commit does not match ORDAX_SOURCE_COMMIT"
+            )
+        return expected
+
+    if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+        raise BuildError(
+            "CI kernel build requires explicit ORDAX_SOURCE_COMMIT; "
+            "reserved GITHUB_SHA is not provenance authority"
+        )
+    return actual
 
 
 def command_version(argv: list[str]) -> str:
@@ -440,7 +462,7 @@ def build(work_dir: Path, out_dir: Path, jobs: int) -> dict:
         else "candidate-unpinned-build-environment",
         "promotable_to_physical": environment_pinned and physical_authorized,
         "physical_artifact_authorized": physical_authorized,
-        "source_commit": git_head(),
+        "source_commit": repository_source_commit(),
         "kernel_version": contract["version"],
         "upstream_archive_url": contract["archive_url"],
         "upstream_archive_sha256": sha256_file(archive),

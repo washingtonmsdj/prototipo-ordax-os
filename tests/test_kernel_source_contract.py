@@ -69,8 +69,15 @@ class KernelSourceContractTest(unittest.TestCase):
         )
         identity = "${{ github.event.pull_request.head.sha || github.sha }}"
         self.assertIn(f"ref: {identity}", workflow)
-        self.assertIn(f"GITHUB_SHA: {identity}", workflow)
+        self.assertIn(f"ORDAX_SOURCE_COMMIT: {identity}", workflow)
+        self.assertNotIn(f"GITHUB_SHA: {identity}", workflow)
         self.assertIn(f"ordax-kernel-{identity}", workflow)
+
+        builder = (ROOT / "bootstrap/kernel/build.py").read_text(encoding="utf-8")
+        self.assertIn('os.environ.get("ORDAX_SOURCE_COMMIT"', builder)
+        self.assertIn("reserved GITHUB_SHA is not provenance authority", builder)
+        self.assertIn("git\", \"rev-parse\", \"HEAD", builder)
+        self.assertNotIn('os.environ.get("GITHUB_SHA")', builder)
 
     def test_environment_is_pinned_but_physical_use_remains_fail_closed(self):
         self.assertTrue(SOURCE["build"]["pinned_environment_resolved"])
