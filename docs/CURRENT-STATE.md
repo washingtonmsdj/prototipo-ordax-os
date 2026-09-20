@@ -207,12 +207,19 @@ PORTABLE_RELEASE_OFFLINE_EXACT_VERIFY=PASS_CI
 PORTABLE_MOUNT_HANDOFF_PROOF=PASS_CI_DISPOSABLE
 PORTABLE_BOOTSTRAP_CAPSULE_REPRODUCIBLE=PASS_CI
 PORTABLE_INITRAMFS_HELPERS=PASS_CI
+PORTABLE_SURFACE_RUNTIME_APK_LOCK=PASS_CI_253_EXACT_PACKAGES
+PORTABLE_SURFACE_RUNTIME_EROFS_REPRODUCIBLE=PASS_CI
+PORTABLE_SURFACE_RUNTIME_EROFS_SHA256=170d306b38cfdbadba47a7548a6757a920ceaedea98697270aaa8ca4f4d8d038
+PORTABLE_SURFACE_RUNTIME_BOOT_CONNECTED=NO
+PORTABLE_STABLE_FIRST_SURFACE_OFFLINE_PROVEN=NO
 PORTABLE_PINNED_INITRAMFS_COMPOSITION=PENDING_CURRENT_HEAD
 PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PENDING_CURRENT_HEAD
 PORTABLE_QEMU_UEFI_BOOT=NO
 PORTABLE_PHYSICAL_USB_BOOT=NO
 PORTABLE_V2_PUBLIC_WRITER_ENABLED=NO
 ```
+
+The offline Stable/MVP graphical runtime is now a separate candidate EROFS artifact with a full 253-package Alpine lock and repeat-digest proof. It deliberately excludes generated machine identity and Fontconfig caches from signed bytes. The artifact is **not yet connected to the Portable v2 boot/runtime handoff** and therefore does not yet prove that a fresh Stable USB reaches the Surface with networking disabled.
 
 CI proof remains distinct from physical boot evidence and does not authorize the public writer.
 
