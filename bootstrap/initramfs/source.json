@@ -170,7 +170,7 @@
       }
     },
     "activation_selection_helper_implemented": true,
-    "activation_selection_pid1_connected": false,
+    "activation_selection_pid1_connected": true,
     "stable_base_pin": {
       "builder_support": true,
       "optional_build_input": "--portable-stable-base",
