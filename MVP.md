@@ -90,6 +90,10 @@ Ajustes          0.3.x
 Creator          0.2.x
 ```
 
+A tabela acima é **somente um exemplo de independência de versionamento**, não um snapshot das versões atuais. Valores correntes devem ser lidos dos manifests/owners e de `docs/CURRENT-STATE.md`; exemplos de planejamento nunca devem ser tratados como estado implementado.
+
+A versão geral do produto pode existir, mas deve ser distinguida da versão dos componentes. Ter uma versão própria também não significa, por si só, possuir atualização independente de produção: esse comportamento depende do `releaseMode` e dos gates correspondentes.
+
 ## 5. Definição prática do MVP
 
 Um usuário deve conseguir:
@@ -290,6 +294,8 @@ Native permanece em trilha técnica pós-MVP, sem bloquear a sequência.
 - não invente preços, tiers ou limites comerciais;
 - preserve gates fail-closed;
 - não declare prova física quando houve apenas CI/prova descartável;
+- não use exemplos de documentação como snapshot atual quando há manifest/contrato estruturado;
+- qualquer mudança de versão, `releaseMode`, geometria física ou outro valor canônico deve atualizar o snapshot/contrato correspondente no mesmo change set e manter o guardrail de freshness verde;
 - prefira arquitetura a paliativos.
 
 ## 14. Referências técnicas
