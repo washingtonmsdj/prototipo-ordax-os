@@ -55,6 +55,20 @@ $ToolkitSourceCommit = [string]$ToolkitProvenance.source_commit
 if ($ToolkitSourceCommit -notmatch '^[0-9a-f]{40}$') {
     throw 'Toolkit provenance source_commit must be exactly 40 lowercase hexadecimal characters.'
 }
+$ExpectedSignerSha256 = [string]$ToolkitProvenance.components.release_signer.sha256
+$ExpectedInitializerSha256 = [string]$ToolkitProvenance.components.trust_initializer.sha256
+if ($ExpectedSignerSha256 -notmatch '^[0-9a-f]{64}$' -or
+    $ExpectedInitializerSha256 -notmatch '^[0-9a-f]{64}$') {
+    throw 'Toolkit provenance component hashes are invalid.'
+}
+$ActualSignerSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $Signer).Hash.ToLowerInvariant()
+$ActualInitializerSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $ScriptPath).Hash.ToLowerInvariant()
+if ($ActualSignerSha256 -ne $ExpectedSignerSha256) {
+    throw 'Release signer bytes do not match toolkit provenance.'
+}
+if ($ActualInitializerSha256 -ne $ExpectedInitializerSha256) {
+    throw 'Trust initializer bytes do not match toolkit provenance.'
+}
 
 $PrivateKeyPath = [IO.Path]::GetFullPath($PrivateKeyPath)
 $ReviewDirectory = [IO.Path]::GetFullPath($ReviewDirectory)
@@ -173,6 +187,7 @@ $Result = [ordered]@{
 Write-Host ''
 Write-Host 'CANONICAL_KEY_MATERIAL_GENERATED=YES'
 Write-Host "SOURCE_COMMIT=$ToolkitSourceCommit"
+Write-Host 'TOOLKIT_COMPONENT_HASHES_VERIFIED=YES'
 Write-Host 'PUBLIC_TRUST_DERIVATION_MATCH=PASS'
 Write-Host 'PROOF_SIGNATURE_CREATED=YES'
 Write-Host "PUBLIC_TRUST_SHA256=$TrustHash"
