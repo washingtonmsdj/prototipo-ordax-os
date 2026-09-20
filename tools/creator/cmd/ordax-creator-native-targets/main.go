@@ -12,8 +12,8 @@ import (
 	linuxadapter "github.com/washingtonmsdj/prototipo-ordax-os/tools/creator/host/linux"
 )
 
-func readSourceBootDevice(path string) (string, error) {
-	data, err := os.ReadFile(path)
+func readSourceBootDevice(sourceFile string) (string, error) {
+	data, err := os.ReadFile(sourceFile)
 	if err != nil {
 		return "", fmt.Errorf("read source boot device handoff: %w", err)
 	}
