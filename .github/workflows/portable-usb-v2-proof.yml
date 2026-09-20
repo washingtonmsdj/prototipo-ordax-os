@@ -144,6 +144,7 @@ jobs:
               'systemd-boot', 'loader-config', 'loader-normal', 'loader-recovery',
               'kernel', 'initramfs', 'bootstrap-capsule', 'release-trust',
               'stable-base', 'persistent-state', 'system-image',
+              'surface-runtime-image', 'surface-runtime-ref',
               'release-manifest', 'release-envelope',
           ]
           artifacts = []
@@ -177,7 +178,7 @@ jobs:
           for id in \
             systemd-boot loader-config loader-normal loader-recovery \
             kernel initramfs bootstrap-capsule release-trust \
-            stable-base persistent-state system-image release-manifest release-envelope
+            stable-base persistent-state system-image surface-runtime-image surface-runtime-ref release-manifest release-envelope
           do
             args+=(--source "$id=$fixtures/$id")
           done
@@ -193,7 +194,7 @@ jobs:
           import json, pathlib, sys
           proof = json.loads(pathlib.Path(sys.argv[1]).read_text())
           assert proof['status'] == 'pass'
-          assert proof['artifact_count'] == 13
+          assert proof['artifact_count'] == 15
           assert proof['partitions'] == ['ORDAX-ESP', 'ORDAX-DATA']
           assert proof['physical_target_device_touched'] is False
           assert proof['physical_write_authorized'] is False
