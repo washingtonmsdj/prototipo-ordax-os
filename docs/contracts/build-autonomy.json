@@ -102,5 +102,20 @@
     "codex_is_optional_partner": true,
     "codex_is_release_authority": false,
     "codex_is_build_authority": false
+  },
+  "native_system_release": {
+    "assembly_recipe": "tools/native-release-assembly/build.py",
+    "assembly_contract": "docs/contracts/native-release-assembly.json",
+    "shared_system_source": "system/",
+    "native_helper_source": [
+      "tools/creator/core/",
+      "tools/creator/host/linux/",
+      "tools/creator/cmd/ordax-creator-native-targets/"
+    ],
+    "helper_built_by_ci": true,
+    "helper_compiled_on_end_user_device": false,
+    "helper_covered_by_signed_system_tar": true,
+    "final_bundle_owner": "tools/release-bundle",
+    "separate_helper_release_channel": false
   }
 }
