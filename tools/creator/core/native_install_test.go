@@ -11,6 +11,12 @@ func TestPlanNativeInstallationIsFailClosedAndUsesNativeProfile(t *testing.T) {
 	if plan.Schema != "prototype-ordax.native-install-plan/1" || plan.Status != "plan-only" {
 		t.Fatalf("unexpected native plan identity: %#v", plan)
 	}
+	if plan.SourceProductMode != "usb" || plan.TargetProductMode != "native-disk" {
+		t.Fatalf("unexpected product-mode transition: %s -> %s", plan.SourceProductMode, plan.TargetProductMode)
+	}
+	if plan.TargetProductModePath != "/ordax/bootstrap/config/product-mode" {
+		t.Fatalf("unexpected target product-mode path: %s", plan.TargetProductModePath)
+	}
 	if plan.Storage.Profile != "native-disk" || plan.Storage.PayloadName != "ORDAX-POOL" {
 		t.Fatalf("unexpected native storage profile: %#v", plan.Storage)
 	}
