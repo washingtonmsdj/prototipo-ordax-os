@@ -328,3 +328,19 @@ Before any portable-v2 QEMU or physical boot promotion, CI must prove that one *
 The proof builds the capsule from the exact static release agent, builds the Stable Base from exact-source kernel modules, passes both EROFS artifacts into `bootstrap/initramfs/build.py`, and verifies that the resulting provenance and in-archive SHA-256 check files match the real bytes.
 
 The two fixed-path verification helpers are then exercised in an isolated initramfs root: exact artifacts must pass and single-byte-tampered copies must fail. This proof does not change the default `/init`, does not promote `ordax-portable-init`, does not boot QEMU and does not authorize physical media. Those remain later gates.
+
+
+### Portable v2 direct-kernel QEMU gate
+
+After the exact-artifact pin composition gate, the next disposable boot proof uses QEMU with the exact OrdaX kernel plus the pinned initramfs candidate and a sparse regular guest disk containing the **final two-partition layout**:
+
+```text
+ORDAX-ESP  FAT32
+ORDAX-DATA exFAT
+```
+
+The disk contains the verified bootstrap capsule and bootstrap-owned CI trust on the ESP, plus the real Stable Base, ext4 persistent-state image and one signed `release-manifest/2` EROFS product release on ORDAX-DATA. The ext4 state owns `current` and `known-good`.
+
+This gate invokes the candidate PID1 explicitly with `rdinit=/sbin/ordax-portable-init`, disables guest networking and requires both the portable PID1 handoff marker and the Stable Base handoff marker. It proves the durable runtime chain without silently changing the default boot path.
+
+This is deliberately **not yet a UEFI proof**. systemd-boot/OVMF, a public physical boot entry and real USB hardware remain later gates.

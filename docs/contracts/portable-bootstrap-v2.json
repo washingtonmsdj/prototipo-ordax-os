@@ -236,5 +236,14 @@
     "pid1_default_changed": false,
     "physical_boot_connected": false,
     "public_physical_promotion_allowed": false
+  },
+  "qemu_direct_kernel_proof": {
+    "contract": "docs/contracts/portable-v2-qemu-boot-proof.json",
+    "workflow_implemented": true,
+    "proof_passed_on_current_head": false,
+    "direct_kernel_only": true,
+    "uefi_boot_proven": false,
+    "physical_boot_proven": false,
+    "public_physical_promotion_allowed": false
   }
 }

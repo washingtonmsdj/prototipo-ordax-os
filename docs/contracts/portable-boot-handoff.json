@@ -214,5 +214,13 @@
     "proof_passed_on_current_head": false,
     "qemu_boot_proven": false,
     "physical_boot_proven": false
+  },
+  "qemu_direct_kernel_proof": {
+    "contract": "docs/contracts/portable-v2-qemu-boot-proof.json",
+    "workflow_implemented": true,
+    "proof_passed_on_current_head": false,
+    "direct_kernel_boot_proven": false,
+    "uefi_boot_proven": false,
+    "physical_boot_proven": false
   }
 }

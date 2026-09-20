@@ -1,0 +1,58 @@
+{
+  "$schema": "prototype-ordax.portable-v2-qemu-boot-proof/1",
+  "status": "candidate-workflow-implemented",
+  "product_scope": "stable-mvp-usb-only",
+  "workflow": ".github/workflows/portable-v2-qemu-boot-proof.yml",
+  "boot_mode": "direct-kernel-candidate-only",
+  "uefi_boot_proven": false,
+  "qemu_direct_kernel_boot_proven": false,
+  "physical_boot_proven": false,
+  "physical_write_authorized": false,
+  "physical_target_device_touched": false,
+  "qemu_network": "disabled",
+  "guest_storage": {
+    "regular_sparse_raw_file_only": true,
+    "layout": [
+      "ORDAX-ESP",
+      "ORDAX-DATA"
+    ],
+    "esp_filesystem": "fat32",
+    "data_filesystem": "exfat",
+    "persistent_state_filesystem": "ext4-in-file",
+    "release_filesystem": "erofs-in-file",
+    "stable_base_filesystem": "erofs-in-file"
+  },
+  "required_real_artifacts": [
+    "exact-source-kernel",
+    "bootstrap-capsule",
+    "stable-base",
+    "pinned-initramfs",
+    "signed-portable-release-v2",
+    "bootstrap-owned-public-trust",
+    "persistent-state-image-with-current-and-known-good"
+  ],
+  "required_serial_markers": [
+    "ORDAX_PORTABLE_V2_HANDOFF=VERIFIED",
+    "ORDAX_STABLE_INIT_HANDOFF=VERIFIED"
+  ],
+  "required_checks": [
+    "initramfs-capsule-pin-matches-staged-capsule",
+    "initramfs-stable-base-pin-matches-staged-base",
+    "portable-release-signature-and-hash-verified-offline",
+    "current-selected-before-known-good",
+    "candidate-is-not-boot-authority",
+    "stable-base-overlay-mounted",
+    "system-erofs-mounted-read-only",
+    "switch-root-reaches-stable-init",
+    "network-disabled",
+    "raw-guest-disk-destroyed",
+    "no-physical-target-device-touched"
+  ],
+  "promotion_effect": {
+    "portable_v2_pid1_default_changed": false,
+    "portable_v2_physical_boot_entry_implemented": false,
+    "public_physical_promotion_allowed": false,
+    "uefi_gate_still_required": true,
+    "physical_usb_gate_still_required": true
+  }
+}
