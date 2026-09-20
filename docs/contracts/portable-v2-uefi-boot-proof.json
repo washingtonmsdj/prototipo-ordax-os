@@ -1,0 +1,42 @@
+{
+  "$schema": "prototype-ordax.portable-v2-uefi-boot-proof/1",
+  "status": "candidate-workflow-not-yet-green",
+  "product_scope": "stable-mvp-usb-only",
+  "workflow": ".github/workflows/portable-v2-qemu-boot-proof.yml",
+  "proof_owner": "bootstrap/portable-v2/uefi_boot.py",
+  "firmware": "ovmf-non-secure-boot-ci-only",
+  "bootloader": "pinned-systemd-boot-candidate",
+  "guest_disk_layout": [
+    "ORDAX-ESP",
+    "ORDAX-DATA"
+  ],
+  "physical_target_device_touched": false,
+  "physical_write_authorized": false,
+  "secure_boot_proven": false,
+  "qemu_direct_kernel_prerequisite": true,
+  "qemu_uefi_boot_proven": false,
+  "physical_usb_boot_proven": false,
+  "public_physical_promotion_allowed": false,
+  "loader": {
+    "config": "boot/portable-v2/loader/loader.conf",
+    "normal_entry": "boot/portable-v2/loader/entries/ordax-portable.conf",
+    "recovery_entry": "boot/portable-v2/loader/entries/ordax-portable-recovery.conf",
+    "default_entry": "ordax-portable.conf",
+    "normal_rdinit": "/sbin/ordax-portable-init",
+    "normal_network_required": false,
+    "recovery_entry_present": true
+  },
+  "required_serial_markers": [
+    "ORDAX_PORTABLE_V2_HANDOFF=VERIFIED",
+    "ORDAX_PORTABLE_V2_SLOT=current",
+    "ORDAX_PORTABLE_V2_SOURCE_SHA=<exact-source-commit>",
+    "ORDAX_STABLE_INIT_HANDOFF=VERIFIED",
+    "ORDAX_STABLE_INIT_SOURCE_SHA=<exact-source-commit>"
+  ],
+  "forbidden_claims": [
+    "secure-boot-proven",
+    "physical-usb-boot-proven",
+    "public-physical-promotion-allowed",
+    "qemu-required-for-end-users"
+  ]
+}
