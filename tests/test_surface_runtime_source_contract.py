@@ -5,6 +5,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "bootstrap/surface-runtime/source.json"
 DISCOVERY = ROOT / "bootstrap/surface-runtime/discover_lock.py"
+BUILDER = ROOT / "bootstrap/surface-runtime/build.py"
 SURFACE = ROOT / "system/surface/bin/ordax-surface"
 
 
@@ -36,6 +37,15 @@ class SurfaceRuntimeSourceContractTests(unittest.TestCase):
         self.assertIn('"portable_v2_boot_connected": False', text)
         self.assertNotIn("/dev/sd", text)
         self.assertNotIn("/dev/nvme", text)
+
+
+    def test_builder_is_fail_closed_until_reviewed_lock_is_committed(self):
+        text = BUILDER.read_text(encoding="utf-8")
+        self.assertIn('status") != "candidate-not-promotable"', text)
+        self.assertIn('apk_package_versions_pinned") is not True', text)
+        self.assertIn("Surface runtime cannot build before reviewed APK lock is committed", text)
+        self.assertIn('"physical_artifact_authorized": False', text)
+        self.assertIn('"portable_v2_boot_connected": False', text)
 
     def test_existing_owner_runtime_path_is_not_silently_removed(self):
         surface = SURFACE.read_text(encoding="utf-8")
