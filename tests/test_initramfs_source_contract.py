@@ -280,8 +280,14 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn('mount(release.device, release_mount, "erofs"', PORTABLE_MOUNT_HELPER)
         self.assertIn("MS_BIND | MS_REMOUNT | MS_RDONLY", PORTABLE_MOUNT_HELPER)
         self.assertNotIn('mount("overlay", system_mount, "overlay"', PORTABLE_MOUNT_HELPER)
-        self.assertNotIn("release-envelope", PORTABLE_MOUNT_HELPER)
-        self.assertNotIn("release-manifest", PORTABLE_MOUNT_HELPER)
+        # The capsule shape may contain the official release-envelope-url
+        # pointer. The mount helper must still never parse or verify signed
+        # release envelopes/manifests itself; that authority stays in the
+        # release agent.
+        self.assertNotIn("release-envelope.json", PORTABLE_MOUNT_HELPER)
+        self.assertNotIn("release-manifest.json", PORTABLE_MOUNT_HELPER)
+        self.assertNotIn("ed25519", PORTABLE_MOUNT_HELPER.lower())
+        self.assertNotIn("sha256", PORTABLE_MOUNT_HELPER.lower())
         self.assertNotIn("https://", PORTABLE_MOUNT_HELPER)
         self.assertNotIn("ordax-portable-mount", INIT)
 
