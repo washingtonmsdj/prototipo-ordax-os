@@ -95,7 +95,8 @@ jobs:
           mkdir -p "$work/stable-base-root/sbin"
           printf '#!/bin/sh\nexit 0\n' > "$work/stable-base-root/sbin/ordax-stable-init"
           chmod 0755 "$work/stable-base-root/sbin/ordax-stable-init"
-          mkfs.erofs -zlz4 -T 0 -L ORDAX-BASE             "$work/stable-base.erofs" "$work/stable-base-root"
+          mkfs.erofs -zlz4 -T 0 -L ORDAX-BASE \
+            "$work/stable-base.erofs" "$work/stable-base-root"
           fsck.erofs "$work/stable-base.erofs"
 
       - name: Build initramfs with non-enforced capsule and Stable Base hash pins
@@ -109,7 +110,8 @@ jobs:
             --jobs 4 \
             --work-dir "$work/initramfs-work" \
             --out-dir "$work/initramfs" \
-            --portable-bootstrap-capsule "$work/bootstrap.erofs"
+            --portable-bootstrap-capsule "$work/bootstrap.erofs" \
+            --portable-stable-base "$work/stable-base.erofs"
           python bootstrap/initramfs/build.py verify --out-dir "$work/initramfs"
 
           python - "$work/bootstrap.erofs" "$work/stable-base.erofs" "$work/initramfs/initramfs-provenance.json" <<'PY'
