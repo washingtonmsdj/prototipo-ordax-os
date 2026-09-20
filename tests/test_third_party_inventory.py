@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 INVENTORY_PATH = ROOT / "platform" / "compliance" / "declared-inputs.json"
 KERNEL_SOURCE = ROOT / "bootstrap" / "kernel" / "source.json"
-DEV_CORE = ROOT / "bootstrap" / "dev-base" / "_build_core.py"
+DEV_CORE = ROOT / "bootstrap" / "base" / "alpine_core.py"
 DEV_BUILD = ROOT / "bootstrap" / "dev-base" / "build.py"
 SURFACE = ROOT / "system" / "surface" / "bin" / "ordax-surface"
 

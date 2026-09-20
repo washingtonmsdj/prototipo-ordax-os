@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
-import shutil
 
 THIS_DIR = Path(__file__).resolve().parent
 
@@ -19,22 +18,18 @@ def _load_module(name: str, path: Path):
     return module
 
 
-CORE = _load_module("ordax_dev_base_core", THIS_DIR / "_build_core.py")
-POLICY = _load_module("ordax_dev_base_firmware_policy", THIS_DIR / "firmware_policy.py")
+BASE_DIR = THIS_DIR.parent / "base"
+CORE = _load_module("ordax_alpine_base_core", BASE_DIR / "alpine_core.py")
+POLICY = _load_module("ordax_base_firmware_policy", BASE_DIR / "firmware_policy.py")
+RUNTIME_POLICY = _load_module("ordax_base_runtime_policy", BASE_DIR / "runtime_policy.py")
 
 BuildError = CORE.BuildError
 PACKAGES = CORE.PACKAGES
 MAX_ROOTFS_BYTES = CORE.MAX_ROOTFS_BYTES
 prune_firmware = CORE.prune_firmware
 
-BUILD_ONLY_PACKAGES = ("zstd",)
-RUNTIME_PRUNE_PATHS = (
-    "etc/apk/repositories",
-    "lib/apk/db",
-    "var/cache/apk",
-    "usr/share/doc",
-    "usr/share/man",
-)
+BUILD_ONLY_PACKAGES = RUNTIME_POLICY.BUILD_ONLY_PACKAGES
+RUNTIME_PRUNE_PATHS = RUNTIME_POLICY.RUNTIME_PRUNE_PATHS
 
 
 def required_firmware_names(rootfs: Path) -> set[str]:
@@ -45,41 +40,17 @@ def required_firmware_names(rootfs: Path) -> set[str]:
 
 
 def verify_runtime_acquisition_client(rootfs: Path) -> None:
-    """Keep only the tiny trusted client needed by Git-controlled runtime setup."""
-    apk = rootfs / "sbin/apk"
-    keys = rootfs / "etc/apk/keys"
-    if not apk.is_file() or apk.is_symlink():
-        raise BuildError("runtime acquisition client is missing: /sbin/apk")
-    if not keys.is_dir() or not any(path.is_file() for path in keys.glob("*.pub")):
-        raise BuildError("runtime acquisition trust keys are missing: /etc/apk/keys/*.pub")
+    """Keep only the tiny trusted client needed by runtime setup."""
+    RUNTIME_POLICY.verify_runtime_acquisition_client(rootfs, BuildError)
 
 
 def prune_build_only_runtime(rootfs: Path) -> None:
-    """Remove tooling/metadata needed to assemble the image, not to run it."""
-    command = "apk del --no-cache " + " ".join(BUILD_ONLY_PACKAGES)
-    CORE.proot_rootfs(rootfs, command)
-
-    for relative in RUNTIME_PRUNE_PATHS:
-        path = rootfs / relative
-        if path.is_dir() and not path.is_symlink():
-            shutil.rmtree(path)
-        elif path.exists() or path.is_symlink():
-            path.unlink()
-
-    for executable in ("usr/bin/zstd", "bin/zstd"):
-        path = rootfs / executable
-        if path.exists() or path.is_symlink():
-            raise BuildError(f"build-only executable remained in runtime: /{executable}")
-
-    # Do not seed Cage/Cog/Mesa into the fixed base. /sbin/apk plus the Alpine
-    # public keys are retained only as the minimal signed-package acquisition
-    # client. Pulled system code can use them to materialize replaceable
-    # runtimes under /state without rewriting the USB image.
-    verify_runtime_acquisition_client(rootfs)
-
-    print(
-        "ORDAX_DEV_BASE_BUILD_ONLY_PRUNED=" + ",".join(BUILD_ONLY_PACKAGES),
-        flush=True,
+    """Remove build-only tooling while retaining the signed package client."""
+    RUNTIME_POLICY.prune_build_only_runtime(
+        rootfs,
+        proot_rootfs=CORE.proot_rootfs,
+        error_type=BuildError,
+        log_prefix="ORDAX_DEV_BASE",
     )
 
 
