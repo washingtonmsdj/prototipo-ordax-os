@@ -1,22 +1,12 @@
 {
   "$schema": "prototype-ordax.native-installation/1",
-  "status": "mvp-storage-proof-implemented-boot-and-apply-pending",
-  "mvp_required": true,
+  "status": "post-mvp-foundation-preserved-mvp-disabled",
+  "mvp_required": false,
   "source_mode": "ordax-usb",
   "target_mode": "native-disk",
   "distribution_profile": "stable-mvp",
   "creator_core_is_single_policy_owner": true,
   "layout_contract": "docs/contracts/storage-architecture.json",
-  "initial_mvp_scope": {
-    "whole_disk_install": true,
-    "install_alongside_existing_os": false,
-    "automatic_partition_shrink": false,
-    "manual_partition_editor": false,
-    "target_must_be_explicitly_selected": true,
-    "source_boot_media_must_not_be_target": true,
-    "existing_target_data_is_erased": true,
-    "explicit_destructive_confirmation_required": true
-  },
   "target_layout": {
     "partition_table": "gpt",
     "partitions": [
@@ -117,9 +107,18 @@
       "physical_device_touched": false,
       "bootable_proven": false,
       "physical_write_authorized": false
+    },
+    "mvp_runtime_policy": {
+      "stable_mvp_native_install_capability": "disabled",
+      "stable_mvp_broker_started": false,
+      "stable_mvp_session_token_exposed": false,
+      "stable_mvp_internal_disk_apply_allowed": false,
+      "owner_development_post_mvp_preview_requires_explicit_opt_in": true
     }
   },
   "fail_closed": [
+    "mvp-never-exposes-native-install-capability",
+    "mvp-never-writes-internal-disk",
     "never-touch-physical-device-during-plan",
     "never-allow-source-usb-as-install-target",
     "never-use-git-as-stable-install-source",
@@ -159,5 +158,25 @@
     "installed_target_value": "native-disk",
     "same_signed_system_release": true,
     "target_value_must_be_verified_before_first_boot": true
+  },
+  "mvp_availability": {
+    "available": false,
+    "advertised": false,
+    "capability_exposed": false,
+    "target_discovery_exposed": false,
+    "internal_disk_write_allowed": false,
+    "destructive_operations_allowed": false,
+    "activation_phase": "post-mvp",
+    "foundation_retained": true
+  },
+  "post_mvp_activation_scope": {
+    "whole_disk_install": true,
+    "install_alongside_existing_os": false,
+    "automatic_partition_shrink": false,
+    "manual_partition_editor": false,
+    "target_must_be_explicitly_selected": true,
+    "source_boot_media_must_not_be_target": true,
+    "existing_target_data_is_erased": true,
+    "explicit_destructive_confirmation_required": true
   }
 }

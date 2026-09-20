@@ -115,7 +115,15 @@
       "activation_and_rollback_require_no_network": true,
       "guardian_rebinds_source_identity_from_current": true,
       "guardian_refresh_required_after_current_swap": true,
-      "runtime_update_known_good_preserved": true
+      "runtime_update_known_good_preserved": true,
+      "mvp_execution_mode": "usb-only",
+      "native_install_capability_enabled": false,
+      "internal_disk_destructive_write_allowed": false,
+      "dual_boot_available": false,
+      "automatic_partition_resize_available": false,
+      "manual_partition_editor_available": false,
+      "native_install_foundation_retained": true,
+      "native_install_activation_phase": "post-mvp"
     }
   },
   "invariants": {
@@ -126,7 +134,10 @@
     "stable_must_fail_closed_without_release_trust": true,
     "stable_public_download_must_fail_closed_without_authorized_release": true,
     "component_versions_may_diverge": true,
-    "base_updates_are_more_restrictive_than_app_updates": true
+    "base_updates_are_more_restrictive_than_app_updates": true,
+    "stable_mvp_public_execution_is_usb_only": true,
+    "stable_mvp_must_not_expose_native_installation": true,
+    "stable_mvp_must_not_write_internal_disk": true
   },
   "next_gate": {
     "id": "stable-base-signed-update-integration",

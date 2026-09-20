@@ -14,7 +14,20 @@ OrdaX Web
    -> OrdaX Native
 ```
 
-These are capability tiers, not separate products or forks.
+These are capability targets, not separate products or forks.
+
+## MVP availability
+
+The architecture remains prepared for all five modes, but **public MVP availability is USB-only**.
+
+```text
+MVP available:          OrdaX USB
+Coming soon:            Web, Mobile, sync/continuity
+Future product surface: Desktop experience
+Post-MVP foundation:    OrdaX Native (internal SSD/NVMe/HDD)
+```
+
+Native installation source/contracts/proofs remain preserved. Stable/MVP must not expose its installer capability, target discovery token, destructive internal-disk write or installation CTA.
 
 ### 1. OrdaX Web
 
@@ -57,12 +70,13 @@ usb
 native-disk
 ```
 
-The bootstrap exports that value as `ORDAX_PRODUCT_MODE`; guardian, supervisor and Surface preserve it. A Stable USB may expose the privileged Native installation capability when the signed helper/broker boundary is available. An installed Native Disk runtime must never expose that installer capability.
+The bootstrap exports that value as `ORDAX_PRODUCT_MODE`; guardian, supervisor and Surface preserve it. In the **Stable/MVP profile**, Native installation capability is forced unavailable even while its technical foundation remains present. A future post-MVP promotion may explicitly activate that capability after separate product/hardware gates.
 
-The future installer writes `native-disk` into the target bootstrap as part of installation materialization. This is configuration of one product mode, not a code or release fork.
-### 5. OrdaX Native
+The future installer writes `native-disk` into the target bootstrap as part of installation materialization. This remains configuration of one product mode, not a code or release fork.
 
-Installs the OrdaX operating system to internal SSD/HD. It is the most persistent deployment mode, but consumes the same release model as OrdaX USB rather than becoming a fork.
+### 5. OrdaX Native — post-MVP
+
+Installs the OrdaX operating system to internal SSD/NVMe/HDD. It is preserved as a future deployment mode and is **not an MVP user-facing capability**.
 
 ## One account across all devices
 
@@ -78,9 +92,9 @@ one OrdaX account
   -> OrdaX Native
 ```
 
-Signing in on another supported device restores the safe synchronized portion of the user's environment according to account entitlements and device capability.
+When cross-device services are implemented, signing in on another supported device may restore the safe synchronized portion of the user's environment according to account entitlements and device capability.
 
-Account identity and basic cross-device continuity must not be paywalled. Plans may expand synchronization capacity and premium services, but must not create incompatible account silos.
+For the MVP, Web, Mobile and synchronization are not active product promises; they may be shown only as **Coming soon / Em breve**. Account architecture stays ready for them without inventing billing or device limits now.
 
 See `docs/ACCOUNT-SYNC-AND-PLANS.md`.
 
@@ -146,18 +160,14 @@ Device-local secrets never synchronize. Examples include private device keys, ma
 
 Sync must be offline-tolerant, server-authorized, encrypted in transit and have an explicit conflict-resolution model before production promotion.
 
-## Plans
+## Plans and future monetization
 
-Pricing is intentionally not defined at foundation stage. Product plans are entitlement bundles, not different account systems.
+Pricing, billing, commercial tier names and device-count limits are intentionally undefined at MVP stage.
 
-Baseline policy:
+The entitlement architecture remains prepared for future value-bearing services such as synchronization capacity, cloud storage, backup/restore, cross-device continuity, collaboration, premium compute and support. The product direction is to monetize ecosystem value, not to charge arbitrarily for a second device.
 
-- one identity works across every supported mode;
-- basic cross-device sync is available to every account;
-- paid plans may increase cloud storage, history retention, backups, collaboration, premium AI compute and recovery/support capabilities;
-- downgrading a plan must not silently destroy user data;
-- entitlement enforcement is server-authoritative;
-- device-private security material is never made syncable by a higher plan.
+Device registration is a security/session boundary first. No current commercial device limit is defined, and no client-claimed entitlement is authoritative.
+
 
 ## Promotion path
 

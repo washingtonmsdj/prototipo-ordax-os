@@ -1,18 +1,14 @@
 # OrdaX Native Installation
 
-Status: MVP REQUIRED — STORAGE PROOF COMPLETE, BOOT/APPLY PENDING
+Status: POST-MVP FOUNDATION — PRESERVED / MVP CAPABILITY DISABLED
 
 Machine-readable authority: `docs/contracts/native-installation.json`.
 
-The MVP must support two distinct outcomes after booting an authorized Stable/MVP USB:
+The public MVP is **USB-only**. It boots and runs OrdaX directly from authorized removable media and does not offer installation to SSD/NVMe/HDD.
 
-```text
-OrdaX USB
-  -> Use OrdaX directly from USB
-  -> Install OrdaX to SSD / NVMe / HDD
-```
+This document preserves the Native installation foundation for a **post-MVP** phase. Native installation is not a different OrdaX product; when activated later it will install the same verified release using the `native-disk` storage profile from `docs/contracts/storage-architecture.json`.
 
-Native installation is not a different OrdaX product. It installs the same verified Stable release using the `native-disk` storage profile from `docs/contracts/storage-architecture.json`.
+For Stable/MVP, the Native capability, target-discovery token and internal-disk destructive operations remain disabled/inaccessible even if their source code and CI proofs exist.
 
 Execution mode is explicit rather than inferred from hardware:
 
@@ -24,9 +20,9 @@ Execution mode is explicit rather than inferred from hardware:
 
 The Stable bootstrap passes this identity as `ORDAX_PRODUCT_MODE` through guardian, supervisor and Surface. The future physical installer must write `native-disk` into the target bootstrap before first boot. The shared signed `system.tar` is the same in both modes; this marker does not fork the product.
 
-## Initial MVP scope
+## Future post-MVP activation scope
 
-The first public installer is deliberately smaller than a general-purpose partition editor:
+If Native installation is promoted after the MVP, the first activation should remain deliberately smaller than a general-purpose partition editor:
 
 - whole-disk installation only;
 - explicit target-disk selection;
@@ -73,7 +69,7 @@ The fixed initramfs is deliberately **not** expanded for the installer. Once Ord
 
 Transport alone is not authority: an internal NVMe/SATA disk and a suitable external SSD may both use the Native profile, while the source live USB remains forbidden.
 
-## Required installation phases
+## Future activation phases
 
 ```text
 inspect target

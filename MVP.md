@@ -2,93 +2,83 @@
 
 Status: CANÔNICO PARA PLANEJAMENTO DO MVP
 
-Este arquivo existe para que qualquer próxima conversa, agente ou colaborador entenda rapidamente **qual OrdaX estamos construindo para desenvolvimento** e **qual OrdaX será entregue ao usuário final**.
+Este arquivo define o escopo público do MVP. Leia-o antes de trabalhar em lançamento, pendrive, Creator, site, conta, releases, instalação Native ou monetização.
 
-Leia este arquivo antes de iniciar trabalho relacionado a lançamento, pendrive, Creator, atualizações, site público, conta, releases ou MVP.
+## 1. Decisão definitiva de escopo
 
-## 1. Um produto, dois perfis de distribuição
+**MVP = execução pelo pendrive.**
 
-O OrdaX não deve virar dois sistemas diferentes nem dois códigos divergentes.
+No MVP público, o OrdaX funciona exclusivamente como **OrdaX USB**:
 
-Existe **uma única base de produto**, mas com duas políticas de distribuição:
+```text
+site oficial
+ -> OrdaX Creator
+ -> USB Stable/MVP verificado
+ -> boot pelo pendrive
+ -> OrdaX em execução diretamente pelo USB
+```
+
+O MVP **não oferece instalação permanente** em SSD, NVMe ou HD. Também não oferece dual boot, resize, editor de partições nem qualquer escrita destrutiva em disco interno.
+
+A instalação **OrdaX Native** continua sendo uma direção arquitetural válida. Todo o trabalho técnico já realizado deve ser preservado, testado e evoluído como fundação **pós-MVP**. Preservar a fundação não significa expor a capability ao usuário do MVP.
+
+## 2. Um produto, dois perfis de distribuição
+
+O OrdaX não deve virar dois sistemas nem dois códigos divergentes.
 
 ### Owner / Development
-
-Uso: desenvolvimento rápido, manutenção e recuperação pelo owner do projeto.
-
-Características:
 
 - checkout Git local permitido;
 - atualização rápida a partir da `main`;
-- SHA/commit/entrega disponíveis em diagnóstico;
+- SHA/commit disponíveis em diagnóstico;
 - Git-first USB permitido;
-- canais de recovery e ferramentas de desenvolvimento permitidos;
-- apps, Surface e serviços podem receber alterações rapidamente;
-- Base/kernel continuam usando mecanismos fail-closed, A/B e health quando aplicável;
-- esta edição não representa a experiência pública do usuário.
-
-Objetivo: maximizar velocidade de desenvolvimento sem transformar o ambiente de usuário final em um ambiente de engenharia.
+- ferramentas de engenharia e provas Native podem existir;
+- não representa a experiência pública.
 
 ### Stable / MVP
 
-Uso: usuário final e distribuição pública.
+- não depende de Git operacional;
+- recebe somente releases oficiais verificadas;
+- Creator é o caminho normal para criar o USB;
+- **modo de execução público: USB**;
+- **instalação Native: desativada e inacessível**;
+- **escrita destrutiva em disco interno: proibida**;
+- conhecido-bom, health e rollback permanecem obrigatórios.
 
-Características:
+Diferenças pertencem a profile, build, configuração, canal, capability e política — nunca a forks permanentes.
 
-- **não depende de Git operacional**;
-- não executa `git pull` como mecanismo de atualização;
-- não precisa expor repositório, branch, PR ou commit na UX normal;
-- recebe somente releases publicadas por canais oficiais;
-- artifacts devem ser vinculados a versão, tamanho, hash e provenance;
-- releases públicas devem ser verificadas/assinadas conforme os contratos de trust;
-- Base/kernel usam staging A/B, one-shot, health gate e rollback;
-- apps e componentes devem evoluir para atualização independente quando isso não exigir mudança da Base;
-- Creator é o caminho normal para preparar mídia;
-- falha de atualização não pode destruir o conhecido-bom.
-
-**Regra:** não criar forks permanentes do código para Owner e Stable. Diferença deve ficar em profile, build, configuração, canal, autorização e política de atualização.
-
-## 2. Modelo de atualização
+## 3. Atualização
 
 ### Owner / Development
-
-Fluxo esperado:
 
 ```text
 main
  -> pull/sync de desenvolvimento
  -> componente afetado
  -> hot apply quando possível
- -> Base candidata A/B quando kernel/rootfs/initramfs mudarem
+ -> Base candidata quando necessário
  -> health
  -> promoção ou fallback
 ```
 
-O desenvolvimento pode continuar rápido. Apps e serviços não devem obrigar reboot do sistema inteiro.
-
 ### Stable / MVP
-
-Fluxo esperado:
 
 ```text
 canal oficial OrdaX
- -> manifest/release envelope autorizado
- -> verificação criptográfica e de integridade
- -> download do componente/release
+ -> release autorizada
+ -> verificação criptográfica/integridade
  -> staging
  -> ativação controlada
- -> health check
+ -> health
  -> promoção
  -> rollback automático se falhar
 ```
 
-O Stable/MVP **não usa Git como canal de atualização do usuário**.
+Stable/MVP não usa Git como canal de atualização do usuário.
 
-## 3. Versões de componentes
+## 4. Versões de componentes
 
 Não fingir que todos os componentes receberam a mesma versão quando somente um mudou.
-
-Exemplo permitido:
 
 ```text
 OrdaX Base       0.9.x
@@ -100,235 +90,185 @@ Ajustes          0.3.x
 Creator          0.2.x
 ```
 
-A versão geral do produto pode existir, mas deve ser distinguida da versão dos componentes.
-
-## 4. Definição prática de MVP
-
-O MVP público não precisa ser OrdaX 1.0.
+## 5. Definição prática do MVP
 
 Um usuário deve conseguir:
 
-1. chegar ao site oficial, cuja rota `/` é a landing page pública;
+1. chegar à landing pública em `/`;
 2. obter o Creator/release pública autorizada;
-3. preparar o pendrive sem terminal, sem manipular ISO, partições, Git ou SHA;
-4. inicializar um hardware oficialmente suportado pelo pendrive;
-5. escolher entre **usar o OrdaX diretamente pelo USB** ou **instalar o OrdaX no SSD/NVMe/HD**;
-6. no modo USB, chegar à Surface e usar o sistema sem instalação obrigatória no disco interno;
-7. no modo Native, concluir a instalação no disco interno e depois iniciar sem depender do pendrive;
-8. conectar à rede;
-9. usar os apps principais;
-10. atualizar por canal oficial;
-11. recuperar automaticamente de uma atualização defeituosa;
-12. entrar/criar Conta OrdaX quando o serviço real de identidade estiver habilitado;
-13. após autenticação, acessar a área do usuário em rota separada da landing pública.
+3. preparar o USB sem terminal, ISO manual, Git ou particionamento;
+4. inicializar hardware oficialmente suportado pelo pendrive;
+5. chegar à Surface e **usar o sistema diretamente pelo USB**;
+6. conectar à rede;
+7. usar Arquivos, Notas, Internet, Ajustes e Sistema;
+8. atualizar por canal oficial;
+9. recuperar automaticamente de atualização defeituosa;
+10. acessar login/cadastro quando identidade real estiver habilitada;
+11. usar `/conta/` como área autenticada separada da landing.
 
-### Apps principais do MVP
+## 6. Gates do MVP público
 
-Prioridade funcional:
-
-- Arquivos;
-- Notas;
-- Internet;
-- Ajustes;
-- Sistema.
-
-Eles devem ser apps/componentes do produto, não código acoplado de forma que uma falha simples derrube a Base.
-
-## 5. O que bloqueia o MVP público
-
-Os gates abaixo são de lançamento, não uma lista de recursos de v1.0:
+Bloqueiam lançamento:
 
 - trust/release signing real;
-- Creator físico promovido e autorizado;
-- payload final verificável para mídia pública;
-- one-shot A/B e fallback suficientemente provados;
-- primeiro pendrive canônico Stable/MVP validado;
-- boot pelo USB -> escolha **Usar OrdaX** / **Instalar OrdaX**;
-- modo USB funcional sem instalação obrigatória no disco interno;
-- instalador Native funcional para SSD/NVMe/HD suportado;
-- boot Native validado após remover o pendrive;
-- boot -> Surface -> rede -> apps principais;
-- fluxo de update oficial sem Git;
-- recovery/rollback funcional;
-- catálogo público de releases fail-closed;
-- Conta OrdaX real para login/cadastro antes de habilitar os botões públicos;
-- privacidade/termos prontos antes de ativar contas reais;
-- conjunto de hardware suportado documentado.
+- Creator físico promovido e autorizado **para criação do USB**;
+- payload final verificável;
+- known-good/fallback suficientemente provados;
+- primeiro USB canônico Stable/MVP;
+- boot USB -> Surface -> rede -> apps;
+- uso real sem instalação no disco interno;
+- update oficial sem Git;
+- recovery/rollback;
+- catálogo público fail-closed;
+- identidade real antes de ativar login/cadastro;
+- privacidade/termos;
+- hardware suportado documentado.
 
-## 6. O que NÃO bloqueia o MVP
+**Não bloqueiam o MVP:** instalador Native, boot por SSD/NVMe/HD, dual boot, resize ou particionamento interno.
 
-Não atrasar o MVP esperando tudo abaixo:
+## 7. Fundação Native pós-MVP
 
-- loja de apps completa;
-- sync completo entre vários dispositivos;
-- amplo suporte a notebooks diferentes;
-- áudio perfeito em todo hardware;
-- suspend/resume universal;
-- aceleração gráfica refinada em todas as GPUs;
-- internacionalização completa;
-- bootloader físico autoatualizável para todos os cenários;
-- conjunto completo de recursos planejados para 1.0.
+Não apagar, duplicar ou degradar a arquitetura já construída para Native.
 
-Esses itens podem entrar durante o MVP, beta ou depois.
+Permanecem como fundação pós-MVP:
 
-## 7. Pendrive e Creator
+- contratos de storage Native;
+- Creator Core e planners;
+- identidade/revalidação de target;
+- LUKS2 + Btrfs;
+- initramfs Native;
+- kernel compartilhado com pré-requisitos Native;
+- boot entries e ESP Native;
+- provas descartáveis de storage/runtime/ESP;
+- brokers/adapters de descoberta;
+- testes e provenance.
 
-Existem dois usos diferentes de USB.
+No perfil Stable/MVP:
+
+```text
+native-install-capability = disabled
+internal-disk-destructive-write = forbidden
+native-install-ui = absent
+native-install-api-token = absent
+```
+
+A reativação futura exige promoção explícita pós-MVP e novos gates de produto/hardware.
+
+## 8. Pendrive e Creator
 
 ### USB Owner / Development
 
 - Git-first;
-- pode conter ferramentas extras de diagnóstico;
-- serve para evolução rápida e recovery de desenvolvimento;
-- não deve ser apresentado como release pública.
+- diagnóstico/recovery de engenharia;
+- não é release pública.
 
 ### USB Stable / MVP
 
 - gerado por Creator/release autorizada;
-- sem dependência operacional de Git;
-- conteúdo vinculado a manifest/hashes/provenance;
-- atualização posterior por canais oficiais;
-- recovery conhecido-bom preservado;
-- usuário não precisa manipular ISO, partição, Git, SHA ou terminal;
-- deve inicializar como um modo de produto utilizável, não apenas como mídia descartável de instalação;
-- deve oferecer, no fluxo suportado do MVP, as ações **Usar OrdaX** e **Instalar OrdaX**.
+- sem Git operacional;
+- manifest/hash/provenance;
+- conhecido-bom e recovery;
+- usuário não manipula partições ou terminal;
+- é um **modo de produto utilizável**, não mídia de instalação.
 
-### Fluxo público obrigatório do MVP
+### Fluxo público obrigatório
 
 ```text
 site oficial
  -> baixar OrdaX Creator
  -> conectar USB
- -> Creator baixa/seleciona release Stable autorizada
+ -> Creator seleciona release Stable autorizada
  -> verifica assinatura/hash
  -> prepara e verifica o USB
  -> usuário inicializa pelo USB
- -> escolher:
-      1. Usar OrdaX diretamente pelo USB
-      2. Instalar OrdaX no SSD/NVMe/HD
+ -> usa o OrdaX diretamente pelo pendrive
 ```
 
-O modo **OrdaX USB** deve funcionar como ambiente real do produto enquanto o computador estiver inicializado pelo pendrive. A instalação no disco interno produz o modo **OrdaX Native**, consumindo o mesmo modelo de release em vez de criar outro sistema.
+O Creator do MVP prepara mídia removível. Não oferece gravação/instalação em disco interno.
 
-O `OrdaX Creator` é um único produto/core. Durante o MVP ele pode ser distribuído como aplicativo standalone quando necessário; posteriormente a mesma capacidade deve ser incorporada ao **OrdaX Desktop**, sem criar um segundo gravador ou uma política paralela de mídia.
-
-O backend físico do Creator pode existir antes de sua promoção pública. **Existência de código de gravação não equivale a autorização para release pública.**
-
-## 8. Site público
-
-O portal público vive em:
+## 9. Site público e rotas
 
 ```text
-sites/public/
-```
-
-Ele é separado do modo de produto OrdaX Web.
-
-Objetivos do portal para o MVP:
-
-- landing page pública em `/`;
-- Download/Creator;
-- login;
-- cadastro;
-- área autenticada da conta em `/conta/`;
-- entrada para o modo OrdaX Web a partir da experiência autenticada, sem substituir a landing;
-- licenças/SBOM/source compliance;
-- privacidade;
-- termos.
-
-### Regra de rotas públicas e autenticadas
-
-```text
-/            -> landing page pública do produto
-/download/   -> download / Creator / releases
-/login/      -> entrada de autenticação
+/            -> landing pública
+/download/   -> Creator / releases
+/login/      -> autenticação
 /cadastro/   -> criação de conta
-/conta/      -> área autenticada do usuário
+/conta/      -> área autenticada
 ```
 
-A **Surface/área OrdaX do usuário não deve ocupar `/`**. A raiz é sempre a apresentação pública do produto. A área pessoal, dispositivos, sessão, preferências sincronizadas e entrada para experiências autenticadas pertencem à conta. O modo **OrdaX Web** continua sendo produto separado do portal público e deve ser alcançado a partir de uma sessão/entrada apropriada, não renderizado como homepage pública.
+A Surface/área do usuário nunca substitui `/`. OrdaX Web é experiência autenticada futura e separada do portal público.
 
-### Regra de comunicação pública
+Landing e Download comunicam MVP USB-only. Instalação permanente só pode aparecer como **futuro/pós-MVP**. Web, Mobile, sync, backup e continuidade ainda indisponíveis podem aparecer apenas como **Em breve**.
 
-A landing deve falar de produto e benefício ao usuário.
+## 10. Conta e monetização
 
-Evitar na home pública:
+No MVP:
 
-- `main`;
-- `git pull`;
-- PR;
-- branch;
-- detalhes do ambiente Owner;
-- recursos ainda não reais apresentados como disponíveis.
+- não implementar cobrança;
+- não publicar preços;
+- não definir tiers comerciais definitivos;
+- não impor limite comercial de dispositivos;
+- não cobrar arbitrariamente pelo segundo dispositivo;
+- conta, quando ativada, é uma identidade única;
+- registro de dispositivos/sessões pode existir por segurança e revogação, não como paywall.
 
-O Download deve continuar fail-closed: sem release autorizada, sem botão falso de download.
+A arquitetura continua preparada para dispositivos, sincronização, backup, continuidade PC/Web/Mobile, armazenamento, assinatura/entitlements e serviços premium.
 
-## 9. Conta OrdaX
+A direção futura de monetização é vender **valor do ecossistema** — sincronização, backup, continuidade, armazenamento, colaboração, compute e serviços — e não transformar quantidade de dispositivos isoladamente no produto vendido.
 
-Para MVP público, o mínimo é:
+Nenhuma política de preço, nome de plano, quota comercial ou limite de dispositivos está definida.
 
-- criar conta;
-- entrar;
-- sair;
-- recuperar acesso;
-- sessão real;
-- perfil básico;
-- área autenticada em `/conta/`;
-- encaminhamento pós-login para a experiência autenticada, nunca para uma falsa dashboard em `/`;
-- entrada para o OrdaX Web quando o runtime Web e os contratos de sessão estiverem realmente habilitados.
+## 11. Conta OrdaX
 
-A rota `/conta/` pode permanecer fail-closed/indisponível enquanto identidade e sessão reais não estiverem conectadas. Ela não deve simular dados, dispositivos ou sincronização.
+O mínimo futuro da conta pública é criar conta, entrar, sair, recuperar acesso, sessão real, perfil básico e `/conta/`.
 
-O site está correto ao não coletar senha enquanto o serviço real de identidade não estiver conectado.
+`/conta/` permanece fail-closed enquanto identidade/sessão reais não estiverem conectadas. Não simular dados, dispositivos, sync ou assinatura.
 
-Sync completo pode vir depois.
+Web, Mobile e sincronização aparecem somente como **Em breve** até existirem de verdade.
 
-## 10. Ordem recomendada de lançamento
+## 12. Ordem recomendada de lançamento
 
 ```text
 1. fechar boot-counting/provenance
 2. fechar trust de release
-3. promover Creator físico
+3. promover Creator físico para USB
 4. gerar primeira mídia Stable/MVP
-5. validar boot/recovery em hardware suportado
+5. validar boot/recovery USB em hardware suportado
 6. validar apps principais
 7. fechar canal oficial de update sem Git
 8. conectar Conta OrdaX
 9. fechar legal/publicação
-10. publicar MVP
+10. publicar MVP USB-only
 ```
 
-## 11. Regras para próximos chats
+Native permanece em trilha técnica pós-MVP, sem bloquear a sequência.
 
-Ao continuar o projeto:
+## 13. Regras para próximos chats
 
-- sincronize com `main` e PRs abertos antes de editar;
+- sincronize com `main` e PRs antes de editar;
 - não duplique trabalho paralelo;
-- mantenha Owner/Development e Stable/MVP como **profiles/canais**, não como forks;
+- Stable/MVP público = USB-only;
+- preserve fundações Native, mas não as exponha no MVP;
+- não introduza escrita destrutiva em disco interno no MVP;
 - não introduza Git operacional no Stable/MVP;
-- não exponha no site público capacidades que ainda não tenham serviço real;
-- preserve os gates fail-closed;
-- não declare prova física quando houve apenas prova descartável/CI;
-- mantenha apps/componentes independentes quando possível;
-- prefira corrigir arquitetura a adicionar paliativos;
-- atualize este arquivo quando uma decisão de MVP mudar materialmente.
+- não anuncie recurso futuro como disponível;
+- não invente preços, tiers ou limites comerciais;
+- preserve gates fail-closed;
+- não declare prova física quando houve apenas CI/prova descartável;
+- prefira arquitetura a paliativos.
 
-## 12. Referências técnicas
-
-Para detalhes atuais, consultar também:
+## 14. Referências técnicas
 
 - `docs/CURRENT-STATE.md`;
 - `docs/PUBLIC-SITE.md`;
-- `docs/CREATOR-INSTALLATION.md`;
+- `docs/PRODUCT-MODES.md`;
+- `docs/ACCOUNT-SYNC-AND-PLANS.md`;
 - `docs/NATIVE-INSTALLATION.md`;
 - `docs/PHYSICAL-MEDIA.md`;
-- `docs/PROMOTION-GATES.md`;
-- `docs/contracts/base-update.json`;
 - `docs/contracts/distribution-profiles.json`;
 - `docs/contracts/native-installation.json`;
-- `docs/contracts/device-update-coverage.json`;
 - `docs/contracts/public-site.json`;
-- `docs/contracts/public-release-catalog.json`;
-- `docs/contracts/physical-write-authorization.json`.
+- `docs/contracts/foundation.json`;
+- `docs/contracts/sync-model.json`.
 
-Este documento define o **alvo de produto**. Os contratos machine-readable continuam sendo a autoridade dos invariantes técnicos.
+Este documento define o **escopo público do MVP**. Os contratos machine-readable continuam autoridade dos invariantes técnicos.
