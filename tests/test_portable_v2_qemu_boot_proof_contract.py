@@ -40,9 +40,9 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
         self.assertIn("if=ide,index=0", text)
         self.assertNotIn("if=virtio", text)
         self.assertIn('"system.erofs"', text)
-        self.assertIn('"stable-base.erofs"', text)
-        self.assertIn('"persistent-state.img"', text)
-        self.assertIn('"release-ed25519.json"', text)
+        self.assertIn('"base/stable-base.erofs"', text)
+        self.assertIn('"state/persistent-state.img"', text)
+        self.assertIn('"ordax/bootstrap/trust/release-ed25519.json"', text)
 
     def test_harness_requires_both_handoff_markers_and_disables_network(self):
         text = SCRIPT.read_text(encoding="utf-8")
