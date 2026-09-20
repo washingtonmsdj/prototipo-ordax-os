@@ -522,3 +522,110 @@ func TestSignAndVerifyPortableV2UsesExistingTrustEnvelopeBoundary(t *testing.T) 
 		t.Fatalf("portable signed envelope lost v2 identity: %#v", verified)
 	}
 }
+
+
+func validManifestV3Bytes() []byte {
+	return []byte(`{
+  "$schema": "prototype-ordax.release-manifest/3",
+  "source_repository": "washingtonmsdj/prototipo-ordax-os",
+  "source_commit": "0123456789abcdef0123456789abcdef01234567",
+  "release_id": "0123456789abcdef0123456789abcdef01234567",
+  "created_from_ci_recipe": "release/portable-usb-v2-runtime/1",
+  "product_mode": "usb",
+  "storage_profile": "portable-usb-v2",
+  "runtime_format": "erofs",
+  "artifacts": [
+    {
+      "name": "system.erofs",
+      "role": "system-image",
+      "url": "https://example.invalid/releases/system.erofs",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "size": 4096
+    },
+    {
+      "name": "native-surface-runtime.erofs",
+      "role": "surface-runtime",
+      "url": "https://example.invalid/runtime/native-surface-runtime.erofs",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "size": 8192
+    }
+  ]
+}`)
+}
+
+func TestStrictManifestAcceptsPortableV3WithoutChangingV1V2(t *testing.T) {
+	v3, err := strictManifest(validManifestV3Bytes(), defaultRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v3.Schema != manifestSchemaV3 || len(v3.Artifacts) != 2 {
+		t.Fatalf("unexpected v3 manifest: %#v", v3)
+	}
+	if v3.Artifacts[0].Name != "system.erofs" ||
+		v3.Artifacts[0].Role != "system-image" ||
+		v3.Artifacts[1].Name != "native-surface-runtime.erofs" ||
+		v3.Artifacts[1].Role != "surface-runtime" {
+		t.Fatalf("v3 artifact order or roles drifted: %#v", v3.Artifacts)
+	}
+	if _, err := strictManifest(validManifestBytes(), defaultRepo); err != nil {
+		t.Fatalf("v1 rejected after v3 support: %v", err)
+	}
+	if _, err := strictManifest(validManifestV2Bytes(), defaultRepo); err != nil {
+		t.Fatalf("v2 rejected after v3 support: %v", err)
+	}
+}
+
+func TestStrictManifestV3RejectsReorderedOrIncompleteArtifacts(t *testing.T) {
+	var manifest Manifest
+	if err := json.Unmarshal(validManifestV3Bytes(), &manifest); err != nil {
+		t.Fatal(err)
+	}
+	manifest.Artifacts[0], manifest.Artifacts[1] = manifest.Artifacts[1], manifest.Artifacts[0]
+	data, _ := json.Marshal(manifest)
+	if _, err := strictManifest(data, defaultRepo); err == nil {
+		t.Fatal("v3 accepted reordered artifacts")
+	}
+
+	if err := json.Unmarshal(validManifestV3Bytes(), &manifest); err != nil {
+		t.Fatal(err)
+	}
+	manifest.Artifacts = manifest.Artifacts[:1]
+	data, _ = json.Marshal(manifest)
+	if _, err := strictManifest(data, defaultRepo); err == nil || !strings.Contains(err.Error(), "exactly") {
+		t.Fatalf("v3 incomplete artifact set error = %v", err)
+	}
+}
+
+func TestSignAndVerifyPortableV3UsesExistingTrustEnvelopeBoundary(t *testing.T) {
+	root := t.TempDir()
+	privatePath := filepath.Join(root, "private.pem")
+	trustPath := filepath.Join(root, "trust.json")
+	if _, err := generateKeyFiles(privatePath, trustPath, "prototype-1"); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := writeManifestForTest(t, root, validManifestV3Bytes())
+	envelopePath := filepath.Join(root, "portable-v3-envelope.json")
+	commit, err := signManifest(
+		manifestPath,
+		privatePath,
+		trustPath,
+		envelopePath,
+		"prototype-1",
+		defaultRepo,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if commit != "0123456789abcdef0123456789abcdef01234567" {
+		t.Fatalf("unexpected signed v3 commit: %s", commit)
+	}
+	verified, err := verifyEnvelope(envelopePath, trustPath, defaultRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verified.Schema != manifestSchemaV3 ||
+		verified.Artifacts[0].Name != "system.erofs" ||
+		verified.Artifacts[1].Name != "native-surface-runtime.erofs" {
+		t.Fatalf("portable v3 signed envelope lost identity: %#v", verified)
+	}
+}
