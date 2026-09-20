@@ -76,6 +76,29 @@ class SmokeHandler(BaseHTTPRequestHandler):
                 ],
             })
             return
+        if self.path == "/__ordax/native/update":
+            self._send_json({
+                "sourceSha": "b" * 40,
+                "deliveryNumber": 42,
+                "runtimeSurfaceSha": "b" * 40,
+                "targetSha": "",
+                "status": "running",
+                "phase": "idle",
+                "applyMode": "none",
+                "attemptId": "",
+                "bootRefreshRequired": False,
+                "baseUpdatePhase": "none",
+                "baseUpdateSha": "",
+                "checkedAt": "2026-09-20T12:00:00Z",
+                "lastAppliedSha": "b" * 40,
+                "lastAppliedAt": "2026-09-20T11:59:00Z",
+                "lastApplyDurationSeconds": 1,
+                "lastStageDurationSeconds": 2,
+                "rejectedSha": "",
+                "lastError": "",
+                "healthToken": "SECRET-HEALTH-TOKEN",
+            })
+            return
         if self.path == "/__ordax/native/update-history":
             self._send_json({
                 "releases": [],
@@ -137,10 +160,17 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
         self.assertEqual(report["summary"]["fail"], 0, report["checks"])
         self.assertEqual(report["observed"]["file_space_root"]["entry_count"], 2)
         self.assertEqual(report["observed"]["network_status"]["interface_count"], 2)
+        self.assertEqual(report["observed"]["update_status"]["status"], "running")
+        self.assertEqual(report["observed"]["update_status"]["phase"], "idle")
+        self.assertEqual(report["observed"]["update_status"]["delivery_number"], 42)
+        self.assertTrue(report["observed"]["update_status"]["runtime_surface_matches_source"])
+        self.assertTrue(report["observed"]["update_status"]["health_token_present"])
         serialized = json.dumps(report, ensure_ascii=False)
         self.assertNotIn("Documento secreto.txt", serialized)
         self.assertNotIn("wlan0", serialized)
         self.assertNotIn("eth0", serialized)
+        self.assertNotIn("SECRET-HEALTH-TOKEN", serialized)
+        self.assertNotIn("b" * 40, serialized)
 
     def test_files_validator_rejects_traversal_and_never_returns_entry_names(self):
         with self.assertRaises(ValueError):
@@ -161,6 +191,42 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
                 "userStorageTotalBytes": 20,
                 "userStorageFreeBytes": 10,
             })
+
+    def test_update_status_validator_is_bounded_and_redacts_runtime_secrets(self):
+        payload = {
+            "sourceSha": "c" * 40,
+            "deliveryNumber": 7,
+            "runtimeSurfaceSha": "c" * 40,
+            "status": "running",
+            "phase": "idle",
+            "applyMode": "none",
+            "bootRefreshRequired": False,
+            "baseUpdatePhase": "none",
+            "lastAppliedSha": "c" * 40,
+            "lastApplyDurationSeconds": 3,
+            "lastStageDurationSeconds": 2,
+            "lastError": "private diagnostic detail",
+            "healthToken": "very-secret-token",
+        }
+        summary = proof.validate_update_status(payload)
+        self.assertEqual(summary["delivery_number"], 7)
+        self.assertTrue(summary["runtime_surface_matches_source"])
+        self.assertTrue(summary["has_last_error"])
+        self.assertTrue(summary["health_token_present"])
+        serialized = json.dumps(summary)
+        self.assertNotIn("very-secret-token", serialized)
+        self.assertNotIn("private diagnostic detail", serialized)
+        self.assertNotIn("c" * 40, serialized)
+
+        bad_phase = dict(payload, phase="teleporting")
+        with self.assertRaises(ValueError):
+            proof.validate_update_status(bad_phase)
+        bad_delivery = dict(payload, deliveryNumber=-1)
+        with self.assertRaises(ValueError):
+            proof.validate_update_status(bad_delivery)
+        bad_duration = dict(payload, lastApplyDurationSeconds=3601)
+        with self.assertRaises(ValueError):
+            proof.validate_update_status(bad_duration)
 
     def test_source_snapshot_hashes_required_modules(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -183,6 +249,7 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
     def test_collector_has_no_mutating_http_methods(self):
         text = PROOF.read_text(encoding="utf-8")
         self.assertIn('putrequest("GET"', text)
+        self.assertIn('"/__ordax/native/update"', text)
         for method in ('putrequest("POST"', 'putrequest("PUT"', 'putrequest("PATCH"', 'putrequest("DELETE"'):
             self.assertNotIn(method, text)
 
