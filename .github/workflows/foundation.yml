@@ -29,6 +29,7 @@ jobs:
         run: |
           python bootstrap/kernel/build.py check
           python bootstrap/initramfs/build.py check
+          python bootstrap/native-initramfs/build.py check
           python bootstrap/network/build.py check
           python boot/esp/build.py check
 
