@@ -51,7 +51,7 @@ _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _SAFE_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 REQUIRED_APPLETS = {
     "blkid", "cat", "echo", "findfs", "losetup", "mkdir", "mount", "poweroff",
-    "reboot", "sh", "sha256sum", "sleep", "switch_root", "sync", "umount",
+    "reboot", "sh", "sha256sum", "sleep", "switch_root", "sync", "test", "[", "umount",
 }
 REQUESTED_CONFIG = {
     "CONFIG_BUSYBOX": "y",
@@ -65,6 +65,7 @@ REQUESTED_CONFIG = {
     "CONFIG_LOSETUP": "y",
     "CONFIG_MKDIR": "y",
     "CONFIG_MOUNT": "y",
+    "CONFIG_FEATURE_MOUNT_FLAGS": "y",
     "CONFIG_FEATURE_MOUNT_LOOP": "y",
     "CONFIG_POWEROFF": "y",
     "CONFIG_REBOOT": "y",
@@ -73,9 +74,13 @@ REQUESTED_CONFIG = {
     "CONFIG_SLEEP": "y",
     "CONFIG_SWITCH_ROOT": "y",
     "CONFIG_SYNC": "y",
+    "CONFIG_TEST": "y",
+    "CONFIG_TEST1": "y",
+    "CONFIG_FEATURE_TEST_64": "y",
     "CONFIG_UMOUNT": "y",
     "CONFIG_FEATURE_VOLUMEID_EXT": "y",
     "CONFIG_FEATURE_VOLUMEID_EXFAT": "y",
+    "CONFIG_FEATURE_VOLUMEID_FAT": "y",
 }
 FIXED_ENV = {
     "SOURCE_DATE_EPOCH": "0",
@@ -887,6 +892,10 @@ def build(
         "portable_v2_prerequisites": {
             "losetup_applet": True,
             "mount_loop_support": True,
+            "mount_security_flags": True,
+            "posix_test_applet": True,
+            "posix_bracket_applet": True,
+            "test_64_bit_comparisons": True,
             "exfat_volume_id": True,
             "boot_path_enabled": False,
             "handoff_helper_installed": True,

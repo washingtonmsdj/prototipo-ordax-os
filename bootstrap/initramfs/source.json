@@ -213,6 +213,16 @@
       "product_system_mount": "read-only-bind",
       "pid1_promotion_allowed": false,
       "physical_boot_authorized": false
-    }
+    },
+    "mount_security_flags": true,
+    "mount_security_flags_busybox_selector": "CONFIG_FEATURE_MOUNT_FLAGS=y",
+    "posix_test_applet": true,
+    "posix_bracket_applet": true,
+    "test_64_bit_comparisons": true,
+    "posix_test_busybox_selectors": [
+      "CONFIG_TEST=y",
+      "CONFIG_TEST1=y",
+      "CONFIG_FEATURE_TEST_64=y"
+    ]
   }
 }
