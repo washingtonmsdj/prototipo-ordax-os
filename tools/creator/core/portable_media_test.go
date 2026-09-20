@@ -68,3 +68,97 @@ func TestParsePortableMediaBindingsIsStrict(t *testing.T) {
 	payload = append(payload, []byte("\n{}")...)
 	if _, err := ParsePortableMediaBindings(payload); err == nil { t.Fatal("trailing JSON accepted") }
 }
+
+func TestPlanPortableApplicationIsDeterministicHostNeutralAndUnauthorized(t *testing.T) {
+	const commit = "0123456789abcdef0123456789abcdef01234567"
+	media, err := PlanPortableMedia(8<<30, commit, portableBindingsFixture())
+	if err != nil { t.Fatal(err) }
+	first, err := PlanPortableApplication(media)
+	if err != nil { t.Fatal(err) }
+	second, err := PlanPortableApplication(media)
+	if err != nil { t.Fatal(err) }
+	a, _ := json.Marshal(first)
+	b, _ := json.Marshal(second)
+	if string(a) != string(b) { t.Fatal("portable application plan is not deterministic") }
+	if first.Schema != PortableApplicationPlanSchema || first.Status != "planned-not-authorized" {
+		t.Fatalf("unexpected application plan identity: %#v", first)
+	}
+	if first.PhysicalWriteAuthorized || first.PhysicalDeviceBound || first.PublicPromotionAllowed {
+		t.Fatalf("portable application plan crossed authorization boundary: %#v", first)
+	}
+	if first.WholeDiskRawImageNeeded {
+		t.Fatal("portable v2 application unexpectedly requires a whole-disk raw image")
+	}
+	if len(first.Partitions) != 2 ||
+		first.Partitions[0].Name != "ORDAX-ESP" ||
+		first.Partitions[1].Name != "ORDAX-DATA" {
+		t.Fatalf("portable application partition plan is wrong: %#v", first.Partitions)
+	}
+	if len(first.Operations) != 3+13+1+13+1 {
+		t.Fatalf("operation count=%d", len(first.Operations))
+	}
+	if first.Operations[0].Kind != "partition-table-gpt-two-partition" ||
+		first.Operations[1].Kind != "format-fat32" ||
+		first.Operations[2].Kind != "format-exfat" {
+		t.Fatalf("portable application destructive prefix is wrong: %#v", first.Operations[:3])
+	}
+	for _, artifact := range media.Artifacts {
+		foundMaterialize := false
+		foundReadback := false
+		for _, operation := range first.Operations {
+			if operation.ArtifactID != artifact.ID { continue }
+			if operation.Kind == "materialize-artifact" &&
+				operation.SHA256 == artifact.SHA256 &&
+				operation.SizeBytes == artifact.SizeBytes &&
+				operation.ReadbackRequired {
+				foundMaterialize = true
+			}
+			if operation.Kind == "readback-sha256-size" &&
+				operation.SHA256 == artifact.SHA256 &&
+				operation.SizeBytes == artifact.SizeBytes &&
+				operation.ReadbackRequired {
+				foundReadback = true
+			}
+		}
+		if !foundMaterialize || !foundReadback {
+			t.Fatalf("artifact %q is not fully bound into apply+readback", artifact.ID)
+		}
+	}
+}
+
+func TestPlanPortableApplicationRejectsMutatedMediaPlan(t *testing.T) {
+	const commit = "0123456789abcdef0123456789abcdef01234567"
+	base, err := PlanPortableMedia(8<<30, commit, portableBindingsFixture())
+	if err != nil { t.Fatal(err) }
+
+	cases := []func(*PortableMediaPlan){
+		func(p *PortableMediaPlan) { p.PhysicalWriteAuthorized = true },
+		func(p *PortableMediaPlan) { p.Profile = "native-disk" },
+		func(p *PortableMediaPlan) { p.DataStartLBA++ },
+		func(p *PortableMediaPlan) { p.Artifacts[0].TargetPath = "/wrong" },
+		func(p *PortableMediaPlan) { p.Artifacts[0].SHA256 = "bad" },
+	}
+	for index, mutate := range cases {
+		copyPlan := base
+		copyPlan.Artifacts = append([]PortableMediaArtifactPlan(nil), base.Artifacts...)
+		mutate(&copyPlan)
+		if _, err := PlanPortableApplication(copyPlan); err == nil {
+			t.Fatalf("mutated application plan case %d was accepted", index)
+		}
+	}
+}
+
+func TestParsePortableMediaPlanIsStrict(t *testing.T) {
+	const commit = "0123456789abcdef0123456789abcdef01234567"
+	media, err := PlanPortableMedia(8<<30, commit, portableBindingsFixture())
+	if err != nil { t.Fatal(err) }
+	payload, err := json.Marshal(media)
+	if err != nil { t.Fatal(err) }
+	parsed, err := ParsePortableMediaPlan(payload)
+	if err != nil { t.Fatal(err) }
+	if parsed.SourceCommit != commit { t.Fatalf("source commit=%q", parsed.SourceCommit) }
+	payload = append(payload, []byte("\n{}")...)
+	if _, err := ParsePortableMediaPlan(payload); err == nil {
+		t.Fatal("portable media plan parser accepted trailing JSON")
+	}
+}

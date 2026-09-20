@@ -27,6 +27,14 @@ class CreatorPortablePreparedMediaTests(unittest.TestCase):
         self.assertTrue(contract["disposable_materializer_readback_verification"])
         self.assertFalse(contract["physical_writer_v2_implemented"])
         self.assertFalse(contract["public_mvp_default_enabled"])
+        application = contract["application_planner"]
+        self.assertTrue(application["implemented"])
+        self.assertTrue(application["host_neutral"])
+        self.assertFalse(application["physical_device_bound"])
+        self.assertFalse(application["physical_write_authorized"])
+        self.assertFalse(application["public_promotion_allowed"])
+        self.assertFalse(application["whole_disk_raw_image_required"])
+        self.assertTrue(application["canonical_media_plan_sha256_bound"])
 
     def test_script_consumes_core_plan_targets_and_rejects_device_output(self):
         text = SCRIPT.read_text(encoding="utf-8")

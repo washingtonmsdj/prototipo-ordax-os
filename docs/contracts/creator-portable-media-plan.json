@@ -25,5 +25,27 @@
   "disposable_materializer_readback_verification": true,
   "disposable_materializer_workflow": ".github/workflows/portable-usb-v2-proof.yml",
   "disposable_materializer_workflow_implemented": true,
-  "disposable_materializer_proof_passed_on_current_head": false
+  "disposable_materializer_proof_passed_on_current_head": false,
+  "application_planner": {
+    "implemented": true,
+    "owner": "tools/creator/core/portable_media.go#PlanPortableApplication",
+    "cli_command": "ordax-creator plan-portable-application",
+    "schema": "prototype-ordax.portable-application-plan/1",
+    "consumes_exact_media_plan": true,
+    "canonical_media_plan_sha256_bound": true,
+    "host_neutral": true,
+    "physical_device_bound": false,
+    "physical_write_authorized": false,
+    "public_promotion_allowed": false,
+    "whole_disk_raw_image_required": false,
+    "ordered_phases": [
+      "write-exact-two-partition-gpt",
+      "format-ORDAX-ESP-fat32",
+      "format-ORDAX-DATA-exfat",
+      "materialize-13-exact-artifacts",
+      "flush-and-sync",
+      "readback-sha256-and-size-for-13-artifacts",
+      "verify-gpt-filesystems-labels-and-capacity"
+    ]
+  }
 }

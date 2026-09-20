@@ -9,11 +9,13 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"crypto/sha256"
 )
 
 const (
 	PortableMediaBindingsSchema = "prototype-ordax.portable-media-bindings/1"
 	PortableMediaPlanSchema = "prototype-ordax.portable-media-plan/1"
+	PortableApplicationPlanSchema = "prototype-ordax.portable-application-plan/1"
 	portableMediaMaxArtifact = uint64(16 << 30)
 )
 
@@ -47,6 +49,43 @@ type PortableMediaPlan struct {
 	DataLastLBA uint64 `json:"data_last_lba"`
 	Artifacts []PortableMediaArtifactPlan `json:"artifacts"`
 	PhysicalWriteAuthorized bool `json:"physical_write_authorized"`
+}
+
+
+type PortableApplicationPartition struct {
+	Index      int    `json:"index"`
+	Name       string `json:"name"`
+	Filesystem string `json:"filesystem"`
+	StartLBA   uint64 `json:"start_lba"`
+	LastLBA    uint64 `json:"last_lba"`
+}
+
+type PortableApplicationOperation struct {
+	Sequence         int    `json:"sequence"`
+	ID               string `json:"id"`
+	Kind             string `json:"kind"`
+	Partition        string `json:"partition,omitempty"`
+	TargetPath       string `json:"target_path,omitempty"`
+	ArtifactID       string `json:"artifact_id,omitempty"`
+	SHA256           string `json:"sha256,omitempty"`
+	SizeBytes        uint64 `json:"size_bytes,omitempty"`
+	DestructiveClass bool   `json:"destructive_class"`
+	ReadbackRequired bool   `json:"readback_required"`
+}
+
+type PortableApplicationPlan struct {
+	Schema                  string                         `json:"$schema"`
+	Status                  string                         `json:"status"`
+	Profile                 string                         `json:"profile"`
+	SourceCommit            string                         `json:"source_commit"`
+	TargetBytes             uint64                         `json:"target_bytes"`
+	MediaPlanSHA256         string                         `json:"media_plan_sha256"`
+	Partitions              []PortableApplicationPartition `json:"partitions"`
+	Operations              []PortableApplicationOperation `json:"operations"`
+	WholeDiskRawImageNeeded bool                           `json:"whole_disk_raw_image_required"`
+	PhysicalDeviceBound     bool                           `json:"physical_device_bound"`
+	PhysicalWriteAuthorized bool                           `json:"physical_write_authorized"`
+	PublicPromotionAllowed  bool                           `json:"public_promotion_allowed"`
 }
 
 type portableMediaTarget struct {
@@ -86,6 +125,23 @@ func ParsePortableMediaBindings(data []byte) (PortableMediaBindings, error) {
 	}
 	if value.Schema != PortableMediaBindingsSchema {
 		return PortableMediaBindings{}, fmt.Errorf("unsupported portable media bindings schema %q", value.Schema)
+	}
+	return value, nil
+}
+
+func ParsePortableMediaPlan(data []byte) (PortableMediaPlan, error) {
+	var value PortableMediaPlan
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&value); err != nil {
+		return PortableMediaPlan{}, fmt.Errorf("decode portable media plan: %w", err)
+	}
+	var extra any
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return PortableMediaPlan{}, errors.New("decode portable media plan: trailing JSON value")
+		}
+		return PortableMediaPlan{}, fmt.Errorf("decode portable media plan trailing content: %w", err)
 	}
 	return value, nil
 }
@@ -137,5 +193,142 @@ func PlanPortableMedia(targetBytes uint64, sourceCommit string, bindings Portabl
 		Schema: PortableMediaPlanSchema, Profile: layout.Profile, SourceCommit: sourceCommit, TargetBytes: targetBytes,
 		ESPStartLBA: layout.ESPStartLBA, ESPLastLBA: layout.ESPLastLBA, DataStartLBA: layout.PayloadStartLBA, DataLastLBA: layout.PayloadLastLBA,
 		Artifacts: artifacts, PhysicalWriteAuthorized: false,
+	}, nil
+}
+
+
+func validatePortableMediaPlanForApplication(plan PortableMediaPlan) (TargetStorageProfile, error) {
+	if plan.Schema != PortableMediaPlanSchema {
+		return TargetStorageProfile{}, errors.New("portable application requires the canonical portable media plan schema")
+	}
+	if plan.Profile != "portable-usb" || !validPortableSourceCommit(plan.SourceCommit) {
+		return TargetStorageProfile{}, errors.New("portable application plan identity is invalid")
+	}
+	if plan.PhysicalWriteAuthorized {
+		return TargetStorageProfile{}, errors.New("portable media policy plan must not authorize physical write")
+	}
+	layout, err := PlanPortableTargetStorage(plan.TargetBytes)
+	if err != nil {
+		return TargetStorageProfile{}, err
+	}
+	if plan.ESPStartLBA != layout.ESPStartLBA ||
+		plan.ESPLastLBA != layout.ESPLastLBA ||
+		plan.DataStartLBA != layout.PayloadStartLBA ||
+		plan.DataLastLBA != layout.PayloadLastLBA {
+		return TargetStorageProfile{}, errors.New("portable media plan geometry differs from Creator Core storage policy")
+	}
+	if len(plan.Artifacts) != len(portableMediaTargets) {
+		return TargetStorageProfile{}, fmt.Errorf("portable application requires exactly %d artifacts", len(portableMediaTargets))
+	}
+	seen := map[string]bool{}
+	seenTargets := map[string]bool{}
+	for _, artifact := range plan.Artifacts {
+		target, ok := portableMediaTargets[artifact.ID]
+		if !ok || seen[artifact.ID] {
+			return TargetStorageProfile{}, fmt.Errorf("portable application artifact identity is invalid: %q", artifact.ID)
+		}
+		seen[artifact.ID] = true
+		expectedPath := target.target(plan.SourceCommit)
+		if artifact.Partition != target.partition || artifact.TargetPath != expectedPath {
+			return TargetStorageProfile{}, fmt.Errorf("portable application artifact %q destination differs from Core policy", artifact.ID)
+		}
+		key := artifact.Partition + ":" + artifact.TargetPath
+		if seenTargets[key] {
+			return TargetStorageProfile{}, errors.New("portable application contains duplicate target destination")
+		}
+		seenTargets[key] = true
+		if !validPortableMediaSHA256(artifact.SHA256) ||
+			artifact.SizeBytes == 0 ||
+			artifact.SizeBytes > portableMediaMaxArtifact {
+			return TargetStorageProfile{}, fmt.Errorf("portable application artifact %q integrity binding is invalid", artifact.ID)
+		}
+	}
+	for id := range portableMediaTargets {
+		if !seen[id] {
+			return TargetStorageProfile{}, fmt.Errorf("portable application is missing artifact %q", id)
+		}
+	}
+	return layout, nil
+}
+
+func PlanPortableApplication(plan PortableMediaPlan) (PortableApplicationPlan, error) {
+	layout, err := validatePortableMediaPlanForApplication(plan)
+	if err != nil {
+		return PortableApplicationPlan{}, err
+	}
+	canonical, err := json.Marshal(plan)
+	if err != nil {
+		return PortableApplicationPlan{}, fmt.Errorf("encode portable media plan identity: %w", err)
+	}
+	digest := sha256.Sum256(canonical)
+
+	operations := make([]PortableApplicationOperation, 0, 3+len(plan.Artifacts)*2+2)
+	add := func(operation PortableApplicationOperation) {
+		operation.Sequence = len(operations) + 1
+		operations = append(operations, operation)
+	}
+	add(PortableApplicationOperation{
+		ID: "write-gpt", Kind: "partition-table-gpt-two-partition",
+		DestructiveClass: true, ReadbackRequired: true,
+	})
+	add(PortableApplicationOperation{
+		ID: "format-esp", Kind: "format-fat32", Partition: "ORDAX-ESP",
+		DestructiveClass: true, ReadbackRequired: true,
+	})
+	add(PortableApplicationOperation{
+		ID: "format-data", Kind: "format-exfat", Partition: "ORDAX-DATA",
+		DestructiveClass: true, ReadbackRequired: true,
+	})
+	for _, artifact := range plan.Artifacts {
+		add(PortableApplicationOperation{
+			ID: "materialize-" + artifact.ID,
+			Kind: "materialize-artifact",
+			Partition: artifact.Partition,
+			TargetPath: artifact.TargetPath,
+			ArtifactID: artifact.ID,
+			SHA256: artifact.SHA256,
+			SizeBytes: artifact.SizeBytes,
+			DestructiveClass: true,
+			ReadbackRequired: true,
+		})
+	}
+	add(PortableApplicationOperation{
+		ID: "flush-filesystems", Kind: "flush-and-sync",
+		DestructiveClass: false, ReadbackRequired: false,
+	})
+	for _, artifact := range plan.Artifacts {
+		add(PortableApplicationOperation{
+			ID: "readback-" + artifact.ID,
+			Kind: "readback-sha256-size",
+			Partition: artifact.Partition,
+			TargetPath: artifact.TargetPath,
+			ArtifactID: artifact.ID,
+			SHA256: artifact.SHA256,
+			SizeBytes: artifact.SizeBytes,
+			DestructiveClass: false,
+			ReadbackRequired: true,
+		})
+	}
+	add(PortableApplicationOperation{
+		ID: "verify-filesystems", Kind: "verify-gpt-filesystem-labels-and-capacity",
+		DestructiveClass: false, ReadbackRequired: true,
+	})
+
+	return PortableApplicationPlan{
+		Schema: PortableApplicationPlanSchema,
+		Status: "planned-not-authorized",
+		Profile: plan.Profile,
+		SourceCommit: plan.SourceCommit,
+		TargetBytes: plan.TargetBytes,
+		MediaPlanSHA256: hex.EncodeToString(digest[:]),
+		Partitions: []PortableApplicationPartition{
+			{Index: 1, Name: "ORDAX-ESP", Filesystem: "fat32", StartLBA: layout.ESPStartLBA, LastLBA: layout.ESPLastLBA},
+			{Index: 2, Name: "ORDAX-DATA", Filesystem: "exfat", StartLBA: layout.PayloadStartLBA, LastLBA: layout.PayloadLastLBA},
+		},
+		Operations: operations,
+		WholeDiskRawImageNeeded: false,
+		PhysicalDeviceBound: false,
+		PhysicalWriteAuthorized: false,
+		PublicPromotionAllowed: false,
 	}, nil
 }

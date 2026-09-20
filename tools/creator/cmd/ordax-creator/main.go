@@ -15,6 +15,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "usage: ordax-creator <check|verify-payload|stage-tree|plan> --manifest <path> [--payload-root <dir>] [--output-root <dir>]")
 	fmt.Fprintln(os.Stderr, "       ordax-creator prepare-image --seed <regular-file> --out <new-regular-file> --target-bytes <bytes>")
 	fmt.Fprintln(os.Stderr, "       ordax-creator plan-portable --target-bytes <bytes>")
+	fmt.Fprintln(os.Stderr, "       ordax-creator plan-portable-application --plan <portable-media-plan.json>")
 	fmt.Fprintln(os.Stderr, "       ordax-creator plan-portable-media --target-bytes <bytes> --source-commit <40-hex> --bindings <json>")
 	fmt.Fprintln(os.Stderr, "       ordax-creator plan-native --target-bytes <bytes>")
 	fmt.Fprintln(os.Stderr, "       ordax-creator plan-native-materialization --target-bytes <bytes>")
@@ -100,6 +101,40 @@ func runPlanPortableMedia(args []string) int {
 	if err := enc.Encode(plan); err != nil { fmt.Fprintf(os.Stderr, "ordax-creator: encode portable media plan: %v\n", err); return 1 }
 	return 0
 }
+func runPlanPortableApplication(args []string) int {
+	fs := flag.NewFlagSet("plan-portable-application", flag.ContinueOnError)
+	planPath := fs.String("plan", "", "canonical portable media plan JSON")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 || *planPath == "" {
+		usage()
+		return 2
+	}
+	data, err := os.ReadFile(*planPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ordax-creator: read portable media plan: %v\n", err)
+		return 1
+	}
+	media, err := creatorcore.ParsePortableMediaPlan(data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ordax-creator: parse portable media plan: %v\n", err)
+		return 1
+	}
+	plan, err := creatorcore.PlanPortableApplication(media)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ordax-creator: plan portable application: %v\n", err)
+		return 1
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(plan); err != nil {
+		fmt.Fprintf(os.Stderr, "ordax-creator: encode portable application plan: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
 func runPlanNative(args []string) int {
 	fs := flag.NewFlagSet("plan-native", flag.ContinueOnError)
 	targetBytes := fs.Uint64("target-bytes", 0, "exact Native install target capacity in bytes; must be 512-byte aligned")
@@ -329,6 +364,9 @@ func main() {
 	}
 	if command == "plan-portable-media" {
 		os.Exit(runPlanPortableMedia(os.Args[2:]))
+	}
+	if command == "plan-portable-application" {
+		os.Exit(runPlanPortableApplication(os.Args[2:]))
 	}
 	if command == "plan-native" {
 		os.Exit(runPlanNative(os.Args[2:]))
