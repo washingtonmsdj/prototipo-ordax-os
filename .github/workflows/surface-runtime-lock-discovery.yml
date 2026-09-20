@@ -86,16 +86,42 @@ jobs:
           work="$RUNNER_TEMP/surface-runtime"
           a="$work/build-a/native-surface-runtime.erofs"
           b="$work/build-b/native-surface-runtime.erofs"
-          cmp "$a" "$b"
-          sha_a="$(sha256sum "$a" | awk '{print $1}')"
-          sha_b="$(sha256sum "$b" | awk '{print $1}')"
-          test "$sha_a" = "$sha_b"
 
-          python - "$work/build-a/surface-runtime-provenance.json" "$work/build-b/surface-runtime-provenance.json" <<'PY'
+          python - \
+            "$work/build-a/surface-runtime-provenance.json" \
+            "$work/build-b/surface-runtime-provenance.json" \
+            "$work/build-a/surface-runtime-tree.json" \
+            "$work/build-b/surface-runtime-tree.json" <<'PY'
           import json, pathlib, sys
-          a = json.loads(pathlib.Path(sys.argv[1]).read_text())
-          b = json.loads(pathlib.Path(sys.argv[2]).read_text())
+          pa, pb, ta, tb = map(pathlib.Path, sys.argv[1:])
+          a = json.loads(pa.read_text())
+          b = json.loads(pb.read_text())
+          tree_a = json.loads(ta.read_text())
+          tree_b = json.loads(tb.read_text())
+
+          print("TREE_A_SHA256", a['tree_manifest_sha256'])
+          print("TREE_B_SHA256", b['tree_manifest_sha256'])
+          print("TAR_A_SHA256", a['normalized_tar_sha256'])
+          print("TAR_B_SHA256", b['normalized_tar_sha256'])
+          print("EROFS_A_SHA256", a['image']['sha256'])
+          print("EROFS_B_SHA256", b['image']['sha256'])
+
+          by_path_a = {entry['path']: entry for entry in tree_a['entries']}
+          by_path_b = {entry['path']: entry for entry in tree_b['entries']}
+          differing = [
+              path for path in sorted(set(by_path_a) | set(by_path_b))
+              if by_path_a.get(path) != by_path_b.get(path)
+          ]
+          if differing:
+              print("SURFACE_RUNTIME_TREE_DIFFERENCES", len(differing))
+              for path in differing[:40]:
+                  print("DIFF", path)
+                  print(" A", by_path_a.get(path))
+                  print(" B", by_path_b.get(path))
+              raise SystemExit("Surface runtime rootfs tree is not reproducible")
+
           assert a['status'] == b['status'] == 'candidate-not-promotable'
+          assert a['tree_manifest_sha256'] == b['tree_manifest_sha256']
           assert a['normalized_tar_sha256'] == b['normalized_tar_sha256']
           assert a['image']['sha256'] == b['image']['sha256']
           assert a['image']['size'] == b['image']['size']
@@ -104,8 +130,19 @@ jobs:
           assert a['network_package_install_during_stable_boot_allowed'] is False
           assert a['physical_artifact_authorized'] is False
           assert a['portable_v2_boot_connected'] is False
-          print('SURFACE_RUNTIME_EROFS_REPEAT_DIGEST=PASS')
           PY
+
+          sha_a="$(sha256sum "$a" | awk '{print $1}')"
+          sha_b="$(sha256sum "$b" | awk '{print $1}')"
+          echo "EROFS_CURRENT_A_SHA256=$sha_a"
+          echo "EROFS_CURRENT_B_SHA256=$sha_b"
+          if [ "$sha_a" != "$sha_b" ]; then
+            echo "First differing EROFS bytes:"
+            cmp -l "$a" "$b" | head -n 32 || true
+            exit 1
+          fi
+          cmp "$a" "$b"
+          echo 'SURFACE_RUNTIME_EROFS_REPEAT_DIGEST=PASS'
 
       - name: Remove unpromoted runtime image bytes
         run: |
@@ -123,5 +160,7 @@ jobs:
             ${{ runner.temp }}/surface-runtime/surface-runtime-lock.json
             ${{ runner.temp }}/surface-runtime/build-a/surface-runtime-provenance.json
             ${{ runner.temp }}/surface-runtime/build-b/surface-runtime-provenance.json
+            ${{ runner.temp }}/surface-runtime/build-a/surface-runtime-tree.json
+            ${{ runner.temp }}/surface-runtime/build-b/surface-runtime-tree.json
           if-no-files-found: error
           retention-days: 14
