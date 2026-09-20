@@ -65,7 +65,10 @@
     "new_release_schema_requires_generator_support": true,
     "new_release_schema_requires_acquisition_agent_support": true,
     "new_release_schema_requires_cross_component_regression": true,
-    "new_trust_transition_requires_explicit_protocol": true
+    "new_trust_transition_requires_explicit_protocol": true,
+    "portable_usb_v2_erofs_requires_new_manifest_schema": true,
+    "portable_usb_v2_candidate_must_not_mutate_manifest_v1": true,
+    "portable_usb_v2_candidate_contract": "docs/contracts/portable-release-image.json"
   },
   "owners": {
     "generator": "tools/release-manifest",

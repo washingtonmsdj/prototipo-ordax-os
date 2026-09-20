@@ -46,6 +46,24 @@ The release acquisition agent independently enforces the same runtime safety bou
 
 CI builds the tool for Linux and Windows and proves two independent bundle invocations are byte-identical.
 
+## Portable USB v2 EROFS candidate
+
+The durable USB architecture needs a compressed read-only filesystem image, but the signed release protocol v1 must remain immutable. Therefore the repository now uses a compatibility bridge:
+
+```text
+canonical system/
+ -> tools/release-bundle policy
+ -> deterministic system.tar
+ -> portable-release-image builder
+ -> deterministic system.erofs candidate
+```
+
+`system.tar` remains the only artifact accepted by `release-manifest/1`, the v1 signer and the current acquisition agent. The EROFS candidate does **not** silently become a v1 release artifact.
+
+`tools/portable-release-image/build.py` first revalidates the normalized tar metadata boundary, then creates `system.erofs` with fixed timestamp, fixed filesystem UUID, root ownership and LZ4 compression. CI must build the image twice and require byte-identical output, then run EROFS integrity verification.
+
+This candidate does not publish, sign, activate or authorize physical media. A future portable release protocol must use a new manifest schema and explicit consumer support before the boot path may rely on `system.erofs`.
+
 ## Release boundary
 
 This tooling does not publish a GitHub Release and does not sign a release envelope by itself.

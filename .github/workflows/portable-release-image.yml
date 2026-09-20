@@ -1,0 +1,147 @@
+name: Portable Release Image Candidate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'system/**'
+      - 'tools/release-bundle/**'
+      - 'tools/portable-release-image/**'
+      - 'docs/contracts/portable-release-image.json'
+      - 'docs/contracts/release-protocol.json'
+      - 'docs/contracts/storage-architecture.json'
+      - 'docs/RELEASE-BUNDLE.md'
+      - 'tests/test_portable_release_image_contract.py'
+      - '.github/workflows/portable-release-image.yml'
+  pull_request:
+    paths:
+      - 'system/**'
+      - 'tools/release-bundle/**'
+      - 'tools/portable-release-image/**'
+      - 'docs/contracts/portable-release-image.json'
+      - 'docs/contracts/release-protocol.json'
+      - 'docs/contracts/storage-architecture.json'
+      - 'docs/RELEASE-BUNDLE.md'
+      - 'tests/test_portable_release_image_contract.py'
+      - '.github/workflows/portable-release-image.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable-release-image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+          cache: false
+
+      - name: Install EROFS verification tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends erofs-utils util-linux
+          command -v mkfs.erofs
+          command -v fsck.erofs
+          command -v blkid
+
+      - name: Validate candidate contract
+        run: |
+          set -euo pipefail
+          python -m unittest tests.test_portable_release_image_contract -v
+
+      - name: Build canonical deterministic system tar
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/portable-release"
+          (
+            cd tools/release-bundle
+            go test -count=1 ./...
+            CGO_ENABLED=0 go build -trimpath -buildvcs=false \
+              -o "$RUNNER_TEMP/portable-release/ordax-release-bundle" .
+          )
+          "$RUNNER_TEMP/portable-release/ordax-release-bundle" \
+            --root "$PWD" \
+            --out "$RUNNER_TEMP/portable-release/system.tar" \
+            | tee "$RUNNER_TEMP/portable-release/bundle.txt"
+
+      - name: Build byte-identical EROFS candidates
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-release"
+          mkdir -p "$work/a" "$work/b"
+          python tools/portable-release-image/build.py build \
+            --tar "$work/system.tar" \
+            --out "$work/a/system.erofs" \
+            > "$work/a/result.json"
+          python tools/portable-release-image/build.py build \
+            --tar "$work/system.tar" \
+            --out "$work/b/system.erofs" \
+            > "$work/b/result.json"
+
+          cmp "$work/a/system.erofs" "$work/b/system.erofs"
+          fsck.erofs --extract "$work/a/system.erofs"
+          fsck.erofs --extract "$work/b/system.erofs"
+
+          python tools/portable-release-image/build.py verify \
+            --tar "$work/system.tar" \
+            --image "$work/a/system.erofs" \
+            > "$work/verified.json"
+
+          python - "$work/a/result.json" "$work/b/result.json" "$work/verified.json" <<'PY'
+          import json, pathlib, sys
+          first, second, verified = [
+              json.loads(pathlib.Path(p).read_text(encoding='utf-8'))
+              for p in sys.argv[1:]
+          ]
+          assert first['image']['sha256'] == second['image']['sha256']
+          assert first['image']['size'] == second['image']['size']
+          assert first['source']['sha256'] == second['source']['sha256']
+          assert first['release_protocol_v1_changed'] is False
+          assert first['signed_publication_enabled'] is False
+          assert first['portable_boot_handoff_connected'] is False
+          assert first['physical_write_authorized'] is False
+          assert verified['image_sha256'] == first['image']['sha256']
+          print('PORTABLE_RELEASE_IMAGE_REPRODUCIBLE=PASS')
+          print('RELEASE_PROTOCOL_V1_CHANGED=NO')
+          print('PORTABLE_BOOT_HANDOFF_CONNECTED=NO')
+          print('PHYSICAL_WRITE_AUTHORIZED=NO')
+          PY
+
+      - name: Publish candidate metadata only
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-release"
+          metadata="$RUNNER_TEMP/portable-release-metadata"
+          mkdir -p "$metadata"
+          cp "$work/a/result.json" "$metadata/build.json"
+          cp "$work/verified.json" "$metadata/verify.json"
+          sha256sum "$work/system.tar" "$work/a/system.erofs" > "$metadata/SHA256SUMS"
+          test -s "$metadata/build.json"
+          test -s "$metadata/verify.json"
+          test -s "$metadata/SHA256SUMS"
+          echo 'SYSTEM_EROFS_ARTIFACT_PUBLISHED_AS_RELEASE=NO'
+
+      - name: Upload proof metadata only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: portable-release-image-proof-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/portable-release-metadata/
+          if-no-files-found: error
+          retention-days: 14

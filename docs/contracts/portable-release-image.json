@@ -1,0 +1,51 @@
+{
+  "$schema": "prototype-ordax.portable-release-image/1",
+  "status": "candidate-proof-only",
+  "product_scope": "mvp-portable-usb-v2",
+  "source_policy_owner": "tools/release-bundle",
+  "source_artifact": {
+    "name": "system.tar",
+    "role": "normalized-system-tree-staging",
+    "must_be_deterministic": true,
+    "release_protocol_v1_signed_artifact_unchanged": true
+  },
+  "output": {
+    "name": "system.erofs",
+    "filesystem": "erofs",
+    "volume_label": "ORDAX-SYSTEM",
+    "filesystem_uuid": "00000000-0000-0000-0000-000000000000",
+    "compression": "lz4",
+    "timestamp": 0,
+    "all_files_owned_by_root": true,
+    "read_only": true,
+    "byte_reproducible_required": true
+  },
+  "builder": {
+    "path": "tools/portable-release-image/build.py",
+    "mkfs_tool": "mkfs.erofs",
+    "fsck_tool": "fsck.erofs",
+    "source_mode": "--tar=f",
+    "fixed_timestamp": "-T 0",
+    "fixed_uuid": true,
+    "all_root": "--all-root"
+  },
+  "integration": {
+    "release_protocol_v1_changed": false,
+    "manifest_v2_implemented": false,
+    "acquisition_agent_v2_implemented": false,
+    "portable_boot_handoff_connected": false,
+    "public_signed_publication_enabled": false,
+    "physical_write_authorized": false
+  },
+  "fail_closed": [
+    "reject-non-regular-or-symlink-system-tar",
+    "reject-non-normalized-tar-metadata",
+    "reject-links-devices-and-special-tar-members",
+    "reject-missing-or-non-executable-system-entrypoint",
+    "reject-existing-output",
+    "reject-output-inside-source-directory",
+    "verify-erofs-integrity-after-build",
+    "never-treat-candidate-image-as-release-protocol-v1-artifact",
+    "never-authorize-physical-write"
+  ]
+}
