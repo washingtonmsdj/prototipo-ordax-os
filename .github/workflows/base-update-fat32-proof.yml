@@ -59,14 +59,10 @@ jobs:
           sudo apt-get install -y --no-install-recommends dosfstools e2fsprogs fdisk util-linux
 
       - name: Prove read-only ESP preflight on a disposable same-disk layout
-        run: |
-          bash bootstrap/base-update/prove_esp_readonly_preflight.sh \
-            out/base-update/esp-readonly-preflight-proof.json
+        run: bash bootstrap/base-update/prove_esp_readonly_preflight.sh "out/base-update/esp-readonly-preflight-proof.json"
 
       - name: Prove inactive-slot physical development staging on disposable media
-        run: |
-          bash bootstrap/base-update/prove_dev_physical_stage.sh \
-            out/base-update/dev-physical-stage-proof.json
+        run: bash bootstrap/base-update/prove_dev_physical_stage.sh "out/base-update/dev-physical-stage-proof.json"
 
       - name: Prove one-shot activation without ESP mutation
         run: |
