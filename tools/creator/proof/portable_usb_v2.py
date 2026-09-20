@@ -32,6 +32,7 @@ REQUIRED_TOOLS = (
     "losetup",
     "mkfs.vfat",
     "mkfs.exfat",
+    "mount.exfat-fuse",
     "mkfs.erofs",
     "fsck.erofs",
     "mkfs.ext4",
@@ -222,6 +223,14 @@ def unmount(path: Path) -> None:
     subprocess.run(["umount", "-l", str(path)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def mount_exfat(device: Path, target: Path, *, read_only: bool = False) -> None:
+    argv = ["mount.exfat-fuse"]
+    if read_only:
+        argv.extend(["-o", "ro"])
+    argv.extend([str(device), str(target)])
+    run(argv)
+
+
 def build_proof(contract_path: Path, plan_path: Path, output_root: Path) -> dict[str, Any]:
     require_root_and_tools()
     contract = load_json(contract_path.resolve(), "portable USB v2 contract")
@@ -332,7 +341,10 @@ def build_proof(contract_path: Path, plan_path: Path, output_root: Path) -> dict
         data_mount.mkdir()
         run(["mount", str(esp), str(esp_mount)])
         esp_mounted = True
-        run(["mount", str(data), str(data_mount)])
+        # GitHub-hosted runners do not guarantee kernel exFAT support. Use the
+        # exFAT FUSE implementation only as a CI inspection transport. The
+        # OrdaX runtime itself is separately gated on CONFIG_EXFAT_FS=y.
+        mount_exfat(data, data_mount)
         data_mounted = True
 
         (esp_mount / "ordax").mkdir()
@@ -402,7 +414,7 @@ def build_proof(contract_path: Path, plan_path: Path, output_root: Path) -> dict
         esp_mounted = False
 
         verify_data_mount.mkdir()
-        run(["mount", "-o", "ro", str(data), str(verify_data_mount)])
+        mount_exfat(data, verify_data_mount, read_only=True)
         data_ro_mounted = True
         verified_release = verify_data_mount / ".ordax/releases/proof-system.erofs"
         verified_state = verify_data_mount / ".ordax/state/persistent-state.img"

@@ -61,12 +61,14 @@ jobs:
             gdisk \
             dosfstools \
             exfatprogs \
+            exfat-fuse \
             erofs-utils \
             e2fsprogs \
             util-linux
           command -v sgdisk
           command -v mkfs.vfat
           command -v mkfs.exfat
+          command -v mount.exfat-fuse
           command -v mkfs.erofs
           command -v fsck.erofs
           command -v mkfs.ext4

@@ -102,5 +102,12 @@
       "CONFIG_OVERLAY_FS": "compose immutable lower system with Linux-native writable persistent state",
       "CONFIG_EXT4_FS": "mount the persistent-state image"
     }
+  },
+  "ci_proof_environment": {
+    "exfat_population_backend": "exfat-fuse-userspace-ci-only",
+    "reason": "GitHub-hosted runner kernel does not guarantee exFAT mount support",
+    "product_runtime_backend": "linux-kernel-CONFIG_EXFAT_FS=y",
+    "proof_still_formats_real_exfat": true,
+    "proof_still_reverifies_real_exfat": true
   }
 }
