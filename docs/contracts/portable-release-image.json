@@ -35,11 +35,13 @@
   "integration": {
     "release_protocol_v1_changed": false,
     "manifest_v2_implemented": true,
-    "acquisition_agent_v2_implemented": false,
+    "acquisition_agent_v2_implemented": true,
     "portable_boot_handoff_connected": false,
     "public_signed_publication_enabled": false,
     "physical_write_authorized": false,
-    "signer_v2_implemented": true
+    "signer_v2_implemented": true,
+    "portable_materialization_implemented": true,
+    "portable_activation_implemented": false
   },
   "fail_closed": [
     "reject-non-regular-or-symlink-system-tar",
@@ -50,6 +52,8 @@
     "reject-output-inside-source-directory",
     "verify-erofs-integrity-after-build",
     "never-treat-candidate-image-as-release-protocol-v1-artifact",
-    "never-authorize-physical-write"
+    "never-authorize-physical-write",
+    "portable-v2-materialization-must-not-create-current-activation-pointer",
+    "legacy-materialize-and-activate-exact-must-reject-portable-v2"
   ]
 }

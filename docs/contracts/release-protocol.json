@@ -98,10 +98,17 @@
     "generator_support": true,
     "signer_support": true,
     "envelope_verifier_support": true,
-    "acquisition_agent_support": false,
-    "materialization_support": false,
+    "acquisition_agent_support": true,
+    "materialization_support": true,
     "activation_support": false,
     "boot_handoff_support": false,
-    "production_publication_allowed": false
+    "production_publication_allowed": false,
+    "channel_inspection_support": true,
+    "materialization_command": "ordax-release-agent materialize-portable",
+    "materialization_root": "/ordax-data/.ordax",
+    "materialization_layout": ".ordax/releases/<source_commit>/{system.erofs,release-manifest.json,release-envelope.json}",
+    "materialization_atomic_directory_rename": true,
+    "erofs_superblock_checked_before_persisted_release_promotion": true,
+    "current_symlink_created": false
   }
 }

@@ -108,6 +108,34 @@ func signedEnvelope(t *testing.T, manifest Manifest, keyID string, priv ed25519.
 	return data
 }
 
+func validPortableEROFS() []byte {
+	data := make([]byte, 4096)
+	copy(data[1024:1028], []byte{0xe2, 0xe1, 0xf5, 0xe0})
+	copy(data[2048:], []byte("ORDAX-PORTABLE-EROFS-PROOF"))
+	return data
+}
+
+func manifestForPortable(rawURL string, data []byte) Manifest {
+	digest := sha256.Sum256(data)
+	return Manifest{
+		Schema:              manifestSchemaV2,
+		SourceRepository:    defaultRepo,
+		SourceCommit:        testCommit,
+		ReleaseID:           testCommit,
+		CreatedFromCIRecipe: "release/portable-usb-v2/1",
+		ProductMode:         "usb",
+		StorageProfile:      "portable-usb-v2",
+		RuntimeFormat:       "erofs",
+		Artifacts: []Artifact{{
+			Name:   "system.erofs",
+			Role:   "system-image",
+			URL:    rawURL,
+			SHA256: hex.EncodeToString(digest[:]),
+			Size:   int64(len(data)),
+		}},
+	}
+}
+
 func manifestFor(rawURL string, data []byte) Manifest {
 	digest := sha256.Sum256(data)
 	return Manifest{
@@ -812,5 +840,216 @@ func TestLoadTrustRejectsSymlink(t *testing.T) {
 	}
 	if _, _, err := loadTrust(link); err == nil {
 		t.Fatal("symlink trust anchor was accepted")
+	}
+}
+
+func TestManifestV2RequiresExactPortableUSBIdentity(t *testing.T) {
+	m := manifestForPortable("https://example.invalid/system.erofs", validPortableEROFS())
+	if err := validateManifest(m, defaultRepo); err != nil {
+		t.Fatal(err)
+	}
+	m.StorageProfile = "native-disk"
+	if err := validateManifest(m, defaultRepo); err == nil || !strings.Contains(err.Error(), "portable-usb-v2") {
+		t.Fatalf("wrong portable storage profile accepted: %v", err)
+	}
+}
+
+func TestInspectReleaseAcceptsPortableV2WithoutDownloadingArtifact(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := validPortableEROFS()
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestForPortable(server.URL+"/system.erofs", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("inspect must not download portable system image")
+	})
+
+	receipt, err := inspectRelease(server.Client(), server.URL+"/release.json", trust, pub, defaultRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.ManifestSchema != manifestSchemaV2 ||
+		receipt.ProductMode != "usb" ||
+		receipt.StorageProfile != "portable-usb-v2" ||
+		receipt.RuntimeFormat != "erofs" ||
+		receipt.ArtifactName != "system.erofs" ||
+		receipt.ArtifactRole != "system-image" {
+		t.Fatalf("portable inspect identity mismatch: %#v", receipt)
+	}
+}
+
+func TestMaterializePortableStoresVerifiedAtomicReleaseWithoutActivation(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := validPortableEROFS()
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestForPortable(server.URL+"/system.erofs", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(artifact)
+	})
+
+	root := filepath.Join(t.TempDir(), ".ordax")
+	receipt, err := materializePortable(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.Status != "materialized-portable" || receipt.Idempotent || receipt.ActivationAllowed {
+		t.Fatalf("unexpected portable materialize receipt: %#v", receipt)
+	}
+	expected := filepath.Join(root, "releases", testCommit)
+	if receipt.ReleasePath != expected || receipt.ArtifactPath != filepath.Join(expected, "system.erofs") {
+		t.Fatalf("portable release path mismatch: %#v", receipt)
+	}
+	stored, err := os.ReadFile(filepath.Join(expected, "system.erofs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(stored, artifact) {
+		t.Fatal("stored portable image differs from signed bytes")
+	}
+	if _, err := os.Lstat(filepath.Join(root, "current")); !os.IsNotExist(err) {
+		t.Fatal("portable materialization created a current activation pointer")
+	}
+
+	second, err := materializePortable(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !second.Idempotent || second.ActivationAllowed {
+		t.Fatalf("portable re-materialization is not safely idempotent: %#v", second)
+	}
+}
+
+func TestMaterializePortableRejectsInvalidEROFSAndLeavesNoRelease(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := make([]byte, 4096)
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestForPortable(server.URL+"/system.erofs", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(artifact)
+	})
+
+	root := filepath.Join(t.TempDir(), ".ordax")
+	if _, err := materializePortable(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	); err == nil || !strings.Contains(err.Error(), "EROFS") {
+		t.Fatalf("invalid EROFS candidate was accepted: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "releases", testCommit)); !os.IsNotExist(err) {
+		t.Fatal("failed portable release survived verification")
+	}
+	if _, err := os.Lstat(filepath.Join(root, "current")); !os.IsNotExist(err) {
+		t.Fatal("failed portable materialization changed activation state")
+	}
+}
+
+func TestLegacyMaterializeRejectsPortableV2BeforeArtifactDownload(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := validPortableEROFS()
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestForPortable(server.URL+"/system.erofs", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("legacy materialize must reject v2 before artifact download")
+	})
+
+	root := filepath.Join(t.TempDir(), "ordax")
+	if _, err := materialize(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	); err == nil || !strings.Contains(err.Error(), "materialize-portable") {
+		t.Fatalf("legacy materialize accepted portable v2: %v", err)
+	}
+	if _, err := os.Stat(root); !os.IsNotExist(err) {
+		t.Fatal("legacy v2 rejection mutated release root")
+	}
+}
+
+func TestActivateExactExplicitlyRejectsPortableV2(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	artifact := validPortableEROFS()
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestForPortable(server.URL+"/system.erofs", artifact)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(artifact)
+	})
+	root := filepath.Join(t.TempDir(), ".ordax")
+	if _, err := materializePortable(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := activateExact(root, trust, pub, defaultRepo, testCommit); err == nil ||
+		!strings.Contains(err.Error(), "dedicated boot handoff") {
+		t.Fatalf("portable v2 activation was not rejected explicitly: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(root, "current")); !os.IsNotExist(err) {
+		t.Fatal("portable v2 activation rejection created current pointer")
 	}
 }

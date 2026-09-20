@@ -168,3 +168,37 @@ ordax-release-agent activate-exact \
 Before replacing `/ordax/current`, the command re-verifies the stored signed envelope, manifest, artifact hash/size and materialized system tree for the exact commit. It also requires the existing `current` pointer to name a safe bootable release and reports that previous commit for rollback.
 
 The command performs no network access, no artifact download, no materialization and no reboot. Health-ready policy remains owned by `system/supervisor`; merely having this command available does not authorize automatic Stable activation.
+
+
+## Portable USB v2 candidate materialization
+
+The acquisition agent now recognizes `prototype-ordax.release-manifest/2` only for the exact portable identity:
+
+```text
+product_mode=usb
+storage_profile=portable-usb-v2
+runtime_format=erofs
+artifact=system.erofs
+role=system-image
+```
+
+The new command is intentionally separate:
+
+```text
+ordax-release-agent materialize-portable \
+  --envelope-url <https-url> \
+  --trust <release-trust.json> \
+  --expected-commit <40-hex> \
+  --root /ordax-data/.ordax
+```
+
+It verifies the signed envelope/manifest, exact SHA-256 and size, checks the EROFS superblock, writes into a temporary release directory, persists the signed manifest and envelope, re-verifies the staged bytes and atomically renames the complete directory to:
+
+```text
+/ordax-data/.ordax/releases/<commit>/
+├─ system.erofs
+├─ release-manifest.json
+└─ release-envelope.json
+```
+
+This path deliberately **does not activate** the release and does not create the legacy `current` symlink. The old `materialize`, `install` and `activate-exact` paths remain v1-only. Portable v2 activation stays fail-closed until the dedicated initramfs/boot handoff and recovery model are implemented and proven.

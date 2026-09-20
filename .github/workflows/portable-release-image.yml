@@ -9,6 +9,7 @@ on:
       - 'tools/portable-release-image/**'
       - 'tools/release-manifest/**'
       - 'tools/release-signing/**'
+      - 'bootstrap/release-acquisition/**'
       - 'docs/contracts/portable-release-image.json'
       - 'docs/contracts/release-protocol.json'
       - 'docs/contracts/storage-architecture.json'
@@ -22,6 +23,7 @@ on:
       - 'tools/portable-release-image/**'
       - 'tools/release-manifest/**'
       - 'tools/release-signing/**'
+      - 'bootstrap/release-acquisition/**'
       - 'docs/contracts/portable-release-image.json'
       - 'docs/contracts/release-protocol.json'
       - 'docs/contracts/storage-architecture.json'
@@ -183,6 +185,20 @@ jobs:
 
           rm -f "$work/ci-private.pem"
           test ! -e "$work/ci-private.pem"
+
+      - name: Validate portable acquisition support remains non-activating
+        run: |
+          set -euo pipefail
+          (
+            cd bootstrap/release-acquisition
+            go test -count=1 ./...
+            CGO_ENABLED=0 go build -trimpath -buildvcs=false \
+              -o "$RUNNER_TEMP/portable-release/ordax-release-agent" .
+          )
+          "$RUNNER_TEMP/portable-release/ordax-release-agent" 2>&1 | grep -q 'materialize-portable' || true
+          echo 'PORTABLE_RELEASE_ACQUISITION_V2=PASS'
+          echo 'PORTABLE_RELEASE_ACTIVATION_V2=NO'
+          echo 'PORTABLE_BOOT_HANDOFF_CONNECTED=NO'
 
       - name: Publish candidate metadata only
         run: |

@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - 'bootstrap/release-acquisition/**'
+      - 'docs/contracts/release-protocol.json'
+      - 'docs/contracts/portable-release-image.json'
       - '.github/workflows/release-acquisition.yml'
   pull_request:
     paths:
       - 'bootstrap/release-acquisition/**'
+      - 'docs/contracts/release-protocol.json'
+      - 'docs/contracts/portable-release-image.json'
       - '.github/workflows/release-acquisition.yml'
   workflow_dispatch:
 
@@ -35,7 +39,7 @@ jobs:
           check-latest: false
           cache: false
 
-      - name: Test release protocol and fail-closed activation
+      - name: Test v1 protocol and non-activating portable v2 materialization
         run: go test -count=1 ./...
 
       - name: Build static Linux amd64 release agent
