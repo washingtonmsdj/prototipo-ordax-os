@@ -16,12 +16,14 @@ import (
 )
 
 const (
-	manifestSchema         = "prototype-ordax.release-manifest/1"
-	manifestSchemaV2       = "prototype-ordax.release-manifest/2"
-	defaultRepo            = "washingtonmsdj/prototipo-ordax-os"
-	defaultRecipe          = "release/native/1"
-	defaultPortableRecipe  = "release/portable-usb-v2/1"
-	maxArtifact            = int64(16 << 30)
+	manifestSchema                = "prototype-ordax.release-manifest/1"
+	manifestSchemaV2              = "prototype-ordax.release-manifest/2"
+	manifestSchemaV3              = "prototype-ordax.release-manifest/3"
+	defaultRepo                   = "washingtonmsdj/prototipo-ordax-os"
+	defaultRecipe                 = "release/native/1"
+	defaultPortableRecipe         = "release/portable-usb-v2/1"
+	defaultPortableRuntimeRecipe  = "release/portable-usb-v2-runtime/1"
+	maxArtifact                   = int64(16 << 30)
 )
 
 var (
@@ -191,6 +193,58 @@ func buildPortableManifest(artifactPath, sourceCommit, artifactURL, repository, 
 	}, nil
 }
 
+func buildPortableRuntimeManifest(systemPath, runtimePath, sourceCommit, systemURL, runtimeURL, repository, recipe string) (Manifest, error) {
+	if !commitPattern.MatchString(sourceCommit) {
+		return Manifest{}, errors.New("source commit must be lowercase 40-hex")
+	}
+	if repository == "" {
+		return Manifest{}, errors.New("source repository is required")
+	}
+	if !recipePattern.MatchString(recipe) {
+		return Manifest{}, errors.New("invalid CI recipe identifier")
+	}
+	if err := validateHTTPSURL(systemURL); err != nil {
+		return Manifest{}, fmt.Errorf("system artifact URL: %w", err)
+	}
+	if err := validateHTTPSURL(runtimeURL); err != nil {
+		return Manifest{}, fmt.Errorf("Surface runtime artifact URL: %w", err)
+	}
+	systemDigest, systemSize, err := hashNamedArtifact(systemPath, "system.erofs", "release-manifest/3 system")
+	if err != nil {
+		return Manifest{}, err
+	}
+	runtimeDigest, runtimeSize, err := hashNamedArtifact(runtimePath, "native-surface-runtime.erofs", "release-manifest/3 Surface runtime")
+	if err != nil {
+		return Manifest{}, err
+	}
+	return Manifest{
+		Schema:              manifestSchemaV3,
+		SourceRepository:    repository,
+		SourceCommit:        sourceCommit,
+		ReleaseID:           sourceCommit,
+		CreatedFromCIRecipe: recipe,
+		ProductMode:         "usb",
+		StorageProfile:      "portable-usb-v2",
+		RuntimeFormat:       "erofs",
+		Artifacts: []Artifact{
+			{
+				Name:   "system.erofs",
+				Role:   "system-image",
+				URL:    systemURL,
+				SHA256: systemDigest,
+				Size:   systemSize,
+			},
+			{
+				Name:   "native-surface-runtime.erofs",
+				Role:   "surface-runtime",
+				URL:    runtimeURL,
+				SHA256: runtimeDigest,
+				Size:   runtimeSize,
+			},
+		},
+	}, nil
+}
+
 func writeManifest(path string, manifest Manifest) error {
 	absolute, err := ensureRealParent(path)
 	if err != nil {
@@ -234,12 +288,14 @@ func writeManifest(path string, manifest Manifest) error {
 func run(args []string) error {
 	flags := flag.NewFlagSet("ordax-release-manifest", flag.ContinueOnError)
 	artifact := flags.String("artifact", "", "verified release artifact path")
+	runtimeArtifact := flags.String("runtime-artifact", "", "verified native-surface-runtime.erofs path for schema 3")
 	commit := flags.String("source-commit", "", "exact lowercase 40-hex source commit")
-	artifactURL := flags.String("artifact-url", "", "canonical HTTPS URL for the exact artifact")
+	artifactURL := flags.String("artifact-url", "", "canonical HTTPS URL for the exact system artifact")
+	runtimeArtifactURL := flags.String("runtime-artifact-url", "", "canonical HTTPS URL for native-surface-runtime.erofs for schema 3")
 	out := flags.String("out", "", "new release-manifest.json path")
 	repository := flags.String("repository", defaultRepo, "source repository")
 	recipe := flags.String("recipe", "", "CI recipe identity; defaults by schema")
-	schema := flags.String("manifest-schema", "1", "release manifest schema major: 1 or 2")
+	schema := flags.String("manifest-schema", "1", "release manifest schema major: 1, 2 or 3")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -261,8 +317,24 @@ func run(args []string) error {
 			selectedRecipe = defaultPortableRecipe
 		}
 		manifest, err = buildPortableManifest(*artifact, *commit, *artifactURL, *repository, selectedRecipe)
+	case "3":
+		if *runtimeArtifact == "" || *runtimeArtifactURL == "" {
+			return errors.New("release-manifest/3 requires --runtime-artifact and --runtime-artifact-url")
+		}
+		if selectedRecipe == "" {
+			selectedRecipe = defaultPortableRuntimeRecipe
+		}
+		manifest, err = buildPortableRuntimeManifest(
+			*artifact,
+			*runtimeArtifact,
+			*commit,
+			*artifactURL,
+			*runtimeArtifactURL,
+			*repository,
+			selectedRecipe,
+		)
 	default:
-		return errors.New("unsupported manifest schema major; expected 1 or 2")
+		return errors.New("unsupported manifest schema major; expected 1, 2 or 3")
 	}
 	if err != nil {
 		return err
@@ -278,6 +350,14 @@ func run(args []string) error {
 		manifest.Artifacts[0].SHA256,
 		manifest.Artifacts[0].Size,
 	)
+	if manifest.Schema == manifestSchemaV3 {
+		fmt.Printf(
+			"RUNTIME_ARTIFACT_NAME=%s\nRUNTIME_ARTIFACT_SHA256=%s\nRUNTIME_ARTIFACT_SIZE=%d\n",
+			manifest.Artifacts[1].Name,
+			manifest.Artifacts[1].SHA256,
+			manifest.Artifacts[1].Size,
+		)
+	}
 	return nil
 }
 
