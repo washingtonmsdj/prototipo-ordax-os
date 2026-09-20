@@ -68,10 +68,10 @@ class KernelBuildEnvironmentContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         identity = "${{ github.event.pull_request.head.sha || github.sha }}"
         self.assertIn(f"ref: {identity}", workflow)
-        self.assertIn(f"ORDAX_SOURCE_COMMIT: {identity}", workflow)
+        canonical = f"          ORDAX_SOURCE_COMMIT: {identity}\n"
+        self.assertEqual(workflow.count(canonical), 2)
         self.assertIn('-e ORDAX_SOURCE_COMMIT="$ORDAX_SOURCE_COMMIT"', workflow)
         self.assertIn("'source_commit': os.environ['ORDAX_SOURCE_COMMIT']", workflow)
-        self.assertNotIn(f"SOURCE_COMMIT: {identity}", workflow)
         self.assertNotIn('-e GITHUB_SHA="$GITHUB_SHA"', workflow)
         self.assertNotIn('"git"', self.load()["apt"]["packages"])
 
