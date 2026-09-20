@@ -5,6 +5,9 @@ ROOT = Path(__file__).resolve().parents[1]
 INITIALIZER = (
     ROOT / "tools/release-signing/windows/Initialize-OrdaXReleaseTrust.ps1"
 ).read_text(encoding="utf-8")
+FINALIZER = (
+    ROOT / "tools/release-signing/windows/Complete-OrdaXReleaseTrust.ps1"
+).read_text(encoding="utf-8")
 TOOLKIT = (
     ROOT / ".github/workflows/windows-prototype-toolkit.yml"
 ).read_text(encoding="utf-8")
@@ -33,7 +36,22 @@ def test_trust_ceremony_verifies_toolkit_components_before_key_generation():
     assert "'trust_initializer': {'name': 'Initialize-OrdaXReleaseTrust.ps1', 'sha256': digest('Initialize-OrdaXReleaseTrust.ps1')}" in TOOLKIT
 
 
+def test_recovery_refuses_source_identity_drift():
+    assert "$ToolkitProvenancePath = Join-Path $ScriptRoot 'provenance.json'" in FINALIZER
+    assert "$ToolkitProvenance.components.trust_recovery_finalizer.sha256" in FINALIZER
+    assert "Trust recovery finalizer bytes do not match toolkit provenance." in FINALIZER
+    assert "$InitialSourceCommit -ne $ToolkitSourceCommit" in FINALIZER
+    assert "Initial trust ceremony source_commit does not match toolkit provenance." in FINALIZER
+    assert "[string]$ProofManifest.source_commit -ne $ToolkitSourceCommit" in FINALIZER
+    assert "[string]$ProofManifest.release_id -ne $ToolkitSourceCommit" in FINALIZER
+    assert "Trust proof manifest source identity does not match toolkit provenance." in FINALIZER
+    assert "TRUST_PROOF_SOURCE_IDENTITY_MATCH=YES" in FINALIZER
+    assert "'trust_recovery_finalizer': {'name': 'Complete-OrdaXReleaseTrust.ps1', 'sha256': digest('Complete-OrdaXReleaseTrust.ps1')}" in TOOLKIT
+
+
 def test_trust_ceremony_still_requires_local_private_custody():
     assert "The private key must be outside the downloaded toolkit/repository directory." in INITIALIZER
     assert "ready_to_pin_public_anchor = $false" in INITIALIZER
     assert "READY_TO_PIN_PUBLIC_ANCHOR=NO" in INITIALIZER
+    assert "Assert-PrivateOutsideToolkit $PrimaryPrivateKeyPath" in FINALIZER
+    assert "Assert-PrivateOutsideToolkit $RecoveredPrivateKeyPath" in FINALIZER
