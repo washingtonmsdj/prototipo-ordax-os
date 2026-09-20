@@ -136,6 +136,37 @@ func manifestForPortable(rawURL string, data []byte) Manifest {
 	}
 }
 
+func manifestForPortableV3(systemURL, runtimeURL string, systemData, runtimeData []byte) Manifest {
+	systemDigest := sha256.Sum256(systemData)
+	runtimeDigest := sha256.Sum256(runtimeData)
+	return Manifest{
+		Schema:              manifestSchemaV3,
+		SourceRepository:    defaultRepo,
+		SourceCommit:        testCommit,
+		ReleaseID:           testCommit,
+		CreatedFromCIRecipe: "release/portable-usb-v2-runtime/1",
+		ProductMode:         "usb",
+		StorageProfile:      "portable-usb-v2",
+		RuntimeFormat:       "erofs",
+		Artifacts: []Artifact{
+			{
+				Name:   "system.erofs",
+				Role:   "system-image",
+				URL:    systemURL,
+				SHA256: hex.EncodeToString(systemDigest[:]),
+				Size:   int64(len(systemData)),
+			},
+			{
+				Name:   "native-surface-runtime.erofs",
+				Role:   "surface-runtime",
+				URL:    runtimeURL,
+				SHA256: hex.EncodeToString(runtimeDigest[:]),
+				Size:   int64(len(runtimeData)),
+			},
+		},
+	}
+}
+
 func manifestFor(rawURL string, data []byte) Manifest {
 	digest := sha256.Sum256(data)
 	return Manifest{
@@ -1136,5 +1167,241 @@ func TestVerifyPortableExactRejectsTamperedStoredImage(t *testing.T) {
 	if _, err := verifyPortableExact(root, trust, pub, defaultRepo, testCommit); err == nil ||
 		!strings.Contains(err.Error(), "digest") {
 		t.Fatalf("tampered stored portable image was accepted: %v", err)
+	}
+}
+
+
+func TestManifestV3RequiresCanonicalSystemAndSurfaceRuntime(t *testing.T) {
+	systemData := validPortableEROFS()
+	runtimeData := validPortableEROFS()
+	runtimeData[len(runtimeData)-1] = 0x7f
+	m := manifestForPortableV3(
+		"https://example.invalid/system.erofs",
+		"https://example.invalid/native-surface-runtime.erofs",
+		systemData,
+		runtimeData,
+	)
+	if err := validateManifest(m, defaultRepo); err != nil {
+		t.Fatal(err)
+	}
+	m.Artifacts[0], m.Artifacts[1] = m.Artifacts[1], m.Artifacts[0]
+	if err := validateManifest(m, defaultRepo); err == nil {
+		t.Fatal("release-manifest/3 accepted reordered artifacts")
+	}
+}
+
+func TestInspectReleaseV3ExposesBothSignedArtifactsWithoutDownloadingThem(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	systemData := validPortableEROFS()
+	runtimeData := validPortableEROFS()
+	runtimeData[len(runtimeData)-1] = 0x22
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestForPortableV3(
+		server.URL+"/system.erofs",
+		server.URL+"/native-surface-runtime.erofs",
+		systemData,
+		runtimeData,
+	)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("inspect must not download v3 system image")
+	})
+	mux.HandleFunc("/native-surface-runtime.erofs", func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("inspect must not download v3 Surface runtime")
+	})
+
+	receipt, err := inspectRelease(server.Client(), server.URL+"/release.json", trust, pub, defaultRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.ManifestSchema != manifestSchemaV3 || len(receipt.Artifacts) != 2 {
+		t.Fatalf("v3 inspect lost artifact set: %#v", receipt)
+	}
+	if receipt.Artifacts[1].Name != "native-surface-runtime.erofs" ||
+		receipt.Artifacts[1].Role != "surface-runtime" {
+		t.Fatalf("v3 inspect lost Surface runtime identity: %#v", receipt.Artifacts)
+	}
+}
+
+func TestMaterializePortableV3StoresRuntimeByDigestWithoutActivation(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	systemData := validPortableEROFS()
+	runtimeData := validPortableEROFS()
+	runtimeData[len(runtimeData)-1] = 0x33
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestForPortableV3(
+		server.URL+"/system.erofs",
+		server.URL+"/native-surface-runtime.erofs",
+		systemData,
+		runtimeData,
+	)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(systemData)
+	})
+	mux.HandleFunc("/native-surface-runtime.erofs", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(runtimeData)
+	})
+
+	root := filepath.Join(t.TempDir(), ".ordax")
+	receipt, err := materializePortableV3(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.Status != "materialized-portable-v3" ||
+		receipt.Idempotent ||
+		receipt.ActivationAllowed ||
+		receipt.RuntimeReused {
+		t.Fatalf("unexpected v3 materialize receipt: %#v", receipt)
+	}
+	runtimeDigest := m.Artifacts[1].SHA256
+	expectedRuntime := filepath.Join(root, "runtimes", "sha256", runtimeDigest, "native-surface-runtime.erofs")
+	if receipt.RuntimePath != expectedRuntime {
+		t.Fatalf("runtime path mismatch: got=%s expected=%s", receipt.RuntimePath, expectedRuntime)
+	}
+	refBytes, err := os.ReadFile(filepath.Join(root, "releases", testCommit, "surface-runtime.sha256"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(refBytes) != runtimeDigest+"\n" {
+		t.Fatalf("stored runtime reference = %q", refBytes)
+	}
+	if _, err := os.Lstat(filepath.Join(root, "current")); !os.IsNotExist(err) {
+		t.Fatal("v3 materialization created an activation pointer")
+	}
+
+	verified, err := verifyPortableV3Exact(root, trust, pub, defaultRepo, testCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verified.RuntimePath != expectedRuntime || verified.ActivationAllowed {
+		t.Fatalf("unexpected v3 exact verification receipt: %#v", verified)
+	}
+}
+
+func TestMaterializePortableV3ReusesRuntimeAcrossDifferentSystemReleases(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	systemA := validPortableEROFS()
+	systemB := append([]byte(nil), systemA...)
+	systemB[len(systemB)-2] = 0x44
+	runtimeData := append([]byte(nil), systemA...)
+	runtimeData[len(runtimeData)-1] = 0x55
+	const secondCommit = "1111111111111111111111111111111111111111"
+
+	var activeEnvelope []byte
+	var systemData []byte
+	systemRequests := 0
+	runtimeRequests := 0
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(activeEnvelope)
+	})
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) {
+		systemRequests++
+		_, _ = w.Write(systemData)
+	})
+	mux.HandleFunc("/native-surface-runtime.erofs", func(w http.ResponseWriter, r *http.Request) {
+		runtimeRequests++
+		_, _ = w.Write(runtimeData)
+	})
+
+	first := manifestForPortableV3(
+		server.URL+"/system.erofs",
+		server.URL+"/native-surface-runtime.erofs",
+		systemA,
+		runtimeData,
+	)
+	activeEnvelope = signedEnvelope(t, first, trust.KeyID, priv)
+	systemData = systemA
+	root := filepath.Join(t.TempDir(), ".ordax")
+	if _, err := materializePortableV3(server.Client(), server.URL+"/release.json", root, trust, pub, defaultRepo, testCommit); err != nil {
+		t.Fatal(err)
+	}
+
+	second := manifestForPortableV3(
+		server.URL+"/system.erofs",
+		server.URL+"/native-surface-runtime.erofs",
+		systemB,
+		runtimeData,
+	)
+	second.SourceCommit = secondCommit
+	second.ReleaseID = secondCommit
+	activeEnvelope = signedEnvelope(t, second, trust.KeyID, priv)
+	systemData = systemB
+	receipt, err := materializePortableV3(server.Client(), server.URL+"/release.json", root, trust, pub, defaultRepo, secondCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !receipt.RuntimeReused {
+		t.Fatalf("second release did not report runtime reuse: %#v", receipt)
+	}
+	if runtimeRequests != 1 {
+		t.Fatalf("Surface runtime downloaded %d times; want exactly once", runtimeRequests)
+	}
+	if systemRequests != 2 {
+		t.Fatalf("system image downloaded %d times; want once per release", systemRequests)
+	}
+	if _, err := os.Stat(filepath.Join(root, "releases", secondCommit, "system.erofs")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestVerifyPortableV3ExactRejectsTamperedContentAddressedRuntime(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	systemData := validPortableEROFS()
+	runtimeData := append([]byte(nil), systemData...)
+	runtimeData[len(runtimeData)-1] = 0x66
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+	m := manifestForPortableV3(
+		server.URL+"/system.erofs",
+		server.URL+"/native-surface-runtime.erofs",
+		systemData,
+		runtimeData,
+	)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(envelope) })
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(systemData) })
+	mux.HandleFunc("/native-surface-runtime.erofs", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(runtimeData) })
+
+	root := filepath.Join(t.TempDir(), ".ordax")
+	receipt, err := materializePortableV3(server.Client(), server.URL+"/release.json", root, trust, pub, defaultRepo, testCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(receipt.RuntimePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data[len(data)-1] ^= 0x01
+	if err := os.WriteFile(receipt.RuntimePath, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := verifyPortableV3Exact(root, trust, pub, defaultRepo, testCommit); err == nil ||
+		!strings.Contains(err.Error(), "digest") {
+		t.Fatalf("tampered content-addressed runtime was accepted: %v", err)
 	}
 }
