@@ -138,6 +138,26 @@ def source_commit() -> str:
     return value
 
 
+def prune_generated_runtime_state(rootfs: Path) -> None:
+    # A release image must never bake one machine identity into every device.
+    # The eventual writable runtime overlay owns device/session identity.
+    for relative in ("etc/machine-id", "var/lib/dbus/machine-id"):
+        path = rootfs / relative
+        if path.exists() or path.is_symlink():
+            path.unlink()
+
+    # Fontconfig caches encode host/build-tree details and are purely derived
+    # from the immutable fonts/configuration. Rebuild them in the writable
+    # runtime layer instead of signing nondeterministic cache bytes.
+    cache = rootfs / "var/cache/fontconfig"
+    if cache.exists():
+        if cache.is_symlink() or not cache.is_dir():
+            raise RuntimeBuildError("fontconfig cache path is not a real directory")
+        shutil.rmtree(cache)
+    cache.mkdir(parents=True, exist_ok=True)
+    cache.chmod(0o755)
+
+
 def normalize_tree(rootfs: Path) -> None:
     for path in rootfs.rglob("*"):
         if path.is_symlink():
@@ -301,6 +321,7 @@ def build(out_dir: Path, cache_dir: Path) -> dict:
 
         CORE.flatten_symlinks(rootfs)
         verify_runtime_tree(rootfs)
+        prune_generated_runtime_state(rootfs)
         normalize_tree(rootfs)
 
         tree_manifest_path = out_dir / "surface-runtime-tree.json"
@@ -350,6 +371,8 @@ def build(out_dir: Path, cache_dir: Path) -> dict:
             },
             "first_boot_offline_required": True,
             "network_package_install_during_stable_boot_allowed": False,
+            "machine_identity_baked_into_image": False,
+            "fontconfig_cache_baked_into_image": False,
             "physical_artifact_authorized": False,
             "portable_v2_boot_connected": False,
         }
