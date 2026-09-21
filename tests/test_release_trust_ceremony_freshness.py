@@ -30,3 +30,18 @@ def test_ceremony_requires_one_provenance_bound_windows_toolkit():
     assert "SHA-256 of `Initialize-OrdaXReleaseTrust.ps1` matches the toolkit provenance" in required
     assert "do not mix files from different toolkit runs" in required
     assert "placeholder commit" in required
+
+def test_public_trust_promotion_uses_single_zip_for_check_and_apply():
+    section = CEREMONY.split("## Public-anchor promotion", 1)[1].split("## CI signing", 1)[0]
+    assert section.count("--promotion-zip") == 2
+    assert "--promotion-dir" not in section
+    assert "OrdaX-Public-Trust-Handoff.zip" in section
+    assert "manual extraction is not required" in section
+
+
+def test_rotation_docs_match_implemented_but_not_activated_boundary():
+    section = CEREMONY.split("## Rotation", 1)[1].split("Current fail-closed state", 1)[0]
+    assert "signed trust-transition protocol v1 is now implemented and CI-proven" in section
+    assert "Stateful device activation" in section
+    assert "production rotation is not yet complete" in section
+

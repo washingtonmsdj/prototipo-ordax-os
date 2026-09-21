@@ -262,7 +262,7 @@ jobs:
           echo 'PORTABLE_V3_ACTIVATION_ALLOWED=NO'
           echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
 
-      - name: Prove public trust promotion check with ephemeral recovery proof
+      - name: Prove public trust promotion check and isolated apply with ephemeral recovery proof
         run: |
           set -euo pipefail
           manifest_tool="$PWD/out/release-pipeline/ordax-release-manifest"
@@ -360,10 +360,68 @@ jobs:
           print('PUBLIC_TRUST_PROMOTION_CHECK=PASS')
           PY
 
+          sandbox="$RUNNER_TEMP/public-trust-promotion-repository"
+          mkdir -p "$sandbox"
+          git archive --format=tar HEAD | tar -xf - -C "$sandbox"
+
+          python "$sandbox/tools/release-signing/promote_public_trust.py" apply \
+            --repo-root "$sandbox" \
+            --promotion-zip "$handoff" \
+            --verifier "$signer" \
+            > "$work/promotion-apply.json"
+
+          python - "$sandbox" "$work/promotion-check.json" "$work/promotion-apply.json" <<'PY'
+          import hashlib, json, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          check = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding='utf-8'))
+          applied = json.loads(pathlib.Path(sys.argv[3]).read_text(encoding='utf-8'))
+
+          assert applied['status'] == 'promoted'
+          assert applied['ready'] is True
+          assert applied['physical_authorization_eligible'] is True
+          assert applied['physical_write_allowed'] is False
+          assert applied['trust_sha256'] == check['trust_sha256']
+          assert applied['minimal_bootstrap_sha256'] == check['minimal_bootstrap_sha256']
+
+          trust = root / 'bootstrap/trust/release-ed25519.json'
+          assert trust.is_file()
+          assert hashlib.sha256(trust.read_bytes()).hexdigest() == applied['trust_sha256']
+
+          minimal = json.loads(
+              (root / 'docs/contracts/minimal-bootstrap.json').read_text(encoding='utf-8')
+          )
+          assert minimal['status'] == 'canonical-bytes-resolved'
+          assert minimal['all_artifacts_resolved'] is True
+          assert minimal['physical_write_allowed'] is False
+
+          policy = json.loads(
+              (root / 'docs/contracts/release-trust-policy.json').read_text(encoding='utf-8')
+          )
+          assert policy['status'] == 'canonical-public-trust-pinned'
+          assert policy['gates']['public_anchor_pinned'] is True
+          assert policy['gates']['physical_authorization_eligible'] is True
+          assert 'physical_write_allowed' not in policy['gates']
+
+          authorization = json.loads(
+              (root / 'docs/contracts/physical-write-authorization.json').read_text(
+                  encoding='utf-8'
+              )
+          )
+          assert authorization['status'] == 'blocked-explicit-physical-authorization-pending'
+          assert authorization['explicit_owner_authorization'] is False
+          assert authorization['physical_write_allowed'] is False
+          assert authorization['authorization_context_sha256'] is None
+
+          print('PUBLIC_TRUST_PROMOTION_APPLY=PASS')
+          print('PROMOTED_REPOSITORY_VALIDATED=PASS')
+          print('PHYSICAL_WRITE_AUTHORIZED=NO')
+          PY
+
           rm -f "$work/private.pem"
           test ! -e "$work/private.pem"
           test ! -e bootstrap/trust/release-ed25519.json
           echo 'CI_TEST_KEY_REMOVED=YES'
-          echo 'PUBLIC_TRUST_PROMOTION_APPLIED=NO'
+          echo 'PUBLIC_TRUST_PROMOTION_APPLIED_TO_WORKING_REPOSITORY=NO'
+          echo 'PUBLIC_TRUST_PROMOTION_APPLIED_TO_ISOLATED_COPY=YES'
           echo 'CANONICAL_TRUST_ANCHOR=NO'
           echo 'PHYSICAL_WRITE_AUTHORIZED=NO'

@@ -330,6 +330,55 @@ class PublicReleaseTrustPromotionTests(unittest.TestCase):
             self.assertTrue(result["physical_authorization_eligible"])
 
     @mock.patch.object(promotion.subprocess, "run")
+    def test_apply_handoff_zip_promotes_and_keeps_write_blocked(self, run):
+        run.return_value = self.verified_process()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            promotion_dir, verifier = self.fixture(root)
+            handoff = root / "OrdaX-Public-Trust-Handoff.zip"
+            with zipfile.ZipFile(
+                handoff,
+                "w",
+                compression=zipfile.ZIP_DEFLATED,
+            ) as archive:
+                for name in sorted(promotion.PROMOTION_FILES):
+                    archive.write(
+                        promotion_dir / name,
+                        arcname=name,
+                    )
+
+            result = promotion.apply_repository_promotion_zip(
+                root,
+                handoff,
+                verifier,
+            )
+
+            self.assertEqual(result["status"], "promoted")
+            self.assertTrue(result["ready"])
+            self.assertTrue(result["physical_authorization_eligible"])
+            self.assertFalse(result["physical_write_allowed"])
+            self.assertTrue(
+                (root / "bootstrap/trust/release-ed25519.json").is_file()
+            )
+            policy = json.loads(
+                (root / "docs/contracts/release-trust-policy.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                policy["status"],
+                "canonical-public-trust-pinned",
+            )
+            authorization = json.loads(
+                (
+                    root
+                    / "docs/contracts/physical-write-authorization.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertFalse(authorization["physical_write_allowed"])
+            self.assertFalse(authorization["explicit_owner_authorization"])
+
+    @mock.patch.object(promotion.subprocess, "run")
     def test_handoff_zip_rejects_extra_or_nested_entries(self, run):
         run.return_value = self.verified_process()
         with tempfile.TemporaryDirectory() as temporary:
