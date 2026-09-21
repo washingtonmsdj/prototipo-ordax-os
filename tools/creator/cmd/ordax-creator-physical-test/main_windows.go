@@ -21,10 +21,12 @@ var (
 	buildSourceCommit            = "UNRESOLVED"
 	buildCanonicalTrustSHA256    = "UNRESOLVED"
 	buildManifestSHA256          = "UNRESOLVED"
-	buildSeedImageSHA256         = "UNRESOLVED"
-	buildSeedImageSize           = "0"
-	buildPhysicalWriteAuthorized = "NO"
-	applyDiagnosticLog           string
+	buildSeedImageSHA256               = "UNRESOLVED"
+	buildSeedImageSize                 = "0"
+	buildPortableUSBContractSHA256     = "UNRESOLVED"
+	buildCreatorPortableContractSHA256 = "UNRESOLVED"
+	buildPhysicalWriteAuthorized       = "NO"
+	applyDiagnosticLog                 string
 )
 
 type stringListFlag []string
@@ -42,10 +44,12 @@ type buildBinding struct {
 	SourceCommit            string `json:"source_commit"`
 	CanonicalTrustSHA256    string `json:"canonical_trust_sha256"`
 	ManifestSHA256          string `json:"manifest_sha256"`
-	SeedImageSHA256         string `json:"seed_image_sha256"`
-	SeedImageSize           int64  `json:"seed_image_size"`
-	PhysicalWriteAuthorized bool   `json:"physical_write_authorized"`
-	Ready                   bool   `json:"ready"`
+	SeedImageSHA256                 string `json:"seed_image_sha256"`
+	SeedImageSize                   int64  `json:"seed_image_size"`
+	PortableUSBContractSHA256       string `json:"portable_usb_contract_sha256"`
+	CreatorPortableContractSHA256   string `json:"creator_portable_contract_sha256"`
+	PhysicalWriteAuthorized         bool   `json:"physical_write_authorized"`
+	Ready                           bool   `json:"ready"`
 }
 
 func validLowerHex(value string, bytes int) bool {
@@ -64,7 +68,17 @@ func binding() buildBinding {
 		validLowerHex(buildManifestSHA256, sha256.Size) &&
 		validLowerHex(buildSeedImageSHA256, sha256.Size) &&
 		size > 0 && authorized
-	return buildBinding{SourceCommit: buildSourceCommit, CanonicalTrustSHA256: buildCanonicalTrustSHA256, ManifestSHA256: buildManifestSHA256, SeedImageSHA256: buildSeedImageSHA256, SeedImageSize: size, PhysicalWriteAuthorized: authorized, Ready: ready}
+	return buildBinding{
+		SourceCommit: buildSourceCommit,
+		CanonicalTrustSHA256: buildCanonicalTrustSHA256,
+		ManifestSHA256: buildManifestSHA256,
+		SeedImageSHA256: buildSeedImageSHA256,
+		SeedImageSize: size,
+		PortableUSBContractSHA256: buildPortableUSBContractSHA256,
+		CreatorPortableContractSHA256: buildCreatorPortableContractSHA256,
+		PhysicalWriteAuthorized: authorized,
+		Ready: ready,
+	}
 }
 
 func encode(value any) error {
@@ -149,6 +163,8 @@ func runTargets() error {
 func portableBindingReady(b buildBinding) bool {
 	return validLowerHex(b.SourceCommit, 20) &&
 		validLowerHex(b.CanonicalTrustSHA256, sha256.Size) &&
+		validLowerHex(b.PortableUSBContractSHA256, sha256.Size) &&
+		validLowerHex(b.CreatorPortableContractSHA256, sha256.Size) &&
 		b.PhysicalWriteAuthorized
 }
 
