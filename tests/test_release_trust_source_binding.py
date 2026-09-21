@@ -61,6 +61,7 @@ def test_canonical_toolkit_eligibility_requires_portable_runtime_v3_prerequisite
         "'portable_runtime_v3_uefi_ovmf_proven'",
         "'portable_writer_v2_implemented_fail_closed'",
         "'physical_authorization_still_fail_closed'",
+        "physical_auth.get('authorization_context_sha256') in (None, '')",
         "'canonical_trust_prerequisites': trust_prerequisites",
         "canonical_main_push and all(trust_prerequisites.values())",
     ):
