@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.gitattributes'
       - 'bootstrap/trust/release-ed25519.json'
       - 'docs/contracts/release-trust-policy.json'
       - 'docs/contracts/creator-app-channel.json'
@@ -15,6 +16,7 @@ on:
       - '.github/workflows/creator-official-candidate.yml'
   pull_request:
     paths:
+      - '.gitattributes'
       - 'bootstrap/trust/release-ed25519.json'
       - 'docs/contracts/release-trust-policy.json'
       - 'docs/contracts/creator-app-channel.json'
