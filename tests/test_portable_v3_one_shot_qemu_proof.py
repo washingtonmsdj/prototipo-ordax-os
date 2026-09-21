@@ -24,6 +24,8 @@ class PortableV3OneShotQemuProofTests(unittest.TestCase):
         self.assertIn('"physical_target_device_untouched": True', text)
         self.assertIn('checks["guest_disk_destroyed"] = not disk.exists()', text)
         self.assertIn('"-net", "none"', text)
+        self.assertIn("cache=directsync", text)
+        self.assertIn('"qemu_durable_cache_mode"', text)
 
     def test_final_state_is_inspected_from_a_read_only_copy(self):
         text = QEMU.read_text(encoding="utf-8")
@@ -33,6 +35,7 @@ class PortableV3OneShotQemuProofTests(unittest.TestCase):
         self.assertIn('current == previous_commit', text)
         self.assertIn('known_good == previous_commit', text)
         self.assertIn('rejected == candidate_commit', text)
+        self.assertIn("final one-shot state mismatch", text)
 
     def test_workflow_uses_real_previous_source_and_same_ephemeral_trust(self):
         text = WORKFLOW.read_text(encoding="utf-8")
