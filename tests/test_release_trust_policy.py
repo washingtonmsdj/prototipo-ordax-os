@@ -14,7 +14,7 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
     def test_policy_resolves_custody_without_faking_key_material(self):
         policy = self.load_policy()
         self.assertEqual(policy["$schema"], "prototype-ordax.release-trust-policy/1")
-        self.assertEqual(policy["status"], "prototype-key-generated-recovery-pending")
+        self.assertEqual(policy["status"], "prototype-recovery-verified-public-anchor-pending")
         self.assertEqual(policy["algorithm"], "ed25519")
         self.assertEqual(policy["canonical_key_id"], "ordax-prototype-release-v1")
         self.assertEqual(policy["private_key"]["custody_owner"], "repository-owner-developer")
@@ -36,6 +36,20 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
             "prototype-ordax.release-trust-ceremony-evidence/1",
         )
         self.assertFalse(recovery["private_key_hash_in_public_evidence_allowed"])
+        self.assertTrue(recovery["offline_recovery_verified"])
+        self.assertTrue(recovery["ready_to_pin_public_anchor"])
+        self.assertEqual(
+            recovery["verification_evidence_repository_path"],
+            "docs/evidence/canonical-trust-local-progress-2026-09-21.json",
+        )
+        self.assertEqual(
+            recovery["public_trust_sha256"],
+            "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
+        )
+        self.assertEqual(
+            recovery["public_handoff_zip_sha256"],
+            "85d4f8430f0a4066ebed84a410071409c112c65aa72a5818483a664a41b91e20",
+        )
 
     def test_first_canonical_identity_requires_one_shot_fallback_proof(self):
         prerequisites = self.load_policy()["canonical_ceremony_prerequisites"]
@@ -96,7 +110,7 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
         self.assertEqual(anchor["runtime_path"], "/ordax/bootstrap/trust/release-ed25519.json")
         self.assertTrue(anchor["pin_only_after_private_custody_ready"])
 
-    def test_pending_policy_keeps_all_promotion_gates_closed(self):
+    def test_recovery_verified_policy_keeps_public_promotion_gates_closed(self):
         policy = self.load_policy()
         gates = policy["gates"]
         self.assertTrue(gates["key_material_generated"])
