@@ -13,6 +13,8 @@ from urllib.parse import quote
 
 SCHEMA = "ordax.mvp-surface-smoke/1"
 COMPARE_SCHEMA = "ordax.mvp-surface-smoke-comparison/1"
+TOUR_SCHEMA = "ordax.mvp-surface-tour-checklist/1"
+FINAL_SCHEMA = "ordax.mvp-surface-smoke-final/1"
 SOURCE_ROOT = Path("/srv/ordax-system")
 RUN_ROOT = Path("/run/ordax-surface")
 EVIDENCE_ROOT = Path("/var/lib/ordax/mvp-smoke")
@@ -50,6 +52,19 @@ REQUIRED_SOURCE_FILES = (
     "apps/system/app.mjs",
     "composition/native/main.mjs",
     "surface/ui/surface.mjs",
+)
+
+TOUR_ITEMS = (
+    "surface",
+    "files",
+    "notes",
+    "internet",
+    "settings",
+    "system",
+    "network-power",
+    "failure-isolation",
+    "continuity",
+    "post-tour",
 )
 
 
@@ -502,6 +517,144 @@ def compare_reports(baseline: dict, after: dict, label: str = "mvp-surface-compa
     return report
 
 
+def tour_template(label: str = "mvp-surface-tour") -> dict:
+    return {
+        "schema": TOUR_SCHEMA,
+        "label": label,
+        "items": [{"id": item_id, "status": "pending"} for item_id in TOUR_ITEMS],
+    }
+
+
+def load_tour_checklist(path: Path) -> dict:
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        raise ValueError(f"tour checklist unavailable: {exc}") from exc
+    if len(data) > MAX_REPORT:
+        raise ValueError(f"tour checklist exceeds {MAX_REPORT} bytes")
+    try:
+        value = json.loads(data.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("tour checklist is not valid UTF-8 JSON") from exc
+    if not isinstance(value, dict) or value.get("schema") != TOUR_SCHEMA:
+        raise ValueError("tour checklist schema is incompatible")
+    label = value.get("label")
+    items = value.get("items")
+    if not isinstance(label, str) or not label or not isinstance(items, list):
+        raise ValueError("tour checklist requires label and items")
+    if len(items) != len(TOUR_ITEMS):
+        raise ValueError("tour checklist must contain every required item exactly once")
+    seen = set()
+    normalized = []
+    for item in items:
+        if not isinstance(item, dict):
+            raise ValueError("invalid tour checklist item")
+        item_id = item.get("id")
+        status = item.get("status")
+        if item_id not in TOUR_ITEMS or item_id in seen:
+            raise ValueError("invalid or duplicate tour checklist item id")
+        if status not in {"pass", "fail"}:
+            raise ValueError(f"tour checklist item {item_id} must be pass or fail")
+        if set(item) != {"id", "status"}:
+            raise ValueError("tour checklist items may contain only id and status")
+        seen.add(item_id)
+        normalized.append({"id": item_id, "status": status})
+    if seen != set(TOUR_ITEMS):
+        raise ValueError("tour checklist is missing required items")
+    return {"schema": TOUR_SCHEMA, "label": label, "items": normalized}
+
+
+def load_comparison(path: Path) -> dict:
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        raise ValueError(f"comparison unavailable: {exc}") from exc
+    if len(data) > MAX_REPORT:
+        raise ValueError(f"comparison exceeds {MAX_REPORT} bytes")
+    try:
+        value = json.loads(data.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("comparison is not valid UTF-8 JSON") from exc
+    if not isinstance(value, dict) or value.get("schema") != COMPARE_SCHEMA:
+        raise ValueError("comparison schema is incompatible")
+    return value
+
+
+def _comparison_semantics(report: dict) -> dict:
+    return {
+        key: report.get(key)
+        for key in ("schema", "label", "baseline_label", "after_label", "checks", "summary")
+    }
+
+
+def finalize_evidence(
+    baseline: dict,
+    after: dict,
+    comparison: dict,
+    checklist: dict,
+    label: str = "mvp-surface-final",
+) -> dict:
+    checks = []
+    expected_comparison = compare_reports(
+        baseline,
+        after,
+        comparison.get("label") if isinstance(comparison.get("label"), str) else "mvp-surface-comparison",
+    )
+    comparison_exact = _comparison_semantics(comparison) == _comparison_semantics(expected_comparison)
+    checks.append(_check(
+        "comparison_recomputed_match",
+        comparison_exact,
+        "comparison matches recomputation" if comparison_exact else "comparison is stale, edited or inconsistent",
+    ))
+
+    automatic_clean = (
+        _report_has_no_failures(baseline)
+        and _report_has_no_failures(after)
+        and isinstance(comparison.get("summary"), dict)
+        and comparison["summary"].get("fail") == 0
+        and comparison_exact
+    )
+    checks.append(_check(
+        "automatic_evidence_clean",
+        automatic_clean,
+        "baseline, after-tour and comparison are clean" if automatic_clean else "automatic evidence contains a failure or mismatch",
+    ))
+
+    item_map = {
+        item["id"]: item["status"]
+        for item in checklist.get("items", [])
+        if isinstance(item, dict) and item.get("id") in TOUR_ITEMS
+    }
+    tour_complete = set(item_map) == set(TOUR_ITEMS)
+    checks.append(_check(
+        "tour_checklist_complete",
+        tour_complete,
+        "all required tour items recorded" if tour_complete else "tour checklist is incomplete",
+    ))
+    for item_id in TOUR_ITEMS:
+        status = item_map.get(item_id)
+        checks.append(_check(
+            f"tour:{item_id}",
+            status == "pass",
+            "PASS" if status == "pass" else "FAIL or missing",
+        ))
+
+    report = {
+        "schema": FINAL_SCHEMA,
+        "captured_at": _timestamp(),
+        "label": label,
+        "baseline_label": baseline.get("label") if isinstance(baseline.get("label"), str) else "",
+        "after_label": after.get("label") if isinstance(after.get("label"), str) else "",
+        "comparison_label": comparison.get("label") if isinstance(comparison.get("label"), str) else "",
+        "tour_label": checklist.get("label") if isinstance(checklist.get("label"), str) else "",
+        "physical_write": False,
+        "reboot_required": False,
+        "checks": checks,
+    }
+    report["summary"] = _summary(checks)
+    return report
+
+
 def load_report(path: Path) -> dict:
     try:
         data = path.read_bytes()
@@ -536,19 +689,28 @@ def _print_summary(report: dict, path: Path) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", nargs="?", default="collect", choices=["collect", "compare"])
+    parser.add_argument(
+        "command",
+        nargs="?",
+        default="collect",
+        choices=["collect", "compare", "tour-template", "finalize"],
+    )
     parser.add_argument("--label", default="mvp-surface-smoke")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--timeout", type=float, default=1.5)
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--after", type=Path)
+    parser.add_argument("--comparison", type=Path)
+    parser.add_argument("--checklist", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
 
     if args.command == "compare":
         if args.baseline is None or args.after is None:
             parser.error("compare requires --baseline and --after")
+        if args.comparison is not None or args.checklist is not None:
+            parser.error("--comparison/--checklist are only valid with finalize")
         try:
             baseline = load_report(args.baseline)
             after = load_report(args.after)
@@ -556,9 +718,29 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(str(exc))
         report = compare_reports(baseline, after, args.label)
         path = write_report(report, args.output, prefix="mvp-smoke-comparison")
+    elif args.command == "tour-template":
+        if any(value is not None for value in (args.baseline, args.after, args.comparison, args.checklist)):
+            parser.error("tour-template does not accept evidence input paths")
+        report = tour_template(args.label)
+        path = write_report(report, args.output, prefix="mvp-smoke-tour")
+        print(f"REPORT={path}")
+        print("TOUR_TEMPLATE=CREATED")
+        return 0
+    elif args.command == "finalize":
+        if None in (args.baseline, args.after, args.comparison, args.checklist):
+            parser.error("finalize requires --baseline, --after, --comparison and --checklist")
+        try:
+            baseline = load_report(args.baseline)
+            after = load_report(args.after)
+            comparison = load_comparison(args.comparison)
+            checklist = load_tour_checklist(args.checklist)
+        except ValueError as exc:
+            parser.error(str(exc))
+        report = finalize_evidence(baseline, after, comparison, checklist, args.label)
+        path = write_report(report, args.output, prefix="mvp-smoke-final")
     else:
-        if args.baseline is not None or args.after is not None:
-            parser.error("--baseline/--after are only valid with compare")
+        if any(value is not None for value in (args.baseline, args.after, args.comparison, args.checklist)):
+            parser.error("evidence input paths are only valid with compare/finalize")
         report = collect(args.label, host=args.host, port=args.port, timeout=args.timeout)
         path = write_report(report, args.output)
 
