@@ -295,6 +295,9 @@ PUBLIC_TRUST_PROMOTION_ZIP_CHECK=PASS_CI
 PUBLIC_TRUST_PROMOTION_ZIP_APPLY_ISOLATED=PASS_CI
 PUBLIC_TRUST_PROMOTION_WORKFLOW_RUN_ID=35642338419
 PUBLIC_TRUST_PROMOTION_PHYSICAL_WRITE_SIDE_EFFECT=NO
+FULL_BOOTSTRAP_CANONICAL_TRUST_PROOF=PASS_MAIN
+FULL_BOOTSTRAP_CANONICAL_TRUST_WORKFLOW_RUN_ID=35661774796
+FULL_BOOTSTRAP_CANONICAL_TRUST_PROOF_ARTIFACT_SHA256=079aad05492867000989fa2c2768b8a29354f9458fa0d791171f4ed02dbe3d0b
 ```
 
 The canonical release channel resolves `release-envelope.json`; the URL selects bytes and Ed25519 verification decides authenticity. The release acquisition code remains fail-closed with SHA-256 verification, exact source-commit binding, safe materialization, atomic activation and known-good preservation.
