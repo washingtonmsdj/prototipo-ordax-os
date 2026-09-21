@@ -13,11 +13,11 @@ SCRIPT = (ROOT / "bootstrap/portable-v2/uefi_boot.py").read_text(encoding="utf-8
 
 
 class PortableV2UEFIBootProofTests(unittest.TestCase):
-    def test_contract_separates_uefi_from_secure_and_physical_boot(self):
+    def test_contract_records_uefi_proof_without_claiming_secure_or_physical_boot(self):
         self.assertEqual(CONTRACT["$schema"], "prototype-ordax.portable-v2-uefi-boot-proof/1")
         self.assertEqual(CONTRACT["firmware"], "ovmf-non-secure-boot-ci-only")
         self.assertFalse(CONTRACT["secure_boot_proven"])
-        self.assertFalse(CONTRACT["qemu_uefi_boot_proven"])
+        self.assertTrue(CONTRACT["qemu_uefi_boot_proven"])
         self.assertFalse(CONTRACT["physical_usb_boot_proven"])
         self.assertFalse(CONTRACT["physical_write_authorized"])
         self.assertFalse(CONTRACT["public_physical_promotion_allowed"])
@@ -27,6 +27,16 @@ class PortableV2UEFIBootProofTests(unittest.TestCase):
         )
         self.assertTrue(CONTRACT["surface_runtime_required"])
         self.assertTrue(CONTRACT["surface_runtime_content_addressed"])
+        self.assertEqual(CONTRACT["last_proven_source_commit"], "b9e1b164d7510f2dfc7572e473642b8fb885fa8c")
+        self.assertEqual(CONTRACT["proof_artifact_sha256"], "0f5b922cb3f24c1c339e7c0c5f4abe9d9b72322ee1da527aee6f54fc65fc730c")
+        self.assertEqual(
+            CONTRACT["last_proven_surface_runtime_sha256"],
+            "5b44729139777b610c300864d6f41c0580a3d6ca0b694b8dc53e38f505f99236",
+        )
+        self.assertFalse(CONTRACT["last_proven_network_required_for_first_boot"])
+        self.assertFalse(CONTRACT["last_proven_physical_target_device_touched"])
+        self.assertFalse(CONTRACT["last_proven_guest_disk_retained"])
+        self.assertFalse(CONTRACT["last_proven_ovmf_vars_retained"])
 
     def test_loader_entries_are_portable_only(self):
         normal = (ROOT / CONTRACT["loader"]["normal_entry"]).read_text(encoding="utf-8")
