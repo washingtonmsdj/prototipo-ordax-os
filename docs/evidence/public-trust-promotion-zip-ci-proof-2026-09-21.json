@@ -1,0 +1,22 @@
+{
+  "$schema": "prototype-ordax.public-trust-promotion-ci-proof/1",
+  "recorded_date": "2026-09-21",
+  "pull_request": 404,
+  "tested_head_commit": "2523203f71d423e157514d4bf326b4b06b272e04",
+  "workflow_name": "Release Pipeline Contract",
+  "workflow_run_id": 35642338419,
+  "workflow_run_number": 1208,
+  "status": "pass",
+  "canonical_input": "OrdaX-Public-Trust-Handoff.zip",
+  "check_mode": "pass",
+  "isolated_apply_mode": "pass",
+  "post_apply_repository_validation": "pass",
+  "public_anchor_pinned_in_isolated_copy": true,
+  "minimal_bootstrap_resolved_in_isolated_copy": true,
+  "physical_authorization_eligible_in_isolated_copy": true,
+  "explicit_owner_authorization": false,
+  "physical_write_allowed": false,
+  "working_repository_mutated": false,
+  "canonical_private_key_touched": false,
+  "ephemeral_ci_key_only": true
+}
