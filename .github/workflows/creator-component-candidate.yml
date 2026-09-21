@@ -59,7 +59,8 @@ jobs:
           version=''
           release_sequence=''
           if [ -f bootstrap/trust/release-ed25519.json ]; then
-            readarray -t values < <(python - <<'PY'
+            values_file="$RUNNER_TEMP/creator-component-gate-values.txt"
+            python - <<'PY' > "$values_file"
           import base64, json, pathlib, re
           trust = json.loads(pathlib.Path('bootstrap/trust/release-ed25519.json').read_text(encoding='utf-8'))
           policy = json.loads(pathlib.Path('docs/contracts/release-trust-policy.json').read_text(encoding='utf-8'))
@@ -90,7 +91,12 @@ jobs:
           print(contract['version'])
           print(contract['release_sequence'])
           PY
-            )
+            readarray -t values < "$values_file"
+            rm -f "$values_file"
+            if [ "${#values[@]}" -ne 2 ]; then
+              echo 'creator component gate did not emit exactly version and release sequence' >&2
+              exit 1
+            fi
             version="${values[0]}"
             release_sequence="${values[1]}"
             ready=true
