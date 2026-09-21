@@ -123,7 +123,7 @@ func (r *portableWindowsRuntime) WriteGPT(parts []creatorcore.PortableApplicatio
 	espOff, espSize, err := portablePartitionBytes(parts[0]); if err != nil { return err }
 	dataOff, dataSize, err := portablePartitionBytes(parts[1]); if err != nil { return err }
 	r.progress("partitioning-portable", 0, 1)
-	script := fmt.Sprintf(\`
+	script := fmt.Sprintf(`
 $ErrorActionPreference='Stop'
 $d=%d; $bytes=[UInt64]%d
 $disk=Get-Disk -Number $d -ErrorAction Stop
@@ -138,7 +138,7 @@ if ($parts.Count -ne 2 -or $p1.PartitionNumber -ne 1 -or $p2.PartitionNumber -ne
 if ([UInt64]$parts[0].Offset -ne [UInt64]%d -or [UInt64]$parts[0].Size -ne [UInt64]%d) { throw 'ORDAX-ESP geometry mismatch' }
 if ([UInt64]$parts[1].Offset -ne [UInt64]%d -or [UInt64]$parts[1].Size -ne [UInt64]%d) { throw 'ORDAX-DATA geometry mismatch' }
 'ORDAX_PORTABLE_GPT=PASS'
-\`, r.target.DiskNumber, targetBytes, espOff, espSize, dataOff, dataSize, espOff, espSize, dataOff, dataSize)
+`, r.target.DiskNumber, targetBytes, espOff, espSize, dataOff, dataSize, espOff, espSize, dataOff, dataSize)
 	out, err := runPortablePS(script)
 	if err != nil { return fmt.Errorf("write Portable GPT: %w", err) }
 	if !strings.Contains(out, "ORDAX_PORTABLE_GPT=PASS") { return errors.New("Portable GPT success marker missing") }
@@ -151,7 +151,7 @@ func (r *portableWindowsRuntime) Format(p creatorcore.PortableApplicationPartiti
 	off, size, err := portablePartitionBytes(p); if err != nil { return err }
 	fs := map[string]string{"fat32":"FAT32", "exfat":"exFAT"}[p.Filesystem]
 	if fs == "" { return fmt.Errorf("unsupported Portable filesystem %q", p.Filesystem) }
-	script := fmt.Sprintf(\`
+	script := fmt.Sprintf(`
 $ErrorActionPreference='Stop'
 $d=%d; $n=%d; $off=[UInt64]%d; $size=[UInt64]%d
 $disk=Get-Disk -Number $d -ErrorAction Stop
@@ -168,7 +168,7 @@ if ([string]::IsNullOrWhiteSpace($observed)) { $observed=[string]$v.FileSystemTy
 if (-not [string]::Equals($observed.Trim(),%s,[System.StringComparison]::OrdinalIgnoreCase)) { throw 'filesystem verification failed' }
 if (-not [string]::Equals(([string]$v.FileSystemLabel).Trim(),%s,[System.StringComparison]::Ordinal)) { throw 'filesystem label verification failed' }
 ([string]$p.DriveLetter)+':\'
-\`, r.target.DiskNumber, p.Index, off, size, r.target.PhysicalDiskBytes, psSingle(fs), psSingle(p.Name), psSingle(fs), psSingle(p.Name))
+`, r.target.DiskNumber, p.Index, off, size, r.target.PhysicalDiskBytes, psSingle(fs), psSingle(p.Name), psSingle(fs), psSingle(p.Name))
 	out, err := runPortablePS(script)
 	if err != nil { return fmt.Errorf("format %s: %w", p.Name, err) }
 	fields := strings.Fields(out)
@@ -249,7 +249,7 @@ func (r *portableWindowsRuntime) VerifyLayout(parts []creatorcore.PortableApplic
 		root := r.roots[p.Name]
 		if root == "" { return fmt.Errorf("missing mounted root for %s", p.Name) }
 	}
-	script := fmt.Sprintf(\`
+	script := fmt.Sprintf(`
 $ErrorActionPreference='Stop'
 $d=%d; $disk=Get-Disk -Number $d -ErrorAction Stop
 if ([UInt64]$disk.Size -ne [UInt64]%d -or ([string]$disk.BusType).ToUpperInvariant() -ne 'USB' -or [bool]$disk.IsSystem -or [bool]$disk.IsBoot) { throw 'unsafe final Portable target' }
@@ -258,7 +258,7 @@ if ($parts.Count -ne 2) { throw 'final Portable GPT partition count mismatch' }
 $v1=Get-Volume -DriveLetter %s -ErrorAction Stop; $v2=Get-Volume -DriveLetter %s -ErrorAction Stop
 if (([string]$v1.FileSystemLabel).Trim() -ne 'ORDAX-ESP' -or ([string]$v2.FileSystemLabel).Trim() -ne 'ORDAX-DATA') { throw 'Portable label mismatch' }
 'ORDAX_PORTABLE_LAYOUT=VERIFIED'
-\`, r.target.DiskNumber, targetBytes, psSingle(strings.TrimSuffix(r.roots["ORDAX-ESP"], ":\\")), psSingle(strings.TrimSuffix(r.roots["ORDAX-DATA"], ":\\")))
+`, r.target.DiskNumber, targetBytes, psSingle(strings.TrimSuffix(r.roots["ORDAX-ESP"], ":\\")), psSingle(strings.TrimSuffix(r.roots["ORDAX-DATA"], ":\\")))
 	out, err := runPortablePS(script)
 	if err != nil { return err }
 	if !strings.Contains(out, "ORDAX_PORTABLE_LAYOUT=VERIFIED") { return errors.New("final Portable layout marker missing") }
