@@ -221,14 +221,15 @@ Estado atual do caminho v2:
 - Stable Base EROFS: Alpine e conjunto APK transitivo pinados; handoff QEMU/UEFI v2-base já provado em CI, prova física ainda pendente;
 - runtime gráfico offline: lock exato de 253 pacotes e EROFS byte-reprodutível provados em CI; handoff v3, preseed Creator e launcher Stable offline já implementados no candidato atual;
 - Stable/MVP não instala nem atualiza o runtime gráfico via `apk add` durante o boot; o runtime assinado usa EROFS read-only + OverlayFS efêmero em `/run`;
-- prova QEMU/UEFI do **head atual com runtime v3**: pendente; não confundir com a prova v2-base já verde;
-- writer físico v2: desativado;
-- boot físico v2/v3: não provado;
+- handoff do runtime v3 em QEMU direct-kernel e OVMF/UEFI: **provado em CI** no source `b9e1b164d7510f2dfc7572e473642b8fb885fa8c`, com rede desabilitada e sem tocar mídia física;
+- essa prova confirma release v3 + runtime offline + Stable Init, mas **não** declara a Surface gráfica completa em hardware real;
+- writer físico Portable: implementado apenas no backend interno/tagged e continua inacessível ao Creator público;
+- boot físico Stable/MVP v2/v3: não provado;
 - Secure Boot: não provado;
 - canonical release trust público: pendente;
 - Native continua fora do MVP.
 
-A mídia transitória atual continua apenas como caminho de validação de hardware. Não habilitar o writer público antes de **trust canônico, prova QEMU/UEFI do runtime v3 no head final e prova física do USB Stable/MVP**.
+A mídia transitória atual continua apenas como caminho de validação de hardware. A prova QEMU/UEFI do runtime v3 já está fechada; não habilitar o writer público antes de **trust canônico, autorização física separada e prova física do USB Stable/MVP**.
 
 ## 9. Site público e rotas
 
