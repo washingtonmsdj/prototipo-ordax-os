@@ -16,7 +16,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strings"
 )
 
 const (
@@ -104,24 +103,6 @@ func readRegular(path string, max int64, secret bool) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	parent := filepath.Dir(absolute)
-	parentInfo, err := os.Lstat(parent)
-	if err != nil || !parentInfo.IsDir() || parentInfo.Mode()&os.ModeSymlink != 0 {
-		return nil, errors.New("parent must be a real directory")
-	}
-	resolved, err := filepath.EvalSymlinks(parent)
-	if err != nil {
-		return nil, errors.New("path may not traverse symlinks")
-	}
-	cleanParent := filepath.Clean(parent)
-	cleanResolved := filepath.Clean(resolved)
-	sameParent := cleanResolved == cleanParent
-	if runtime.GOOS == "windows" {
-		sameParent = strings.EqualFold(cleanResolved, cleanParent)
-	}
-	if !sameParent {
-		return nil, errors.New("path may not traverse symlinks")
-	}
 	info, err := os.Lstat(absolute)
 	if err != nil {
 		return nil, err
@@ -135,7 +116,32 @@ func readRegular(path string, max int64, secret bool) ([]byte, error) {
 	if secret && runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
 		return nil, fmt.Errorf("private key permissions are too broad: %04o", info.Mode().Perm())
 	}
-	return os.ReadFile(absolute)
+
+	file, err := os.Open(absolute)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	openedInfo, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !openedInfo.Mode().IsRegular() || !os.SameFile(info, openedInfo) {
+		return nil, errors.New("input changed between validation and open")
+	}
+	if openedInfo.Size() != info.Size() || openedInfo.Size() <= 0 || openedInfo.Size() > max {
+		return nil, errors.New("input size changed between validation and open")
+	}
+
+	data, err := io.ReadAll(io.LimitReader(file, max+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) != openedInfo.Size() {
+		return nil, errors.New("input changed while being read")
+	}
+	return data, nil
 }
 
 func validateManifest(data []byte) (manifest, error) {
