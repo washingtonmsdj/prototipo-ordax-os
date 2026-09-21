@@ -21,7 +21,7 @@ class PortableV3OneShotQemuProofTests(unittest.TestCase):
         self.assertIn('"candidate_file_removed"', text)
         self.assertIn('"activation_transaction_removed"', text)
         self.assertIn('"physical_target_device_untouched": True', text)
-        self.assertIn('"guest_disk_destroyed": not disk.exists()', text)
+        self.assertIn('checks["guest_disk_destroyed"] = not disk.exists()', text)
         self.assertIn('"-net", "none"', text)
 
     def test_final_state_is_inspected_from_a_read_only_copy(self):
@@ -39,7 +39,7 @@ class PortableV3OneShotQemuProofTests(unittest.TestCase):
         self.assertIn('git worktree add --detach "$previous_source" "$previous"', text)
         self.assertIn('--source-commit "$previous"', text)
         self.assertIn('--expected-commit "$previous"', text)
-        self.assertIn('ordax-portable-state" \\', text)
+        self.assertIn('ordax-portable-state"', text)
         self.assertIn('prepare "$mountpoint" "$portable" "$candidate"', text)
         self.assertIn('--previous-commit "$previous"', text)
         self.assertIn("PORTABLE_V3_QEMU_ONE_SHOT_FALLBACK=PASS", text)
