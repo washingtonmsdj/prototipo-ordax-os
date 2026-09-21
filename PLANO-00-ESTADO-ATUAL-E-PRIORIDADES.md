@@ -55,9 +55,9 @@ Estados canônicos que permanecem explícitos em `docs/PROMOTION-GATES.md`:
 PORTABLE_V2_PID1_INTEGRATION=PASS_SOURCE
 PORTABLE_QEMU_DIRECT_KERNEL_BOOT_BASELINE=PASS_CI_DISPOSABLE
 PORTABLE_QEMU_UEFI_BOOT_BASELINE=PASS_CI_DISPOSABLE_OVMF_NON_SECURE_BOOT
-PORTABLE_RUNTIME_V3_CURRENT_HEAD_PROOF=SEE_PROOF_CONTRACTS
-PORTABLE_V3_UPDATE_ACTIVATION=PASS_SOURCE_ONE_SHOT_PENDING_CI_PROOF
-PORTABLE_V3_UPDATE_ROLLBACK=PASS_SOURCE_REJECTED_SHA_PENDING_CI_PROOF
+PORTABLE_RUNTIME_V3_CURRENT_MAIN_BASELINE_PROOF=PASS_CI_EVIDENCE_FILE
+PORTABLE_V3_UPDATE_ACTIVATION=PASS_SOURCE_MAIN_BASELINE_BOOT_REGRESSION_PASS_DEDICATED_ONE_SHOT_PENDING
+PORTABLE_V3_UPDATE_ROLLBACK=PASS_IN_AGENT_TESTS_MAIN_REJECTED_SHA_DEDICATED_BOOT_PENDING
 PORTABLE_PHYSICAL_WRITER=PASS_TAGGED_INTERNAL
 PORTABLE_PHYSICAL_USB_BOOT=NO
 MVP_SURFACE_SMOKE_HARNESS=PASS_SOURCE
@@ -73,7 +73,7 @@ O USB Owner/Development possui provas físicas próprias; elas não equivalem à
 
 ### P0 — consolidar o Stable/MVP portátil a partir do estado já implementado
 
-A consolidação USB-only da antiga PR #357 já foi integrada à `main`. Depois dela, o source avançou: o Portable v2 possui PID1 candidato conectado, verificação offline, Stable Base e runtime gráfico separado por conteúdo; o Creator também possui writer Portable v2 interno/tagged para o layout final `ORDAX-ESP + ORDAX-DATA`. A ativação Portable v3 agora também está conectada em source sobre o **mesmo estado ext4 existente**, sem duplicar A/B nem criar symlink no exFAT: `prepare -> candidate one-shot -> cold-health -> commit/rollback`, com `rejected` persistente para não repetir um SHA ruim. Há provas descartáveis baseline do handoff runtime-v3 anterior; a **nova transação de update desta frente ainda precisa da prova CI do head correspondente** antes de virar PASS de boot/update. O estado das provas deve ser lido nos contratos de evidência, sem transformar prova histórica em afirmação sobre um head novo.
+A consolidação USB-only da antiga PR #357 já foi integrada à `main`. Depois dela, o source avançou: o Portable v2 possui PID1 candidato conectado, verificação offline, Stable Base e runtime gráfico separado por conteúdo; o Creator também possui writer Portable v2 interno/tagged para o layout final `ORDAX-ESP + ORDAX-DATA`. A ativação Portable v3 está integrada à `main` sobre o **mesmo estado ext4 existente**, sem duplicar A/B nem criar symlink no exFAT: `prepare -> candidate one-shot -> cold-health -> commit/rollback`, com `rejected` persistente para não repetir um SHA ruim. O commit `c8c8fe526d03ced7630420cd116dd954b08ef03a` passou o baseline exato de boot direto e OVMF/UEFI no run `35598937763`; essa prova confirma que o novo initramfs não regrediu o boot `current`, mas **não** prova ainda a transação armada one-shot. A evidência corrente desse baseline fica em `docs/evidence/portable-runtime-v3-main-proof.json`; não promover o contrato histórico como se ele provasse o one-shot.
 
 A falha histórica `ORDAX-ESP partition not found` de um head antigo foi superada e não é uma pendência atual. Não voltar a habilitar flags BusyBox, aumentar timeouts ou criar rotas alternativas por causa daquele log sem primeiro reproduzir a falha no source e CI atuais.
 
@@ -89,7 +89,7 @@ O próximo marco é uma cerimônia real de operador conforme `docs/RELEASE-TRUST
 
 Com o handoff Portable v2 implementado e a transação de update Portable v3 agora conectada em source, o próximo fechamento técnico é provar esse ciclo em mídia descartável: canal assinado -> materialização v3 -> arm one-shot -> reboot -> cold-health -> commit e também candidato falho -> rejected -> rollback offline. Depois disso, o fechamento canônico continua sendo trust real + publicação autorizada + prova física do USB final. Não reaproveitar evidência Owner/Development como se fosse prova de produto.
 
-As provas baseline de QEMU direto e UEFI/OVMF reduzem o risco do boot candidato, mas continuam sendo prova descartável. A prova runtime-v3 do head corrente só é PASS quando os contratos de evidência desse head forem promovidos a partir do workflow correspondente. CI, Web candidate e USB de desenvolvimento não substituem `CANONICAL_NOTEBOOK_UEFI_BOOT`, `CANONICAL_STABLE_GRAPHICAL_MODE`, Secure Boot nem outras provas físicas canônicas pendentes.
+As provas baseline de QEMU direto e UEFI/OVMF reduzem o risco do boot candidato, mas continuam sendo prova descartável. O baseline do commit corrente da `main` está registrado em `docs/evidence/portable-runtime-v3-main-proof.json`; o próximo CI necessário é a prova dedicada `previous -> candidate one-shot -> previous + rejected`. CI, Web candidate e USB de desenvolvimento não substituem `CANONICAL_NOTEBOOK_UEFI_BOOT`, `CANONICAL_STABLE_GRAPHICAL_MODE`, Secure Boot nem outras provas físicas canônicas pendentes.
 
 ### P0 — smoke físico da Surface
 
@@ -126,7 +126,7 @@ Os planos longos registram capacidades herdadas como referência de produto, mas
 | C17 Conectores/automações | **PÓS-MVP** | Fora do lançamento básico. |
 | C18 Diagnóstico/exportação | **ENTRA no recorte local útil** | Revisão/exportação sanitizada já existe; evoluir somente lacunas concretas de fonte/retenção/prova. |
 | C19 Controle remoto | **PÓS-MVP** | Rescue/observação existentes não viram controle remoto genérico. |
-| C20 Update/health/rollback | **ENTRA e é gate do MVP** | Canal oficial sem Git e transação Portable one-shot já estão conectados em source; falta fechar prova CI do ciclo novo e depois known-good/rollback no USB Stable/MVP físico. |
+| C20 Update/health/rollback | **ENTRA e é gate do MVP** | Canal oficial sem Git e transação Portable one-shot estão integrados à main; baseline current-slot já passou no QEMU/OVMF exato. Falta a prova dedicada one-shot/rejected e depois known-good/rollback no USB Stable/MVP físico. |
 | C21 Instalação/storage/recovery | **USB/recovery ENTRA; Native NÃO** | Layout Portable, persistência e recovery do USB são MVP; instalação em SSD/NVMe/HD permanece desativada. |
 | C22 Build/cache/retenção | **ENGENHARIA, não feature do MVP** | Otimizar CI quando medido; não recompilar kernel por mudança administrativa sem dependência real. |
 | C23/C24 Intelligence/Lab/federação | **PÓS-MVP** | Fora da trilha de lançamento. |

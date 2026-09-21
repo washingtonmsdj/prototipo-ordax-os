@@ -160,15 +160,19 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertEqual(promotion["DEVELOPMENT_DEVICE_GIT_HOT_UPDATE"], "PASS_PHYSICAL_DEVELOPMENT_USB")
         self.assertEqual(
             promotion["STABLE_DEVICE_RELEASE_OR_DELTA_UPDATE"],
-            "PASS_SOURCE_PORTABLE_V3_PENDING_CI_AND_PHYSICAL",
+            "PASS_SOURCE_PORTABLE_V3_MAIN_BASELINE_CI_PENDING_DEDICATED_AND_PHYSICAL",
         )
         self.assertEqual(
             promotion["STABLE_HEALTH_READINESS"],
-            "PASS_SOURCE_PORTABLE_COLD_HEALTH_PENDING_PHYSICAL",
+            "PASS_SOURCE_PORTABLE_COLD_HEALTH_MAIN_PENDING_PHYSICAL",
         )
         self.assertEqual(
             state["PORTABLE_V3_UPDATE_ACTIVATION_SOURCE"],
             "CONNECTED_ONE_SHOT_REBOOT_COLD_HEALTH",
+        )
+        self.assertEqual(
+            state["PORTABLE_V3_UPDATE_BASELINE_QEMU_REGRESSION"],
+            "PASS_CI_CURRENT_MAIN_DIRECT_AND_UEFI",
         )
         self.assertEqual(
             state["PORTABLE_V3_UPDATE_ACTIVATION_QEMU_ONE_SHOT_PROOF"],
@@ -192,11 +196,15 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
             current,
         )
         self.assertIn(
+            "PORTABLE_V3_UPDATE_BASELINE_QEMU_REGRESSION=PASS_CI_CURRENT_MAIN_DIRECT_AND_UEFI",
+            current,
+        )
+        self.assertIn(
             "PORTABLE_V3_UPDATE_ACTIVATION_QEMU_ONE_SHOT_PROOF=PENDING_DEDICATED_PROOF",
             current,
         )
         self.assertIn("PORTABLE_V3_UPDATE_ACTIVATION_PHYSICAL_PROOF=NO", current)
-        self.assertIn("PASS_SOURCE_PENDING_CI_PROOF", promotion)
+        self.assertIn("PASS_SOURCE_MAIN_BASELINE_BOOT_REGRESSION_PASS_DEDICATED_PROOF_PENDING", promotion)
         self.assertIn("KNOWN_GOOD_PERSISTED=PENDING_PHYSICAL", promotion)
         self.assertIn("ROLLBACK=PENDING_PHYSICAL", promotion)
         self.assertNotIn("portable-v2-activation-not-connected", current)

@@ -219,12 +219,12 @@ Estado atual do caminho v2:
 - transação Portable one-shot: `prepare -> select-boot -> commit/rollback`, com replace atômico + fsync e sem ponteiro mutável no exFAT;
 - `candidate` só ganha autoridade de boot quando existe uma transação armada; recebe **uma tentativa** e nunca substitui `current` antes do cold-health;
 - SHA rejeitado fica persistido e não é rearmado enquanto o canal oficial não avançar para outro commit;
-- o supervisor Stable já orquestra `inspect -> materialize-portable-v3 -> verify-portable-v3-exact -> arm -> reboot -> cold-health -> commit/rollback` em source; a prova dessa nova transação no QEMU/UEFI e no USB físico continua separada;
+- o supervisor Stable já orquestra `inspect -> materialize-portable-v3 -> verify-portable-v3-exact -> arm -> reboot -> cold-health -> commit/rollback` na `main`; o commit `c8c8fe526d03ced7630420cd116dd954b08ef03a` passou o baseline exato QEMU direct-kernel + OVMF/UEFI, enquanto a prova dedicada do candidate one-shot/rejected e a prova no USB físico continuam separadas;
 - bootstrap capsule EROFS: determinística, reprodutível, pinada e verificada pelo PID1 candidato;
 - Stable Base EROFS: Alpine e conjunto APK transitivo pinados; handoff QEMU/UEFI v2-base já provado em CI, prova física ainda pendente;
 - runtime gráfico offline: lock exato de 253 pacotes e EROFS byte-reprodutível provados em CI; handoff v3, preseed Creator e launcher Stable offline já implementados no candidato atual;
 - Stable/MVP não instala nem atualiza o runtime gráfico via `apk add` durante o boot; o runtime assinado usa EROFS read-only + OverlayFS efêmero em `/run`;
-- handoff do runtime v3 em QEMU direct-kernel e OVMF/UEFI: **provado em CI** no source `b9e1b164d7510f2dfc7572e473642b8fb885fa8c`, com rede desabilitada e sem tocar mídia física;
+- handoff do runtime v3 em QEMU direct-kernel e OVMF/UEFI: **reprovado regressivamente como PASS no commit atual da main** `c8c8fe526d03ced7630420cd116dd954b08ef03a` pelo run `35598937763`, com rede desabilitada e sem tocar mídia física;
 - essa prova confirma release v3 + runtime offline + Stable Init, mas **não** declara a Surface gráfica completa em hardware real;
 - writer físico Portable: implementado apenas no backend interno/tagged e continua inacessível ao Creator público;
 - boot físico Stable/MVP v2/v3: não provado;
