@@ -21,6 +21,11 @@ KEY_ID = "ordax-prototype-release-v1"
 REPOSITORY = "washingtonmsdj/prototipo-ordax-os"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
+FINAL_AUTHORIZATION_BLOCKERS = {
+    "explicit-physical-write-authorization-missing",
+    "physical-authorization-bindings-unresolved",
+}
+
 REQUIRED_AUTHORIZATION_REQUIREMENTS = {
     "canonical_public_trust_pinned",
     "minimal_bootstrap_all_artifacts_resolved",
@@ -318,10 +323,31 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
     _add(blockers, bindings_ok, "physical-authorization-bindings-unresolved")
 
     blockers = sorted(set(blockers))
+    authorization_blockers = sorted(
+        blocker for blocker in blockers if blocker in FINAL_AUTHORIZATION_BLOCKERS
+    )
+    pre_authorization_blockers = sorted(
+        blocker for blocker in blockers if blocker not in FINAL_AUTHORIZATION_BLOCKERS
+    )
+    pre_authorization_ready = not pre_authorization_blockers
+    ready = not blockers
+    if ready:
+        next_stage = "authorized-candidate-materialization"
+    elif pre_authorization_ready:
+        next_stage = "explicit-owner-authorization"
+    else:
+        next_stage = "resolve-pre-authorization-blockers"
+
     return {
         "$schema": "prototype-ordax.physical-promotion-status/2",
-        "status": "ready" if not blockers else "blocked",
-        "ready": not blockers,
+        "status": "ready" if ready else "blocked",
+        "ready": ready,
+        "pre_authorization_ready": pre_authorization_ready,
+        "pre_authorization_blockers": pre_authorization_blockers,
+        "authorization_blockers": authorization_blockers,
+        "owner_authorization_required": pre_authorization_ready and not ready,
+        "authorized_candidate_materialization_allowed": ready,
+        "next_stage": next_stage,
         "blockers": blockers,
         "computed_bindings": {
             "minimal_bootstrap_sha256": minimal_sha,
