@@ -41,11 +41,12 @@ The first canonical release identity must be created only after the Stable/MVP P
 - the internal/tagged Portable writer implementation while the public writer and destructive authorization remain disabled;
 - signed `release-manifest/3` system + Surface-runtime binding;
 - recorded direct-kernel QEMU and OVMF/UEFI proof of the offline runtime-v3 handoff;
-- `physical_write_allowed=false` and no claim of physical USB boot or Secure Boot.
+- recorded disposable QEMU proof of the Portable v3 one-shot failure path: candidate boots exactly once, next boot returns to the exact previous release, the candidate is persisted as `rejected`, and the activation transaction is cleaned up;
+- `physical_write_allowed=false` and no claim of cold-health commit, physical USB boot or Secure Boot.
 
 This ordering prevents the canonical key ceremony from being bound to a source commit whose physical-media policy is immediately obsolete. The eligible Windows Prototype Toolkit must therefore come from a `push` of `main` **after** these prerequisites have landed. A toolkit from an earlier `main` commit, even if otherwise well formed, must not be used for the first canonical identity.
 
-This is enforced by provenance, not prose alone. `provenance.json` carries a `canonical_trust_prerequisites` object for the recorded runtime-v3 direct-kernel proof, runtime-v3 OVMF proof, final Portable writer implementation in fail-closed mode, and still-disabled physical authorization. `canonical_trust_ceremony_eligible=true` is emitted only when the run is a canonical `main` push **and** every prerequisite is true. Both initialization and recovery re-check those fields locally.
+This is enforced by provenance, not prose alone. `provenance.json` carries a `canonical_trust_prerequisites` object for the recorded runtime-v3 direct-kernel proof, runtime-v3 OVMF proof, the committed one-shot failure/fallback proof, final Portable writer implementation in fail-closed mode, and still-disabled physical authorization. The one-shot evidence source commit must also be an ancestor of the toolkit's exact `main` source commit. `canonical_trust_ceremony_eligible=true` is emitted only when the run is a canonical `main` push **and** every prerequisite is true. Both initialization and recovery re-check those fields locally.
 
 ## Required local ceremony
 
