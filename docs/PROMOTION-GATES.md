@@ -74,7 +74,7 @@ QEMU_REQUIRED=NO
 
 The trust custody/recovery/rotation policy is defined in `docs/contracts/release-trust-policy.json`; policy completion does not resolve the actual public trust artifact.
 
-The signed trust-transition protocol is implemented and CI-proven as a separate forward-resilience boundary. Offline recovery is now operator-proven, but this does not pin the current public anchor and does not authorize the first controlled physical write. Production rotation remains blocked until stateful device activation and effective-trust selection exist.
+The signed trust-transition protocol is implemented and CI-proven as a separate forward-resilience boundary. The cryptographic recovery proof is operator-proven, while independent external/offline backup custody remains pending; neither fact pins the current public anchor or authorizes the first controlled physical write. Production rotation remains blocked until stateful device activation and effective-trust selection exist.
 
 ## Gate 3 - Two-partition bootstrap-seed provisioning in disposable media
 
