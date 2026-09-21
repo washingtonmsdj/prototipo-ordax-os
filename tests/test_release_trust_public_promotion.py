@@ -233,6 +233,7 @@ class PublicReleaseTrustPromotionTests(unittest.TestCase):
                 ).read_text(encoding="utf-8")
             )
             self.assertFalse(authorization["physical_write_allowed"])
+            self.assertFalse(authorization["explicit_owner_authorization"])
             self.assertEqual(
                 authorization["status"],
                 "blocked-explicit-physical-authorization-pending",
@@ -248,6 +249,31 @@ class PublicReleaseTrustPromotionTests(unittest.TestCase):
             )
             self.assertTrue(all(authorization["bindings"].values()))
             self.assertGreaterEqual(run.call_count, 2)
+
+    @mock.patch.object(promotion.subprocess, "run")
+    def test_public_trust_promotion_rejects_inherited_owner_authorization(self, run):
+        run.return_value = self.verified_process()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            promotion_dir, verifier = self.fixture(root)
+            auth_path = root / "docs/contracts/physical-write-authorization.json"
+            authorization = json.loads(auth_path.read_text(encoding="utf-8"))
+            authorization["explicit_owner_authorization"] = True
+            write_json(auth_path, authorization)
+
+            with self.assertRaisesRegex(
+                promotion.PromotionError,
+                "requires fresh Stable/MVP owner authorization",
+            ):
+                promotion.prepare_repository_promotion(
+                    root,
+                    promotion_dir,
+                    verifier,
+                )
+
+            self.assertFalse(
+                (root / "bootstrap/trust/release-ed25519.json").exists()
+            )
 
     @mock.patch.object(promotion.subprocess, "run")
     def test_single_handoff_zip_is_accepted_without_manual_extraction(self, run):
