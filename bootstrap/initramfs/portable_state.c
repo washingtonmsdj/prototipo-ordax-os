@@ -411,12 +411,6 @@ static int write_transaction_at(
     return atomic_write_at(parent, TRANSACTION_FILE, payload, (size_t)length);
 }
 
-static int transaction_absent(int parent) {
-    struct activation_transaction transaction;
-    int rc = read_transaction(parent, &transaction);
-    return rc == EXIT_ABSENT;
-}
-
 static int cleanup_transaction(int parent) {
     if (remove_file_at_sync(parent, "candidate") != 0) {
         return -1;
