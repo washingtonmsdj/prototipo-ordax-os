@@ -77,7 +77,7 @@ class ReleaseAgentRefreshTests(unittest.TestCase):
         self.assertTrue(refresh["refresh_target_may_advance_without_physical_media_rewrite"])
         self.assertEqual(
             refresh["current_seed_sha256"],
-            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
+            "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
         )
         self.assertTrue(refresh["current_seed_includes_inspect"])
         self.assertIn(
@@ -95,16 +95,17 @@ class ReleaseAgentRefreshTests(unittest.TestCase):
         self.assertTrue(refresh["current_seed_includes_activate_exact"])
         self.assertEqual(
             refresh["current_refresh_target_sha256"],
-            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
+            "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
         )
         self.assertTrue(refresh["current_seed_includes_portable_v3_materialize"])
         self.assertTrue(refresh["current_seed_includes_portable_v3_verify_exact"])
         self.assertTrue(refresh["current_refresh_target_includes_portable_v3_materialize"])
         self.assertTrue(refresh["current_refresh_target_includes_portable_v3_verify_exact"])
         self.assertTrue(refresh["current_refresh_target_runtime_reuse_by_sha256"])
-        self.assertEqual(refresh["previous_seed_sha256"], "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da")
+        self.assertEqual(refresh["previous_seed_sha256"], "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c")
         self.assertTrue(refresh["previous_seed_refreshes_without_physical_media_rewrite"])
         self.assertIn("102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da", refresh["legacy_seed_sha256"])
+        self.assertIn("ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c", refresh["legacy_seed_sha256"])
 
     def test_publisher_never_mutably_overwrites_hash_addressed_asset(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
