@@ -53,8 +53,17 @@ class ReleaseSigningHeavyWorkflowScopeTests(unittest.TestCase):
         )
         for relative in HEAVY_WORKFLOWS:
             body = (ROOT / relative).read_text(encoding="utf-8")
+            executable_body = "\n".join(
+                line
+                for line in body.splitlines()
+                if not line.strip().startswith("- '!tools/release-signing/")
+            )
             for token in forbidden:
-                self.assertNotIn(token, body, f"{relative}: {token}")
+                self.assertNotIn(
+                    token,
+                    executable_body,
+                    f"{relative}: {token}",
+                )
 
 
 if __name__ == "__main__":
