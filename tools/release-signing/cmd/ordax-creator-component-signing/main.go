@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 )
 
 const (
@@ -109,7 +110,16 @@ func readRegular(path string, max int64, secret bool) ([]byte, error) {
 		return nil, errors.New("parent must be a real directory")
 	}
 	resolved, err := filepath.EvalSymlinks(parent)
-	if err != nil || filepath.Clean(resolved) != filepath.Clean(parent) {
+	if err != nil {
+		return nil, errors.New("path may not traverse symlinks")
+	}
+	cleanParent := filepath.Clean(parent)
+	cleanResolved := filepath.Clean(resolved)
+	sameParent := cleanResolved == cleanParent
+	if runtime.GOOS == "windows" {
+		sameParent = strings.EqualFold(cleanResolved, cleanParent)
+	}
+	if !sameParent {
 		return nil, errors.New("path may not traverse symlinks")
 	}
 	info, err := os.Lstat(absolute)
