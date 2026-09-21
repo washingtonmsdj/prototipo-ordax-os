@@ -290,23 +290,27 @@ PRODUCTION_RELEASE_PUBLISHED=NO
 
 The canonical release channel resolves `release-envelope.json`; the URL selects bytes and Ed25519 verification decides authenticity. The release acquisition code remains fail-closed with SHA-256 verification, exact source-commit binding, safe materialization, atomic activation and known-good preservation.
 
-### Canonical release trust — unresolved
+### Canonical release trust — local key generated, recovery pending
 
 ```text
 RELEASE_TRUST_POLICY=RESOLVED
 TRUST_POLICY_SCHEMA=prototype-ordax.release-trust-policy/1
 CANONICAL_KEY_ID=ordax-prototype-release-v1
-CANONICAL_KEY_MATERIAL_GENERATED=NO
+CANONICAL_KEY_MATERIAL_GENERATED=YES
+CANONICAL_PUBLIC_TRUST_SHA256=d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250
+CANONICAL_TRUST_RECOVERY_VERIFIED=NO
 PUBLIC_ANCHOR_PINNED=NO
-RELEASE_TRUST=UNRESOLVED
+RELEASE_TRUST=PENDING_RECOVERY_AND_PUBLIC_ANCHOR
 PRIVATE_SIGNING_KEY_IN_GIT=FORBIDDEN
 PRIVATE_SIGNING_KEY_IN_USB=FORBIDDEN
 PRIVATE_KEY_CUSTODY_OWNER=repository-owner-developer
+RELEASE_SIGNING_BACKEND_CURRENT=LOCAL_PEM_CONTROLLED_PROTOTYPE
+RELEASE_SIGNING_BACKEND_PRODUCTION_TARGET=MANAGED_NON_EXPORTABLE_KMS_HSM
 MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=NO
 PHYSICAL_WRITE_ALLOWED=NO
 ```
 
-The canonical private key must be generated and backed up outside Git according to `docs/RELEASE-TRUST-CEREMONY.md`; only the matching public trust document may enter source. CI/fixture keys never satisfy canonical trust. An eligible Windows trust toolkit has now been produced from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`): its provenance reports all five prerequisites true and `canonical_trust_ceremony_eligible=true`, its ZIP digest is `cb8232d20a9cdbaa81e73d55b52e2d6047b3b800a06a73a14869e6dc2245af31`, and its internal `SHA256SUMS` pass. The next step is the **local read-only preflight**, followed only then by local key generation; no canonical key material has been generated yet.
+The eligible Windows trust toolkit from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`) completed operator steps 1 and 2 on 2026-09-21: read-only preflight passed, local Ed25519 material was generated, independent public derivation matched and the proof signature succeeded. The private key remains outside Git/USB/Actions artifacts and is not recorded here. The next gate is encrypted recovery verification from a distinct restored path; until that passes, the public anchor remains unpinned and physical write remains blocked. The local PEM is accepted only as controlled-prototype custody; production custody remains provider-neutral with managed non-exportable KMS/HSM as a future backend and signed rotation required before broad public distribution.
 
 ## Creator and physical-write boundary
 
