@@ -99,18 +99,56 @@ Depois dos P0, priorizar somente lacunas suportadas por necessidade concreta: co
 
 Identidade/cloud, colaboração, planos, app store e expansões semelhantes não devem deslocar os gates de sistema do MVP.
 
+### Recorte do legado `novo-ordax-os` para o MVP USB-only
+
+Os planos longos registram capacidades herdadas como referência de produto, mas a decisão posterior do MVP mudou a prioridade. Para o MVP público atual, interpretar a matriz C01–C27 assim:
+
+| Capacidade do plano legado | Decisão para o MVP | Estado/ação atual |
+|---|---|---|
+| C01 Arquivos | **ENTRA no núcleo do MVP** | Operações locais principais já existem. Fechar somente falhas reais de uso/smoke; lixeira, miniaturas e associações avançadas não bloqueiam lançamento. |
+| C02 Rede/Wi-Fi | **ENTRA e é requisito do MVP** | Ajustes → Rede e painel rápido existem; falta prova Stable/MVP no hardware-alvo e correção somente de gaps reproduzidos. |
+| C03 Sessão local / lock | **ENTRA apenas no recorte local de segurança** | Não introduzir conta cloud para resolver lock. Se lock/unlock for exposto no MVP, precisa de autoridade local real; não deve deslocar os P0 de USB/trust. |
+| C04 Workspace/projetos | **JÁ HÁ recorte suficiente; não é gate** | Áreas, janelas, Recentes e catálogo local de Projetos existem. Continuidade avançada fica posterior. |
+| C05 Checkpoints de sessão | **PÓS-MVP** | Não bloquear o lançamento por restauração completa de rota/documento/posição/rascunho. |
+| C06 Home contextual | **NÃO BLOQUEIA** | Melhorias de “continuar trabalho” são P1/P2; não criar outro shell. |
+| C07 Hardware/compatibilidade | **ENTRA no recorte de suporte** | MVP precisa hardware suportado documentado e diagnóstico suficiente; inventário sofisticado de periféricos é posterior. |
+| C08 Conta de produto | **CONDICIONAL ao portal público** | Login/cadastro só pode ser ativado com identidade/sessão reais. Dispositivos vinculados, planos e continuidade não bloqueiam o USB. |
+| C09 Sync cloud | **PÓS-MVP** | Core local pode permanecer; não implementar transporte cloud para fechar o lançamento. |
+| C10 Mobile | **PÓS-MVP** | Em breve; depende de conta/sync reais. |
+| C11 Desktop instalado / Creator | **Creator ENTRA; Desktop instalado NÃO** | Creator USB é P0. Instalação permanente/desktop Native continua pós-MVP. |
+| C12 Apps instaláveis/SDK | **PÓS-MVP** | Apps first-party atuais bastam para o MVP; package manager geral não é gate. |
+| C13 Store | **PÓS-MVP** | Não deslocar P0/P1. |
+| C14 Perfis profissionais | **PÓS-MVP** | Fora do lançamento básico. |
+| C15 Objetos/proveniência de produto | **PÓS-MVP** | Fora do lançamento básico. |
+| C16 IA nativa | **PÓS-MVP** | Não criar dependência de IA para o sistema funcionar. |
+| C17 Conectores/automações | **PÓS-MVP** | Fora do lançamento básico. |
+| C18 Diagnóstico/exportação | **ENTRA no recorte local útil** | Revisão/exportação sanitizada já existe; evoluir somente lacunas concretas de fonte/retenção/prova. |
+| C19 Controle remoto | **PÓS-MVP** | Rescue/observação existentes não viram controle remoto genérico. |
+| C20 Update/health/rollback | **ENTRA e é gate do MVP** | Canal oficial sem Git, health, known-good e rollback precisam fechar no perfil Stable/MVP. |
+| C21 Instalação/storage/recovery | **USB/recovery ENTRA; Native NÃO** | Layout Portable, persistência e recovery do USB são MVP; instalação em SSD/NVMe/HD permanece desativada. |
+| C22 Build/cache/retenção | **ENGENHARIA, não feature do MVP** | Otimizar CI quando medido; não recompilar kernel por mudança administrativa sem dependência real. |
+| C23/C24 Intelligence/Lab/federação | **PÓS-MVP** | Fora da trilha de lançamento. |
+| C25 Navegador/produtividade | **Internet básico ENTRA; office/editor amplo NÃO** | O app Internet é parte dos apps principais do MVP; suíte de produtividade completa não é gate. |
+| C26 Onboarding/notificações/acessibilidade | **ENTRA no básico de produto** | Acessibilidade real já avançou; primeiro uso e notificações só entram quando sustentados por contratos reais. |
+| C27 Backup/histórico pessoal | **PÓS-MVP** | Não confundir backup de dados com rollback/known-good do sistema, que é P0. |
+
+Portanto, do legado, os itens que ainda merecem atenção **antes do MVP** são principalmente: C02 no hardware real, C07 no recorte de compatibilidade suportada, C18 somente onde houver gap real, C20, C21 no caminho USB/recovery e o recorte básico de C26. C01/C04 já possuem implementação suficiente para não serem reconstruídos. C08 só sobe de prioridade quando identidade real for habilitada no portal. O restante não deve atrasar o primeiro Stable/MVP USB.
+
 ## 3. Regra para trabalho paralelo
 
-Antes de abrir uma branch:
+A `main` é a linha de integração e a fonte de verdade do desenvolvimento. Nesta fase, evitar proliferação de branches e PRs:
 
-1. ler a `main` atual e as PRs abertas;
-2. listar arquivos alterados pela frente ativa mais próxima;
-3. escolher um incremento que não duplique dono nem colida com branch alheia;
-4. cruzar plano com contrato/source antes de chamar algo de “ausente”;
-5. distinguir `PASS_SOURCE`, `PASS_IN_AGENT_TESTS`, `PASS_PHYSICAL_DEVELOPMENT_USB` e prova física Stable/MVP;
-6. após CI/merge, atualizar a afirmação factual correspondente — nunca antecipar resultado.
+1. manter **no máximo uma branch ativa por frente** e, preferencialmente, **uma PR aberta por vez**;
+2. não abrir nova branch para cada correção pequena do mesmo incremento;
+3. agrupar mudanças relacionadas antes de disparar CI, evitando uma nova rodada pesada para cada microajuste;
+4. mudanças somente documentais ou claramente isoladas/não destrutivas podem ir direto para `main` quando não houver colisão e a política do repositório permitir;
+5. mudanças de trust, boot, storage, updater, contratos canônicos, writer físico ou outros limites de segurança continuam usando uma branch curta + revisão/gates proporcionais;
+6. CI deve ser acionado por **dependência real**: mudança em script administrativo não deve recompilar kernel/QEMU se esse script não participa do artefato;
+7. após merge, a branch deixa de ser linha de trabalho; não criar uma branch substituta sem necessidade concreta;
+8. antes de editar, ler a `main` atual e as PRs abertas, cruzar plano com contrato/source e distinguir `PASS_SOURCE`, `PASS_IN_AGENT_TESTS`, `PASS_PHYSICAL_DEVELOPMENT_USB` e prova física Stable/MVP;
+9. após CI/merge, atualizar a afirmação factual correspondente — nunca antecipar resultado.
 
-Se uma frente externa estiver mexendo no mesmo arquivo/owner, prefira diagnóstico reproduzível, teste independente, documentação factual não conflitante ou outro gap real em vez de produzir uma segunda implementação.
+Se uma frente externa estiver mexendo no mesmo arquivo/owner, prefira outro gap real ou diagnóstico independente em vez de produzir uma segunda implementação.
 
 ## 4. O que não fazer agora
 
