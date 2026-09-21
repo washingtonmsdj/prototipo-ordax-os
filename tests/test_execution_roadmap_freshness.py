@@ -31,6 +31,14 @@ class ExecutionRoadmapFreshnessTests(unittest.TestCase):
         self.assertIn("PORTABLE_QEMU_DIRECT_KERNEL_BOOT_BASELINE=PASS_CI_DISPOSABLE", roadmap)
         self.assertIn("PORTABLE_QEMU_UEFI_BOOT_BASELINE=PASS_CI_DISPOSABLE_OVMF_NON_SECURE_BOOT", roadmap)
         self.assertIn("PORTABLE_RUNTIME_V3_CURRENT_HEAD_PROOF=SEE_PROOF_CONTRACTS", roadmap)
+        self.assertIn(
+            "PORTABLE_V3_UPDATE_ACTIVATION=PASS_SOURCE_ONE_SHOT_PENDING_CI_PROOF",
+            roadmap,
+        )
+        self.assertIn(
+            "PORTABLE_V3_UPDATE_ROLLBACK=PASS_SOURCE_REJECTED_SHA_PENDING_CI_PROOF",
+            roadmap,
+        )
         self.assertIn("PORTABLE_PHYSICAL_WRITER=PASS_TAGGED_INTERNAL", roadmap)
         self.assertIn("PORTABLE_PHYSICAL_USB_BOOT=NO", roadmap)
         self.assertIn("PUBLIC_PHYSICAL_APPLY=NO", roadmap)
