@@ -83,7 +83,7 @@ O que permanece aberto é de outra classe: trust canônico, autorização públi
 
 A infraestrutura para cerimônia, promoção do trust público, verificação e recuperação já existe no repositório. O bloqueio não deve ser “resolvido” gerando uma chave privada dentro do Git, CI ou USB.
 
-O próximo marco é uma cerimônia real de operador conforme `docs/RELEASE-TRUST-CEREMONY.md`, com chave privada externa, backup/recovery fora do repositório e promoção **somente do material público/evidência permitida**. Enquanto isso, `CANONICAL_RELEASE_TRUST=PENDING_CANONICAL_KEY` continua correto.
+A prova one-shot/rejected já passou em CI e agora também é pré-requisito obrigatório da primeira identidade canônica. O próximo marco é gerar um **novo Windows Prototype Toolkit a partir de um push da main pós-one-shot**, confirmar no passo 1 que `CANONICAL_TRUST_CEREMONY_ELIGIBLE=YES` e só então executar a cerimônia real de operador conforme `docs/RELEASE-TRUST-CEREMONY.md`, com chave privada externa, backup/recovery fora do repositório e promoção **somente do material público/evidência permitida**. Toolkits anteriores a essa evidência são inelegíveis. Enquanto isso, `CANONICAL_RELEASE_TRUST=PENDING_CANONICAL_KEY` continua correto.
 
 ### P0 — prova Stable/MVP integrada
 

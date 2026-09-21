@@ -45,10 +45,19 @@ def test_key_generation_requires_explicit_switch_after_preflight():
     assert "-GenerateKey" not in PREFLIGHT_WRAPPER
 
 
+def test_toolkit_uses_full_history_for_one_shot_evidence_ancestry():
+    toolkit_job = TOOLKIT.split("jobs:", 1)[1].split("windows-native-tests:", 1)[0]
+    assert "fetch-depth: 0" in toolkit_job
+    assert "git', 'merge-base', '--is-ancestor'" in TOOLKIT
+    assert "one_shot.get('source_commit')" in TOOLKIT
+    assert "'portable_v3_one_shot_failure_fallback_proven'" in TOOLKIT
+
+
 def test_toolkit_workflow_tracks_every_canonical_eligibility_input():
     for path in (
         "docs/contracts/portable-v2-qemu-boot-proof.json",
         "docs/contracts/portable-v2-uefi-boot-proof.json",
+        "docs/evidence/portable-v3-one-shot-qemu-proof.json",
         "docs/contracts/creator-portable-media-plan.json",
         "docs/contracts/physical-write-authorization.json",
     ):
@@ -59,6 +68,7 @@ def test_canonical_toolkit_eligibility_requires_portable_runtime_v3_prerequisite
     for marker in (
         "'portable_runtime_v3_direct_kernel_proven'",
         "'portable_runtime_v3_uefi_ovmf_proven'",
+        "'portable_v3_one_shot_failure_fallback_proven'",
         "'portable_writer_v2_implemented_fail_closed'",
         "'physical_authorization_still_fail_closed'",
         "physical_auth.get('authorization_context_sha256') in (None, '')",
@@ -71,9 +81,10 @@ def test_canonical_toolkit_eligibility_requires_portable_runtime_v3_prerequisite
         assert "$ToolkitProvenance.canonical_trust_prerequisites" in source
         assert "$TrustPrerequisites.portable_runtime_v3_direct_kernel_proven -ne $true" in source
         assert "$TrustPrerequisites.portable_runtime_v3_uefi_ovmf_proven -ne $true" in source
+        assert "$TrustPrerequisites.portable_v3_one_shot_failure_fallback_proven -ne $true" in source
         assert "$TrustPrerequisites.portable_writer_v2_implemented_fail_closed -ne $true" in source
         assert "$TrustPrerequisites.physical_authorization_still_fail_closed -ne $true" in source
-        assert "required Portable runtime-v3 and fail-closed writer prerequisites" in source
+        assert "required Portable runtime-v3, one-shot fallback and fail-closed writer prerequisites" in source
 
 
 def test_trust_ceremony_binds_proof_to_toolkit_source_commit():

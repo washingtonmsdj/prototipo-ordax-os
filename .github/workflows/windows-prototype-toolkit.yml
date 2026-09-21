@@ -10,6 +10,7 @@ on:
       - 'docs/contracts/release-trust-policy.json'
       - 'docs/contracts/portable-v2-qemu-boot-proof.json'
       - 'docs/contracts/portable-v2-uefi-boot-proof.json'
+      - 'docs/evidence/portable-v3-one-shot-qemu-proof.json'
       - 'docs/contracts/creator-portable-media-plan.json'
       - 'docs/contracts/physical-write-authorization.json'
       - '.github/workflows/windows-prototype-toolkit.yml'
@@ -21,6 +22,7 @@ on:
       - 'docs/contracts/release-trust-policy.json'
       - 'docs/contracts/portable-v2-qemu-boot-proof.json'
       - 'docs/contracts/portable-v2-uefi-boot-proof.json'
+      - 'docs/evidence/portable-v3-one-shot-qemu-proof.json'
       - 'docs/contracts/creator-portable-media-plan.json'
       - 'docs/contracts/physical-write-authorization.json'
       - '.github/workflows/windows-prototype-toolkit.yml'
@@ -37,6 +39,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Go
@@ -165,6 +168,9 @@ jobs:
           uefi = json.loads(pathlib.Path(
               'docs/contracts/portable-v2-uefi-boot-proof.json'
           ).read_text(encoding='utf-8'))
+          one_shot = json.loads(pathlib.Path(
+              'docs/evidence/portable-v3-one-shot-qemu-proof.json'
+          ).read_text(encoding='utf-8'))
           portable_media = json.loads(pathlib.Path(
               'docs/contracts/creator-portable-media-plan.json'
           ).read_text(encoding='utf-8'))
@@ -186,6 +192,32 @@ jobs:
                   and uefi.get('release_manifest_schema') == 'prototype-ordax.release-manifest/3'
                   and uefi.get('secure_boot_proven') is False
                   and uefi.get('physical_usb_boot_proven') is False
+              ),
+              'portable_v3_one_shot_failure_fallback_proven': (
+                  one_shot.get('$schema') == 'prototype-ordax.portable-v3-one-shot-qemu-proof/1'
+                  and one_shot.get('status') == 'pass'
+                  and isinstance(one_shot.get('source_commit'), str)
+                  and len(one_shot.get('source_commit')) == 40
+                  and all(ch in '0123456789abcdef' for ch in one_shot.get('source_commit'))
+                  and subprocess.run(
+                      ['git', 'merge-base', '--is-ancestor', one_shot.get('source_commit'), os.environ['GITHUB_SHA']],
+                      check=False,
+                      stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL,
+                  ).returncode == 0
+                  and one_shot.get('proven', {}).get('candidate_boot_selected_once') is True
+                  and one_shot.get('proven', {}).get('fallback_previous_selected') is True
+                  and one_shot.get('proven', {}).get('candidate_persisted_as_rejected') is True
+                  and one_shot.get('proven', {}).get('candidate_file_removed') is True
+                  and one_shot.get('proven', {}).get('activation_transaction_removed') is True
+                  and one_shot.get('proven', {}).get('guest_disk_destroyed') is True
+                  and one_shot.get('proven', {}).get('qemu_network_disabled') is True
+                  and one_shot.get('not_proven', {}).get('cold_health_commit') is True
+                  and one_shot.get('not_proven', {}).get('physical_usb_boot') is True
+                  and one_shot.get('not_proven', {}).get('secure_boot') is True
+                  and one_shot.get('safety', {}).get('physical_target_device_touched') is False
+                  and one_shot.get('safety', {}).get('physical_write_authorized') is False
+                  and one_shot.get('safety', {}).get('public_physical_promotion_allowed') is False
               ),
               'portable_writer_v2_implemented_fail_closed': (
                   portable_media.get('partitions') == ['ORDAX-ESP', 'ORDAX-DATA']
@@ -268,6 +300,7 @@ jobs:
           assert set(prerequisites) == {
               'portable_runtime_v3_direct_kernel_proven',
               'portable_runtime_v3_uefi_ovmf_proven',
+              'portable_v3_one_shot_failure_fallback_proven',
               'portable_writer_v2_implemented_fail_closed',
               'physical_authorization_still_fail_closed',
           }

@@ -68,5 +68,12 @@
     "public_anchor_pinned": false,
     "minimal_bootstrap_resolved": false,
     "physical_authorization_eligible": false
-  }
+  },
+  "canonical_ceremony_prerequisites": [
+    "portable_runtime_v3_direct_kernel_proven",
+    "portable_runtime_v3_uefi_ovmf_proven",
+    "portable_v3_one_shot_failure_fallback_proven",
+    "portable_writer_v2_implemented_fail_closed",
+    "physical_authorization_still_fail_closed"
+  ]
 }

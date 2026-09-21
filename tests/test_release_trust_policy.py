@@ -37,6 +37,19 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
         )
         self.assertFalse(recovery["private_key_hash_in_public_evidence_allowed"])
 
+    def test_first_canonical_identity_requires_one_shot_fallback_proof(self):
+        prerequisites = self.load_policy()["canonical_ceremony_prerequisites"]
+        self.assertEqual(
+            prerequisites,
+            [
+                "portable_runtime_v3_direct_kernel_proven",
+                "portable_runtime_v3_uefi_ovmf_proven",
+                "portable_v3_one_shot_failure_fallback_proven",
+                "portable_writer_v2_implemented_fail_closed",
+                "physical_authorization_still_fail_closed",
+            ],
+        )
+
     def test_private_key_locations_explicitly_forbid_repository_and_usb(self):
         forbidden = set(self.load_policy()["private_key"]["forbidden_locations"])
         for location in {"git", "usb-bootstrap", "github-actions-artifacts", "logs", "chat"}:

@@ -155,6 +155,10 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertEqual(promotion["WEB_MODE"], "PASS_SOURCE_BROWSER_CANDIDATE")
 
         self.assertEqual(state["NATIVE_GRAPHICAL_HOST"], "PASS_PHYSICAL_DEVELOPMENT_USB")
+        self.assertEqual(
+            state["CANONICAL_TRUST_TOOLKIT_REQUIRES_PORTABLE_ONE_SHOT_PROOF"],
+            "YES",
+        )
         self.assertEqual(promotion["NATIVE_GRAPHICAL_MODE"], "PASS_PHYSICAL_DEVELOPMENT_USB")
         self.assertEqual(promotion["CANONICAL_STABLE_GRAPHICAL_MODE"], "PENDING")
 
