@@ -15,7 +15,7 @@
   "private_key_material_recorded": false,
   "private_key_path_recorded": false,
   "evidence_origin": "operator-reported-local-toolkit-output",
-  "note": "Operator-reported local toolkit recovery proof passed. Only non-secret recovery evidence and public handoff digest are recorded. No PEM bytes, private-key hash, recovery password, backup secret or local private-key path are committed.",
+  "note": "Operator-reported local toolkit recovery proof passed cryptographically. The encrypted archive used for this proof was still on the same host, so external/offline backup custody is not yet claimed. Only non-secret recovery evidence and the public handoff digest are recorded. No PEM bytes, private-key hash, recovery password, backup secret or local private-key path are committed.",
   "recovered_private_path_distinct": true,
   "recovered_public_derivation_match": true,
   "recovered_signing_proof": true,
@@ -24,6 +24,10 @@
   "toolkit_component_hashes_verified": true,
   "public_handoff_contents_verified": true,
   "public_handoff_secret_material": false,
-  "ready_to_pin_public_anchor": true,
-  "public_trust_handoff_zip_sha256": "85d4f8430f0a4066ebed84a410071409c112c65aa72a5818483a664a41b91e20"
+  "ready_to_pin_public_anchor": false,
+  "public_trust_handoff_zip_sha256": "85d4f8430f0a4066ebed84a410071409c112c65aa72a5818483a664a41b91e20",
+  "cryptographic_recovery_verified": true,
+  "tool_reported_ready_to_pin_public_anchor": true,
+  "external_offline_backup_custody_confirmed": false,
+  "repository_policy_ready_to_pin_public_anchor": false
 }
