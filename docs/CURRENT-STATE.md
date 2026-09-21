@@ -108,7 +108,7 @@ CANONICAL_SYSTEM_RUNTIME_COMPLETE=NO
 ```
 
 
-The local ceremony steps 1 and 2 were operator-executed on 2026-09-21 against the eligible toolkit bound to `2172eb6a18430910afd036199ec492ad63dc185d`. Read-only preflight passed, canonical Ed25519 key material was generated locally, independent public derivation matched and the proof signature passed. Only non-secret evidence is recorded in Git. Offline recovery is not yet verified and the public anchor is not pinned, so physical authorization remains fail-closed. The local PEM is a controlled prototype signing backend, not the intended long-term production single point of custody; managed non-exportable KMS/HSM remains a provider-neutral future backend, while signed trust rotation is required before broad public distribution.
+The local ceremony steps 1 and 2 were operator-executed on 2026-09-21 against the eligible toolkit bound to `2172eb6a18430910afd036199ec492ad63dc185d`. Read-only preflight passed, canonical Ed25519 key material was generated locally, independent public derivation matched and the proof signature passed. Only non-secret evidence is recorded in Git. Offline recovery is verified from a distinct restored copy and the recovered signing envelope passed public verification. The public anchor is still not pinned, so physical authorization remains fail-closed. The local PEM is a controlled prototype signing backend, not the intended long-term production single point of custody; managed non-exportable KMS/HSM remains a provider-neutral future backend, while signed trust rotation is required before broad public distribution.
 
 The first formal human product version is **OrdaX Prototype v0.1.0**. Product version, Entrega, Git SHA and component/app versions are separate identities: v0.1.0 identifies the prototype product milestone, Entrega identifies the notebook-facing delivery sequence, the SHA remains the exact technical build identity, and each component may evolve its own SemVer. First-party apps on the `0.x` line are **Beta**; `1.0.0` remains reserved for the first stable release of each app. Internet is currently `0.3.0 Beta` and Notes is `0.4.0 Beta`, both using `git-app` in Owner/Development. Arquivos, Ajustes, Conta and Sistema are `0.1.0 Beta` and remain `bundled`. A component having its own version does not mean it already has a production-independent update channel: `git-app` is a development delivery mode, while production-independent activation remains gated behind the signed `component-slot` path with pending health, promotion and rollback. Product v1.0 remains reserved for the stable product rather than being inferred from prototype maturity, component versions or delivery count.
 
@@ -295,7 +295,7 @@ PUBLIC_TRUST_PROMOTION_PHYSICAL_WRITE_SIDE_EFFECT=NO
 
 The canonical release channel resolves `release-envelope.json`; the URL selects bytes and Ed25519 verification decides authenticity. The release acquisition code remains fail-closed with SHA-256 verification, exact source-commit binding, safe materialization, atomic activation and known-good preservation.
 
-### Canonical release trust — local key generated, recovery pending
+### Canonical release trust — recovery verified, public anchor pending
 
 ```text
 RELEASE_TRUST_POLICY=RESOLVED
@@ -303,9 +303,9 @@ TRUST_POLICY_SCHEMA=prototype-ordax.release-trust-policy/1
 CANONICAL_KEY_ID=ordax-prototype-release-v1
 CANONICAL_KEY_MATERIAL_GENERATED=YES
 CANONICAL_PUBLIC_TRUST_SHA256=d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250
-CANONICAL_TRUST_RECOVERY_VERIFIED=NO
+CANONICAL_TRUST_RECOVERY_VERIFIED=YES
 PUBLIC_ANCHOR_PINNED=NO
-RELEASE_TRUST=PENDING_RECOVERY_AND_PUBLIC_ANCHOR
+RELEASE_TRUST=PENDING_PUBLIC_ANCHOR
 PRIVATE_SIGNING_KEY_IN_GIT=FORBIDDEN
 PRIVATE_SIGNING_KEY_IN_USB=FORBIDDEN
 PRIVATE_KEY_CUSTODY_OWNER=repository-owner-developer
@@ -314,11 +314,13 @@ RELEASE_SIGNING_BACKEND_PRODUCTION_TARGET=MANAGED_NON_EXPORTABLE_KMS_HSM
 GITHUB_IS_KEY_CUSTODIAN=NO
 MANAGED_KMS_HSM_REQUIRED_FOR_FIRST_PHYSICAL_PROOF=NO
 SIGNED_TRUST_ROTATION_REQUIRED_BEFORE_BROAD_PUBLIC_DISTRIBUTION=YES
+RECOVERY_PUBLIC_HANDOFF_SHA256=85d4f8430f0a4066ebed84a410071409c112c65aa72a5818483a664a41b91e20
+READY_TO_PIN_PUBLIC_ANCHOR=YES
 MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=NO
 PHYSICAL_WRITE_ALLOWED=NO
 ```
 
-The eligible Windows trust toolkit from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`) completed operator steps 1 and 2 on 2026-09-21: read-only preflight passed, local Ed25519 material was generated, independent public derivation matched and the proof signature succeeded. The private key remains outside Git/USB/Actions artifacts and is not recorded here. The next gate is encrypted recovery verification from a distinct restored path; until that passes, the public anchor remains unpinned and physical write remains blocked. The local PEM is accepted only as controlled-prototype custody; production custody remains provider-neutral with managed non-exportable KMS/HSM as a future backend and signed rotation required before broad public distribution.
+The eligible Windows trust toolkit from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`) completed operator steps 1, 2 and 3 on 2026-09-21: read-only preflight passed, local Ed25519 material was generated, independent public derivation matched, the proof signature succeeded, and the encrypted backup was restored to a distinct path whose derived trust and signing proof matched the canonical identity. The recovery envelope verified successfully with public trust only. The private key remains outside Git/USB/Actions artifacts and is not recorded here. The next gate is promotion of the public handoff ZIP into the repository; until that exact public bundle is validated and pinned, physical write remains blocked. The local PEM is accepted only as controlled-prototype custody; production custody remains provider-neutral with managed non-exportable KMS/HSM as a future backend and signed rotation required before broad public distribution.
 
 ## Creator and physical-write boundary
 
