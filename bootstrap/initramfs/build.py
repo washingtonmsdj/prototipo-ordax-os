@@ -1030,8 +1030,12 @@ def verify(out_dir: Path) -> dict:
         or candidate_pid1.get("requires_capsule_pin") is not True
         or candidate_pid1.get("requires_stable_base_pin") is not True
         or candidate_pid1.get("requires_bootstrap_owned_trust") is not True
-        or candidate_pid1.get("current_then_known_good_exact_verification") is not True
-        or candidate_pid1.get("candidate_slot_boot_authority") is not False
+        or candidate_pid1.get(
+            "one_shot_candidate_then_current_known_good_exact_verification"
+        ) is not True
+        or candidate_pid1.get("candidate_slot_boot_authority") is not True
+        or candidate_pid1.get("candidate_slot_boot_authority_policy")
+        != "armed-one-shot-transaction-only"
         or candidate_pid1.get("network_required") is not False
         or candidate_pid1.get("physical_boot_authorized") is not False
         or not _SHA256.fullmatch(str(candidate_pid1.get("source_sha256", "")))
