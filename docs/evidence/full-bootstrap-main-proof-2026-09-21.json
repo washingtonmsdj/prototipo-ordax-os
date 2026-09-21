@@ -1,0 +1,26 @@
+{
+  "$schema": "prototype-ordax.full-bootstrap-main-proof/1",
+  "status": "pass",
+  "source_commit": "9e3e7f706540d411293e6ea048dd54457515ad85",
+  "workflow_run_id": 35661774796,
+  "workflow_name": "Full Bootstrap Media Proof",
+  "artifact": {
+    "name": "ordax-full-bootstrap-media-proof-9e3e7f706540d411293e6ea048dd54457515ad85",
+    "artifact_id": 10668035972,
+    "sha256": "079aad05492867000989fa2c2768b8a29354f9458fa0d791171f4ed02dbe3d0b",
+    "metadata_only": true
+  },
+  "proven": {
+    "canonical_public_trust_binding": true,
+    "byte_complete_payload": true,
+    "creator_core_staging": true,
+    "real_gpt_and_filesystems_on_disposable_media": true,
+    "creator_capacity_expansion": true,
+    "boot_time_ext4_growth": true
+  },
+  "safety": {
+    "unpublished_media_bytes_destroyed": true,
+    "physical_target_device_touched": false,
+    "physical_write_authorized": false
+  }
+}
