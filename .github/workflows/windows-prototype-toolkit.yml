@@ -200,6 +200,7 @@ jobs:
                   and physical_auth.get('status') == 'blocked-canonical-trust-pending'
                   and physical_auth.get('physical_write_allowed') is False
                   and physical_auth.get('explicit_owner_authorization') is False
+                  and physical_auth.get('authorization_context_sha256') in (None, '')
               ),
           }
           canonical_main_push = (

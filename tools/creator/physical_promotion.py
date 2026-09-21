@@ -9,6 +9,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import stat
 from typing import Any
 
 AUTH_SCHEMA = "prototype-ordax.physical-write-authorization/2"
@@ -24,7 +25,21 @@ HEX64 = re.compile(r"^[0-9a-f]{64}$")
 FINAL_AUTHORIZATION_BLOCKERS = {
     "explicit-physical-write-authorization-missing",
     "physical-authorization-bindings-unresolved",
+    "physical-authorization-context-mismatch",
 }
+
+AUTHORIZATION_CONTEXT_PATTERNS = (
+    ".github/workflows/physical-write-promotion.yml",
+    "tools/creator/physical_promotion.py",
+    "tools/creator/authorize_physical_write.py",
+    "tools/creator/go.*",
+    "tools/creator/core/*.go",
+    "tools/creator/host/windows/*.go",
+    "tools/creator/physicalchannel/*.go",
+    "tools/creator/cmd/ordax-creator-physical-test/*.go",
+    "tools/release-signing/go.*",
+    "tools/release-signing/cmd/ordax-physical-release-signing/*.go",
+)
 
 REQUIRED_AUTHORIZATION_REQUIREMENTS = {
     "canonical_public_trust_pinned",
@@ -75,6 +90,68 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def authorization_source_sha256(path: Path) -> str:
+    try:
+        payload = path.read_bytes()
+    except OSError as exc:
+        raise PromotionError(
+            f"cannot read physical authorization context source: {path}"
+        ) from exc
+    # Git checkouts may present text as LF or CRLF depending on the Windows
+    # client configuration. Consent is bound to logical source bytes, not
+    # platform line-ending conversion.
+    canonical = payload.replace(b"\r\n", b"\n")
+    if b"\r" in canonical:
+        raise PromotionError(
+            f"physical authorization context source contains bare CR bytes: {path}"
+        )
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def authorization_context_files(repo_root: Path) -> list[Path]:
+    root = repo_root.resolve()
+    files: dict[str, Path] = {}
+    for pattern in AUTHORIZATION_CONTEXT_PATTERNS:
+        matches = sorted(root.glob(pattern))
+        usable = []
+        for path in matches:
+            if path.name.endswith("_test.go"):
+                continue
+            try:
+                metadata = path.lstat()
+            except OSError as exc:
+                raise PromotionError(
+                    f"cannot inspect physical authorization context file: {path}"
+                ) from exc
+            if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+                raise PromotionError(
+                    f"physical authorization context path is not a regular file: {path}"
+                )
+            usable.append(path)
+        if not usable:
+            raise PromotionError(
+                f"physical authorization context pattern resolved no source files: {pattern}"
+            )
+        for path in usable:
+            relative = path.relative_to(root).as_posix()
+            files[relative] = path
+    return [files[name] for name in sorted(files)]
+
+
+def authorization_context_sha256(repo_root: Path) -> tuple[str, int]:
+    root = repo_root.resolve()
+    digest = hashlib.sha256()
+    digest.update(b"ordax-physical-authorization-context/1\0")
+    files = authorization_context_files(root)
+    for path in files:
+        relative = path.relative_to(root).as_posix().encode("utf-8")
+        digest.update(relative)
+        digest.update(b"\0")
+        digest.update(bytes.fromhex(authorization_source_sha256(path)))
+        digest.update(b"\0")
+    return digest.hexdigest(), len(files)
 
 
 def _add(blockers: list[str], condition: bool, label: str) -> None:
@@ -296,6 +373,27 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
     minimal_sha = sha256_file(minimal_path)
     portable_sha = sha256_file(portable_path)
     creator_portable_sha = sha256_file(creator_portable_path)
+    authorization_context_sha, authorization_context_file_count = (
+        authorization_context_sha256(root)
+    )
+    authorization_claimed = (
+        auth.get("status") == "authorized"
+        or auth.get("physical_write_allowed") is True
+        or auth.get("explicit_owner_authorization") is True
+    )
+    authorization_context_value = auth.get("authorization_context_sha256")
+    if authorization_claimed:
+        _add(
+            blockers,
+            authorization_context_value == authorization_context_sha,
+            "physical-authorization-context-mismatch",
+        )
+    else:
+        _add(
+            blockers,
+            authorization_context_value in (None, ""),
+            "physical-authorization-context-must-be-empty-before-consent",
+        )
     authorization_enabled = (
         auth.get("status") == "authorized"
         and auth.get("physical_write_allowed") is True
@@ -352,6 +450,11 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
         "owner_authorization_required": pre_authorization_ready and not ready,
         "authorized_candidate_materialization_allowed": ready,
         "physical_authorization_bindings_resolved": bindings_resolved,
+        "computed_authorization_context_sha256": authorization_context_sha,
+        "authorization_context_file_count": authorization_context_file_count,
+        "authorization_context_matches_current_source": (
+            authorization_context_value == authorization_context_sha
+        ),
         "next_stage": next_stage,
         "blockers": blockers,
         "computed_bindings": {

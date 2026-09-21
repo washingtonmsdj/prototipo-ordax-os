@@ -655,6 +655,11 @@ def _load_repository_contracts(
             "public trust promotion requires fresh Stable/MVP owner "
             "authorization after trust is pinned"
         )
+    if authorization.get("authorization_context_sha256") not in (None, ""):
+        raise PromotionError(
+            "public trust promotion requires the physical authorization "
+            "source context to remain unset before owner consent"
+        )
     if policy.get("canonical_key_id") != KEY_ID:
         raise PromotionError(
             "release trust policy canonical key_id is invalid"
@@ -950,6 +955,11 @@ def validate_promoted_repository(
         raise PromotionError(
             "physical owner authorization was unexpectedly carried "
             "through public trust promotion"
+        )
+    if authorization.get("authorization_context_sha256") not in (None, ""):
+        raise PromotionError(
+            "physical authorization source context was unexpectedly "
+            "carried through public trust promotion"
         )
     if (
         authorization.get("status")
