@@ -11,6 +11,7 @@ on:
       - 'docs/contracts/creator-portable-media-plan.json'
       - 'docs/contracts/physical-write-authorization.json'
       - 'tools/creator/physical_promotion.py'
+      - 'tools/creator/authorize_physical_write.py'
       - 'tools/creator/core/**'
       - 'tools/creator/host/windows/**'
       - 'tools/creator/cmd/ordax-creator-physical-test/**'
@@ -26,6 +27,7 @@ on:
       - 'docs/contracts/creator-portable-media-plan.json'
       - 'docs/contracts/physical-write-authorization.json'
       - 'tools/creator/physical_promotion.py'
+      - 'tools/creator/authorize_physical_write.py'
       - 'tools/creator/core/**'
       - 'tools/creator/host/windows/**'
       - 'tools/creator/cmd/ordax-creator-physical-test/**'
@@ -71,7 +73,15 @@ jobs:
           assert isinstance(data['pre_authorization_ready'], bool)
           assert isinstance(data['owner_authorization_required'], bool)
           assert isinstance(data['authorized_candidate_materialization_allowed'], bool)
+          assert isinstance(data['authorization_context_matches_current_source'], bool)
+          assert isinstance(data['authorization_context_file_count'], int)
+          assert data['authorization_context_file_count'] > 10
+          context_sha = data['computed_authorization_context_sha256']
+          assert isinstance(context_sha, str) and len(context_sha) == 64
+          int(context_sha, 16)
           assert data['authorized_candidate_materialization_allowed'] is data['ready']
+          if data['ready']:
+              assert data['authorization_context_matches_current_source'] is True
           assert data['next_stage'] in {
               'resolve-pre-authorization-blockers',
               'explicit-owner-authorization',
@@ -167,6 +177,10 @@ jobs:
           sequence = auth.get('release_sequence')
           if isinstance(sequence, bool) or not isinstance(sequence, int) or sequence <= 0:
               raise SystemExit('physical release_sequence is missing or invalid')
+          context_sha = auth.get('authorization_context_sha256')
+          if not isinstance(context_sha, str) or len(context_sha) != 64:
+              raise SystemExit('physical authorization source context is missing or invalid')
+          int(context_sha, 16)
           PY
 
           cp bootstrap/trust/release-ed25519.json "$out/release-ed25519.json"
