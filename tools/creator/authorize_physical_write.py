@@ -35,6 +35,7 @@ AUTH_SCHEMA = "prototype-ordax.physical-write-authorization/2"
 RESULT_SCHEMA = "prototype-ordax.physical-owner-authorization/1"
 EXPECTED_REPOSITORY = "washingtonmsdj/prototipo-ordax-os"
 EXPECTED_SCOPE = "first-real-stable-mvp-usb-proof"
+PRE_TRUST_STATUS = "blocked-canonical-trust-pending"
 BLOCKED_STATUS = "blocked-explicit-physical-authorization-pending"
 AUTHORIZED_STATUS = "authorized"
 CONFIRMATION = "AUTHORIZE_FIRST_REAL_STABLE_MVP_USB_PROOF"
@@ -79,8 +80,10 @@ def _load_authorization(repo_root: Path) -> tuple[dict[str, Any], bytes, int]:
         raise AuthorizationError("authorization repository is incompatible")
     if contract.get("scope") != EXPECTED_SCOPE:
         raise AuthorizationError("authorization scope is incompatible")
-    if contract.get("status") != BLOCKED_STATUS:
-        raise AuthorizationError("authorization contract is not awaiting explicit owner consent")
+    if contract.get("status") not in (PRE_TRUST_STATUS, BLOCKED_STATUS):
+        raise AuthorizationError(
+            "authorization contract is not in a supported pre-consent state"
+        )
     if contract.get("physical_write_allowed") is not False:
         raise AuthorizationError("authorization contract is already physically enabled")
     if contract.get("explicit_owner_authorization") is not False:
@@ -104,6 +107,11 @@ def prepare_authorization(repo_root: Path) -> dict[str, Any]:
         raise AuthorizationError(
             "physical promotion prerequisites are not ready: "
             + ",".join(status.get("pre_authorization_blockers", []))
+        )
+    if contract.get("status") != BLOCKED_STATUS:
+        raise AuthorizationError(
+            "canonical trust promotion has not advanced the authorization "
+            "contract to explicit-owner-consent stage"
         )
     if status.get("physical_authorization_bindings_resolved") is not True:
         raise AuthorizationError("physical authorization bindings are not resolved")
