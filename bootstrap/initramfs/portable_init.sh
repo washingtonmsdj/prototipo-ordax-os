@@ -177,7 +177,7 @@ select_verified_release() {
     return 1
 }
 select_verified_release ||
-    rescue "neither current nor known-good is an exactly verified signed release"
+    rescue "no candidate/current/known-good release is safely selectable and exactly verified"
 
 if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ]; then
     SURFACE_RUNTIME_IMAGE="$PORTABLE_ROOT/runtimes/sha256/$SELECTED_SURFACE_RUNTIME_SHA256/native-surface-runtime.erofs"
