@@ -39,10 +39,11 @@ class MVPSeedArtifactBindingsTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        self.assertEqual(artifact["sha256"], "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c")
-        self.assertEqual(refresh["target_sha256"], "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c")
+        self.assertEqual(artifact["sha256"], "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740")
+        self.assertEqual(refresh["target_sha256"], "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740")
         self.assertEqual(artifact["sha256"], refresh["target_sha256"])
         self.assertIn("102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da", refresh["allowed_from_sha256"])
+        self.assertIn("ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c", refresh["allowed_from_sha256"])
         self.assertIn(
             "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
             refresh["allowed_from_sha256"],
