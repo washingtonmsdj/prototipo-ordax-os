@@ -165,6 +165,17 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertEqual(promotion["CANONICAL_RELEASE_TRUST"], "PENDING_CANONICAL_KEY")
         self.assertEqual(promotion["PHYSICAL_USB_WRITE"], "NO")
 
+    def test_surface_smoke_gate_tracks_fail_closed_finalizer(self):
+        promotion_text = PROMOTION_GATES.read_text(encoding="utf-8")
+        promotion = assignment_map(promotion_text)
+
+        self.assertEqual(promotion["MVP_SURFACE_SMOKE_HARNESS"], "PASS_SOURCE")
+        self.assertEqual(promotion["MVP_SURFACE_SMOKE_PHYSICAL"], "PENDING")
+        self.assertIn("tour-template", promotion_text)
+        self.assertIn("`finalize`", promotion_text)
+        self.assertIn("all 10 required tour items are PASS", promotion_text)
+        self.assertIn("matches a fresh recomputation", promotion_text)
+
     def test_known_stale_promotion_claims_cannot_return(self):
         promotion = assignment_map(PROMOTION_GATES.read_text(encoding="utf-8"))
         stale_keys = {
