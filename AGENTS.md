@@ -24,22 +24,27 @@ Antes de alterar codigo, contratos ou midia:
 
 1. `README.md`
 2. `MVP.md`
-3. `docs/CURRENT-STATE.md`
-4. `docs/ARCHITECTURE.md`
-5. `docs/BUILD-AUTONOMY.md`
-6. `docs/PRODUCT-MODES.md`
-7. `docs/MINIMAL-USB-BOOTSTRAP.md`
-8. `docs/HOST-INDEPENDENCE.md`
-9. `docs/REMOTE-CONTROL.md`
-10. `docs/PHYSICAL-MEDIA.md`
-11. `docs/DEVELOPMENT-WORKFLOW.md`
-12. `docs/SOURCE-MIGRATION.md`
-13. `docs/PROMOTION-GATES.md`
-14. `docs/DECISIONS.md`
+3. `docs/README.md`
+4. `docs/CURRENT-STATE.md`
+5. `docs/ARCHITECTURE.md`
+6. `docs/BUILD-AUTONOMY.md`
+7. `docs/PRODUCT-MODES.md`
+8. `docs/MINIMAL-USB-BOOTSTRAP.md`
+9. `docs/HOST-INDEPENDENCE.md`
+10. `docs/REMOTE-CONTROL.md`
+11. `docs/PHYSICAL-MEDIA.md`
+12. `docs/DEVELOPMENT-WORKFLOW.md`
+13. `docs/SOURCE-MIGRATION.md`
+14. `docs/PROMOTION-GATES.md`
+15. `docs/DECISIONS.md`
 
 Quando um snapshot de estado conflitar com texto historico, `docs/CURRENT-STATE.md` e os contratos arquiteturais canonicos vencem. Para a separacao Owner/Development vs Stable/MVP, `docs/contracts/distribution-profiles.json` e a autoridade machine-readable. Para numero/geometria de particoes, os dois contratos fisicos acima sao a autoridade final porque descrevem artefatos diferentes.
 
 Um snapshot canonico tambem nao pode vencer silenciosamente o proprio source atual. Antes de usar valores correntes como versoes, `releaseMode`, geometria de midia ou estado de uma capacidade, compare `docs/CURRENT-STATE.md` com os manifests/owners e contratos machine-readable correspondentes. Se divergirem, trate a documentacao canonica como defeito a corrigir na mesma mudanca; nao planeje trabalho novo em cima de uma afirmacao obsoleta.
+
+### Ciclo de vida da documentacao
+
+`docs/README.md` e o indice canonico da documentacao e define a hierarquia entre contratos, estado atual, decisoes, guias, planos, evidencias e historico. Nao criar um segundo documento ativo para uma responsabilidade que ja possui owner documental. Quando um documento for substituido, marcar explicitamente o sucessor e retirar o documento antigo da rota de leitura ativa; evidencias historicas permanecem em `docs/evidence/` e nunca viram source authority por envelhecerem bem. Remover ou arquivar somente depois de confirmar que referencias, testes e links nao dependem do caminho antigo.
 
 ### Plano funcional da Surface e dos aplicativos
 

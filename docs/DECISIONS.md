@@ -316,3 +316,35 @@ When the product reaches the MVP/real-user hardening phase, an app may move from
 
 Reason: development speed and production activation safety are separate concerns. A cryptographically valid package can still contain a runtime regression; the signed-slot protocol remains fail-closed without forcing prototype app development through production ceremony.
 
+## ADR-023 - Release-signing custody is provider-neutral and must be rotatable
+
+Decision: the OrdaX release protocol must not permanently depend on one exportable private-key file, one workstation, one GitHub secret or one cloud provider.
+
+The first controlled physical prototype may use the locally generated Ed25519 PEM under the canonical ceremony because it keeps the private material outside Git/USB/CI artifacts and allows the bootstrap/update protocol to be proven without paid infrastructure. This local key is a **prototype signing backend**, not the final production custody model.
+
+Canonical responsibility split:
+
+```text
+GitHub / CI
+ -> source + build + orchestration + short-lived authorization
+
+Signing backend
+ -> local-pem for controlled prototype/development
+ -> managed non-exportable KMS/HSM for later production custody
+
+OrdaX devices
+ -> verify only public trust + signed release metadata
+```
+
+Rules:
+
+- GitHub is not a private-key custodian.
+- The signing API/protocol must remain provider-neutral; changing custody provider must not require changing the device-side release protocol.
+- A managed KMS/HSM backend is deliberately deferred while the project has no budget requirement for it; it is not a blocker for the first controlled physical Stable/MVP proof.
+- The current local PEM must never become the only unrecoverable production authority.
+- A signed trust-transition/rotation protocol is required before broad public distribution.
+- Losing one workstation, one local file, one operational release key or one provider account must not permanently end the ability to publish future trusted updates.
+- Root/recovery policy may later use threshold authorities; its exact provider/topology is a separate decision and must not be hard-coded into the v1 release envelope.
+- End users never receive, back up or manage publisher private keys.
+
+Reason: preserve zero/low-cost prototype velocity now while ensuring the long-term trust architecture can move to non-exportable managed custody and recover from operational key loss without reprovisioning the entire installed population.

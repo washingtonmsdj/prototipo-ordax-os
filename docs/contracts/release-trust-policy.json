@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.release-trust-policy/1",
-  "status": "policy-resolved-key-material-pending",
+  "status": "prototype-key-generated-recovery-pending",
   "scope": "prototype-first-physical-proof",
   "algorithm": "ed25519",
   "canonical_key_id": "ordax-prototype-release-v1",
@@ -43,7 +43,13 @@
       "github-actions-artifacts",
       "logs",
       "chat"
-    ]
+    ],
+    "current_backend": "local-pem",
+    "current_key_role": "controlled-prototype-first-physical-proof",
+    "local_private_key_is_production_single_source_of_truth": false,
+    "managed_non_exportable_backend_deferred": true,
+    "managed_backend_target": "kms-hsm",
+    "github_is_key_custodian": false
   },
   "recovery": {
     "minimum_offline_backups": 1,
@@ -61,10 +67,15 @@
     "prototype_policy": "reprovision-required-until-signed-trust-transition-is-implemented",
     "signed_trust_transition_required_for_production": true,
     "old_key_must_authorize_new_key": true,
-    "production_rotation_implemented": false
+    "production_rotation_implemented": false,
+    "provider_neutral_signing_backend_required": true,
+    "managed_kms_hsm_target": true,
+    "managed_kms_hsm_required_for_first_physical_proof": false,
+    "signed_rotation_required_before_broad_public_distribution": true,
+    "single_lost_key_or_host_must_not_permanently_block_updates": true
   },
   "gates": {
-    "key_material_generated": false,
+    "key_material_generated": true,
     "public_anchor_pinned": false,
     "minimal_bootstrap_resolved": false,
     "physical_authorization_eligible": false

@@ -76,6 +76,24 @@ canal oficial OrdaX
 
 Stable/MVP não usa Git como canal de atualização do usuário.
 
+## 3.1 Custodia de assinatura e evolucao
+
+O primeiro proof fisico Stable/MVP pode usar a chave Ed25519 local criada pela ceremonia canonica, desde que a recuperacao criptografada seja verificada e a chave privada continue fora de Git, USB, Actions artifacts e clientes. Isso e uma solucao de bootstrap/prototipo, nao a custodia definitiva do produto.
+
+A arquitetura de assinatura deve permanecer provider-neutral. O backend local (`local-pem`) e permitido para o prototipo e desenvolvimento; um backend gerenciado com chave nao exportavel em KMS/HSM pode ser adotado depois sem alterar o protocolo de verificacao do dispositivo. GitHub e executor/orquestrador e nao custodiante da chave privada.
+
+```text
+MANAGED_KMS_HSM_REQUIRED_FOR_FIRST_PHYSICAL_PROOF=NO
+LOCAL_PEM_ALLOWED_FOR_CONTROLLED_PROTOTYPE=YES
+PRIVATE_KEY_IN_GIT=NO
+GITHUB_IS_KEY_CUSTODIAN=NO
+SIGNING_BACKEND_PROVIDER_NEUTRAL=YES
+SIGNED_TRUST_ROTATION_REQUIRED_BEFORE_BROAD_PUBLIC_DISTRIBUTION=YES
+SINGLE_LOST_FILE_OR_HOST_MUST_NOT_PERMANENTLY_BLOCK_UPDATES=YES
+```
+
+Antes de distribuicao publica ampla, o OrdaX deve possuir transicao/rotacao de trust assinada e recuperacao redundante suficiente para que a perda de um computador, arquivo ou uma unica chave operacional nao obrigue reprovisionamento em massa. KMS/HSM e uma evolucao de custodia, nao uma dependencia paga obrigatoria para fechar o primeiro proof fisico.
+
 ## 4. Versões de componentes
 
 Não fingir que todos os componentes receberam a mesma versão quando somente um mudou.

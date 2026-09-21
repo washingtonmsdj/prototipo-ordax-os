@@ -1,12 +1,28 @@
 # Canonical Release Trust Ceremony
 
-Status: POLICY RESOLVED — KEY MATERIAL NOT YET GENERATED
+Status: LOCAL KEY GENERATED — RECOVERY PENDING — PUBLIC ANCHOR NOT PINNED
 
 This ceremony exists so the first physical OrdaX prototype can be created without Codex, without committing a private key, and without inventing a CI-only trust anchor.
 
 The repository owns the protocol and policy. The developer owns the canonical private release-signing key. Only the matching public Ed25519 trust anchor may enter Git and the boot payload.
 
 The machine-readable authority for this policy is `docs/contracts/release-trust-policy.json`. If prose and contract diverge, the contract wins.
+
+## Current operator state — 2026-09-21
+
+The eligible toolkit bound to source commit `2172eb6a18430910afd036199ec492ad63dc185d` has completed local steps 1 and 2. The read-only preflight passed, key material was generated locally, independent public derivation matched and the proof signing step succeeded. The public trust file SHA-256 reported by the ceremony is `d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250`.
+
+```text
+TOOLKIT_TRUST_PREFLIGHT=PASS
+CANONICAL_KEY_MATERIAL_GENERATED=YES
+PUBLIC_TRUST_DERIVATION_MATCH=PASS
+PROOF_SIGNATURE_CREATED=YES
+OFFLINE_RECOVERY_VERIFIED=NO
+PUBLIC_ANCHOR_PINNED=NO
+PHYSICAL_WRITE_ALLOWED=NO
+```
+
+No private PEM bytes, private-key hash, backup secret or recovery password are recorded in source. Step 3 remains pending.
 
 ## Boundary
 
@@ -302,6 +318,13 @@ PRIVATE_KEY_IN_CHAT=NO
 
 Never record the private PEM, a seed, private-key bytes or another reversible secret in this evidence.
 
+## Custody evolution after the controlled prototype
+
+The local PEM ceremony is allowed to close the first controlled physical prototype proof without introducing a paid cloud dependency. It is not the intended permanent production custody model.
+
+The release-signing boundary must remain provider-neutral: `local-pem` is the current controlled-prototype backend; a future managed non-exportable KMS/HSM backend may replace operational custody while devices continue verifying the same signed release protocol. GitHub remains source/build/orchestration infrastructure and is not a key custodian.
+
+Before broad public distribution, OrdaX must implement signed trust transition/rotation so loss or retirement of one operational release key does not force mass reprovisioning. The exact future KMS/HSM provider and any threshold Root topology are intentionally not embedded in this ceremony contract.
 ## Recovery
 
 For the prototype, key loss is intentionally fail-closed.
@@ -316,11 +339,12 @@ Silent public-key replacement is forbidden.
 
 Until a signed trust-transition protocol is implemented, prototype key rotation requires reprovisioning. Production rotation will require the currently trusted key to authorize the successor key before the old key is retired.
 
-Therefore, until this ceremony is actually executed:
+Current fail-closed state after local generation but before recovery/public promotion:
 
 ```text
 TRUST_POLICY_RESOLVED=YES
-CANONICAL_KEY_MATERIAL_GENERATED=NO
+CANONICAL_KEY_MATERIAL_GENERATED=YES
+OFFLINE_RECOVERY_VERIFIED=NO
 PUBLIC_ANCHOR_PINNED=NO
 BOOTSTRAP_RELEASE_TRUST_RESOLVED=NO
 PHYSICAL_WRITE_ALLOWED=NO
