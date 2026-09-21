@@ -136,6 +136,22 @@ class PortableActivationStateHelperTests(unittest.TestCase):
         self.assertFalse((activation / "rejected").exists())
         self.assertEqual((activation / "candidate").read_text().strip(), NEXT)
 
+    def test_orphan_candidate_without_transaction_has_no_boot_authority(self):
+        state, portable, activation = self.fixture()
+
+        # Model power loss after durable transaction removal but before the
+        # advisory candidate file is removed.
+        (activation / "candidate").write_text(NEW + "\n", encoding="ascii")
+
+        selected = self.run_helper("select-boot", state, portable)
+        self.assertEqual(selected.stdout.strip(), f"current {OLD}")
+        self.assertEqual((activation / "candidate").read_text().strip(), NEW)
+
+        # The next different candidate arm cleans the harmless orphan first.
+        prepared = self.run_helper("prepare", state, portable, NEXT)
+        self.assertEqual(prepared.stdout.strip(), NEXT)
+        self.assertEqual((activation / "candidate").read_text().strip(), NEXT)
+
     def test_successful_candidate_commit_rotates_known_good(self):
         state, portable, activation = self.fixture()
 
