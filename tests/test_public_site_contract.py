@@ -131,8 +131,8 @@ class PublicSiteContractTests(unittest.TestCase):
         landing = (SITE / "index.html").read_text(encoding="utf-8")
         for href in ("/download/", "/login/", "/cadastro/", "/licencas/"):
             self.assertIn(f'href="{href}"', landing)
-        self.assertIn("Protótipo em desenvolvimento", landing)
-        self.assertIn("Downloads públicos aparecem somente", landing)
+        self.assertIn("Em desenvolvimento", landing)
+        self.assertIn("Login e downloads dependem da disponibilidade pública", landing)
         self.assertIn("Stable/MVP", landing)
         self.assertIn("OrdaX Creator", landing)
         self.assertIn("diretamente pelo pendrive", landing)
@@ -148,6 +148,28 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertNotIn('data-page="conta"', landing)
         self.assertNotIn("Área da conta", landing)
 
+
+    def test_interactive_playground_remains_local_disposable_marketing_demo(self):
+        landing = (SITE / "index.html").read_text(encoding="utf-8")
+        script = (SITE / "assets" / "playground.js").read_text(encoding="utf-8")
+
+        self.assertIn('id="experimente"', landing)
+        self.assertIn("A demonstração usa dados de exemplo", landing)
+        self.assertIn("Simulação local nesta página", landing)
+        self.assertIn("Ao sair, as alterações são descartadas", landing)
+
+        self.assertIn("Public marketing simulation only", script)
+        self.assertIn("No product imports, persistence, network or identity", script)
+        for forbidden in (
+            "fetch(",
+            "XMLHttpRequest",
+            "WebSocket",
+            "localStorage",
+            "sessionStorage",
+            "indexedDB",
+            "document.cookie",
+        ):
+            self.assertNotIn(forbidden, script)
 
 if __name__ == "__main__":
     unittest.main()
