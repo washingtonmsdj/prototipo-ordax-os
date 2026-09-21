@@ -7,7 +7,8 @@ on:
       - 'bootstrap/trust/**'
       - 'docs/contracts/minimal-bootstrap.json'
       - 'docs/contracts/release-trust-policy.json'
-      - 'docs/contracts/physical-media.json'
+      - 'docs/contracts/portable-usb-v2.json'
+      - 'docs/contracts/creator-portable-media-plan.json'
       - 'docs/contracts/physical-write-authorization.json'
       - 'tools/creator/physical_promotion.py'
       - 'tools/creator/assemble.py'
@@ -46,7 +47,9 @@ jobs:
           ready="$(python - "$status" <<'PY'
           import json, pathlib, sys
           data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
-          assert data['$schema'] == 'prototype-ordax.physical-promotion-status/1'
+          assert data['$schema'] == 'prototype-ordax.physical-promotion-status/2'
+          assert data['legacy_physical_media_contract_authoritative'] is False
+          assert data['portable_layout_authority'] == 'tools/creator/core/portable_media.go'
           assert data['consumer_key_setup_required'] is False
           assert data['development_channel_can_authorize_write'] is False
           assert isinstance(data['release_sequence'], int) and data['release_sequence'] > 0

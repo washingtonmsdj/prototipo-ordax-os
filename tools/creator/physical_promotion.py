@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate the canonical gates required before a destructive Creator payload may exist."""
+"""Evaluate the canonical gates required before a destructive Portable Creator payload may exist."""
 
 from __future__ import annotations
 
@@ -11,14 +11,34 @@ from pathlib import Path
 import re
 from typing import Any
 
-AUTH_SCHEMA = "prototype-ordax.physical-write-authorization/1"
+AUTH_SCHEMA = "prototype-ordax.physical-write-authorization/2"
 MINIMAL_SCHEMA = "prototype-ordax.minimal-bootstrap/4"
 TRUST_POLICY_SCHEMA = "prototype-ordax.release-trust-policy/1"
 TRUST_SCHEMA = "prototype-ordax.release-trust/1"
-MEDIA_SCHEMA = "prototype-ordax.physical-media/1"
+PORTABLE_USB_SCHEMA = "prototype-ordax.portable-usb-v2/1"
+CREATOR_PORTABLE_SCHEMA = "prototype-ordax.creator-portable-media-plan/1"
 KEY_ID = "ordax-prototype-release-v1"
 REPOSITORY = "washingtonmsdj/prototipo-ordax-os"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
+
+REQUIRED_AUTHORIZATION_REQUIREMENTS = {
+    "canonical_public_trust_pinned",
+    "minimal_bootstrap_all_artifacts_resolved",
+    "minimal_bootstrap_remains_non_destructive",
+    "portable_usb_contract_canonical",
+    "creator_portable_media_policy_canonical",
+    "disposable_portable_media_proof_required",
+    "portable_physical_writer_implemented",
+    "writer_binds_portable_media_plan_sha256",
+    "writer_binds_generated_media_sha256_and_size",
+    "writer_binds_public_trust_sha256",
+    "writer_requires_exact_15_artifact_readback",
+    "signed_release_sequence_must_never_decrease",
+    "live_usb_reenumeration_required",
+    "end_user_destructive_confirmation_required",
+    "windows_uac_required",
+    "post_write_readback_required",
+}
 
 
 class PromotionError(RuntimeError):
@@ -57,18 +77,109 @@ def _add(blockers: list[str], condition: bool, label: str) -> None:
         blockers.append(label)
 
 
+def _portable_contract_ok(portable: dict[str, Any]) -> bool:
+    partitions = portable.get("partitions")
+    if not isinstance(partitions, list) or len(partitions) != 2:
+        return False
+    esp, data = partitions
+    internal = portable.get("ordax_internal_layout")
+    if not isinstance(internal, dict):
+        return False
+    state = internal.get("persistent_state_image")
+    activation = internal.get("activation_state")
+    return all(
+        [
+            portable.get("$schema") == PORTABLE_USB_SCHEMA,
+            portable.get("product_scope") == "mvp-usb-durable-storage-target",
+            portable.get("physical_write_authorized") is False,
+            portable.get("physical_device_paths_allowed") is False,
+            portable.get("logical_sector_bytes") == 512,
+            portable.get("alignment_bytes") == 1048576,
+            isinstance(esp, dict),
+            esp.get("index") == 1,
+            esp.get("name") == "ORDAX-ESP",
+            esp.get("filesystem") == "fat32",
+            esp.get("filesystem_label") == "ORDAX-ESP",
+            esp.get("start_lba") == 2048,
+            esp.get("size_bytes") == 536870912,
+            isinstance(data, dict),
+            data.get("index") == 2,
+            data.get("name") == "ORDAX-DATA",
+            data.get("filesystem") == "exfat",
+            data.get("filesystem_label") == "ORDAX-DATA",
+            data.get("size_policy") == "fill-all-remaining-usable-capacity",
+            data.get("windows_visible") is True,
+            data.get("direct_overlayfs_upper") is False,
+            isinstance(state, dict),
+            state.get("path") == ".ordax/state/persistent-state.img",
+            state.get("filesystem") == "ext4",
+            state.get("filesystem_label") == "ORDAX-STATE",
+            state.get("mounted_through_loop_device_in_runtime") is True,
+            state.get("overlayfs_upper_owner") is True,
+            isinstance(activation, dict),
+            activation.get("not_stored_directly_on_exfat") is True,
+        ]
+    )
+
+
+def _creator_portable_contract_ok(contract: dict[str, Any]) -> bool:
+    application = contract.get("application_planner")
+    runtime = contract.get("surface_runtime_preseed")
+    return all(
+        [
+            contract.get("$schema") == CREATOR_PORTABLE_SCHEMA,
+            contract.get("product_scope") == "stable-mvp-usb-only",
+            contract.get("artifact_count") == 15,
+            contract.get("partitions") == ["ORDAX-ESP", "ORDAX-DATA"],
+            contract.get("physical_write_authorized") is False,
+            contract.get("physical_device_paths_allowed") is False,
+            contract.get("disposable_materializer_implemented") is True,
+            contract.get("disposable_materializer_physical_device_allowed") is False,
+            contract.get("disposable_materializer_readback_verification") is True,
+            isinstance(application, dict),
+            application.get("implemented") is True,
+            application.get("consumes_exact_media_plan") is True,
+            application.get("canonical_media_plan_sha256_bound") is True,
+            application.get("host_neutral") is True,
+            application.get("physical_device_bound") is False,
+            application.get("physical_write_authorized") is False,
+            application.get("public_promotion_allowed") is False,
+            application.get("whole_disk_raw_image_required") is False,
+            application.get("ordered_phases")
+            == [
+                "write-exact-two-partition-gpt",
+                "format-ORDAX-ESP-fat32",
+                "format-ORDAX-DATA-exfat",
+                "materialize-15-exact-artifacts",
+                "flush-and-sync",
+                "readback-sha256-and-size-for-15-artifacts",
+                "verify-gpt-filesystems-labels-and-capacity",
+            ],
+            isinstance(runtime, dict),
+            runtime.get("implemented") is True,
+            runtime.get("image_artifact_id") == "surface-runtime-image",
+            runtime.get("reference_artifact_id") == "surface-runtime-ref",
+            runtime.get("content_addressed") is True,
+            runtime.get("release_manifest_schema") == "prototype-ordax.release-manifest/3",
+            runtime.get("physical_write_authorized") is False,
+        ]
+    )
+
+
 def evaluate(repo_root: Path) -> dict[str, Any]:
     root = repo_root.resolve()
     auth_path = root / "docs/contracts/physical-write-authorization.json"
     minimal_path = root / "docs/contracts/minimal-bootstrap.json"
     policy_path = root / "docs/contracts/release-trust-policy.json"
-    media_path = root / "docs/contracts/physical-media.json"
+    portable_path = root / "docs/contracts/portable-usb-v2.json"
+    creator_portable_path = root / "docs/contracts/creator-portable-media-plan.json"
     trust_path = root / "bootstrap/trust/release-ed25519.json"
 
     auth = load_json(auth_path)
     minimal = load_json(minimal_path)
     policy = load_json(policy_path)
-    media = load_json(media_path)
+    portable = load_json(portable_path)
+    creator_portable = load_json(creator_portable_path)
     blockers: list[str] = []
 
     _add(blockers, auth.get("$schema") == AUTH_SCHEMA, "authorization-schema-invalid")
@@ -82,40 +193,25 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
     _add(blockers, sequence_ok, "physical-release-sequence-invalid")
     _add(blockers, minimal.get("$schema") == MINIMAL_SCHEMA, "minimal-bootstrap-schema-invalid")
     _add(blockers, policy.get("$schema") == TRUST_POLICY_SCHEMA, "release-trust-policy-schema-invalid")
-    _add(blockers, media.get("$schema") == MEDIA_SCHEMA, "physical-media-schema-invalid")
+    _add(blockers, _portable_contract_ok(portable), "portable-usb-contract-invalid")
+    _add(
+        blockers,
+        _creator_portable_contract_ok(creator_portable),
+        "creator-portable-media-contract-invalid",
+    )
+    _add(
+        blockers,
+        creator_portable.get("physical_writer_v2_implemented") is True,
+        "portable-physical-writer-not-implemented",
+    )
 
     requirements = auth.get("requirements")
-    requirements_ok = isinstance(requirements, dict) and all(
-        requirements.get(name) is True
-        for name in (
-            "canonical_public_trust_pinned",
-            "minimal_bootstrap_all_artifacts_resolved",
-            "minimal_bootstrap_remains_non_destructive",
-            "disposable_media_proof_required",
-            "writer_binds_generated_seed_sha256_and_size",
-            "writer_binds_manifest_sha256",
-            "writer_binds_public_trust_sha256",
-            "signed_release_sequence_must_never_decrease",
-            "live_usb_reenumeration_required",
-            "end_user_destructive_confirmation_required",
-            "windows_uac_required",
-            "post_write_readback_required",
-        )
+    requirements_ok = (
+        isinstance(requirements, dict)
+        and set(requirements) == REQUIRED_AUTHORIZATION_REQUIREMENTS
+        and all(requirements.get(name) is True for name in REQUIRED_AUTHORIZATION_REQUIREMENTS)
     )
     _add(blockers, requirements_ok, "physical-authorization-requirements-invalid")
-
-    partitions = media.get("partitions")
-    geometry_ok = (
-        isinstance(partitions, list)
-        and len(partitions) == 2
-        and partitions[0].get("name") == "ORDAX-ESP"
-        and partitions[0].get("filesystem") == "fat32"
-        and partitions[1].get("name") == "ORDAX"
-        and partitions[1].get("filesystem") == "ext4"
-        and media.get("partition_table") == "gpt"
-        and media.get("physical_write_allowed") is False
-    )
-    _add(blockers, geometry_ok, "physical-media-proof-contract-weakened")
 
     consumer = policy.get("consumer_creator")
     consumer_ok = isinstance(consumer, dict) and all(
@@ -175,7 +271,11 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
     _add(blockers, trust_valid, "canonical-public-trust-missing-or-invalid")
 
     if isinstance(groups, list) and trust_valid:
-        trust_groups = [group for group in groups if isinstance(group, dict) and group.get("id") == "bootstrap-release-trust"]
+        trust_groups = [
+            group
+            for group in groups
+            if isinstance(group, dict) and group.get("id") == "bootstrap-release-trust"
+        ]
         trust_group_ok = False
         if len(trust_groups) == 1:
             artifacts = trust_groups[0].get("artifacts")
@@ -189,7 +289,8 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
         _add(blockers, trust_group_ok, "minimal-bootstrap-trust-binding-invalid")
 
     minimal_sha = sha256_file(minimal_path)
-    media_sha = sha256_file(media_path)
+    portable_sha = sha256_file(portable_path)
+    creator_portable_sha = sha256_file(creator_portable_path)
     authorization_enabled = (
         auth.get("status") == "authorized"
         and auth.get("physical_write_allowed") is True
@@ -200,28 +301,37 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
     bindings = auth.get("bindings")
     bindings_ok = False
     if isinstance(bindings, dict) and authorization_enabled and trust_sha is not None:
+        expected_bindings = {
+            "minimal_bootstrap_sha256": minimal_sha,
+            "release_trust_sha256": trust_sha,
+            "portable_usb_contract_sha256": portable_sha,
+            "creator_portable_media_contract_sha256": creator_portable_sha,
+        }
         bindings_ok = (
-            HEX64.fullmatch(str(bindings.get("minimal_bootstrap_sha256", ""))) is not None
-            and bindings.get("minimal_bootstrap_sha256") == minimal_sha
-            and HEX64.fullmatch(str(bindings.get("release_trust_sha256", ""))) is not None
-            and bindings.get("release_trust_sha256") == trust_sha
-            and HEX64.fullmatch(str(bindings.get("physical_media_sha256", ""))) is not None
-            and bindings.get("physical_media_sha256") == media_sha
+            set(bindings) == set(expected_bindings)
+            and all(
+                HEX64.fullmatch(str(bindings.get(name, ""))) is not None
+                and bindings.get(name) == value
+                for name, value in expected_bindings.items()
+            )
         )
     _add(blockers, bindings_ok, "physical-authorization-bindings-unresolved")
 
     blockers = sorted(set(blockers))
     return {
-        "$schema": "prototype-ordax.physical-promotion-status/1",
+        "$schema": "prototype-ordax.physical-promotion-status/2",
         "status": "ready" if not blockers else "blocked",
         "ready": not blockers,
         "blockers": blockers,
         "computed_bindings": {
             "minimal_bootstrap_sha256": minimal_sha,
             "release_trust_sha256": trust_sha,
-            "physical_media_sha256": media_sha,
+            "portable_usb_contract_sha256": portable_sha,
+            "creator_portable_media_contract_sha256": creator_portable_sha,
         },
         "release_sequence": release_sequence if sequence_ok else None,
+        "portable_layout_authority": "tools/creator/core/portable_media.go",
+        "legacy_physical_media_contract_authoritative": False,
         "consumer_key_setup_required": False,
         "development_channel_can_authorize_write": False,
     }

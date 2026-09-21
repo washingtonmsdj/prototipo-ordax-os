@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regress separation between payload description and destructive authorization."""
+"""Regress separation between Portable layout policy and destructive authorization."""
 
 import base64
 import hashlib
@@ -45,7 +45,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             "artifact_groups": [
                 {
                     "id": "bootstrap-release-trust",
-                    "partition": "ORDAX",
+                    "partition": "ORDAX-ESP",
                     "source_owner": "bootstrap/trust",
                     "resolved": True,
                     "artifacts": [
@@ -64,17 +64,87 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         minimal_path = root / "docs/contracts/minimal-bootstrap.json"
         write_json(minimal_path, minimal)
 
-        media = {
-            "$schema": "prototype-ordax.physical-media/1",
-            "physical_write_allowed": False,
-            "partition_table": "gpt",
+        portable = {
+            "$schema": "prototype-ordax.portable-usb-v2/1",
+            "product_scope": "mvp-usb-durable-storage-target",
+            "physical_write_authorized": False,
+            "physical_device_paths_allowed": False,
+            "logical_sector_bytes": 512,
+            "alignment_bytes": 1048576,
             "partitions": [
-                {"name": "ORDAX-ESP", "filesystem": "fat32"},
-                {"name": "ORDAX", "filesystem": "ext4"},
+                {
+                    "index": 1,
+                    "name": "ORDAX-ESP",
+                    "filesystem": "fat32",
+                    "filesystem_label": "ORDAX-ESP",
+                    "start_lba": 2048,
+                    "size_bytes": 536870912,
+                },
+                {
+                    "index": 2,
+                    "name": "ORDAX-DATA",
+                    "filesystem": "exfat",
+                    "filesystem_label": "ORDAX-DATA",
+                    "size_policy": "fill-all-remaining-usable-capacity",
+                    "windows_visible": True,
+                    "direct_overlayfs_upper": False,
+                },
             ],
+            "ordax_internal_layout": {
+                "persistent_state_image": {
+                    "path": ".ordax/state/persistent-state.img",
+                    "filesystem": "ext4",
+                    "filesystem_label": "ORDAX-STATE",
+                    "mounted_through_loop_device_in_runtime": True,
+                    "overlayfs_upper_owner": True,
+                },
+                "activation_state": {"not_stored_directly_on_exfat": True},
+            },
         }
-        media_path = root / "docs/contracts/physical-media.json"
-        write_json(media_path, media)
+        portable_path = root / "docs/contracts/portable-usb-v2.json"
+        write_json(portable_path, portable)
+
+        creator_portable = {
+            "$schema": "prototype-ordax.creator-portable-media-plan/1",
+            "product_scope": "stable-mvp-usb-only",
+            "artifact_count": 15,
+            "partitions": ["ORDAX-ESP", "ORDAX-DATA"],
+            "physical_write_authorized": False,
+            "physical_device_paths_allowed": False,
+            "disposable_materializer_implemented": True,
+            "disposable_materializer_physical_device_allowed": False,
+            "disposable_materializer_readback_verification": True,
+            "physical_writer_v2_implemented": True,
+            "application_planner": {
+                "implemented": True,
+                "consumes_exact_media_plan": True,
+                "canonical_media_plan_sha256_bound": True,
+                "host_neutral": True,
+                "physical_device_bound": False,
+                "physical_write_authorized": False,
+                "public_promotion_allowed": False,
+                "whole_disk_raw_image_required": False,
+                "ordered_phases": [
+                    "write-exact-two-partition-gpt",
+                    "format-ORDAX-ESP-fat32",
+                    "format-ORDAX-DATA-exfat",
+                    "materialize-15-exact-artifacts",
+                    "flush-and-sync",
+                    "readback-sha256-and-size-for-15-artifacts",
+                    "verify-gpt-filesystems-labels-and-capacity",
+                ],
+            },
+            "surface_runtime_preseed": {
+                "implemented": True,
+                "image_artifact_id": "surface-runtime-image",
+                "reference_artifact_id": "surface-runtime-ref",
+                "content_addressed": True,
+                "release_manifest_schema": "prototype-ordax.release-manifest/3",
+                "physical_write_authorized": False,
+            },
+        }
+        creator_path = root / "docs/contracts/creator-portable-media-plan.json"
+        write_json(creator_path, creator_portable)
 
         policy = {
             "$schema": "prototype-ordax.release-trust-policy/1",
@@ -94,61 +164,96 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         }
         write_json(root / "docs/contracts/release-trust-policy.json", policy)
 
-        requirements = {
-            "canonical_public_trust_pinned": True,
-            "minimal_bootstrap_all_artifacts_resolved": True,
-            "minimal_bootstrap_remains_non_destructive": True,
-            "disposable_media_proof_required": True,
-            "writer_binds_generated_seed_sha256_and_size": True,
-            "writer_binds_manifest_sha256": True,
-            "writer_binds_public_trust_sha256": True,
-            "signed_release_sequence_must_never_decrease": True,
-            "live_usb_reenumeration_required": True,
-            "end_user_destructive_confirmation_required": True,
-            "windows_uac_required": True,
-            "post_write_readback_required": True,
-        }
         auth = {
-            "$schema": "prototype-ordax.physical-write-authorization/1",
+            "$schema": "prototype-ordax.physical-write-authorization/2",
             "status": "authorized",
             "physical_write_allowed": True,
             "explicit_owner_authorization": True,
             "source_repository": "washingtonmsdj/prototipo-ordax-os",
             "release_sequence": 1,
-            "requirements": requirements,
+            "requirements": {
+                name: True
+                for name in promotion.REQUIRED_AUTHORIZATION_REQUIREMENTS
+            },
             "bindings": {
                 "minimal_bootstrap_sha256": sha256(minimal_path),
                 "release_trust_sha256": trust_sha,
-                "physical_media_sha256": sha256(media_path),
+                "portable_usb_contract_sha256": sha256(portable_path),
+                "creator_portable_media_contract_sha256": sha256(creator_path),
             },
         }
         write_json(root / "docs/contracts/physical-write-authorization.json", auth)
 
-    def test_ready_promotion_keeps_payload_manifest_non_destructive(self):
+    def test_ready_promotion_uses_only_portable_layout_authority(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.make_ready_fixture(root)
-
             status = promotion.evaluate(root)
-
             self.assertTrue(status["ready"], status["blockers"])
-            minimal = json.loads(
-                (root / "docs/contracts/minimal-bootstrap.json").read_text(encoding="utf-8")
+            self.assertEqual(
+                status["portable_layout_authority"],
+                "tools/creator/core/portable_media.go",
             )
-            self.assertFalse(minimal["physical_write_allowed"])
+            self.assertFalse(status["legacy_physical_media_contract_authoritative"])
+            self.assertEqual(
+                set(status["computed_bindings"]),
+                {
+                    "minimal_bootstrap_sha256",
+                    "release_trust_sha256",
+                    "portable_usb_contract_sha256",
+                    "creator_portable_media_contract_sha256",
+                },
+            )
+
+    def test_legacy_ordax_ext4_contract_cannot_satisfy_portable_gate(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            portable_path = root / "docs/contracts/portable-usb-v2.json"
+            auth_path = root / "docs/contracts/physical-write-authorization.json"
+            portable = json.loads(portable_path.read_text(encoding="utf-8"))
+            portable["partitions"][1] = {
+                "index": 2,
+                "name": "ORDAX",
+                "filesystem": "ext4",
+                "filesystem_label": "ORDAX",
+                "size_policy": "fill-all-remaining-usable-capacity",
+                "windows_visible": False,
+                "direct_overlayfs_upper": True,
+            }
+            write_json(portable_path, portable)
+            auth = json.loads(auth_path.read_text(encoding="utf-8"))
+            auth["bindings"]["portable_usb_contract_sha256"] = sha256(portable_path)
+            write_json(auth_path, auth)
+            status = promotion.evaluate(root)
+            self.assertFalse(status["ready"])
+            self.assertIn("portable-usb-contract-invalid", status["blockers"])
+
+    def test_portable_writer_must_be_implemented_before_authorization(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            creator_path = root / "docs/contracts/creator-portable-media-plan.json"
+            auth_path = root / "docs/contracts/physical-write-authorization.json"
+            creator = json.loads(creator_path.read_text(encoding="utf-8"))
+            creator["physical_writer_v2_implemented"] = False
+            write_json(creator_path, creator)
+            auth = json.loads(auth_path.read_text(encoding="utf-8"))
+            auth["bindings"]["creator_portable_media_contract_sha256"] = sha256(creator_path)
+            write_json(auth_path, auth)
+            status = promotion.evaluate(root)
+            self.assertFalse(status["ready"])
+            self.assertIn("portable-physical-writer-not-implemented", status["blockers"])
 
     def test_trust_policy_rejects_duplicate_destructive_authority(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.make_ready_fixture(root)
             policy_path = root / "docs/contracts/release-trust-policy.json"
-
             policy = json.loads(policy_path.read_text(encoding="utf-8"))
             policy["gates"]["physical_write_allowed"] = False
             write_json(policy_path, policy)
-
             status = promotion.evaluate(root)
-
             self.assertFalse(status["ready"])
             self.assertIn(
                 "release-trust-policy-gates-not-authorized",
@@ -161,17 +266,13 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             self.make_ready_fixture(root)
             minimal_path = root / "docs/contracts/minimal-bootstrap.json"
             auth_path = root / "docs/contracts/physical-write-authorization.json"
-
             minimal = json.loads(minimal_path.read_text(encoding="utf-8"))
             minimal["physical_write_allowed"] = True
             write_json(minimal_path, minimal)
-
             auth = json.loads(auth_path.read_text(encoding="utf-8"))
             auth["bindings"]["minimal_bootstrap_sha256"] = sha256(minimal_path)
             write_json(auth_path, auth)
-
             status = promotion.evaluate(root)
-
             self.assertFalse(status["ready"])
             self.assertIn(
                 "minimal-bootstrap-must-remain-non-destructive",
