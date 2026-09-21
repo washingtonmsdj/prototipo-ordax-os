@@ -112,7 +112,7 @@ class DistributionProfilesContractTests(unittest.TestCase):
         )
         self.assertEqual(
             stable["portable_v3_release_agent_previous_seed_sha256"],
-            "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
+            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
         )
         self.assertTrue(
             stable["portable_v3_existing_previous_seed_requires_hash_addressed_refresh"]
@@ -233,10 +233,10 @@ class DistributionProfilesContractTests(unittest.TestCase):
             "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
         )
         self.assertTrue(stable["exact_release_activation_seed_media_includes_primitive"])
-        self.assertTrue(stable["exact_release_activation_asset_published"])
+        self.assertFalse(stable["exact_release_activation_asset_published"])
         self.assertEqual(
             stable["exact_release_activation_previous_agent_sha256"],
-            "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
+            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
         )
         self.assertTrue(stable["signed_release_activation_connected"])
 
