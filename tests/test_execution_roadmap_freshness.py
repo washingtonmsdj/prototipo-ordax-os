@@ -35,6 +35,13 @@ class ExecutionRoadmapFreshnessTests(unittest.TestCase):
         self.assertIn("PORTABLE_PHYSICAL_USB_BOOT=NO", roadmap)
         self.assertIn("PUBLIC_PHYSICAL_APPLY=NO", roadmap)
 
+    def test_roadmap_tracks_structured_surface_smoke_finalization(self):
+        roadmap = ROADMAP.read_text(encoding="utf-8")
+        self.assertIn("`tour-template`", roadmap)
+        self.assertIn("`finalize` fail-closed", roadmap)
+        self.assertIn("`final.json` tiver `FAIL=0`", roadmap)
+        self.assertIn("comparação stale/editada", roadmap)
+
     def test_historical_blockers_cannot_return_as_current_priorities(self):
         roadmap = ROADMAP.read_text(encoding="utf-8")
         for stale in (

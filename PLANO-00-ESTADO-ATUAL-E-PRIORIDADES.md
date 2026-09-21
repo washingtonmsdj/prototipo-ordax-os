@@ -47,7 +47,7 @@ Provedor real de identidade, transporte autenticado, isolamento por conta, perfi
 
 ### Surface e prova física
 
-O harness read-only do smoke integrado existe no source e a comparação baseline/pós-tour da mesma sessão técnica é fail-closed. Isso melhora a qualidade da evidência, mas não converte execução pendente em PASS físico.
+O harness read-only do smoke integrado existe no source com coleta baseline/pós-tour, checklist machine-readable gerado por `tour-template` e `finalize` fail-closed que recalcula a comparação e exige os 10 itens do tour em PASS. Isso melhora a qualidade da evidência, mas não converte execução pendente em PASS físico.
 
 Estados canônicos que permanecem explícitos em `docs/PROMOTION-GATES.md`:
 
@@ -91,7 +91,7 @@ As provas baseline de QEMU direto e UEFI/OVMF reduzem o risco do boot candidato,
 
 ### P0 — smoke físico da Surface
 
-Executar o runbook source-controlled no notebook em uma única sessão técnica, produzindo baseline, tour funcional e pós-tour, e comparar as evidências com o comparador fail-closed já integrado. Não preencher manualmente PASS que não veio do harness.
+Executar o runbook source-controlled no notebook em uma única sessão técnica: gerar `tour.json` via `tour-template`, coletar baseline, realizar o tour funcional, coletar pós-tour, gerar `comparison.json` e encerrar com `finalize`. A sessão só pode ser promovida quando `final.json` tiver `FAIL=0`; não preencher manualmente PASS fora do checklist estruturado nem reutilizar comparação stale/editada.
 
 ### P1 — lacunas locais reais, sem expandir produto prematuramente
 
