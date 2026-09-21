@@ -58,7 +58,7 @@ class CurrentExecutionRoadmapTests(unittest.TestCase):
             "MVP_SURFACE_SMOKE_HARNESS": "PASS_SOURCE",
             "MVP_SURFACE_SMOKE_PHYSICAL": "PENDING",
             "CANONICAL_STABLE_GRAPHICAL_MODE": "PENDING",
-            "CANONICAL_RELEASE_TRUST": "PENDING_PUBLIC_ANCHOR",
+            "CANONICAL_RELEASE_TRUST": "PENDING_EXTERNAL_BACKUP_AND_PUBLIC_ANCHOR",
             "PUBLIC_PHYSICAL_APPLY": "NO",
         }
         for key, value in expected.items():
