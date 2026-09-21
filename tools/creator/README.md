@@ -103,7 +103,7 @@ ORDAX-DATA  exFAT
   .ordax/state/persistent-state.img
 ```
 
-The Creator Core already owns the v2 geometry through `PlanPortableTargetStorage`. Physical v2 apply remains disabled until the prepared-media proof, UEFI/QEMU gate, canonical trust and physical USB gates all pass.
+The Creator Core already owns the v2 geometry through `PlanPortableTargetStorage` and the final 35-operation application plan. Physical v2 apply remains disabled until the disposable Portable media/runtime-v3 QEMU+UEFI proofs, canonical trust, fresh Stable/MVP owner authorization and physical USB gates close in order.
 
 ## Release bootstrap inputs
 
@@ -134,15 +134,15 @@ TARGET_REENUMERATION=IMPLEMENTED
 DESTRUCTIVE_CONFIRMATION_UI=IMPLEMENTED
 WINDOWS_UAC_HANDOFF=IMPLEMENTED
 RAW_DISK_BACKEND=IMPLEMENTED_BUILD_TAGGED
-PREPARE_EXACT_TARGET_IMAGE=IMPLEMENTED_GATED
+PORTABLE_APPLICATION_PLAN=IMPLEMENTED_35_OPERATIONS
 PHYSICAL_APPLY_FLOW=IMPLEMENTED_GATED
 POST_WRITE_READBACK=IMPLEMENTED_GATED
 PHYSICAL_SIGNED_CHANNEL=IMPLEMENTED
 OFFLINE_LAST_KNOWN_GOOD_PHYSICAL_BACKEND=IMPLEMENTED
 CREATOR_DEV_CHANNEL=READ_ONLY
-EXPLICIT_OWNER_AUTHORIZATION_FIRST_USB=RECORDED
+EXPLICIT_OWNER_AUTHORIZATION_STABLE_MVP=NO
 CANONICAL_RELEASE_TRUST=PENDING
-AUTHORIZED_PHYSICAL_CANDIDATE=PENDING_CANONICAL_TRUST
+AUTHORIZED_PHYSICAL_CANDIDATE=PENDING_CANONICAL_TRUST_AND_OWNER_AUTHORIZATION
 PHYSICAL_USB_WRITE=BLOCKED_UNTIL_PROMOTION_GATES_PASS
 NATIVE_INSTALL_GEOMETRY_PLAN=IMPLEMENTED
 NATIVE_INSTALL_PLAN=IMPLEMENTED_NON_DESTRUCTIVE
@@ -161,21 +161,42 @@ NATIVE_INSTALL_FOUNDATION_PHASE=POST_MVP
 
 The development `OrdaX-Creator.exe` is intentionally useful for the graphical workflow, automatic development updates and safe USB discovery, but it cannot acquire a raw writer because its physical trust binding is unresolved. This separation prevents an ordinary development build from becoming destructive by accident.
 
-The final physical flow is already wired:
+The final Portable physical flow is implemented behind the isolated tagged/publisher boundary, but it is not yet a public Creator capability:
 
 ```text
-OrdaX-Creator.exe
- -> refresh signed physical channel
- -> select verified USB target
- -> explicit destructive confirmation
- -> prepare exact-size GPT image
+canonical public trust
+ -> exact Portable policy bindings
+ -> fresh Stable/MVP owner authorization contract
+ -> signed physical channel
+ -> select and revalidate exact USB target
+ -> target-specific destructive confirmation
  -> Windows UAC elevation
- -> raw write to the reverified target only
- -> flush + byte-complete readback verification
- -> success / fail-closed result in the GUI
+ -> write exact two-partition GPT
+ -> format ORDAX-ESP FAT32 + ORDAX-DATA exFAT
+ -> materialize 15 exact artifacts
+ -> flush + per-artifact SHA-256/size readback
+ -> verify final geometry, labels and capacity
+ -> success / fail-closed result
 ```
 
-Canonical publisher trust and the purpose-bound signed physical release must be completed before that flow is enabled for the first real USB.
+There is no target-sized whole-disk RAW image in this final path. Canonical publisher trust must be pinned first; only then may the repository owner deliberately record a **new Stable/MVP-specific authorization**. The old first-USB development consent is not reusable.
+
+Read-only authorization preflight:
+
+```text
+python tools/creator/authorize_physical_write.py check
+```
+
+The future authorization mode changes only the source-controlled authorization contract; it does not touch a physical device or invoke the writer. It requires the exact scope, release sequence and confirmation phrase:
+
+```text
+python tools/creator/authorize_physical_write.py authorize \
+  --confirm-scope first-real-stable-mvp-usb-proof \
+  --confirm-release-sequence <current-sequence> \
+  --authorize AUTHORIZE_FIRST_REAL_STABLE_MVP_USB_PROOF
+```
+
+Do not run `authorize` until the repository owner has explicitly chosen to authorize that exact Stable/MVP physical proof. Candidate materialization and the later target-specific destructive confirmation remain separate gates.
 
 Examples for non-destructive engineering verification:
 
