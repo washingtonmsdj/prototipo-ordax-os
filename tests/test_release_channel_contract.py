@@ -122,6 +122,35 @@ class ReleaseChannelContractTest(unittest.TestCase):
         self.assertTrue(transaction["known_good_preserved"])
         self.assertFalse(transaction["reboot_requested"])
 
+    def test_portable_runtime_activation_is_signed_one_shot_and_offline_rollback(self):
+        activation = CONTRACT["portable_runtime_activation"]
+        self.assertEqual(activation["profile"], "stable-mvp")
+        self.assertEqual(activation["runtime_layout"], "portable-v2")
+        self.assertEqual(activation["discovery_command"], "ordax-release-agent inspect")
+        self.assertEqual(
+            activation["materialization_command"],
+            "ordax-release-agent materialize-portable-v3",
+        )
+        self.assertEqual(
+            activation["exact_verification_command"],
+            "ordax-release-agent verify-portable-v3-exact",
+        )
+        self.assertEqual(activation["activation_state_helper"], "ordax-portable-state")
+        self.assertEqual(
+            activation["activation_state_root"],
+            "/state/ordax/portable-release",
+        )
+        self.assertEqual(activation["portable_root"], "/ordax-data/.ordax")
+        self.assertEqual(activation["candidate_policy"], "armed-one-shot-boot")
+        self.assertTrue(activation["candidate_reboot_required"])
+        self.assertTrue(activation["candidate_cold_health_required"])
+        self.assertTrue(activation["commit_after_cold_health"])
+        self.assertTrue(activation["failed_candidate_persisted"])
+        self.assertFalse(activation["same_failed_candidate_retried"])
+        self.assertFalse(activation["rollback_network_required"])
+        self.assertFalse(activation["rollback_git_required"])
+        self.assertFalse(activation["physical_boot_proven"])
+
     def test_kernel_is_compiled_in_repository_ci_not_on_device(self):
         kernel = CONTRACT["kernel"]
         self.assertFalse(kernel["compiled_on_device"])
