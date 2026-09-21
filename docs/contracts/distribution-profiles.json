@@ -133,7 +133,7 @@
       "portable_v2_runtime_identity_source": "verified-boot-handoff-source-sha",
       "portable_v2_legacy_current_symlink_required": false,
       "portable_v2_initial_surface_runtime_supported": true,
-      "portable_v2_update_activation_connected": false,
+      "portable_v2_update_activation_connected": true,
       "portable_v2_guardian_refresh_via_legacy_swap_allowed": false,
       "portable_v2_activation_state_owner": "ext4-persistent-state-image",
       "portable_v2_physical_boot_connected": false,
@@ -149,10 +149,17 @@
       "portable_v3_release_agent_seed_sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
       "portable_v3_release_agent_target_sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
       "portable_v3_release_agent_supports_content_addressed_runtime": true,
-      "portable_v3_release_agent_activation_connected": false,
+      "portable_v3_release_agent_activation_connected": true,
       "portable_v3_release_agent_previous_seed_sha256": "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
       "portable_v3_existing_previous_seed_requires_hash_addressed_refresh": true,
-      "portable_v3_new_media_includes_capable_agent": true
+      "portable_v3_new_media_includes_capable_agent": true,
+      "portable_v2_update_activation_mode": "signed-v3-one-shot-reboot-cold-health",
+      "portable_v2_update_requires_reboot": true,
+      "portable_v2_candidate_rejected_sha_persisted": true,
+      "portable_v2_candidate_rearm_same_sha_allowed": false,
+      "portable_v3_activation_primitive": "ordax-portable-state",
+      "portable_v3_activation_state_root": "/state/ordax/portable-release",
+      "portable_v3_activation_physical_proven": false
     }
   },
   "invariants": {
