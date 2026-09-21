@@ -1,6 +1,6 @@
 # Canonical Release Trust Ceremony
 
-Status: LOCAL KEY GENERATED — RECOVERY VERIFIED — PUBLIC ANCHOR NOT PINNED
+Status: LOCAL KEY GENERATED — CRYPTOGRAPHIC RECOVERY VERIFIED — EXTERNAL OFFLINE BACKUP PENDING — PUBLIC ANCHOR NOT PINNED
 
 This ceremony exists so the first physical OrdaX prototype can be created without Codex, without committing a private key, and without inventing a CI-only trust anchor.
 
@@ -339,7 +339,7 @@ Silent public-key replacement is forbidden.
 
 A signed trust-transition protocol v1 is now implemented and CI-proven between the signer and release agent. It requires the currently trusted key to authorize a distinct successor key, binds the exact current-trust SHA-256 and an exact monotonic sequence, and fails closed on rollback/tampering. Stateful device activation of the successor trust is still disabled, so production rotation is not yet complete. Until that activation owner is implemented and physically proven, the first controlled prototype remains bound to the pinned canonical anchor.
 
-Current fail-closed state after local generation and verified offline recovery, but before public-anchor promotion:
+Current fail-closed state after local generation and verified cryptographic recovery, but before independent external/offline backup custody and public-anchor promotion:
 
 ```text
 TRUST_POLICY_RESOLVED=YES
