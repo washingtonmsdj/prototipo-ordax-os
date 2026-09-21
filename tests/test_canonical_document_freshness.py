@@ -168,8 +168,9 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
             "YES",
         )
         self.assertEqual(state["CANONICAL_KEY_MATERIAL_GENERATED"], "YES")
-        self.assertEqual(state["CANONICAL_TRUST_RECOVERY_VERIFIED"], "NO")
+        self.assertEqual(state["CANONICAL_TRUST_RECOVERY_VERIFIED"], "YES")
         self.assertEqual(state["PUBLIC_ANCHOR_PINNED"], "NO")
+        self.assertEqual(state["READY_TO_PIN_PUBLIC_ANCHOR"], "YES")
         self.assertEqual(promotion["NATIVE_GRAPHICAL_MODE"], "PASS_PHYSICAL_DEVELOPMENT_USB")
         self.assertEqual(promotion["CANONICAL_STABLE_GRAPHICAL_MODE"], "PENDING")
 
@@ -206,7 +207,7 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
 
         self.assertEqual(promotion["MVP_SURFACE_SMOKE_HARNESS"], "PASS_SOURCE")
         self.assertEqual(promotion["MVP_SURFACE_SMOKE_PHYSICAL"], "PENDING")
-        self.assertEqual(promotion["CANONICAL_RELEASE_TRUST"], "PENDING_RECOVERY_AND_PUBLIC_ANCHOR")
+        self.assertEqual(promotion["CANONICAL_RELEASE_TRUST"], "PENDING_PUBLIC_ANCHOR")
         self.assertEqual(promotion["PHYSICAL_USB_WRITE"], "NO")
 
     def test_portable_update_docs_keep_source_ci_and_physical_evidence_separate(self):
