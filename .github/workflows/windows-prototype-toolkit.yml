@@ -8,6 +8,10 @@ on:
       - 'tools/release-signing/**'
       - 'docs/RELEASE-TRUST-CEREMONY.md'
       - 'docs/contracts/release-trust-policy.json'
+      - 'docs/contracts/portable-v2-qemu-boot-proof.json'
+      - 'docs/contracts/portable-v2-uefi-boot-proof.json'
+      - 'docs/contracts/creator-portable-media-plan.json'
+      - 'docs/contracts/physical-write-authorization.json'
       - '.github/workflows/windows-prototype-toolkit.yml'
   pull_request:
     paths:
@@ -15,6 +19,10 @@ on:
       - 'tools/release-signing/**'
       - 'docs/RELEASE-TRUST-CEREMONY.md'
       - 'docs/contracts/release-trust-policy.json'
+      - 'docs/contracts/portable-v2-qemu-boot-proof.json'
+      - 'docs/contracts/portable-v2-uefi-boot-proof.json'
+      - 'docs/contracts/creator-portable-media-plan.json'
+      - 'docs/contracts/physical-write-authorization.json'
       - '.github/workflows/windows-prototype-toolkit.yml'
   workflow_dispatch:
 
