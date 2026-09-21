@@ -45,17 +45,37 @@ The first canonical release identity must be created only after the Stable/MVP P
 
 This ordering prevents the canonical key ceremony from being bound to a source commit whose physical-media policy is immediately obsolete. The eligible Windows Prototype Toolkit must therefore come from a `push` of `main` **after** these prerequisites have landed. A toolkit from an earlier `main` commit, even if otherwise well formed, must not be used for the first canonical identity.
 
+This is enforced by provenance, not prose alone. `provenance.json` carries a `canonical_trust_prerequisites` object for the recorded runtime-v3 direct-kernel proof, runtime-v3 OVMF proof, final Portable writer implementation in fail-closed mode, and still-disabled physical authorization. `canonical_trust_ceremony_eligible=true` is emitted only when the run is a canonical `main` push **and** every prerequisite is true. Both initialization and recovery re-check those fields locally.
+
 ## Required local ceremony
 
 The actual canonical key generation is a local user action and must not be performed in CI, a chat session or a disposable runner. The signer under `tools/release-signing/` already supports the required operation and uses only standard Ed25519/PKCS#8 primitives from the Go standard library.
 
 For the canonical ceremony, use the complete **Windows Prototype Toolkit** produced for one exact reviewed commit. Keep `provenance.json`, `ordax-release-signing.exe` and `Initialize-OrdaXReleaseTrust.ps1` together exactly as downloaded; do not mix files from different toolkit runs and do not replace one file with a locally rebuilt copy.
 
-Start the ceremony through:
+Before generating any key material, run the read-only toolkit preflight:
+
+```text
+1-Verify-OrdaXTrustToolkit.cmd
+```
+
+It invokes the same initializer with `-PreflightOnly`, validates canonical-main provenance plus the signer/initializer hashes, reports the exact source commit, and exits before creating private/review paths or mutating the filesystem. Require:
+
+```text
+TOOLKIT_TRUST_PREFLIGHT=PASS
+CANONICAL_TRUST_CEREMONY_ELIGIBLE=YES
+TOOLKIT_COMPONENT_HASHES_VERIFIED=YES
+PRIVATE_KEY_TOUCHED=NO
+FILESYSTEM_MUTATION=NO
+```
+
+Only after that succeeds, start the actual local ceremony through:
 
 ```text
 2-Initialize-OrdaXTrust.cmd
 ```
+
+The underlying PowerShell initializer is fail-closed: direct invocation without the explicit `-GenerateKey` switch refuses key generation. The step-2 wrapper supplies that switch only after the operator deliberately chooses the generation step.
 
 Before any key is generated, the initializer fails closed unless:
 
