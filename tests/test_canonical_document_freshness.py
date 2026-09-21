@@ -171,8 +171,8 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
             "CONNECTED_ONE_SHOT_REBOOT_COLD_HEALTH",
         )
         self.assertEqual(
-            state["PORTABLE_V3_UPDATE_ACTIVATION_QEMU_PROOF"],
-            "PENDING_CURRENT_BRANCH",
+            state["PORTABLE_V3_UPDATE_ACTIVATION_QEMU_ONE_SHOT_PROOF"],
+            "PENDING_DEDICATED_PROOF",
         )
         self.assertEqual(
             state["PORTABLE_V3_UPDATE_ACTIVATION_PHYSICAL_PROOF"],
@@ -192,7 +192,7 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
             current,
         )
         self.assertIn(
-            "PORTABLE_V3_UPDATE_ACTIVATION_QEMU_PROOF=PENDING_CURRENT_BRANCH",
+            "PORTABLE_V3_UPDATE_ACTIVATION_QEMU_ONE_SHOT_PROOF=PENDING_DEDICATED_PROOF",
             current,
         )
         self.assertIn("PORTABLE_V3_UPDATE_ACTIVATION_PHYSICAL_PROOF=NO", current)
