@@ -184,6 +184,20 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         }
         write_json(root / "docs/contracts/physical-write-authorization.json", auth)
 
+    def test_repository_stable_mvp_authorization_is_explicitly_unset(self):
+        auth = json.loads(
+            (ROOT / "docs/contracts/physical-write-authorization.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(
+            auth["status"],
+            "blocked-canonical-trust-pending",
+        )
+        self.assertFalse(auth["physical_write_allowed"])
+        self.assertFalse(auth["explicit_owner_authorization"])
+        self.assertEqual(auth["scope"], "first-real-stable-mvp-usb-proof")
+
     def test_ready_promotion_uses_only_portable_layout_authority(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
