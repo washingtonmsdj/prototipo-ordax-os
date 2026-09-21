@@ -75,7 +75,11 @@
       "current": "/ordax/portable-release/current",
       "known_good": "/ordax/portable-release/known-good",
       "candidate": "/ordax/portable-release/candidate",
-      "transaction": "/ordax/portable-release/activation-transaction.json"
+      "transaction": "/ordax/portable-release/activation-transaction.json",
+      "rejected": "/ordax/portable-release/rejected",
+      "candidate_policy": "armed-one-shot-boot-only",
+      "transaction_commit_owner": "system/supervisor-after-cold-health",
+      "rollback_owner": "pid1-or-supervisor"
     }
   },
   "user_data": {
