@@ -112,7 +112,7 @@ def load_json(path: Path, label: str) -> dict[str, Any]:
 def require_programs() -> None:
     names = (
         "sgdisk", "losetup", "mkfs.vfat", "mkfs.exfat", "mount.exfat-fuse",
-        "mount", "umount", "qemu-system-x86_64",
+        "mount", "umount", "qemu-system-x86_64", "debugfs",
     )
     missing = [name for name in names if shutil.which(name) is None]
     if missing:
@@ -138,6 +138,64 @@ def unmount(path: Path) -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+
+
+def validate_portable_release(
+    portable: Path,
+    commit: str,
+    *,
+    label: str,
+) -> dict[str, Any]:
+    if COMMIT_RE.fullmatch(commit) is None:
+        raise ProofError(f"{label} commit must be lowercase 40-hex")
+
+    release = portable / "releases" / commit
+    if release.is_symlink() or not release.is_dir():
+        raise ProofError(f"{label} release directory is missing")
+    for name in (
+        "system.erofs",
+        "surface-runtime.sha256",
+        "release-manifest.json",
+        "release-envelope.json",
+    ):
+        regular(release / name, f"{label} release {name}", minimum=2)
+
+    runtime_sha = (release / "surface-runtime.sha256").read_text(
+        encoding="utf-8"
+    ).strip()
+    if SHA256_RE.fullmatch(runtime_sha) is None:
+        raise ProofError(f"{label} Surface runtime reference is not lowercase SHA-256")
+    runtime = regular(
+        portable / "runtimes" / "sha256" / runtime_sha / "native-surface-runtime.erofs",
+        f"{label} Surface runtime",
+        minimum=4096,
+    )
+    if sha256_file(runtime) != runtime_sha:
+        raise ProofError(f"{label} Surface runtime digest differs from release reference")
+
+    manifest = load_json(release / "release-manifest.json", f"{label} release manifest")
+    if manifest.get("$schema") != "prototype-ordax.release-manifest/3":
+        raise ProofError(f"{label} proof requires a signed release-manifest/3 release")
+    if manifest.get("source_commit") != commit:
+        raise ProofError(f"{label} manifest source commit differs from release directory")
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, list) or len(artifacts) != 2:
+        raise ProofError(f"{label} release manifest artifact set is invalid")
+    runtime_artifact = artifacts[1]
+    if (
+        not isinstance(runtime_artifact, dict)
+        or runtime_artifact.get("name") != "native-surface-runtime.erofs"
+        or runtime_artifact.get("role") != "surface-runtime"
+        or runtime_artifact.get("sha256") != runtime_sha
+    ):
+        raise ProofError(f"{label} manifest runtime binding differs from materialized store")
+
+    return {
+        "commit": commit,
+        "release": release,
+        "runtime": runtime,
+        "runtime_sha256": runtime_sha,
+    }
 
 
 def validate_inputs(args: argparse.Namespace) -> dict[str, Any]:
@@ -172,44 +230,25 @@ def validate_inputs(args: argparse.Namespace) -> dict[str, Any]:
     if capsule_pin.get("pid1_enforced") is not False or base_pin.get("pid1_enforced") is not False:
         raise ProofError("candidate pin provenance crossed its promotion boundary")
 
-    release = portable / "releases" / args.source_commit
-    if release.is_symlink() or not release.is_dir():
-        raise ProofError("exact portable release directory is missing")
-    for name in (
-        "system.erofs",
-        "surface-runtime.sha256",
-        "release-manifest.json",
-        "release-envelope.json",
-    ):
-        regular(release / name, f"portable release {name}", minimum=2)
-
-    runtime_sha = (release / "surface-runtime.sha256").read_text(
-        encoding="utf-8"
-    ).strip()
-    if SHA256_RE.fullmatch(runtime_sha) is None:
-        raise ProofError("portable v3 Surface runtime reference is not lowercase SHA-256")
-    runtime = regular(
-        portable / "runtimes" / "sha256" / runtime_sha / "native-surface-runtime.erofs",
-        "portable v3 Surface runtime",
-        minimum=4096,
+    candidate = validate_portable_release(
+        portable,
+        args.source_commit,
+        label="candidate",
     )
-    if sha256_file(runtime) != runtime_sha:
-        raise ProofError("portable v3 Surface runtime digest differs from release reference")
-
-    manifest = load_json(release / "release-manifest.json", "portable release manifest")
-    if manifest.get("$schema") != "prototype-ordax.release-manifest/3":
-        raise ProofError("QEMU proof requires a signed release-manifest/3 release")
-    artifacts = manifest.get("artifacts")
-    if not isinstance(artifacts, list) or len(artifacts) != 2:
-        raise ProofError("portable v3 manifest artifact set is invalid")
-    runtime_artifact = artifacts[1]
-    if (
-        not isinstance(runtime_artifact, dict)
-        or runtime_artifact.get("name") != "native-surface-runtime.erofs"
-        or runtime_artifact.get("role") != "surface-runtime"
-        or runtime_artifact.get("sha256") != runtime_sha
-    ):
-        raise ProofError("portable v3 manifest runtime binding differs from materialized store")
+    previous = None
+    if args.previous_commit:
+        if args.previous_commit == args.source_commit:
+            raise ProofError("previous commit must differ from candidate source commit")
+        previous = validate_portable_release(
+            portable,
+            args.previous_commit,
+            label="previous",
+        )
+        if previous["runtime_sha256"] != candidate["runtime_sha256"]:
+            raise ProofError(
+                "one-shot proof requires candidate and previous releases to reuse "
+                "the exact content-addressed Surface runtime"
+            )
 
     return {
         "kernel": kernel,
@@ -219,8 +258,11 @@ def validate_inputs(args: argparse.Namespace) -> dict[str, Any]:
         "state_image": state,
         "trust": trust,
         "portable_root": portable,
-        "runtime": runtime,
-        "runtime_sha256": runtime_sha,
+        "runtime": candidate["runtime"],
+        "runtime_sha256": candidate["runtime_sha256"],
+        "candidate_release": candidate["release"],
+        "previous_release": previous["release"] if previous else None,
+        "previous_commit": previous["commit"] if previous else None,
         "provenance": provenance,
     }
 
@@ -291,10 +333,16 @@ def stage_disk(args: argparse.Namespace, inputs: dict[str, Any], work: Path) -> 
         shutil.copyfile(inputs["stable_base"], internal / "base/stable-base.erofs")
         shutil.copyfile(inputs["state_image"], internal / "state/persistent-state.img")
         shutil.copytree(
-            inputs["portable_root"] / "releases" / args.source_commit,
+            inputs["candidate_release"],
             internal / "releases" / args.source_commit,
             symlinks=False,
         )
+        if inputs["previous_release"] is not None:
+            shutil.copytree(
+                inputs["previous_release"],
+                internal / "releases" / inputs["previous_commit"],
+                symlinks=False,
+            )
         shutil.copyfile(
             inputs["runtime"],
             runtime_target / "native-surface-runtime.erofs",
@@ -311,9 +359,23 @@ def stage_disk(args: argparse.Namespace, inputs: dict[str, Any], work: Path) -> 
     return disk
 
 
-def boot_qemu(args: argparse.Namespace, inputs: dict[str, Any], disk: Path, work: Path) -> tuple[str, dict[str, bool]]:
-    serial = work / "serial.log"
-    stderr = work / "qemu.stderr"
+def boot_qemu_expected(
+    args: argparse.Namespace,
+    inputs: dict[str, Any],
+    disk: Path,
+    work: Path,
+    *,
+    expected_slot: str,
+    expected_commit: str,
+    serial_name: str,
+) -> tuple[str, dict[str, bool]]:
+    if expected_slot not in {"candidate", "current", "known-good"}:
+        raise ProofError("unexpected QEMU expected slot")
+    if COMMIT_RE.fullmatch(expected_commit) is None:
+        raise ProofError("unexpected QEMU expected source commit")
+
+    serial = work / serial_name
+    stderr = work / (serial_name + ".stderr")
     command = [
         "qemu-system-x86_64",
         "-machine", "pc",
@@ -340,9 +402,9 @@ def boot_qemu(args: argparse.Namespace, inputs: dict[str, Any], disk: Path, work
         deadline = time.monotonic() + 150.0
         while time.monotonic() < deadline:
             text = serial.read_text(encoding="utf-8", errors="replace") if serial.exists() else ""
-            source_marker = "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit
-            stable_source_marker = "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.source_commit
-            slot_marker = "ORDAX_PORTABLE_V2_SLOT=current"
+            source_marker = "ORDAX_PORTABLE_V2_SOURCE_SHA=" + expected_commit
+            stable_source_marker = "ORDAX_STABLE_INIT_SOURCE_SHA=" + expected_commit
+            slot_marker = "ORDAX_PORTABLE_V2_SLOT=" + expected_slot
             schema_marker = "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3"
             runtime_marker = "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED"
             runtime_sha_marker = "ORDAX_SURFACE_RUNTIME_SHA256=" + inputs["runtime_sha256"]
@@ -362,19 +424,20 @@ def boot_qemu(args: argparse.Namespace, inputs: dict[str, Any], disk: Path, work
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait(timeout=5)
-                checks = {
+                return text, {
                     "portable_pid1_handoff_marker": True,
                     "stable_init_handoff_marker": True,
                     "qemu_network_disabled": "-net" in command and "none" in command,
-                    "candidate_rdinit_used": any("rdinit=/sbin/ordax-portable-init" in item for item in command),
-                    "current_slot_selected": slot_marker in text,
+                    "candidate_rdinit_used": any(
+                        "rdinit=/sbin/ordax-portable-init" in item for item in command
+                    ),
+                    "expected_slot_selected": slot_marker in text,
                     "portable_source_sha_exact": source_marker in text,
                     "stable_init_source_sha_exact": stable_source_marker in text,
                     "portable_manifest_v3_selected": schema_marker in text,
                     "surface_runtime_handoff_marker": runtime_marker in text,
                     "surface_runtime_sha_exact": runtime_sha_marker in text,
                 }
-                return text, checks
             if process.poll() is not None:
                 break
             time.sleep(0.25)
@@ -383,7 +446,8 @@ def boot_qemu(args: argparse.Namespace, inputs: dict[str, Any], disk: Path, work
         serial_tail = serial.read_text(encoding="utf-8", errors="replace")[-12000:] if serial.exists() else ""
         raise ProofError(
             "QEMU did not reach portable-v2 handoff markers "
-            f"(exit={process.poll()}, stderr_tail={tail!r}, serial_tail={serial_tail!r})"
+            f"(slot={expected_slot}, source={expected_commit}, exit={process.poll()}, "
+            f"stderr_tail={tail!r}, serial_tail={serial_tail!r})"
         )
     finally:
         if process.poll() is None:
@@ -393,6 +457,79 @@ def boot_qemu(args: argparse.Namespace, inputs: dict[str, Any], disk: Path, work
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
+
+
+def boot_qemu(
+    args: argparse.Namespace,
+    inputs: dict[str, Any],
+    disk: Path,
+    work: Path,
+) -> tuple[str, dict[str, bool]]:
+    text, generic = boot_qemu_expected(
+        args,
+        inputs,
+        disk,
+        work,
+        expected_slot="current",
+        expected_commit=args.source_commit,
+        serial_name="serial.log",
+    )
+    return text, {
+        **generic,
+        "current_slot_selected": generic["expected_slot_selected"],
+    }
+
+
+def inspect_one_shot_state(
+    disk: Path,
+    work: Path,
+    *,
+    previous_commit: str,
+    candidate_commit: str,
+) -> dict[str, bool]:
+    loop = ""
+    data_mounted = False
+    state_mounted = False
+    data_mount = work / "inspect-data"
+    state_mount = work / "inspect-state"
+    data_mount.mkdir(exist_ok=True)
+    state_mount.mkdir(exist_ok=True)
+    try:
+        loop = capture(["losetup", "--find", "--show", "--partscan", str(disk)])
+        if not loop.startswith("/dev/loop"):
+            raise ProofError("one-shot inspection did not map to a host loop device")
+        data = Path(loop + "p2")
+        wait_block(data)
+        run(["mount.exfat-fuse", "-o", "ro", str(data), str(data_mount)])
+        data_mounted = True
+        state_image = regular(
+            data_mount / ".ordax/state/persistent-state.img",
+            "one-shot persistent-state image",
+            minimum=16 * 1024 * 1024,
+        )
+        run(["mount", "-t", "ext4", "-o", "loop,ro,noload", str(state_image), str(state_mount)])
+        state_mounted = True
+        release_state = state_mount / "ordax/portable-release"
+        current = (release_state / "current").read_text(encoding="ascii").strip()
+        known_good = (release_state / "known-good").read_text(encoding="ascii").strip()
+        rejected = (release_state / "rejected").read_text(encoding="ascii").strip()
+        return {
+            "current_restored_to_previous": current == previous_commit,
+            "known_good_preserved_as_previous": known_good == previous_commit,
+            "candidate_persisted_as_rejected": rejected == candidate_commit,
+            "candidate_file_removed": not (release_state / "candidate").exists(),
+            "activation_transaction_removed": not (
+                release_state / "activation-transaction.json"
+            ).exists(),
+        }
+    finally:
+        if state_mounted:
+            unmount(state_mount)
+        if data_mounted:
+            unmount(data_mount)
+        if loop:
+            run(["losetup", "-d", loop])
+
 
 
 def prove(args: argparse.Namespace) -> dict[str, Any]:
@@ -423,8 +560,94 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         disk = stage_disk(args, inputs, work)
         checks["regular_sparse_guest_disk_only"] = True
         checks["final_two_partition_layout"] = True
-        serial_text, qemu_checks = boot_qemu(args, inputs, disk, work)
-        checks.update(qemu_checks)
+        activation = None
+        if args.previous_commit:
+            first_serial, first_checks = boot_qemu_expected(
+                args,
+                inputs,
+                disk,
+                work,
+                expected_slot="candidate",
+                expected_commit=args.source_commit,
+                serial_name="serial-candidate.log",
+            )
+            second_serial, second_checks = boot_qemu_expected(
+                args,
+                inputs,
+                disk,
+                work,
+                expected_slot="current",
+                expected_commit=args.previous_commit,
+                serial_name="serial-fallback.log",
+            )
+            state_checks = inspect_one_shot_state(
+                disk,
+                work,
+                previous_commit=args.previous_commit,
+                candidate_commit=args.source_commit,
+            )
+            activation_checks = {
+                "candidate_boot_selected_once": first_checks["expected_slot_selected"],
+                "candidate_source_sha_exact": first_checks["portable_source_sha_exact"],
+                "fallback_previous_selected": second_checks["expected_slot_selected"],
+                "fallback_previous_source_sha_exact": second_checks["portable_source_sha_exact"],
+                **state_checks,
+            }
+            if not all(activation_checks.values()):
+                raise ProofError(
+                    f"portable-v3 one-shot activation checks incomplete: {activation_checks}"
+                )
+            checks.update({
+                "portable_pid1_handoff_marker": (
+                    first_checks["portable_pid1_handoff_marker"]
+                    and second_checks["portable_pid1_handoff_marker"]
+                ),
+                "stable_init_handoff_marker": (
+                    first_checks["stable_init_handoff_marker"]
+                    and second_checks["stable_init_handoff_marker"]
+                ),
+                "qemu_network_disabled": (
+                    first_checks["qemu_network_disabled"]
+                    and second_checks["qemu_network_disabled"]
+                ),
+                "candidate_rdinit_used": (
+                    first_checks["candidate_rdinit_used"]
+                    and second_checks["candidate_rdinit_used"]
+                ),
+                "current_slot_selected": second_checks["expected_slot_selected"],
+                "portable_source_sha_exact": first_checks["portable_source_sha_exact"],
+                "stable_init_source_sha_exact": (
+                    first_checks["stable_init_source_sha_exact"]
+                    and second_checks["stable_init_source_sha_exact"]
+                ),
+                "portable_manifest_v3_selected": (
+                    first_checks["portable_manifest_v3_selected"]
+                    and second_checks["portable_manifest_v3_selected"]
+                ),
+                "surface_runtime_handoff_marker": (
+                    first_checks["surface_runtime_handoff_marker"]
+                    and second_checks["surface_runtime_handoff_marker"]
+                ),
+                "surface_runtime_sha_exact": (
+                    first_checks["surface_runtime_sha_exact"]
+                    and second_checks["surface_runtime_sha_exact"]
+                ),
+            })
+            serial_text = first_serial + "\n--- SECOND BOOT ---\n" + second_serial
+            activation = {
+                "proven": True,
+                "candidate_commit": args.source_commit,
+                "previous_commit": args.previous_commit,
+                "candidate_boot_count": 1,
+                "fallback_boot_count": 1,
+                "cold_health_commit_proven": False,
+                "failure_fallback_proven": True,
+                "rejected_state_proven": True,
+                "checks": activation_checks,
+            }
+        else:
+            serial_text, qemu_checks = boot_qemu(args, inputs, disk, work)
+            checks.update(qemu_checks)
         disk_sha = sha256_file(disk)
         disk.unlink()
         checks["guest_disk_destroyed"] = not disk.exists()
@@ -444,6 +667,8 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
             "public_physical_promotion_allowed": False,
             "candidate_pid1_default_changed": False,
             "network_required_for_first_boot": False,
+            "armed_candidate_one_shot_proven": bool(activation),
+            "activation_one_shot": activation,
             "serial_markers": [
                 SUCCESS,
                 STABLE,
@@ -489,6 +714,7 @@ def main() -> int:
     parser.add_argument("--portable-root", required=True, type=Path)
     parser.add_argument("--trust", required=True, type=Path)
     parser.add_argument("--source-commit", required=True)
+    parser.add_argument("--previous-commit")
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     for name in (
