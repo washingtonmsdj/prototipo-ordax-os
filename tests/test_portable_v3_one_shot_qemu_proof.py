@@ -12,6 +12,7 @@ class PortableV3OneShotQemuProofTests(unittest.TestCase):
     def test_runner_keeps_baseline_and_adds_optional_two_boot_mode(self):
         text = QEMU.read_text(encoding="utf-8")
         self.assertIn('parser.add_argument("--previous-commit")', text)
+        self.assertIn('previous_commit = getattr(args, "previous_commit", None)', text)
         self.assertIn('expected_slot="candidate"', text)
         self.assertIn('expected_slot="current"', text)
         self.assertIn('"candidate_boot_count": 1', text)
