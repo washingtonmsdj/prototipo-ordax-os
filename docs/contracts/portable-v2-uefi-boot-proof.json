@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.portable-v2-uefi-boot-proof/1",
-  "status": "runtime-v3-candidate-workflow-implemented-awaiting-current-head-proof",
+  "status": "runtime-v3-uefi-ovmf-proof-pass",
   "product_scope": "stable-mvp-usb-only",
   "workflow": ".github/workflows/portable-v2-qemu-boot-proof.yml",
   "proof_owner": "bootstrap/portable-v2/uefi_boot.py",
@@ -14,7 +14,7 @@
   "physical_write_authorized": false,
   "secure_boot_proven": false,
   "qemu_direct_kernel_prerequisite": true,
-  "qemu_uefi_boot_proven": false,
+  "qemu_uefi_boot_proven": true,
   "physical_usb_boot_proven": false,
   "public_physical_promotion_allowed": false,
   "loader": {
@@ -44,5 +44,14 @@
   ],
   "release_manifest_schema": "prototype-ordax.release-manifest/3",
   "surface_runtime_required": true,
-  "surface_runtime_content_addressed": true
+  "surface_runtime_content_addressed": true,
+  "last_proven_source_commit": "b9e1b164d7510f2dfc7572e473642b8fb885fa8c",
+  "last_proven_at": "2026-09-21T02:00:01Z",
+  "last_proven_workflow_run_id": 35551920524,
+  "proof_artifact_sha256": "0f5b922cb3f24c1c339e7c0c5f4abe9d9b72322ee1da527aee6f54fc65fc730c",
+  "last_proven_surface_runtime_sha256": "5b44729139777b610c300864d6f41c0580a3d6ca0b694b8dc53e38f505f99236",
+  "last_proven_network_required_for_first_boot": false,
+  "last_proven_physical_target_device_touched": false,
+  "last_proven_guest_disk_retained": false,
+  "last_proven_ovmf_vars_retained": false
 }

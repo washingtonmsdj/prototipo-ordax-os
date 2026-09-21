@@ -213,16 +213,18 @@ PORTABLE_BOOTSTRAP_CAPSULE_REPRODUCIBLE=PASS_CI
 PORTABLE_INITRAMFS_HELPERS=PASS_CI
 PORTABLE_SURFACE_RUNTIME_APK_LOCK=PASS_CI_253_EXACT_PACKAGES
 PORTABLE_SURFACE_RUNTIME_EROFS_REPRODUCIBLE=PASS_CI
-PORTABLE_SURFACE_RUNTIME_EROFS_SHA256=170d306b38cfdbadba47a7548a6757a920ceaedea98697270aaa8ca4f4d8d038
-PORTABLE_SURFACE_RUNTIME_BOOT_CONNECTED=YES_CANDIDATE_IMPLEMENTED
-PORTABLE_STABLE_FIRST_SURFACE_OFFLINE_PROVEN=PENDING_CURRENT_HEAD_QEMU_UEFI
+PORTABLE_SURFACE_RUNTIME_EROFS_SHA256=5b44729139777b610c300864d6f41c0580a3d6ca0b694b8dc53e38f505f99236
+PORTABLE_SURFACE_RUNTIME_BOOT_CONNECTED=PASS_CI_RUNTIME_V3_HANDOFF
+PORTABLE_STABLE_RUNTIME_V3_HANDOFF_PROVEN=PASS_CI_DIRECT_KERNEL_AND_UEFI
+PORTABLE_STABLE_GRAPHICAL_SURFACE_OFFLINE_PROVEN=NO_PHYSICAL_GRAPHICAL_EXERCISE_PENDING
 PORTABLE_STABLE_BOOT_APK_INSTALL_ALLOWED=NO
 PORTABLE_SURFACE_RUNTIME_EPHEMERAL_OVERLAY=/run
-PORTABLE_PINNED_INITRAMFS_COMPOSITION=PASS_CI_V2_BASELINE
-PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PASS_CI_V2_BASELINE
-PORTABLE_QEMU_UEFI_BOOT=PASS_CI_V2_BASELINE_OVMF_NON_SECURE_BOOT
-PORTABLE_RUNTIME_V3_QEMU_DIRECT_KERNEL_BOOT=PENDING_CURRENT_HEAD
-PORTABLE_RUNTIME_V3_QEMU_UEFI_BOOT=PENDING_CURRENT_HEAD
+PORTABLE_PINNED_INITRAMFS_COMPOSITION=PASS_CI
+PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PASS_CI_RUNTIME_V3
+PORTABLE_QEMU_UEFI_BOOT=PASS_CI_RUNTIME_V3_OVMF_NON_SECURE_BOOT
+PORTABLE_RUNTIME_V3_LAST_PROVEN_SOURCE_COMMIT=b9e1b164d7510f2dfc7572e473642b8fb885fa8c
+PORTABLE_RUNTIME_V3_QEMU_DIRECT_KERNEL_BOOT=PASS_CI
+PORTABLE_RUNTIME_V3_QEMU_UEFI_BOOT=PASS_CI_OVMF_NON_SECURE_BOOT
 PORTABLE_QEMU_NETWORK_REQUIRED=NO
 PORTABLE_QEMU_PHYSICAL_TARGET_TOUCHED=NO
 PORTABLE_QEMU_SECURE_BOOT=NO
@@ -230,7 +232,7 @@ PORTABLE_PHYSICAL_USB_BOOT=NO
 PORTABLE_V2_PUBLIC_WRITER_ENABLED=NO
 ```
 
-The offline Stable/MVP graphical runtime is a separate EROFS artifact with a full 253-package Alpine lock and repeat-digest proof. It deliberately excludes generated machine identity and Fontconfig caches from signed bytes. Release-manifest/3 now binds that runtime by SHA-256, Creator preseeds the content-addressed bytes, the candidate PID1 re-verifies v3 offline and mounts the runtime read-only beneath an ephemeral OverlayFS in `/run`, and the Stable launcher refuses boot-time `apk add` provisioning. **The implementation is connected; the fresh-USB graphical boot claim remains pending until the current-head QEMU/UEFI proof passes.**
+The offline Stable/MVP graphical runtime is a separate EROFS artifact with a full 253-package Alpine lock and repeat-digest proof. It deliberately excludes generated machine identity and Fontconfig caches from signed bytes. Release-manifest/3 binds that runtime by SHA-256, Creator preseeds the content-addressed bytes, the candidate PID1 re-verifies v3 offline and mounts the runtime read-only beneath an ephemeral OverlayFS in `/run`, and the Stable launcher refuses boot-time `apk add` provisioning. The exact runtime-v3 handoff was proven at source `b9e1b164d7510f2dfc7572e473642b8fb885fa8c` in both direct-kernel QEMU and non-Secure-Boot OVMF/UEFI with networking disabled and no physical target touched. **This proves the signed offline runtime handoff, not a complete graphical Surface session on real hardware; the final Stable/MVP USB graphical boot remains a physical validation gate.**
 
 Portable v2 itself has now crossed the CI boot-handoff gate with the final two-partition layout: the direct-kernel QEMU proof and the UEFI/OVMF + systemd-boot proof both reached `ORDAX_PORTABLE_V2_HANDOFF=VERIFIED` and `ORDAX_STABLE_INIT_HANDOFF=VERIFIED`, selected the exact `current` slot/source identity, ran with QEMU networking disabled, destroyed disposable guest state afterward and did not touch a physical target device. The UEFI proof uses non-Secure-Boot OVMF; **Secure Boot and physical USB boot remain unproven**.
 
