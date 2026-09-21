@@ -67,31 +67,37 @@
       "source": "bootstrap/initramfs/portable_state.c",
       "runtime_path": "/sbin/ordax-portable-state",
       "static": true,
-      "read_only": true,
+      "read_only": false,
       "accepted_slots": [
         "current",
         "known-good",
-        "candidate"
+        "candidate",
+        "rejected"
       ],
       "identity": "lowercase-40-hex-source-commit",
       "nofollow_directory_walk": true,
-      "activation_performed": false,
+      "activation_performed": true,
       "operations": [
         "read-slot",
         "resolve",
-        "select"
+        "select",
+        "prepare",
+        "select-boot",
+        "commit",
+        "rollback"
       ],
       "selection_order": [
+        "candidate-one-shot",
         "current",
         "known-good"
       ],
-      "candidate_is_boot_authority": false,
+      "candidate_is_boot_authority": true,
       "requires_materialized_release_directory": true,
       "requires_system_erofs_magic": true,
       "requires_manifest_and_envelope_files": true,
       "selection_output": "slot-space-commit",
       "verifies_signature": false,
-      "writes_activation_state": false,
+      "writes_activation_state": true,
       "pid1_connected": true,
       "resolve_boot_slots": [
         "current",
@@ -100,7 +106,14 @@
       "resolve_candidate_allowed": false,
       "resolve_requires_materialized_release_shape": true,
       "resolve_verifies_signature": false,
-      "resolve_is_for_exact_release_agent_handoff": true
+      "resolve_is_for_exact_release_agent_handoff": true,
+      "candidate_boot_authority": "armed-one-shot-transaction-only",
+      "atomic_replace": true,
+      "fsync_required": true,
+      "directory_fsync_required": true,
+      "rejected_identity_persisted": true,
+      "runtime_copy_path": "/run/ordax/bootstrap-tools/ordax-portable-state",
+      "runtime_copy_survives_switch_root": true
     },
     "activation_state_reader_installed": true,
     "portable_mount_helper": {
@@ -210,10 +223,11 @@
       "requires_stable_base_hash_verification": true,
       "requires_bootstrap_owned_release_trust": true,
       "release_selection": [
+        "candidate-one-shot",
         "current",
         "known-good"
       ],
-      "candidate_slot_boot_authority": false,
+      "candidate_slot_boot_authority": true,
       "selected_release_exact_signature_verification": true,
       "switch_root_target": "stable-base-overlay",
       "product_system_mount": "read-only-bind",
@@ -222,7 +236,10 @@
       "exact_signed_release_verification": true,
       "release_manifest_v3_supported": true,
       "surface_runtime_verified_handoff": true,
-      "surface_runtime_overlay": "ephemeral-run"
+      "surface_runtime_overlay": "ephemeral-run",
+      "candidate_slot_boot_authority_policy": "armed-one-shot-transaction-only",
+      "candidate_failure_rolls_back_before_handoff": true,
+      "activation_helper_retained_after_switch_root": true
     },
     "mount_security_flags": true,
     "mount_security_flags_busybox_selector": "CONFIG_FEATURE_MOUNT_FLAGS=y",
@@ -233,6 +250,10 @@
       "CONFIG_TEST=y",
       "CONFIG_TEST1=y",
       "CONFIG_FEATURE_TEST_64=y"
+    ],
+    "busybox_runtime_copy_applets": [
+      "cp",
+      "chmod"
     ]
   }
 }

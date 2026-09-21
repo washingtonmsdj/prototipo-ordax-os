@@ -65,6 +65,36 @@ class PortableBootHandoffContractTests(unittest.TestCase):
         self.assertTrue(boundary["minimal_os_base_remains_separate"])
         self.assertFalse(boundary["switch_root_to_system_erofs_allowed"])
 
+    def test_portable_update_activation_is_one_shot_and_physical_proof_remains_pending(self):
+        boundary = self.contract["runtime_boundary"]
+        self.assertTrue(boundary["portable_update_activation_connected"])
+        self.assertEqual(
+            boundary["portable_update_activation_mode"],
+            "signed-v3-materialize-arm-reboot-cold-health",
+        )
+        self.assertTrue(boundary["portable_update_reboot_required"])
+        self.assertFalse(boundary["portable_guardian_refresh_connected"])
+
+        state = self.contract["activation_state"]
+        self.assertEqual(
+            state["rejected_file"],
+            "/state/ordax/portable-release/rejected",
+        )
+        self.assertEqual(state["candidate_boot_authority"], "one-shot-only-when-armed")
+        self.assertFalse(state["selection_helper_read_only"])
+        self.assertEqual(
+            state["selection_helper_order"],
+            ["candidate-one-shot", "current", "known-good"],
+        )
+        self.assertFalse(state["selection_helper_candidate_ignored"])
+        self.assertTrue(state["exact_boot_slot_resolver_candidate_allowed"])
+        self.assertTrue(state["rejected_candidate_blocks_rearm_until_channel_advances"])
+        self.assertTrue(state["commit_requires_cold_health"])
+        self.assertTrue(state["rollback_requires_no_network"])
+        self.assertTrue(state["runtime_supervisor_connected"])
+        self.assertFalse(self.contract["physical_boot_connected"])
+        self.assertFalse(self.contract["physical_write_authorized"])
+
     def test_mount_graph_keeps_exfat_out_of_overlay_upper(self):
         proof = self.contract["proof"]
         self.assertEqual(proof["release_mount"]["filesystem"], "erofs")
@@ -87,7 +117,7 @@ class PortableBootHandoffContractTests(unittest.TestCase):
         self.assertEqual(surface["runtime_view"], "overlayfs")
         self.assertFalse(surface["persistent_upper"])
 
-    def test_initramfs_integration_gap_is_explicit(self):
+    def test_initramfs_integration_and_transaction_helper_are_explicit(self):
         requirements = self.contract["initramfs_integration_requirements"]
         self.assertTrue(requirements["busybox_losetup_applet_required"])
         self.assertTrue(requirements["busybox_losetup_applet_currently_enabled"])
@@ -100,6 +130,25 @@ class PortableBootHandoffContractTests(unittest.TestCase):
         self.assertEqual(requirements["activation_state_reader_path"], "/sbin/ordax-portable-state")
         self.assertTrue(requirements["portable_handoff_helper_pid1_connected"])
         self.assertTrue(requirements["activation_selection_helper_pid1_connected"])
+        self.assertTrue(requirements["activation_transaction_writer_implemented"])
+        self.assertEqual(
+            requirements["activation_transaction_writer_runtime_path"],
+            "/run/ordax/bootstrap-tools/ordax-portable-state",
+        )
+        self.assertTrue(requirements["activation_transaction_survives_switch_root"])
+        self.assertEqual(
+            requirements["activation_state_reader_operations"],
+            ["read-slot", "resolve", "select", "prepare", "select-boot", "commit", "rollback"],
+        )
+        self.assertEqual(
+            requirements["activation_selection_order"],
+            ["candidate-one-shot", "current", "known-good"],
+        )
+        self.assertTrue(requirements["candidate_is_boot_authority"])
+        self.assertEqual(
+            requirements["candidate_boot_authority_policy"],
+            "armed-one-shot-transaction-only",
+        )
         self.assertTrue(requirements["portable_v3_release_verification"])
         self.assertTrue(requirements["surface_runtime_reference_verified"])
         self.assertEqual(
@@ -110,6 +159,8 @@ class PortableBootHandoffContractTests(unittest.TestCase):
         initramfs = INITRAMFS_BUILD.read_text(encoding="utf-8")
         applets = initramfs.split("REQUIRED_APPLETS", 1)[1].split("}", 1)[0]
         self.assertIn('"losetup"', applets)
+        self.assertIn('"cp"', applets)
+        self.assertIn('"chmod"', applets)
         self.assertIn('"CONFIG_LOSETUP": "y"', initramfs)
         self.assertIn('"CONFIG_FEATURE_MOUNT_LOOP": "y"', initramfs)
         self.assertIn('"CONFIG_FEATURE_VOLUMEID_EXFAT": "y"', initramfs)

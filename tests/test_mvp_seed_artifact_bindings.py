@@ -27,10 +27,10 @@ class MVPSeedArtifactBindingsTests(unittest.TestCase):
         self.assertEqual(artifact["source_path"], "bootstrap/kernel/vmlinuz-6.6.52")
         self.assertEqual(artifact["sha256"], "43652d59b476e5c1db159ddd39b99bec40cc7e7f1d8879be393ac87534233ee0")
 
-    def test_current_initramfs_binding_matches_portable_v2_capable_capsule(self):
+    def test_current_initramfs_binding_matches_transactional_portable_capsule(self):
         artifact = self.artifact("initramfs")
         self.assertEqual(artifact["source_path"], "bootstrap/initramfs/initramfs.cpio.gz")
-        self.assertEqual(artifact["sha256"], "380e22fef11c5c25f96360c5e66cd6ebcc66256c11b1233629463cf20b1bb68d")
+        self.assertEqual(artifact["sha256"], "233e7d6379f927bb95c1c895e5b84eb2f5968d84a144fa60581c9a160d68d0df")
 
     def test_current_release_agent_seed_matches_v3_target_and_keeps_prior_migration(self):
         artifact = self.artifact("bootstrap-release-acquisition")

@@ -86,9 +86,63 @@ class StableReleaseActivationTransactionTests(unittest.TestCase):
         supervisor = SUPERVISOR.read_text(encoding="utf-8")
         update = function_body(supervisor, "check_for_update")
         portable_update = update.split("portable-v2)", 1)[1].split(";;", 1)[0]
-        self.assertIn("portable-v2-activation-not-connected", portable_update)
+        self.assertIn('check_stable_portable_update "$current"', portable_update)
         self.assertNotIn("check_stable_signed_update", portable_update)
         self.assertNotIn("activate-exact", portable_update)
+
+    def test_portable_v3_update_is_materialized_then_armed_for_one_shot_boot(self):
+        text = SUPERVISOR.read_text(encoding="utf-8")
+        check = function_body(text, "check_stable_portable_update")
+
+        self.assertIn('"$STABLE_RELEASE_AGENT" inspect', check)
+        self.assertIn('"$STABLE_RELEASE_AGENT" materialize-portable-v3', check)
+        self.assertIn('--expected-commit "$remote_sha"', check)
+        self.assertIn('portable_release_is_verified "$remote_sha"', check)
+        self.assertIn('portable_prepare_candidate "$remote_sha"', check)
+        self.assertIn('write_state_value "$STAGED_RELEASE_FILE" "$remote_sha"', check)
+        self.assertIn("candidate-armed signed-release", check)
+        self.assertIn("portable_reboot_now", check)
+        self.assertNotIn("git ", check.lower())
+        self.assertNotIn("activate-exact", check)
+
+    def test_portable_candidate_commits_only_after_cold_health(self):
+        text = SUPERVISOR.read_text(encoding="utf-8")
+        handler = function_body(text, "handle_portable_candidate_boot")
+        self.assertIn('[ "$PORTABLE_BOOT_SLOT" = "candidate" ]', handler)
+        self.assertIn("surface_stays_running 4", handler)
+        self.assertIn(
+            'wait_for_surface_health "$candidate_sha" "$INITIAL_SURFACE_HEALTH_TIMEOUT"',
+            handler,
+        )
+        self.assertIn('portable_commit_candidate "$candidate_sha"', handler)
+        self.assertIn('record_applied "$candidate_sha" signed-release', handler)
+        self.assertIn('portable_rollback_candidate "$candidate_sha"', handler)
+        self.assertIn('write_state_value "$STABLE_HEALTH_REJECTED_FILE" "$candidate_sha"', handler)
+        self.assertIn("portable_reboot_now", handler)
+
+        health = handler.index(
+            'wait_for_surface_health "$candidate_sha" "$INITIAL_SURFACE_HEALTH_TIMEOUT"'
+        )
+        commit = handler.index('portable_commit_candidate "$candidate_sha"')
+        self.assertLess(health, commit)
+
+    def test_portable_activation_helper_is_retained_from_verified_initramfs(self):
+        text = SUPERVISOR.read_text(encoding="utf-8")
+        self.assertIn(
+            'PORTABLE_STATE_HELPER=${ORDAX_PORTABLE_STATE_HELPER:-/run/ordax/bootstrap-tools/ordax-portable-state}',
+            text,
+        )
+        ready = function_body(text, "portable_state_helper_ready")
+        self.assertIn('[ -x "$PORTABLE_STATE_HELPER" ]', ready)
+        self.assertIn('[ ! -L "$PORTABLE_STATE_HELPER" ]', ready)
+
+    def test_portable_failed_sha_is_blocked_until_channel_advances(self):
+        text = SUPERVISOR.read_text(encoding="utf-8")
+        check = function_body(text, "check_stable_portable_update")
+        self.assertIn('rejected_sha=$(portable_rejected_sha || true)', check)
+        self.assertIn('[ "$remote_sha" = "$rejected_sha" ]', check)
+        self.assertIn('"stable-release-health-rejected"', check)
+        self.assertIn('rm -f "$STABLE_HEALTH_REJECTED_FILE"', check)
 
     def test_guard_is_persisted_before_exact_activation(self):
         text = SUPERVISOR.read_text(encoding="utf-8")

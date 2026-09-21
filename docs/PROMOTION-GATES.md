@@ -253,12 +253,14 @@ FIRST_RELEASE_ACQUIRED_AFTER_BOOT=PENDING
 RELEASE_MATERIALIZE=PASS_IN_AGENT_TESTS
 RELEASE_INTEGRITY=PASS_IN_AGENT_TESTS
 ATOMIC_ACTIVATION=PASS_IN_AGENT_TESTS
+PORTABLE_V3_ONE_SHOT_ACTIVATION=PASS_SOURCE_PENDING_CI_PROOF
+PORTABLE_V3_REJECTED_SHA_PERSISTENCE=PASS_SOURCE_PENDING_CI_PROOF
 KNOWN_GOOD_PERSISTED=PENDING_PHYSICAL
 KNOWN_GOOD_OFFLINE_BOOT=PENDING_PHYSICAL
 ROLLBACK=PENDING_PHYSICAL
 ```
 
-A Stable/MVP release must be tied to an exact source commit and authenticated before activation. The Owner/Development Git checkout/update path is deliberately not counted as completion of this canonical release gate.
+A Stable/MVP release must be tied to an exact source commit and authenticated before activation. The Portable v3 source path now stages through the official signed channel, arms a one-shot candidate inside the ext4 state image, requires a reboot, and commits `current/known-good` only after cold Surface health; failed candidates are persisted as `rejected` and roll back without Git or network. That implementation is a **source claim until the dedicated disposable boot/update proof passes**, and it still does not close the physical `KNOWN_GOOD` or `ROLLBACK` rows. The Owner/Development Git checkout/update path is deliberately not counted as completion of this canonical release gate.
 
 ## Gate 9 - Single-source Surface across Web and native
 
@@ -290,8 +292,8 @@ GIT_PUSH=PASS
 CI_AFFECTED_ARTIFACT_BUILD=PASS_PARTIAL
 DEVELOPMENT_DEVICE_GIT_HOT_UPDATE=PASS_PHYSICAL_DEVELOPMENT_USB
 DEVELOPMENT_HEALTH_READINESS=PASS_PHYSICAL_DEVELOPMENT_USB
-STABLE_DEVICE_RELEASE_OR_DELTA_UPDATE=PENDING
-STABLE_HEALTH_READINESS=PENDING
+STABLE_DEVICE_RELEASE_OR_DELTA_UPDATE=PASS_SOURCE_PORTABLE_V3_PENDING_CI_AND_PHYSICAL
+STABLE_HEALTH_READINESS=PASS_SOURCE_PORTABLE_COLD_HEALTH_PENDING_PHYSICAL
 FULL_IMAGE_REBUILD_REQUIRED_FOR_NORMAL_SYSTEM_CHANGES=NO
 USB_REFLASH_REQUIRED_FOR_NORMAL_SYSTEM_CHANGES=NO
 ROUTINE_REBOOT_REQUIRED_FOR_LIVE_SAFE_CHANGES=NO

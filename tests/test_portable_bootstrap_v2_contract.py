@@ -44,6 +44,12 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         self.assertTrue(first["initial_current_equals_known_good"])
         self.assertTrue(first["initial_candidate_absent"])
         self.assertTrue(first["initial_transaction_absent"])
+        self.assertTrue(first["initial_rejected_absent"])
+        self.assertEqual(
+            first["update_activation_mode"],
+            "signed-v3-one-shot-reboot-cold-health",
+        )
+        self.assertFalse(first["physical_update_activation_proven"])
         self.assertTrue(first["boot_must_reverify_exact_release_offline"])
         self.assertTrue(first["fallback_must_not_require_network"])
 
@@ -94,8 +100,30 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         state = helpers["portable_state_reader"]
         mount = helpers["portable_mount_helper"]
         self.assertTrue(state["installed"])
-        self.assertTrue(state["read_only"])
+        self.assertFalse(state["read_only"])
         self.assertTrue(state["pid1_connected"])
+        self.assertEqual(
+            state["operations"],
+            ["read-slot", "resolve", "select", "prepare", "select-boot", "commit", "rollback"],
+        )
+        self.assertEqual(
+            state["selection_order"],
+            ["candidate-one-shot", "current", "known-good"],
+        )
+        self.assertTrue(state["candidate_is_boot_authority"])
+        self.assertEqual(
+            state["candidate_boot_authority_policy"],
+            "armed-one-shot-transaction-only",
+        )
+        self.assertTrue(state["writes_activation_state"])
+        self.assertTrue(state["atomic_replace"])
+        self.assertTrue(state["fsync_required"])
+        self.assertTrue(state["directory_fsync_required"])
+        self.assertEqual(
+            state["runtime_copy_path"],
+            "/run/ordax/bootstrap-tools/ordax-portable-state",
+        )
+        self.assertEqual(state["rejected_slot"], "rejected")
         self.assertTrue(mount["installed"])
         self.assertTrue(mount["mounts_state_ext4"])
         self.assertTrue(mount["mounts_release_erofs_read_only"])
@@ -109,6 +137,22 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         self.assertTrue(mount["mounts_surface_runtime_erofs_read_only"])
         self.assertEqual(mount["surface_runtime_view"], "overlayfs-ephemeral-run")
         self.assertFalse(mount["surface_runtime_persistent_upper"])
+
+    def test_candidate_pid1_uses_one_shot_transaction_without_physical_claim(self):
+        pid1 = CONTRACT["initramfs_helpers"]["portable_candidate_pid1"]
+        self.assertFalse(pid1["current_then_known_good"])
+        self.assertEqual(
+            pid1["release_selection"],
+            ["candidate-one-shot", "current", "known-good"],
+        )
+        self.assertTrue(pid1["candidate_boot_authority"])
+        self.assertEqual(
+            pid1["candidate_boot_authority_policy"],
+            "armed-one-shot-transaction-only",
+        )
+        self.assertTrue(pid1["failed_candidate_rolls_back_before_handoff"])
+        self.assertTrue(pid1["activation_helper_retained_after_switch_root"])
+        self.assertFalse(pid1["physical_boot_authorized"])
 
     def test_boot_sequence_mounts_stable_base_before_immutable_system(self):
         sequence = CONTRACT["boot_sequence_target"]

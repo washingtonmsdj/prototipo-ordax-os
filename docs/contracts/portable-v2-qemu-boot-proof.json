@@ -50,7 +50,7 @@
     "initramfs-stable-base-pin-matches-staged-base",
     "portable-release-signature-and-hash-verified-offline",
     "current-selected-before-known-good",
-    "candidate-is-not-boot-authority",
+    "unarmed-candidate-is-not-boot-authority",
     "stable-base-overlay-mounted",
     "system-erofs-mounted-read-only",
     "switch-root-reaches-stable-init",
@@ -83,5 +83,8 @@
   "last_proven_surface_runtime_sha256": "5b44729139777b610c300864d6f41c0580a3d6ca0b694b8dc53e38f505f99236",
   "last_proven_network_required_for_first_boot": false,
   "last_proven_physical_target_device_touched": false,
-  "last_proven_guest_disk_retained": false
+  "last_proven_guest_disk_retained": false,
+  "activation_transaction_scope": "baseline-current-boot-only",
+  "armed_candidate_one_shot_proven": false,
+  "note": "This historical/current-slot baseline proves ordinary Portable boot. Armed candidate one-shot activation requires a separate disposable proof and must not be inferred from this contract."
 }

@@ -50,8 +50,9 @@ KERNEL_BUILD = _load_repo_module("ordax_kernel_build_for_initramfs", KERNEL_BUIL
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _SAFE_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 REQUIRED_APPLETS = {
-    "blkid", "cat", "echo", "findfs", "losetup", "mkdir", "mount", "poweroff",
-    "reboot", "sh", "sha256sum", "sleep", "switch_root", "sync", "test", "[", "umount",
+    "blkid", "cat", "chmod", "cp", "echo", "findfs", "losetup", "mkdir", "mount",
+    "poweroff", "reboot", "sh", "sha256sum", "sleep", "switch_root", "sync", "test",
+    "[", "umount",
 }
 REQUESTED_CONFIG = {
     "CONFIG_BUSYBOX": "y",
@@ -60,6 +61,8 @@ REQUESTED_CONFIG = {
     "CONFIG_SH_IS_ASH": "y",
     "CONFIG_BLKID": "y",
     "CONFIG_CAT": "y",
+    "CONFIG_CHMOD": "y",
+    "CONFIG_CP": "y",
     "CONFIG_ECHO": "y",
     "CONFIG_FINDFS": "y",
     "CONFIG_LOSETUP": "y",
@@ -859,8 +862,9 @@ def build(
             "requires_capsule_pin": True,
             "requires_stable_base_pin": True,
             "requires_bootstrap_owned_trust": True,
-            "current_then_known_good_exact_verification": True,
-            "candidate_slot_boot_authority": False,
+            "one_shot_candidate_then_current_known_good_exact_verification": True,
+            "candidate_slot_boot_authority": True,
+            "candidate_slot_boot_authority_policy": "armed-one-shot-transaction-only",
             "network_required": False,
             "physical_boot_authorized": False,
         },
@@ -881,11 +885,24 @@ def build(
             "helper_path": "/sbin/ordax-portable-state",
             "source_sha256": sha256_file(portable_state_source),
             "binary_sha256": sha256_file(portable_state_binary),
-            "read_only": True,
-            "accepted_slots": ["current", "known-good", "candidate"],
+            "read_only": False,
+            "accepted_slots": ["current", "known-good", "candidate", "rejected"],
             "identity": "lowercase-40-hex-source-commit",
             "symlink_traversal_allowed": False,
-            "activation_performed": False,
+            "activation_performed": True,
+            "operations": [
+                "read-slot",
+                "resolve",
+                "select",
+                "prepare",
+                "select-boot",
+                "commit",
+                "rollback",
+            ],
+            "atomic_replace": True,
+            "fsync_required": True,
+            "directory_fsync_required": True,
+            "runtime_copy_path": "/run/ordax/bootstrap-tools/ordax-portable-state",
         },
         "static_userspace": True,
         "network_inside_fixed_initramfs": False,
@@ -1013,8 +1030,12 @@ def verify(out_dir: Path) -> dict:
         or candidate_pid1.get("requires_capsule_pin") is not True
         or candidate_pid1.get("requires_stable_base_pin") is not True
         or candidate_pid1.get("requires_bootstrap_owned_trust") is not True
-        or candidate_pid1.get("current_then_known_good_exact_verification") is not True
-        or candidate_pid1.get("candidate_slot_boot_authority") is not False
+        or candidate_pid1.get(
+            "one_shot_candidate_then_current_known_good_exact_verification"
+        ) is not True
+        or candidate_pid1.get("candidate_slot_boot_authority") is not True
+        or candidate_pid1.get("candidate_slot_boot_authority_policy")
+        != "armed-one-shot-transaction-only"
         or candidate_pid1.get("network_required") is not False
         or candidate_pid1.get("physical_boot_authorized") is not False
         or not _SHA256.fullmatch(str(candidate_pid1.get("source_sha256", "")))
@@ -1040,13 +1061,30 @@ def verify(out_dir: Path) -> dict:
     if (
         state_reader.get("installed") is not True
         or state_reader.get("helper_path") != "/sbin/ordax-portable-state"
-        or state_reader.get("read_only") is not True
-        or state_reader.get("activation_performed") is not False
+        or state_reader.get("read_only") is not False
+        or state_reader.get("activation_performed") is not True
         or state_reader.get("symlink_traversal_allowed") is not False
+        or state_reader.get("accepted_slots")
+        != ["current", "known-good", "candidate", "rejected"]
+        or state_reader.get("operations")
+        != [
+            "read-slot",
+            "resolve",
+            "select",
+            "prepare",
+            "select-boot",
+            "commit",
+            "rollback",
+        ]
+        or state_reader.get("atomic_replace") is not True
+        or state_reader.get("fsync_required") is not True
+        or state_reader.get("directory_fsync_required") is not True
+        or state_reader.get("runtime_copy_path")
+        != "/run/ordax/bootstrap-tools/ordax-portable-state"
         or not _SHA256.fullmatch(str(state_reader.get("source_sha256", "")))
         or not _SHA256.fullmatch(str(state_reader.get("binary_sha256", "")))
     ):
-        raise BuildError("initramfs provenance is missing the portable activation-state reader")
+        raise BuildError("initramfs provenance is missing the portable activation-state transaction helper")
 
     growth = provenance.get("filesystem_growth", {})
     if growth.get("mode") != "online-ext4-kernel-ioctl" or growth.get("helper_path") != "/sbin/ordax-grow-ext4":

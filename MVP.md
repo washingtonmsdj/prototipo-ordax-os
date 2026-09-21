@@ -215,8 +215,11 @@ Estado atual do caminho v2:
 - revalidação offline exata da release assinada: implementada para v2 e v3;
 - mount EROFS + estado ext4 + runtime system read-only: prova descartável verde;
 - helper de mount portátil dentro do initramfs: conectado ao PID1 candidato; continua sem autoridade de assinatura/ativação própria;
-- leitura de estado `current/known-good/candidate`: implementada no initramfs;
-- seleção read-only `current -> known-good`: conectada ao PID1 candidato; `candidate` continua sem autoridade de boot;
+- estado de ativação `current/known-good/candidate/rejected`: implementado no ext4 persistente;
+- transação Portable one-shot: `prepare -> select-boot -> commit/rollback`, com replace atômico + fsync e sem ponteiro mutável no exFAT;
+- `candidate` só ganha autoridade de boot quando existe uma transação armada; recebe **uma tentativa** e nunca substitui `current` antes do cold-health;
+- SHA rejeitado fica persistido e não é rearmado enquanto o canal oficial não avançar para outro commit;
+- o supervisor Stable já orquestra `inspect -> materialize-portable-v3 -> verify-portable-v3-exact -> arm -> reboot -> cold-health -> commit/rollback` em source; a prova dessa nova transação no QEMU/UEFI e no USB físico continua separada;
 - bootstrap capsule EROFS: determinística, reprodutível, pinada e verificada pelo PID1 candidato;
 - Stable Base EROFS: Alpine e conjunto APK transitivo pinados; handoff QEMU/UEFI v2-base já provado em CI, prova física ainda pendente;
 - runtime gráfico offline: lock exato de 253 pacotes e EROFS byte-reprodutível provados em CI; handoff v3, preseed Creator e launcher Stable offline já implementados no candidato atual;

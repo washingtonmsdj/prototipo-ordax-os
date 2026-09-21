@@ -199,7 +199,7 @@ ORDAX-DATA  exFAT
   -> .ordax/state/persistent-state.img   # ext4-in-file
 ```
 
-Mutable activation authority (`current`, `known-good`, `candidate`) lives inside the ext4 persistent-state image, never as a mutable exFAT symlink/pointer. Portable v2 remains a compatibility release shape; the current Stable/MVP candidate uses signed `release-manifest/3`, binding both `system.erofs` and the content-addressed Surface runtime. The Stable Base remains a separate immutable minimal OS EROFS. The fixed initramfs candidate owns exact release selection, capsule/Base verification, system/runtime EROFS mounts and the read-only-to-ephemeral OverlayFS handoff; signature authority remains in the bootstrap-owned release agent.
+Mutable activation authority (`current`, `known-good`, `candidate`, `rejected` and `activation-transaction.json`) lives inside the ext4 persistent-state image, never as a mutable exFAT symlink/pointer. Portable v2 remains a compatibility release shape; the current Stable/MVP candidate uses signed `release-manifest/3`, binding both `system.erofs` and the content-addressed Surface runtime. The Stable Base remains a separate immutable minimal OS EROFS. The fixed initramfs candidate owns exact release selection, capsule/Base verification, system/runtime EROFS mounts and the read-only-to-ephemeral OverlayFS handoff; signature authority remains in the bootstrap-owned release agent. The Portable activation primitive is now connected in source: a verified v3 release is materialized without activation, armed as a one-shot candidate in ext4, cold-booted once, committed only after Surface health, or rejected/rolled back offline to the previous `current`. This source integration does **not** by itself prove the transaction in QEMU/UEFI or on the physical Stable/MVP USB.
 
 ```text
 PORTABLE_USB_V2_STORAGE_PROOF=PASS_CI_DISPOSABLE
@@ -218,6 +218,10 @@ PORTABLE_SURFACE_RUNTIME_BOOT_CONNECTED=PASS_CI_RUNTIME_V3_HANDOFF
 PORTABLE_STABLE_RUNTIME_V3_HANDOFF_PROVEN=PASS_CI_DIRECT_KERNEL_AND_UEFI
 PORTABLE_STABLE_GRAPHICAL_SURFACE_OFFLINE_PROVEN=NO_PHYSICAL_GRAPHICAL_EXERCISE_PENDING
 PORTABLE_STABLE_BOOT_APK_INSTALL_ALLOWED=NO
+PORTABLE_V3_UPDATE_ACTIVATION_SOURCE=CONNECTED_ONE_SHOT_REBOOT_COLD_HEALTH
+PORTABLE_V3_UPDATE_ACTIVATION_QEMU_ONE_SHOT_PROOF=PENDING_DEDICATED_PROOF
+PORTABLE_V3_UPDATE_ACTIVATION_PHYSICAL_PROOF=NO
+PORTABLE_V3_REJECTED_SHA_PERSISTED=YES_SOURCE
 PORTABLE_SURFACE_RUNTIME_EPHEMERAL_OVERLAY=/run
 PORTABLE_PINNED_INITRAMFS_COMPOSITION=PASS_CI
 PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PASS_CI_RUNTIME_V3
