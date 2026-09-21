@@ -184,6 +184,9 @@
     "current_trust_mutation_allowed": false,
     "stateful_device_activation_support": false,
     "bootstrap_effective_trust_selection_support": false,
-    "production_rotation_ready": false
+    "production_rotation_ready": false,
+    "ci_cross_component_proof": true,
+    "ci_signer_agent_run_id": 35640416446,
+    "ci_release_agent_run_id": 35640416481
   }
 }
