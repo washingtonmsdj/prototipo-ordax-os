@@ -100,7 +100,7 @@ class StableReleaseActivationTransactionTests(unittest.TestCase):
         self.assertIn('portable_release_is_verified "$remote_sha"', check)
         self.assertIn('portable_prepare_candidate "$remote_sha"', check)
         self.assertIn('write_state_value "$STAGED_RELEASE_FILE" "$remote_sha"', check)
-        self.assertIn("candidate-armed signed-release-v3", check)
+        self.assertIn("candidate-armed signed-release", check)
         self.assertIn("portable_reboot_now", check)
         self.assertNotIn("git ", check.lower())
         self.assertNotIn("activate-exact", check)
@@ -115,7 +115,7 @@ class StableReleaseActivationTransactionTests(unittest.TestCase):
             handler,
         )
         self.assertIn('portable_commit_candidate "$candidate_sha"', handler)
-        self.assertIn('record_applied "$candidate_sha" signed-release-v3', handler)
+        self.assertIn('record_applied "$candidate_sha" signed-release', handler)
         self.assertIn('portable_rollback_candidate "$candidate_sha"', handler)
         self.assertIn('write_state_value "$STABLE_HEALTH_REJECTED_FILE" "$candidate_sha"', handler)
         self.assertIn("portable_reboot_now", handler)
