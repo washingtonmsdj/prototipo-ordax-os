@@ -53,8 +53,9 @@ Estados canônicos que permanecem explícitos em `docs/PROMOTION-GATES.md`:
 
 ```text
 PORTABLE_V2_PID1_INTEGRATION=PASS_SOURCE
-PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PASS_CI_DISPOSABLE
-PORTABLE_QEMU_UEFI_BOOT=PASS_CI_DISPOSABLE_OVMF_NON_SECURE_BOOT
+PORTABLE_QEMU_DIRECT_KERNEL_BOOT_BASELINE=PASS_CI_DISPOSABLE
+PORTABLE_QEMU_UEFI_BOOT_BASELINE=PASS_CI_DISPOSABLE_OVMF_NON_SECURE_BOOT
+PORTABLE_RUNTIME_V3_CURRENT_HEAD_PROOF=SEE_PROOF_CONTRACTS
 PORTABLE_PHYSICAL_WRITER=PASS_TAGGED_INTERNAL
 PORTABLE_PHYSICAL_USB_BOOT=NO
 MVP_SURFACE_SMOKE_HARNESS=PASS_SOURCE
@@ -70,7 +71,7 @@ O USB Owner/Development possui provas físicas próprias; elas não equivalem à
 
 ### P0 — consolidar o Stable/MVP portátil a partir do estado já implementado
 
-A consolidação USB-only da antiga PR #357 já foi integrada à `main`. Depois dela, o source avançou: o Portable v2 possui PID1 candidato conectado, seleção `current -> known-good`, verificação offline, Stable Base, runtime gráfico separado por conteúdo e provas descartáveis de boot direto e UEFI/OVMF; o Creator também possui writer Portable v2 interno/tagged para o layout final `ORDAX-ESP + ORDAX-DATA`.
+A consolidação USB-only da antiga PR #357 já foi integrada à `main`. Depois dela, o source avançou: o Portable v2 possui PID1 candidato conectado, seleção `current -> known-good`, verificação offline, Stable Base e runtime gráfico separado por conteúdo; o Creator também possui writer Portable v2 interno/tagged para o layout final `ORDAX-ESP + ORDAX-DATA`. Há provas descartáveis baseline de boot direto e UEFI/OVMF. O estado da prova runtime-v3 do head atual deve ser lido nos contratos `portable-v2-qemu-boot-proof.json` e `portable-v2-uefi-boot-proof.json`, sem transformar uma prova histórica em afirmação sobre um head ainda não promovido.
 
 A falha histórica `ORDAX-ESP partition not found` de um head antigo foi superada e não é uma pendência atual. Não voltar a habilitar flags BusyBox, aumentar timeouts ou criar rotas alternativas por causa daquele log sem primeiro reproduzir a falha no source e CI atuais.
 
@@ -86,7 +87,7 @@ O próximo marco é uma cerimônia real de operador conforme `docs/RELEASE-TRUST
 
 Com o handoff Portable v2 já implementado e exercitado em mídia descartável, o próximo fechamento canônico é trust real + publicação autorizada + prova física do USB final. A partir daí, fechar no hardware os gates de aquisição/assinatura/health/rollback do perfil Stable sem reaproveitar evidência Owner/Development como se fosse prova de produto.
 
-QEMU direto e UEFI/OVMF já reduzem o risco do boot candidato, mas continuam sendo prova descartável. CI, Web candidate e USB de desenvolvimento não substituem `CANONICAL_NOTEBOOK_UEFI_BOOT`, `CANONICAL_STABLE_GRAPHICAL_MODE`, Secure Boot nem outras provas físicas canônicas pendentes.
+As provas baseline de QEMU direto e UEFI/OVMF reduzem o risco do boot candidato, mas continuam sendo prova descartável. A prova runtime-v3 do head corrente só é PASS quando os contratos de evidência desse head forem promovidos a partir do workflow correspondente. CI, Web candidate e USB de desenvolvimento não substituem `CANONICAL_NOTEBOOK_UEFI_BOOT`, `CANONICAL_STABLE_GRAPHICAL_MODE`, Secure Boot nem outras provas físicas canônicas pendentes.
 
 ### P0 — smoke físico da Surface
 
