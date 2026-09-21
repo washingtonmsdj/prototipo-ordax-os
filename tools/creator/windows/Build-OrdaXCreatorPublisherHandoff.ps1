@@ -63,15 +63,7 @@ if ($TrustClass -eq 'canonical') {
         throw 'canonical Creator handoff requires pinned release trust policy'
     }
     $expectedTrustSha = [string]$policy.public_anchor.sha256
-    if ($expectedTrustSha -cnotmatch '^[0-9a-f]{64}$') {
-        throw 'release trust policy public anchor SHA-256 is invalid'
-    }
-    if ($trustSha -cne $expectedTrustSha) {
-        throw "canonical Creator trust bytes differ from pinned policy SHA-256: expected=$expectedTrustSha actual=$trustSha"
-    }
-}
-
-Push-Location (Join-Path $repoRoot 'tools/creator')
+    if ($expectedTrustSha -cnotmatch '^[0-9a-f]{64}Push-Location (Join-Path $repoRoot 'tools/creator')
 try {
     go test -count=1 ./appchannel ./componentchannel ./physicalchannel ./cmd/ordax-creator-app ./cmd/ordax-creator-launcher
     if ($LASTEXITCODE -ne 0) { throw 'Creator handoff pre-build tests failed' }
