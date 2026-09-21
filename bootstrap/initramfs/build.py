@@ -50,8 +50,9 @@ KERNEL_BUILD = _load_repo_module("ordax_kernel_build_for_initramfs", KERNEL_BUIL
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _SAFE_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 REQUIRED_APPLETS = {
-    "blkid", "cat", "echo", "findfs", "losetup", "mkdir", "mount", "poweroff",
-    "reboot", "sh", "sha256sum", "sleep", "switch_root", "sync", "test", "[", "umount",
+    "blkid", "cat", "chmod", "cp", "echo", "findfs", "losetup", "mkdir", "mount",
+    "poweroff", "reboot", "sh", "sha256sum", "sleep", "switch_root", "sync", "test",
+    "[", "umount",
 }
 REQUESTED_CONFIG = {
     "CONFIG_BUSYBOX": "y",
@@ -60,6 +61,8 @@ REQUESTED_CONFIG = {
     "CONFIG_SH_IS_ASH": "y",
     "CONFIG_BLKID": "y",
     "CONFIG_CAT": "y",
+    "CONFIG_CHMOD": "y",
+    "CONFIG_CP": "y",
     "CONFIG_ECHO": "y",
     "CONFIG_FINDFS": "y",
     "CONFIG_LOSETUP": "y",
