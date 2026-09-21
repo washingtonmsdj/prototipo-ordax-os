@@ -73,6 +73,8 @@ QEMU_REQUIRED=NO
 
 The trust custody/recovery/rotation policy is defined in `docs/contracts/release-trust-policy.json`; policy completion does not resolve the actual public trust artifact.
 
+The signed trust-transition protocol is being implemented as a separate forward-resilience boundary. Its signer/verifier source does not close `RELEASE_TRUST_RECOVERY`, does not pin the current public anchor, and is not required to authorize the first controlled physical proof. Production rotation remains blocked until stateful device activation and effective-trust selection exist.
+
 ## Gate 3 - Two-partition bootstrap-seed provisioning in disposable media
 
 ```text
