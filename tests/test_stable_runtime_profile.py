@@ -255,7 +255,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
             stable["exact_release_activation_physical_agent_target_sha256"],
             "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
         )
-        self.assertFalse(stable["exact_release_activation_asset_published"])
+        self.assertTrue(stable["exact_release_activation_asset_published"])
         self.assertTrue(stable["activation_requires_staged_sha_equals_health_ready_sha"])
         self.assertTrue(stable["activation_guard_persisted_before_current_swap"])
         self.assertTrue(stable["activated_release_requires_cold_health"])
