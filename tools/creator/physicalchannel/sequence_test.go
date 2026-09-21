@@ -20,21 +20,29 @@ func sequencedCandidate(t *testing.T, root, commit string, sequence int64) Insta
 		t.Fatal(err)
 	}
 	provenance := physicalProvenance{
-		Schema:                          physicalProvenanceSchema,
-		Status:                          "authorized-candidate-not-published",
-		SourceCommit:                    commit,
-		ReleaseSequence:                 sequence,
-		ConsumerKeySetupRequired:        false,
-		DevelopmentChannel:              false,
-		CanonicalTrustSHA256:            strings.Repeat("1", 64),
-		MinimalBootstrapSHA256:          strings.Repeat("2", 64),
-		PhysicalMediaSHA256:             strings.Repeat("3", 64),
-		SeedSHA256:                      strings.Repeat("4", 64),
-		SeedSize:                        4096,
-		RawBackendLinked:                true,
-		PhysicalWriteAuthorizedInBinary: true,
-		ReleasePublished:                false,
-		PrivateKeyInCandidate:           false,
+		Schema:                             physicalProvenanceSchema,
+		Status:                             "authorized-candidate-not-published",
+		SourceCommit:                       commit,
+		ReleaseSequence:                    sequence,
+		ConsumerKeySetupRequired:           false,
+		DevelopmentChannel:                 false,
+		CanonicalTrustSHA256:               strings.Repeat("1", 64),
+		MinimalBootstrapSHA256:             strings.Repeat("2", 64),
+		PortableUSBContractSHA256:          strings.Repeat("3", 64),
+		CreatorPortableMediaContractSHA256: strings.Repeat("4", 64),
+		PhysicalWriteAuthorizationSHA256:   strings.Repeat("5", 64),
+		PortableWriterLinked:               true,
+		PortableApplicationPlanSchema:      "prototype-ordax.portable-application-plan/1",
+		PortableApplicationOperationCount:  35,
+		PortableArtifactCount:              15,
+		PerArtifactReadbackSHA256Size:       true,
+		WholeDiskRawImageRequired:           false,
+		TargetSpecificPlanRequired:          true,
+		PayloadArtifactsInCandidate:         false,
+		PublicCreatorReachable:              false,
+		PhysicalWriteAuthorizedInBinary:     true,
+		ReleasePublished:                    false,
+		PrivateKeyInCandidate:               false,
 	}
 	provenanceBytes, err := json.Marshal(provenance)
 	if err != nil {
@@ -121,5 +129,69 @@ func TestEnsureNotRollbackRejectsSequenceReuseAndAllowsAdvance(t *testing.T) {
 	}
 	if err := ensureNotRollback(root, newer, trust, trustSHA); err != nil {
 		t.Fatalf("newer candidate rejected: %v", err)
+	}
+}
+
+
+func TestReleaseSequenceRejectsLegacyRawWriterProvenanceShape(t *testing.T) {
+	root := t.TempDir()
+	installed := sequencedCandidate(t, root, "5555555555555555555555555555555555555555", 4)
+	path := filepath.Join(installed.Directory, "provenance.json")
+	var provenance map[string]any
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &provenance); err != nil {
+		t.Fatal(err)
+	}
+	provenance["$schema"] = "prototype-ordax.physical-write-candidate/1"
+	provenance["physical_media_sha256"] = strings.Repeat("a", 64)
+	provenance["seed_sha256"] = strings.Repeat("b", 64)
+	provenance["seed_size"] = 4096
+	data, _ = json.Marshal(provenance)
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for i := range installed.Manifest.Files {
+		if installed.Manifest.Files[i].Name != "provenance.json" {
+			continue
+		}
+		digest := sha256.Sum256(data)
+		installed.Manifest.Files[i].SHA256 = hex.EncodeToString(digest[:])
+		installed.Manifest.Files[i].Size = int64(len(data))
+	}
+	if _, err := ReleaseSequence(installed); err == nil || !strings.Contains(err.Error(), "unsupported physical provenance schema") {
+		t.Fatalf("legacy RAW provenance unexpectedly accepted: %v", err)
+	}
+}
+
+func TestReleaseSequenceRejectsPortableCandidateThatRequiresWholeDiskRaw(t *testing.T) {
+	root := t.TempDir()
+	installed := sequencedCandidate(t, root, "6666666666666666666666666666666666666666", 5)
+	path := filepath.Join(installed.Directory, "provenance.json")
+	var provenance map[string]any
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &provenance); err != nil {
+		t.Fatal(err)
+	}
+	provenance["whole_disk_raw_image_required"] = true
+	data, _ = json.Marshal(provenance)
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for i := range installed.Manifest.Files {
+		if installed.Manifest.Files[i].Name != "provenance.json" {
+			continue
+		}
+		digest := sha256.Sum256(data)
+		installed.Manifest.Files[i].SHA256 = hex.EncodeToString(digest[:])
+		installed.Manifest.Files[i].Size = int64(len(data))
+	}
+	if _, err := ReleaseSequence(installed); err == nil || !strings.Contains(err.Error(), "whole-disk RAW") {
+		t.Fatalf("whole-disk RAW regression unexpectedly accepted: %v", err)
 	}
 }
