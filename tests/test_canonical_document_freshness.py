@@ -158,12 +158,48 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
 
         self.assertEqual(state["GIT_HOT_UPDATE_ROUND_TRIP"], "PASS")
         self.assertEqual(promotion["DEVELOPMENT_DEVICE_GIT_HOT_UPDATE"], "PASS_PHYSICAL_DEVELOPMENT_USB")
-        self.assertEqual(promotion["STABLE_DEVICE_RELEASE_OR_DELTA_UPDATE"], "PENDING")
+        self.assertEqual(
+            promotion["STABLE_DEVICE_RELEASE_OR_DELTA_UPDATE"],
+            "PASS_SOURCE_PORTABLE_V3_PENDING_CI_AND_PHYSICAL",
+        )
+        self.assertEqual(
+            promotion["STABLE_HEALTH_READINESS"],
+            "PASS_SOURCE_PORTABLE_COLD_HEALTH_PENDING_PHYSICAL",
+        )
+        self.assertEqual(
+            state["PORTABLE_V3_UPDATE_ACTIVATION_SOURCE"],
+            "CONNECTED_ONE_SHOT_REBOOT_COLD_HEALTH",
+        )
+        self.assertEqual(
+            state["PORTABLE_V3_UPDATE_ACTIVATION_QEMU_PROOF"],
+            "PENDING_CURRENT_BRANCH",
+        )
+        self.assertEqual(
+            state["PORTABLE_V3_UPDATE_ACTIVATION_PHYSICAL_PROOF"],
+            "NO",
+        )
 
         self.assertEqual(promotion["MVP_SURFACE_SMOKE_HARNESS"], "PASS_SOURCE")
         self.assertEqual(promotion["MVP_SURFACE_SMOKE_PHYSICAL"], "PENDING")
         self.assertEqual(promotion["CANONICAL_RELEASE_TRUST"], "PENDING_CANONICAL_KEY")
         self.assertEqual(promotion["PHYSICAL_USB_WRITE"], "NO")
+
+    def test_portable_update_docs_keep_source_ci_and_physical_evidence_separate(self):
+        current = CURRENT_STATE.read_text(encoding="utf-8")
+        promotion = PROMOTION_GATES.read_text(encoding="utf-8")
+        self.assertIn(
+            "PORTABLE_V3_UPDATE_ACTIVATION_SOURCE=CONNECTED_ONE_SHOT_REBOOT_COLD_HEALTH",
+            current,
+        )
+        self.assertIn(
+            "PORTABLE_V3_UPDATE_ACTIVATION_QEMU_PROOF=PENDING_CURRENT_BRANCH",
+            current,
+        )
+        self.assertIn("PORTABLE_V3_UPDATE_ACTIVATION_PHYSICAL_PROOF=NO", current)
+        self.assertIn("PASS_SOURCE_PENDING_CI_PROOF", promotion)
+        self.assertIn("KNOWN_GOOD_PERSISTED=PENDING_PHYSICAL", promotion)
+        self.assertIn("ROLLBACK=PENDING_PHYSICAL", promotion)
+        self.assertNotIn("portable-v2-activation-not-connected", current)
 
     def test_surface_smoke_gate_tracks_fail_closed_finalizer(self):
         promotion_text = PROMOTION_GATES.read_text(encoding="utf-8")
