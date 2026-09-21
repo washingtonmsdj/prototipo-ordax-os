@@ -14,7 +14,7 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
     def test_policy_resolves_custody_without_faking_key_material(self):
         policy = self.load_policy()
         self.assertEqual(policy["$schema"], "prototype-ordax.release-trust-policy/1")
-        self.assertEqual(policy["status"], "policy-resolved-key-material-pending")
+        self.assertEqual(policy["status"], "prototype-key-generated-recovery-pending")
         self.assertEqual(policy["algorithm"], "ed25519")
         self.assertEqual(policy["canonical_key_id"], "ordax-prototype-release-v1")
         self.assertEqual(policy["private_key"]["custody_owner"], "repository-owner-developer")
@@ -50,6 +50,19 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
             ],
         )
 
+    def test_custody_evolution_is_provider_neutral_and_not_single_host_bound(self):
+        policy = self.load_policy()
+        private_key = policy["private_key"]
+        rotation = policy["rotation"]
+        self.assertEqual(private_key["current_backend"], "local-pem")
+        self.assertFalse(private_key["local_private_key_is_production_single_source_of_truth"])
+        self.assertEqual(private_key["managed_backend_target"], "kms-hsm")
+        self.assertFalse(private_key["github_is_key_custodian"])
+        self.assertTrue(rotation["provider_neutral_signing_backend_required"])
+        self.assertFalse(rotation["managed_kms_hsm_required_for_first_physical_proof"])
+        self.assertTrue(rotation["signed_rotation_required_before_broad_public_distribution"])
+        self.assertTrue(rotation["single_lost_key_or_host_must_not_permanently_block_updates"])
+
     def test_private_key_locations_explicitly_forbid_repository_and_usb(self):
         forbidden = set(self.load_policy()["private_key"]["forbidden_locations"])
         for location in {"git", "usb-bootstrap", "github-actions-artifacts", "logs", "chat"}:
@@ -65,13 +78,12 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
     def test_pending_policy_keeps_all_promotion_gates_closed(self):
         policy = self.load_policy()
         gates = policy["gates"]
-        self.assertFalse(gates["key_material_generated"])
+        self.assertTrue(gates["key_material_generated"])
         self.assertFalse(gates["public_anchor_pinned"])
         self.assertFalse(gates["minimal_bootstrap_resolved"])
         self.assertFalse(gates["physical_authorization_eligible"])
         self.assertNotIn("physical_write_allowed", gates)
-        if policy["status"] == "policy-resolved-key-material-pending":
-            self.assertFalse(TRUST_PATH.exists(), "pending policy must not ship placeholder canonical trust")
+        self.assertFalse(TRUST_PATH.exists(), "generated local key must not imply a pinned public anchor")
 
 
 if __name__ == "__main__":
