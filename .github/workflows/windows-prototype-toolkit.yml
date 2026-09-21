@@ -116,6 +116,7 @@ jobs:
           )
           cp docs/RELEASE-TRUST-CEREMONY.md "$out/RELEASE-TRUST-CEREMONY.md"
           cp docs/contracts/release-trust-policy.json "$out/release-trust-policy.json"
+          cp tools/release-signing/windows/1-Verify-OrdaXTrustToolkit.cmd "$out/1-Verify-OrdaXTrustToolkit.cmd"
           cp tools/release-signing/windows/2-Initialize-OrdaXTrust.cmd "$out/2-Initialize-OrdaXTrust.cmd"
           cp tools/release-signing/windows/Initialize-OrdaXReleaseTrust.ps1 "$out/Initialize-OrdaXReleaseTrust.ps1"
           cp tools/release-signing/windows/3-Verify-OrdaXTrustRecovery.cmd "$out/3-Verify-OrdaXTrustRecovery.cmd"
@@ -134,6 +135,7 @@ jobs:
               ordax-creator.exe \
               ordax-creator-targets.exe \
               ordax-release-signing.exe \
+              1-Verify-OrdaXTrustToolkit.cmd \
               2-Initialize-OrdaXTrust.cmd \
               Initialize-OrdaXReleaseTrust.ps1 \
               3-Verify-OrdaXTrustRecovery.cmd \
