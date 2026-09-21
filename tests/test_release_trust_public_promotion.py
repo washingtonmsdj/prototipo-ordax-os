@@ -234,6 +234,7 @@ class PublicReleaseTrustPromotionTests(unittest.TestCase):
             )
             self.assertFalse(authorization["physical_write_allowed"])
             self.assertFalse(authorization["explicit_owner_authorization"])
+            self.assertIsNone(authorization["authorization_context_sha256"])
             self.assertEqual(
                 authorization["status"],
                 "blocked-explicit-physical-authorization-pending",
@@ -264,6 +265,31 @@ class PublicReleaseTrustPromotionTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 promotion.PromotionError,
                 "requires fresh Stable/MVP owner authorization",
+            ):
+                promotion.prepare_repository_promotion(
+                    root,
+                    promotion_dir,
+                    verifier,
+                )
+
+            self.assertFalse(
+                (root / "bootstrap/trust/release-ed25519.json").exists()
+            )
+
+    @mock.patch.object(promotion.subprocess, "run")
+    def test_public_trust_promotion_rejects_preloaded_authorization_context(self, run):
+        run.return_value = self.verified_process()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            promotion_dir, verifier = self.fixture(root)
+            auth_path = root / "docs/contracts/physical-write-authorization.json"
+            authorization = json.loads(auth_path.read_text(encoding="utf-8"))
+            authorization["authorization_context_sha256"] = "a" * 64
+            write_json(auth_path, authorization)
+
+            with self.assertRaisesRegex(
+                promotion.PromotionError,
+                "source context to remain unset",
             ):
                 promotion.prepare_repository_promotion(
                     root,
