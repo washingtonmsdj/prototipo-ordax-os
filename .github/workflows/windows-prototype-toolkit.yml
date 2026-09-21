@@ -8,6 +8,10 @@ on:
       - 'tools/release-signing/**'
       - 'docs/RELEASE-TRUST-CEREMONY.md'
       - 'docs/contracts/release-trust-policy.json'
+      - 'docs/contracts/portable-v2-qemu-boot-proof.json'
+      - 'docs/contracts/portable-v2-uefi-boot-proof.json'
+      - 'docs/contracts/creator-portable-media-plan.json'
+      - 'docs/contracts/physical-write-authorization.json'
       - '.github/workflows/windows-prototype-toolkit.yml'
   pull_request:
     paths:
@@ -15,6 +19,10 @@ on:
       - 'tools/release-signing/**'
       - 'docs/RELEASE-TRUST-CEREMONY.md'
       - 'docs/contracts/release-trust-policy.json'
+      - 'docs/contracts/portable-v2-qemu-boot-proof.json'
+      - 'docs/contracts/portable-v2-uefi-boot-proof.json'
+      - 'docs/contracts/creator-portable-media-plan.json'
+      - 'docs/contracts/physical-write-authorization.json'
       - '.github/workflows/windows-prototype-toolkit.yml'
   workflow_dispatch:
 
@@ -116,6 +124,7 @@ jobs:
           )
           cp docs/RELEASE-TRUST-CEREMONY.md "$out/RELEASE-TRUST-CEREMONY.md"
           cp docs/contracts/release-trust-policy.json "$out/release-trust-policy.json"
+          cp tools/release-signing/windows/1-Verify-OrdaXTrustToolkit.cmd "$out/1-Verify-OrdaXTrustToolkit.cmd"
           cp tools/release-signing/windows/2-Initialize-OrdaXTrust.cmd "$out/2-Initialize-OrdaXTrust.cmd"
           cp tools/release-signing/windows/Initialize-OrdaXReleaseTrust.ps1 "$out/Initialize-OrdaXReleaseTrust.ps1"
           cp tools/release-signing/windows/3-Verify-OrdaXTrustRecovery.cmd "$out/3-Verify-OrdaXTrustRecovery.cmd"
@@ -134,6 +143,7 @@ jobs:
               ordax-creator.exe \
               ordax-creator-targets.exe \
               ordax-release-signing.exe \
+              1-Verify-OrdaXTrustToolkit.cmd \
               2-Initialize-OrdaXTrust.cmd \
               Initialize-OrdaXReleaseTrust.ps1 \
               3-Verify-OrdaXTrustRecovery.cmd \
@@ -148,6 +158,53 @@ jobs:
           root = pathlib.Path('out/windows-prototype-toolkit')
           def digest(name):
               return hashlib.sha256((root / name).read_bytes()).hexdigest()
+
+          qemu = json.loads(pathlib.Path(
+              'docs/contracts/portable-v2-qemu-boot-proof.json'
+          ).read_text(encoding='utf-8'))
+          uefi = json.loads(pathlib.Path(
+              'docs/contracts/portable-v2-uefi-boot-proof.json'
+          ).read_text(encoding='utf-8'))
+          portable_media = json.loads(pathlib.Path(
+              'docs/contracts/creator-portable-media-plan.json'
+          ).read_text(encoding='utf-8'))
+          physical_auth = json.loads(pathlib.Path(
+              'docs/contracts/physical-write-authorization.json'
+          ).read_text(encoding='utf-8'))
+
+          trust_prerequisites = {
+              'portable_runtime_v3_direct_kernel_proven': (
+                  qemu.get('status') == 'runtime-v3-qemu-direct-kernel-proof-pass'
+                  and qemu.get('qemu_direct_kernel_boot_proven') is True
+                  and qemu.get('release_manifest_schema') == 'prototype-ordax.release-manifest/3'
+                  and qemu.get('physical_boot_proven') is False
+                  and qemu.get('physical_write_authorized') is False
+              ),
+              'portable_runtime_v3_uefi_ovmf_proven': (
+                  uefi.get('status') == 'runtime-v3-uefi-ovmf-proof-pass'
+                  and uefi.get('qemu_uefi_boot_proven') is True
+                  and uefi.get('release_manifest_schema') == 'prototype-ordax.release-manifest/3'
+                  and uefi.get('secure_boot_proven') is False
+                  and uefi.get('physical_usb_boot_proven') is False
+              ),
+              'portable_writer_v2_implemented_fail_closed': (
+                  portable_media.get('partitions') == ['ORDAX-ESP', 'ORDAX-DATA']
+                  and portable_media.get('physical_writer_v2_implemented') is True
+                  and portable_media.get('public_mvp_default_enabled') is False
+                  and portable_media.get('physical_write_authorized') is False
+                  and portable_media.get('physical_writer_v2', {}).get('public_creator_reachable') is False
+                  and portable_media.get('physical_writer_v2', {}).get('physical_write_authorized') is False
+              ),
+              'physical_authorization_still_fail_closed': (
+                  physical_auth.get('$schema') == 'prototype-ordax.physical-write-authorization/2'
+                  and physical_auth.get('physical_write_allowed') is False
+              ),
+          }
+          canonical_main_push = (
+              os.environ['GITHUB_REPOSITORY'] == 'washingtonmsdj/prototipo-ordax-os'
+              and os.environ['GITHUB_EVENT_NAME'] == 'push'
+              and os.environ['GITHUB_REF'] == 'refs/heads/main'
+          )
           data = {
               '$schema': 'prototype-ordax.windows-prototype-toolkit/2',
               'status': 'candidate',
@@ -156,10 +213,9 @@ jobs:
               'source_ref': os.environ['GITHUB_REF'],
               'source_event': os.environ['GITHUB_EVENT_NAME'],
               'canonical_trust_ceremony_eligible': (
-                  os.environ['GITHUB_REPOSITORY'] == 'washingtonmsdj/prototipo-ordax-os'
-                  and os.environ['GITHUB_EVENT_NAME'] == 'push'
-                  and os.environ['GITHUB_REF'] == 'refs/heads/main'
+                  canonical_main_push and all(trust_prerequisites.values())
               ),
+              'canonical_trust_prerequisites': trust_prerequisites,
               'go_version': subprocess.check_output(['go', 'version'], text=True).strip(),
               'native_windows_raw_disk_backend_source_implemented': True,
               'native_windows_raw_disk_backend_build_tag': 'ordax_raw_backend',
@@ -205,11 +261,20 @@ jobs:
           assert provenance['source_repository'] == os.environ['GITHUB_REPOSITORY']
           assert provenance['source_ref'] == os.environ['GITHUB_REF']
           assert provenance['source_event'] == os.environ['GITHUB_EVENT_NAME']
-          expected_ceremony_eligibility = (
+          prerequisites = provenance['canonical_trust_prerequisites']
+          assert set(prerequisites) == {
+              'portable_runtime_v3_direct_kernel_proven',
+              'portable_runtime_v3_uefi_ovmf_proven',
+              'portable_writer_v2_implemented_fail_closed',
+              'physical_authorization_still_fail_closed',
+          }
+          assert all(isinstance(value, bool) for value in prerequisites.values())
+          canonical_main_push = (
               os.environ['GITHUB_REPOSITORY'] == 'washingtonmsdj/prototipo-ordax-os'
               and os.environ['GITHUB_EVENT_NAME'] == 'push'
               and os.environ['GITHUB_REF'] == 'refs/heads/main'
           )
+          expected_ceremony_eligibility = canonical_main_push and all(prerequisites.values())
           assert provenance['canonical_trust_ceremony_eligible'] is expected_ceremony_eligibility
           print('TOOLKIT_SECRET_MATERIAL=NONE')
           print('TOOLKIT_PUBLIC_PHYSICAL_APPLY=BLOCKED')
