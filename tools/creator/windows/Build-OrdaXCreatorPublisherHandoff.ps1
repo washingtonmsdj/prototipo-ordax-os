@@ -53,6 +53,23 @@ try {
 if ($publicBytes.Length -ne 32) { throw 'Creator public release trust must contain a 32-byte Ed25519 public key' }
 $trustSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $TrustPath).Hash.ToLowerInvariant()
 $trustBase64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($TrustPath))
+if ($TrustClass -eq 'canonical') {
+    $policyPath = Get-RealFile -Path (Join-Path $repoRoot 'docs/contracts/release-trust-policy.json') -Label 'release trust policy'
+    $policy = Get-Content -LiteralPath $policyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($policy.'$schema' -ne 'prototype-ordax.release-trust-policy/1') {
+        throw 'release trust policy schema is invalid'
+    }
+    if ([string]$policy.status -cne 'canonical-public-trust-pinned') {
+        throw 'canonical Creator handoff requires pinned release trust policy'
+    }
+    $expectedTrustSha = [string]$policy.public_anchor.sha256
+    if ($expectedTrustSha -cnotmatch '^[0-9a-f]{64}$') {
+        throw 'release trust policy public anchor SHA-256 is invalid'
+    }
+    if ($trustSha -cne $expectedTrustSha) {
+        throw "canonical Creator trust bytes differ from pinned policy SHA-256: expected=$expectedTrustSha actual=$trustSha"
+    }
+}
 
 Push-Location (Join-Path $repoRoot 'tools/creator')
 try {

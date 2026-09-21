@@ -1,0 +1,2 @@
+# Canonical byte-pinned release trust must keep identical bytes on every host.
+bootstrap/trust/release-ed25519.json text eol=lf

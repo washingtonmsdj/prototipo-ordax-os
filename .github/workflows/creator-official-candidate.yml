@@ -4,6 +4,19 @@ on:
   push:
     branches: [main]
     paths:
+      - '.gitattributes'
+      - 'bootstrap/trust/release-ed25519.json'
+      - 'docs/contracts/release-trust-policy.json'
+      - 'docs/contracts/creator-app-channel.json'
+      - 'docs/contracts/creator-component-channel.json'
+      - 'docs/contracts/creator-code-signing.json'
+      - 'tools/creator/**'
+      - 'tools/release-signing/cmd/ordax-creator-app-signing/**'
+      - 'tools/release-signing/cmd/ordax-creator-app-manifest/**'
+      - '.github/workflows/creator-official-candidate.yml'
+  pull_request:
+    paths:
+      - '.gitattributes'
       - 'bootstrap/trust/release-ed25519.json'
       - 'docs/contracts/release-trust-policy.json'
       - 'docs/contracts/creator-app-channel.json'
@@ -166,7 +179,7 @@ jobs:
           $out = Join-Path $PWD 'out/creator-publisher-handoff-regression'
           & tools/creator/windows/Build-OrdaXCreatorPublisherHandoff.ps1 `
             -TrustPath $trustPath `
-            -SourceCommit '${{ github.sha }}' `
+            -SourceCommit '${{ github.event.pull_request.head.sha || github.sha }}' `
             -AppVersion ([string]$app.version) `
             -AppReleaseSequence ([int64]$app.release_sequence) `
             -TrustClass 'ci-disposable' `
@@ -214,7 +227,7 @@ jobs:
           $out = Join-Path $PWD 'out/creator-official-candidate'
           & tools/creator/windows/Build-OrdaXCreatorPublisherHandoff.ps1 `
             -TrustPath bootstrap/trust/release-ed25519.json `
-            -SourceCommit '${{ github.sha }}' `
+            -SourceCommit '${{ github.event.pull_request.head.sha || github.sha }}' `
             -AppVersion $env:APP_VERSION `
             -AppReleaseSequence ([int64]$env:APP_SEQUENCE) `
             -TrustClass 'canonical' `

@@ -4,6 +4,18 @@ on:
   push:
     branches: [main]
     paths:
+      - '.gitattributes'
+      - 'bootstrap/trust/release-ed25519.json'
+      - 'docs/contracts/release-trust-policy.json'
+      - 'docs/contracts/creator-component-channel.json'
+      - 'tools/creator/componentchannel/**'
+      - 'tools/creator/cmd/ordax-creator-inspection/**'
+      - 'tools/creator/host/windows/**'
+      - 'tools/release-signing/cmd/ordax-creator-component-signing/**'
+      - '.github/workflows/creator-component-candidate.yml'
+  pull_request:
+    paths:
+      - '.gitattributes'
       - 'bootstrap/trust/release-ed25519.json'
       - 'docs/contracts/release-trust-policy.json'
       - 'docs/contracts/creator-component-channel.json'
@@ -59,7 +71,8 @@ jobs:
           version=''
           release_sequence=''
           if [ -f bootstrap/trust/release-ed25519.json ]; then
-            readarray -t values < <(python - <<'PY'
+            values_file="$RUNNER_TEMP/creator-component-gate-values.txt"
+            python - <<'PY' > "$values_file"
           import base64, json, pathlib, re
           trust = json.loads(pathlib.Path('bootstrap/trust/release-ed25519.json').read_text(encoding='utf-8'))
           policy = json.loads(pathlib.Path('docs/contracts/release-trust-policy.json').read_text(encoding='utf-8'))
@@ -90,7 +103,12 @@ jobs:
           print(contract['version'])
           print(contract['release_sequence'])
           PY
-            )
+            readarray -t values < "$values_file"
+            rm -f "$values_file"
+            if [ "${#values[@]}" -ne 2 ]; then
+              echo 'creator component gate did not emit exactly version and release sequence' >&2
+              exit 1
+            fi
             version="${values[0]}"
             release_sequence="${values[1]}"
             ready=true
@@ -179,6 +197,7 @@ jobs:
         env:
           COMPONENT_VERSION: ${{ needs.trust-and-contract-gate.outputs.version }}
           RELEASE_SEQUENCE: ${{ needs.trust-and-contract-gate.outputs.release_sequence }}
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
@@ -187,7 +206,7 @@ jobs:
             --output-dir out/creator-component-release `
             --version $env:COMPONENT_VERSION `
             --release-sequence $env:RELEASE_SEQUENCE `
-            --source-commit $env:GITHUB_SHA
+            --source-commit $env:ORDAX_SOURCE_COMMIT
 
           $release = Join-Path $PWD 'out/creator-component-release'
           if (Get-ChildItem -LiteralPath $release -Recurse -File | Where-Object { $_.Extension -in @('.pem', '.key', '.p12', '.pfx', '.dpapi') }) {

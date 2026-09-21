@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 import unittest
@@ -5,6 +6,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = ROOT / "docs" / "contracts" / "release-trust-policy.json"
 TRUST_PATH = ROOT / "bootstrap" / "trust" / "release-ed25519.json"
+GITATTRIBUTES_PATH = ROOT / ".gitattributes"
 
 
 class ReleaseTrustPolicyTests(unittest.TestCase):
@@ -108,6 +110,16 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
         forbidden = set(self.load_policy()["private_key"]["forbidden_locations"])
         for location in {"git", "usb-bootstrap", "github-actions-artifacts", "logs", "chat"}:
             self.assertIn(location, forbidden)
+
+    def test_canonical_trust_bytes_are_hash_stable_across_checkouts(self):
+        policy = self.load_policy()
+        digest = hashlib.sha256(TRUST_PATH.read_bytes()).hexdigest()
+        self.assertEqual(digest, policy["public_anchor"]["sha256"])
+        attributes = GITATTRIBUTES_PATH.read_text(encoding="utf-8")
+        self.assertIn(
+            "bootstrap/trust/release-ed25519.json text eol=lf",
+            attributes.splitlines(),
+        )
 
     def test_public_anchor_path_matches_runtime_contract(self):
         anchor = self.load_policy()["public_anchor"]

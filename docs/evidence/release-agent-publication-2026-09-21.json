@@ -1,0 +1,23 @@
+{
+  "$schema": "prototype-ordax.release-agent-publication-evidence/1",
+  "status": "pass",
+  "source_commit": "9e3e7f706540d411293e6ea048dd54457515ad85",
+  "workflow_run_id": 35661774810,
+  "workflow_name": "Release Agent Refresh Asset",
+  "tag": "ordax-release-agent-721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
+  "asset": {
+    "name": "ordax-release-agent",
+    "sha256": "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
+    "size": 7196832,
+    "state": "uploaded"
+  },
+  "release": {
+    "prerelease": true,
+    "draft": false
+  },
+  "safety": {
+    "physical_artifact_authorized": false,
+    "physical_write_allowed": false,
+    "private_key_material_present": false
+  }
+}
