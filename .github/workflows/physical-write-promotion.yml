@@ -43,6 +43,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       ready: ${{ steps.gate.outputs.ready }}
+      pre_authorization_ready: ${{ steps.gate.outputs.pre_authorization_ready }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -67,10 +68,31 @@ jobs:
           assert data['consumer_key_setup_required'] is False
           assert data['development_channel_can_authorize_write'] is False
           assert isinstance(data['release_sequence'], int) and data['release_sequence'] > 0
+          assert isinstance(data['pre_authorization_ready'], bool)
+          assert isinstance(data['owner_authorization_required'], bool)
+          assert isinstance(data['authorized_candidate_materialization_allowed'], bool)
+          assert data['authorized_candidate_materialization_allowed'] is data['ready']
+          assert data['next_stage'] in {
+              'resolve-pre-authorization-blockers',
+              'explicit-owner-authorization',
+              'authorized-candidate-materialization',
+          }
+          if data['pre_authorization_ready'] and not data['ready']:
+              assert data['owner_authorization_required'] is True
+              assert data['next_stage'] == 'explicit-owner-authorization'
+          if not data['pre_authorization_ready']:
+              assert data['owner_authorization_required'] is False
           print('true' if data['ready'] else 'false')
           PY
           )"
           echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          pre_authorization_ready="$(python - "$status" <<'PY'
+          import json, pathlib, sys
+          data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          print('true' if data['pre_authorization_ready'] else 'false')
+          PY
+          )"
+          echo "pre_authorization_ready=$pre_authorization_ready" >> "$GITHUB_OUTPUT"
           if [ "$ready" = true ]; then
             echo 'PHYSICAL_PROMOTION_GATE=READY'
           else

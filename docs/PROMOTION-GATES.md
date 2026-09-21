@@ -169,6 +169,13 @@ CI proves both sides of this boundary: the normal Windows build excludes the tag
 
 This gate is destructive and requires explicit user authorization at execution time.
 
+The source-controlled preflight distinguishes two states without weakening the boundary:
+
+- `pre_authorization_ready=true`: canonical trust, bootstrap, Portable layout and writer policy are internally consistent, but **no destructive candidate may be materialized yet**;
+- `ready=true`: the separate physical-write authorization contract is explicitly authorized and its exact trust/bootstrap/Portable bindings match current source.
+
+`pre_authorization_ready` is diagnostic only. It never implies `physical_write_allowed`, never creates a writer artifact, and never substitutes for target-specific confirmation or UAC at execution time.
+
 Before write:
 
 ```text

@@ -190,6 +190,12 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             self.make_ready_fixture(root)
             status = promotion.evaluate(root)
             self.assertTrue(status["ready"], status["blockers"])
+            self.assertTrue(status["pre_authorization_ready"])
+            self.assertEqual(status["pre_authorization_blockers"], [])
+            self.assertEqual(status["authorization_blockers"], [])
+            self.assertFalse(status["owner_authorization_required"])
+            self.assertTrue(status["authorized_candidate_materialization_allowed"])
+            self.assertEqual(status["next_stage"], "authorized-candidate-materialization")
             self.assertEqual(
                 status["portable_layout_authority"],
                 "tools/creator/core/portable_media.go",
@@ -204,6 +210,38 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
                     "creator_portable_media_contract_sha256",
                 },
             )
+
+    def test_pre_authorization_ready_does_not_authorize_destructive_candidate(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            auth_path = root / "docs/contracts/physical-write-authorization.json"
+            auth = json.loads(auth_path.read_text(encoding="utf-8"))
+            auth["status"] = "eligible-awaiting-explicit-authorization"
+            auth["physical_write_allowed"] = False
+            auth["bindings"] = {
+                "minimal_bootstrap_sha256": None,
+                "release_trust_sha256": None,
+                "portable_usb_contract_sha256": None,
+                "creator_portable_media_contract_sha256": None,
+            }
+            write_json(auth_path, auth)
+
+            status = promotion.evaluate(root)
+
+            self.assertFalse(status["ready"])
+            self.assertTrue(status["pre_authorization_ready"], status["pre_authorization_blockers"])
+            self.assertEqual(status["pre_authorization_blockers"], [])
+            self.assertEqual(
+                status["authorization_blockers"],
+                [
+                    "explicit-physical-write-authorization-missing",
+                    "physical-authorization-bindings-unresolved",
+                ],
+            )
+            self.assertTrue(status["owner_authorization_required"])
+            self.assertFalse(status["authorized_candidate_materialization_allowed"])
+            self.assertEqual(status["next_stage"], "explicit-owner-authorization")
 
     def test_legacy_ordax_ext4_contract_cannot_satisfy_portable_gate(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -227,6 +265,8 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             write_json(auth_path, auth)
             status = promotion.evaluate(root)
             self.assertFalse(status["ready"])
+            self.assertFalse(status["pre_authorization_ready"])
+            self.assertIn("portable-usb-contract-invalid", status["pre_authorization_blockers"])
             self.assertIn("portable-usb-contract-invalid", status["blockers"])
 
     def test_portable_writer_must_be_implemented_before_authorization(self):
