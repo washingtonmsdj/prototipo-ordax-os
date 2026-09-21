@@ -58,8 +58,15 @@ class ReleaseChannelConfigTests(unittest.TestCase):
         self.assertEqual(artifact["mode"], "0644")
 
         unresolved = [group["id"] for group in manifest["artifact_groups"] if not group["resolved"]]
-        self.assertEqual(unresolved, ["bootstrap-release-trust"])
-        self.assertFalse(manifest["all_artifacts_resolved"])
+        self.assertEqual(unresolved, [])
+        self.assertTrue(manifest["all_artifacts_resolved"])
+        trust = groups["bootstrap-release-trust"]
+        self.assertTrue(trust["resolved"])
+        self.assertEqual(len(trust["artifacts"]), 1)
+        self.assertEqual(
+            trust["artifacts"][0]["sha256"],
+            "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
+        )
         self.assertFalse(manifest["physical_write_allowed"])
 
 
