@@ -216,17 +216,21 @@ PHYSICAL_ARTIFACT_AUTHORIZED=NO
 
 The Stable/MVP runtime reuses the shared `system/supervisor`, but it does not poll Git.
 
-Its current safe boundary is:
+The Stable profile has two explicit runtime layouts. The legacy-tree path keeps its existing exact activation transaction. The MVP Portable path uses release-manifest/3 and never creates the legacy `/ordax/current` symlink:
 
 ```text
 official HTTPS channel
  -> ordax-release-agent inspect
- -> verify signed envelope + trust
- -> exact source_commit
- -> ordax-release-agent materialize --expected-commit
- -> immutable /ordax/releases/<commit>
- -> validate staged system tree
- -> record staged-release-sha
+ -> verify signed envelope + trust + exact source_commit
+ -> ordax-release-agent materialize-portable-v3 --expected-commit
+ -> ordax-release-agent verify-portable-v3-exact
+ -> immutable .ordax/releases/<commit> + content-addressed runtime
+ -> ordax-portable-state prepare
+ -> reboot
+ -> initramfs ordax-portable-state select-boot
+ -> one candidate boot only
+ -> Stable Surface cold-health
+ -> commit current/known-good OR persist rejected + rollback
 ```
 
-This stage does **not** call `install`, does not retarget `/ordax/current`, does not activate a candidate, and does not reboot. Candidate health and exact activation are a separate promotion gate.
+`materialize-portable-v3` and `verify-portable-v3-exact` remain **non-activating primitives**. Activation authority is the ext4 Portable state transaction plus the shared supervisor health policy. No Git is required for activation or rollback. The source path is connected, but the current transaction must still pass its disposable update/rollback proof and later the physical Stable/MVP USB gate before being called product-proven.
