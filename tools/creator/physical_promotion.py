@@ -90,6 +90,24 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def authorization_source_sha256(path: Path) -> str:
+    try:
+        payload = path.read_bytes()
+    except OSError as exc:
+        raise PromotionError(
+            f"cannot read physical authorization context source: {path}"
+        ) from exc
+    # Git checkouts may present text as LF or CRLF depending on the Windows
+    # client configuration. Consent is bound to logical source bytes, not
+    # platform line-ending conversion.
+    canonical = payload.replace(b"\r\n", b"\n")
+    if b"\r" in canonical:
+        raise PromotionError(
+            f"physical authorization context source contains bare CR bytes: {path}"
+        )
+    return hashlib.sha256(canonical).hexdigest()
+
+
 def authorization_context_files(repo_root: Path) -> list[Path]:
     root = repo_root.resolve()
     files: dict[str, Path] = {}
@@ -129,7 +147,7 @@ def authorization_context_sha256(repo_root: Path) -> tuple[str, int]:
         relative = path.relative_to(root).as_posix().encode("utf-8")
         digest.update(relative)
         digest.update(b"\0")
-        digest.update(bytes.fromhex(sha256_file(path)))
+        digest.update(bytes.fromhex(authorization_source_sha256(path)))
         digest.update(b"\0")
     return digest.hexdigest(), len(files)
 
