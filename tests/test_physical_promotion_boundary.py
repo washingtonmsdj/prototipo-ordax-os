@@ -209,6 +209,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             self.assertEqual(status["authorization_blockers"], [])
             self.assertFalse(status["owner_authorization_required"])
             self.assertTrue(status["authorized_candidate_materialization_allowed"])
+            self.assertTrue(status["physical_authorization_bindings_resolved"])
             self.assertEqual(status["next_stage"], "authorized-candidate-materialization")
             self.assertEqual(
                 status["portable_layout_authority"],
@@ -224,6 +225,30 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
                     "creator_portable_media_contract_sha256",
                 },
             )
+
+    def test_resolved_bindings_leave_only_explicit_authorization_blocked(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            auth_path = root / "docs/contracts/physical-write-authorization.json"
+            auth = json.loads(auth_path.read_text(encoding="utf-8"))
+            auth["status"] = "blocked-explicit-physical-authorization-pending"
+            auth["physical_write_allowed"] = False
+            auth["explicit_owner_authorization"] = False
+            write_json(auth_path, auth)
+
+            status = promotion.evaluate(root)
+
+            self.assertFalse(status["ready"])
+            self.assertTrue(status["pre_authorization_ready"], status["pre_authorization_blockers"])
+            self.assertTrue(status["physical_authorization_bindings_resolved"])
+            self.assertEqual(
+                status["authorization_blockers"],
+                ["explicit-physical-write-authorization-missing"],
+            )
+            self.assertTrue(status["owner_authorization_required"])
+            self.assertEqual(status["next_stage"], "explicit-owner-authorization")
+            self.assertFalse(status["authorized_candidate_materialization_allowed"])
 
     def test_pre_authorization_ready_does_not_authorize_destructive_candidate(self):
         with tempfile.TemporaryDirectory() as temporary:

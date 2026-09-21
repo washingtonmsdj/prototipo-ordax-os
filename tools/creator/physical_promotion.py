@@ -304,15 +304,15 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
     _add(blockers, authorization_enabled, "explicit-physical-write-authorization-missing")
 
     bindings = auth.get("bindings")
-    bindings_ok = False
-    if isinstance(bindings, dict) and authorization_enabled and trust_sha is not None:
+    bindings_resolved = False
+    if isinstance(bindings, dict) and trust_sha is not None:
         expected_bindings = {
             "minimal_bootstrap_sha256": minimal_sha,
             "release_trust_sha256": trust_sha,
             "portable_usb_contract_sha256": portable_sha,
             "creator_portable_media_contract_sha256": creator_portable_sha,
         }
-        bindings_ok = (
+        bindings_resolved = (
             set(bindings) == set(expected_bindings)
             and all(
                 HEX64.fullmatch(str(bindings.get(name, ""))) is not None
@@ -320,7 +320,11 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
                 for name, value in expected_bindings.items()
             )
         )
-    _add(blockers, bindings_ok, "physical-authorization-bindings-unresolved")
+    _add(
+        blockers,
+        bindings_resolved,
+        "physical-authorization-bindings-unresolved",
+    )
 
     blockers = sorted(set(blockers))
     authorization_blockers = sorted(
@@ -347,6 +351,7 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
         "authorization_blockers": authorization_blockers,
         "owner_authorization_required": pre_authorization_ready and not ready,
         "authorized_candidate_materialization_allowed": ready,
+        "physical_authorization_bindings_resolved": bindings_resolved,
         "next_stage": next_stage,
         "blockers": blockers,
         "computed_bindings": {
