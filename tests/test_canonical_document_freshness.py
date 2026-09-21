@@ -170,8 +170,13 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertEqual(state["CANONICAL_KEY_MATERIAL_GENERATED"], "YES")
         self.assertEqual(state["CANONICAL_TRUST_RECOVERY_VERIFIED"], "YES")
         self.assertEqual(state["PUBLIC_ANCHOR_PINNED"], "YES")
-        self.assertEqual(state["READY_TO_PIN_PUBLIC_ANCHOR"], "NO_PENDING_EXTERNAL_BACKUP")
-        self.assertEqual(state["EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED"], "NO")
+        self.assertEqual(state["PUBLIC_TRUST_HANDOFF_VALIDATION"], "PASS")
+        self.assertEqual(state["MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED"], "YES")
+        self.assertEqual(state["PHYSICAL_AUTHORIZATION_ELIGIBLE"], "YES")
+        self.assertEqual(
+            state["EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED"],
+            "NO_DEFERRED_BEFORE_BROAD_PUBLIC_DISTRIBUTION",
+        )
         self.assertEqual(promotion["NATIVE_GRAPHICAL_MODE"], "PASS_PHYSICAL_DEVELOPMENT_USB")
         self.assertEqual(promotion["CANONICAL_STABLE_GRAPHICAL_MODE"], "PENDING")
 
