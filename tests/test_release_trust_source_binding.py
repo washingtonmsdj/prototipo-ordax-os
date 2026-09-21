@@ -11,6 +11,66 @@ FINALIZER = (
 TOOLKIT = (
     ROOT / ".github/workflows/windows-prototype-toolkit.yml"
 ).read_text(encoding="utf-8")
+PREFLIGHT_WRAPPER = (
+    ROOT / "tools/release-signing/windows/1-Verify-OrdaXTrustToolkit.cmd"
+).read_text(encoding="utf-8")
+INITIALIZER_WRAPPER = (
+    ROOT / "tools/release-signing/windows/2-Initialize-OrdaXTrust.cmd"
+).read_text(encoding="utf-8")
+
+
+def test_read_only_preflight_reuses_initializer_checks_before_key_generation():
+    assert "[switch]$PreflightOnly" in INITIALIZER
+    assert "if ($PreflightOnly)" in INITIALIZER
+    assert "TOOLKIT_TRUST_PREFLIGHT=PASS" in INITIALIZER
+    assert "CANONICAL_TRUST_CEREMONY_ELIGIBLE=YES" in INITIALIZER
+    assert "PRIVATE_KEY_TOUCHED=NO" in INITIALIZER
+    assert "FILESYSTEM_MUTATION=NO" in INITIALIZER
+    assert INITIALIZER.index("if ($PreflightOnly)") < INITIALIZER.index("New-Item -ItemType Directory")
+    assert '-PreflightOnly' in PREFLIGHT_WRAPPER
+    assert '1-Verify-OrdaXTrustToolkit.cmd' in TOOLKIT
+    assert '1-Verify-OrdaXTrustToolkit.cmd \\' in TOOLKIT
+
+
+def test_key_generation_requires_explicit_switch_after_preflight():
+    assert "[switch]$GenerateKey" in INITIALIZER
+    assert "if ($PreflightOnly -and $GenerateKey)" in INITIALIZER
+    assert "if (-not $GenerateKey)" in INITIALIZER
+    assert "Canonical key generation requires the explicit -GenerateKey switch." in INITIALIZER
+    assert INITIALIZER.index("if (-not $GenerateKey)") < INITIALIZER.index("New-Item -ItemType Directory")
+    assert "-GenerateKey" in INITIALIZER_WRAPPER
+    assert "-PreflightOnly" not in INITIALIZER_WRAPPER
+    assert "-GenerateKey" not in PREFLIGHT_WRAPPER
+
+
+def test_toolkit_workflow_tracks_every_canonical_eligibility_input():
+    for path in (
+        "docs/contracts/portable-v2-qemu-boot-proof.json",
+        "docs/contracts/portable-v2-uefi-boot-proof.json",
+        "docs/contracts/creator-portable-media-plan.json",
+        "docs/contracts/physical-write-authorization.json",
+    ):
+        assert TOOLKIT.count(f"- '{path}'") == 2
+
+
+def test_canonical_toolkit_eligibility_requires_portable_runtime_v3_prerequisites():
+    for marker in (
+        "'portable_runtime_v3_direct_kernel_proven'",
+        "'portable_runtime_v3_uefi_ovmf_proven'",
+        "'portable_writer_v2_implemented_fail_closed'",
+        "'physical_authorization_still_fail_closed'",
+        "'canonical_trust_prerequisites': trust_prerequisites",
+        "canonical_main_push and all(trust_prerequisites.values())",
+    ):
+        assert marker in TOOLKIT
+
+    for source in (INITIALIZER, FINALIZER):
+        assert "$ToolkitProvenance.canonical_trust_prerequisites" in source
+        assert "$TrustPrerequisites.portable_runtime_v3_direct_kernel_proven -ne $true" in source
+        assert "$TrustPrerequisites.portable_runtime_v3_uefi_ovmf_proven -ne $true" in source
+        assert "$TrustPrerequisites.portable_writer_v2_implemented_fail_closed -ne $true" in source
+        assert "$TrustPrerequisites.physical_authorization_still_fail_closed -ne $true" in source
+        assert "required Portable runtime-v3 and fail-closed writer prerequisites" in source
 
 
 def test_trust_ceremony_binds_proof_to_toolkit_source_commit():
@@ -69,4 +129,4 @@ def test_canonical_trust_rejects_pr_and_manual_toolkits():
         assert "$ToolkitProvenance.source_event -ne 'push'" in source
         assert "$ToolkitProvenance.source_ref -ne 'refs/heads/main'" in source
         assert "$ToolkitProvenance.canonical_trust_ceremony_eligible -ne $true" in source
-        assert "Canonical trust ceremony requires a toolkit produced by a push of the canonical main branch." in source
+        assert "Canonical trust ceremony requires a toolkit produced by an eligible push of the canonical main branch." in source
