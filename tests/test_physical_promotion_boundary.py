@@ -6,6 +6,7 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 
@@ -15,6 +16,14 @@ spec = importlib.util.spec_from_file_location("ordax_physical_promotion_test", M
 promotion = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 spec.loader.exec_module(promotion)
+
+AUTHORIZATION_TOOL_PATH = ROOT / "tools" / "creator" / "authorize_physical_write.py"
+authorization_spec = importlib.util.spec_from_file_location(
+    "ordax_owner_authorization_test", AUTHORIZATION_TOOL_PATH
+)
+authorization = importlib.util.module_from_spec(authorization_spec)
+assert authorization_spec.loader is not None
+authorization_spec.loader.exec_module(authorization)
 
 
 def write_json(path: Path, value: dict) -> None:
@@ -164,6 +173,12 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         }
         write_json(root / "docs/contracts/release-trust-policy.json", policy)
 
+        for source in promotion.authorization_context_files(ROOT):
+            destination = root / source.relative_to(ROOT)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+        authorization_context_sha, _ = promotion.authorization_context_sha256(root)
+
         auth = {
             "$schema": "prototype-ordax.physical-write-authorization/2",
             "status": "authorized",
@@ -171,6 +186,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             "explicit_owner_authorization": True,
             "source_repository": "washingtonmsdj/prototipo-ordax-os",
             "release_sequence": 1,
+            "authorization_context_sha256": authorization_context_sha,
             "requirements": {
                 name: True
                 for name in promotion.REQUIRED_AUTHORIZATION_REQUIREMENTS
@@ -196,7 +212,122 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         )
         self.assertFalse(auth["physical_write_allowed"])
         self.assertFalse(auth["explicit_owner_authorization"])
+        self.assertIsNone(auth["authorization_context_sha256"])
         self.assertEqual(auth["scope"], "first-real-stable-mvp-usb-proof")
+
+    def _set_pending_owner_authorization(self, root: Path) -> Path:
+        auth_path = root / "docs/contracts/physical-write-authorization.json"
+        auth = json.loads(auth_path.read_text(encoding="utf-8"))
+        auth["status"] = "blocked-explicit-physical-authorization-pending"
+        auth["physical_write_allowed"] = False
+        auth["explicit_owner_authorization"] = False
+        auth["authorization_context_sha256"] = None
+        write_json(auth_path, auth)
+        return auth_path
+
+    def test_owner_authorization_check_is_read_only(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            auth_path = self._set_pending_owner_authorization(root)
+            before = auth_path.read_bytes()
+
+            plan = authorization.prepare_authorization(root)
+
+            self.assertTrue(plan["ready"])
+            self.assertEqual(plan["scope"], "first-real-stable-mvp-usb-proof")
+            self.assertEqual(plan["release_sequence"], 1)
+            self.assertEqual(
+                plan["confirmation"],
+                "AUTHORIZE_FIRST_REAL_STABLE_MVP_USB_PROOF",
+            )
+            self.assertFalse(plan["physical_device_touched"])
+            self.assertFalse(plan["writer_invoked"])
+            self.assertFalse(plan["candidate_materialized"])
+            self.assertRegex(plan["authorization_context_sha256"], r"^[0-9a-f]{64}$")
+            self.assertGreater(plan["authorization_context_file_count"], 10)
+            self.assertEqual(auth_path.read_bytes(), before)
+
+            status = promotion.evaluate(root)
+            self.assertFalse(status["ready"])
+            self.assertTrue(status["pre_authorization_ready"])
+            self.assertTrue(status["physical_authorization_bindings_resolved"])
+            self.assertTrue(status["owner_authorization_required"])
+
+    def test_owner_authorization_apply_requires_exact_three_part_confirmation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            auth_path = self._set_pending_owner_authorization(root)
+            before = auth_path.read_bytes()
+
+            with self.assertRaises(authorization.AuthorizationError):
+                authorization.apply_authorization(
+                    root,
+                    confirm_scope="wrong-scope",
+                    confirm_release_sequence=1,
+                    confirmation=authorization.CONFIRMATION,
+                )
+            self.assertEqual(auth_path.read_bytes(), before)
+
+            with self.assertRaises(authorization.AuthorizationError):
+                authorization.apply_authorization(
+                    root,
+                    confirm_scope=authorization.EXPECTED_SCOPE,
+                    confirm_release_sequence=2,
+                    confirmation=authorization.CONFIRMATION,
+                )
+            self.assertEqual(auth_path.read_bytes(), before)
+
+            with self.assertRaises(authorization.AuthorizationError):
+                authorization.apply_authorization(
+                    root,
+                    confirm_scope=authorization.EXPECTED_SCOPE,
+                    confirm_release_sequence=1,
+                    confirmation="AUTHORIZE",
+                )
+            self.assertEqual(auth_path.read_bytes(), before)
+
+            result = authorization.apply_authorization(
+                root,
+                confirm_scope=authorization.EXPECTED_SCOPE,
+                confirm_release_sequence=1,
+                confirmation=authorization.CONFIRMATION,
+            )
+            self.assertEqual(result["status"], "owner-authorization-recorded")
+            self.assertFalse(result["physical_device_touched"])
+            self.assertFalse(result["writer_invoked"])
+            self.assertFalse(result["candidate_materialized"])
+
+            contract = json.loads(auth_path.read_text(encoding="utf-8"))
+            self.assertEqual(contract["status"], "authorized")
+            self.assertTrue(contract["physical_write_allowed"])
+            self.assertTrue(contract["explicit_owner_authorization"])
+            self.assertEqual(
+                contract["authorization_context_sha256"],
+                result["authorization_context_sha256"],
+            )
+
+            status = promotion.evaluate(root)
+            self.assertTrue(status["ready"], status["blockers"])
+            self.assertTrue(status["authorized_candidate_materialization_allowed"])
+            self.assertEqual(
+                status["next_stage"],
+                "authorized-candidate-materialization",
+            )
+
+    def test_owner_authorization_refuses_before_canonical_trust_is_ready(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            self._set_pending_owner_authorization(root)
+            (root / "bootstrap/trust/release-ed25519.json").unlink()
+
+            with self.assertRaisesRegex(
+                authorization.AuthorizationError,
+                "prerequisites are not ready",
+            ):
+                authorization.prepare_authorization(root)
 
     def test_ready_promotion_uses_only_portable_layout_authority(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -210,6 +341,12 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             self.assertFalse(status["owner_authorization_required"])
             self.assertTrue(status["authorized_candidate_materialization_allowed"])
             self.assertTrue(status["physical_authorization_bindings_resolved"])
+            self.assertTrue(status["authorization_context_matches_current_source"])
+            self.assertRegex(
+                status["computed_authorization_context_sha256"],
+                r"^[0-9a-f]{64}$",
+            )
+            self.assertGreater(status["authorization_context_file_count"], 10)
             self.assertEqual(status["next_stage"], "authorized-candidate-materialization")
             self.assertEqual(
                 status["portable_layout_authority"],
@@ -235,6 +372,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             auth["status"] = "blocked-explicit-physical-authorization-pending"
             auth["physical_write_allowed"] = False
             auth["explicit_owner_authorization"] = False
+            auth["authorization_context_sha256"] = None
             write_json(auth_path, auth)
 
             status = promotion.evaluate(root)
@@ -258,6 +396,8 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             auth = json.loads(auth_path.read_text(encoding="utf-8"))
             auth["status"] = "eligible-awaiting-explicit-authorization"
             auth["physical_write_allowed"] = False
+            auth["explicit_owner_authorization"] = False
+            auth["authorization_context_sha256"] = None
             auth["bindings"] = {
                 "minimal_bootstrap_sha256": None,
                 "release_trust_sha256": None,
@@ -281,6 +421,26 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             self.assertTrue(status["owner_authorization_required"])
             self.assertFalse(status["authorized_candidate_materialization_allowed"])
             self.assertEqual(status["next_stage"], "explicit-owner-authorization")
+
+    def test_authorization_context_invalidates_consent_after_writer_source_change(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            writer = root / "tools/creator/host/windows/portable_apply_windows.go"
+            writer.write_text(
+                writer.read_text(encoding="utf-8") + "\n// changed after owner consent\n",
+                encoding="utf-8",
+            )
+
+            status = promotion.evaluate(root)
+
+            self.assertFalse(status["ready"])
+            self.assertFalse(status["authorization_context_matches_current_source"])
+            self.assertIn(
+                "physical-authorization-context-mismatch",
+                status["authorization_blockers"],
+            )
+            self.assertFalse(status["authorized_candidate_materialization_allowed"])
 
     def test_legacy_ordax_ext4_contract_cannot_satisfy_portable_gate(self):
         with tempfile.TemporaryDirectory() as temporary:
