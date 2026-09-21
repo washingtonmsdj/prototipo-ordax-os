@@ -22,6 +22,7 @@ SURFACE_RUNTIME_LOWER=/run/ordax/lower/surface-runtime
 SURFACE_RUNTIME_UPPER=/run/ordax/runtime/native-surface/upper
 SURFACE_RUNTIME_WORK=/run/ordax/runtime/native-surface/work
 SURFACE_RUNTIME_ROOT=/run/ordax/runtime/native-surface/rootfs
+RUNTIME_STATE_HELPER=/run/ordax/bootstrap-tools/ordax-portable-state
 
 rescue() {
     echo "ordax-portable-init: entering local read-only recovery shell: $*" >&2
@@ -54,6 +55,12 @@ mount -t sysfs sysfs /sys || rescue "cannot mount /sys"
 mount -t devtmpfs devtmpfs /dev || rescue "cannot mount /dev"
 mount -t tmpfs -o mode=0755 tmpfs /run || rescue "cannot mount /run"
 
+mkdir -p /run/ordax/bootstrap-tools ||
+    rescue "cannot create runtime bootstrap-tools directory"
+/bin/busybox cp /sbin/ordax-portable-state "$RUNTIME_STATE_HELPER" ||
+    rescue "cannot retain portable activation helper"
+/bin/busybox chmod 0555 "$RUNTIME_STATE_HELPER" ||
+    rescue "cannot protect portable activation helper"
 ESP_DEVICE="$(findfs LABEL=ORDAX-ESP 2>/dev/null || true)"
 case "$ESP_DEVICE" in
     "") rescue "ORDAX-ESP partition not found" ;;
@@ -104,44 +111,71 @@ SELECTED_COMMIT=
 SELECTED_MANIFEST_SCHEMA=
 SELECTED_SURFACE_RUNTIME_SHA256=
 
-select_verified_release() {
-    for slot in current known-good; do
-        commit="$(/sbin/ordax-portable-state resolve "$STATE_MOUNT" "$PORTABLE_ROOT" "$slot" 2>/dev/null || true)"
-        is_sha "$commit" || continue
+verify_selected_release() {
+    slot=$1
+    commit=$2
+    is_sha "$commit" || return 1
 
-        if "$AGENT" verify-portable-v3-exact \
-            --trust "$TRUST_ANCHOR" \
-            --root "$PORTABLE_ROOT" \
-            --expected-commit "$commit" \
-            >"/run/portable-release-verify.json" 2>/dev/null; then
-            runtime_ref="$PORTABLE_ROOT/releases/$commit/surface-runtime.sha256"
-            runtime_sha="$(cat "$runtime_ref" 2>/dev/null || true)"
-            is_sha256 "$runtime_sha" || continue
-            runtime_image="$PORTABLE_ROOT/runtimes/sha256/$runtime_sha/native-surface-runtime.erofs"
-            [ -f "$runtime_image" ] || continue
+    if "$AGENT" verify-portable-v3-exact \
+        --trust "$TRUST_ANCHOR" \
+        --root "$PORTABLE_ROOT" \
+        --expected-commit "$commit" \
+        >"/run/portable-release-verify.json" 2>/dev/null; then
+        runtime_ref="$PORTABLE_ROOT/releases/$commit/surface-runtime.sha256"
+        runtime_sha="$(cat "$runtime_ref" 2>/dev/null || true)"
+        is_sha256 "$runtime_sha" || return 1
+        runtime_image="$PORTABLE_ROOT/runtimes/sha256/$runtime_sha/native-surface-runtime.erofs"
+        [ -f "$runtime_image" ] || return 1
 
-            SELECTED_SLOT=$slot
-            SELECTED_COMMIT=$commit
-            SELECTED_MANIFEST_SCHEMA=3
-            SELECTED_SURFACE_RUNTIME_SHA256=$runtime_sha
-            return 0
-        fi
+        SELECTED_SLOT=$slot
+        SELECTED_COMMIT=$commit
+        SELECTED_MANIFEST_SCHEMA=3
+        SELECTED_SURFACE_RUNTIME_SHA256=$runtime_sha
+        return 0
+    fi
 
-        if "$AGENT" verify-portable-exact \
-            --trust "$TRUST_ANCHOR" \
-            --root "$PORTABLE_ROOT" \
-            --expected-commit "$commit" \
-            >"/run/portable-release-verify.json" 2>/dev/null; then
-            SELECTED_SLOT=$slot
-            SELECTED_COMMIT=$commit
-            SELECTED_MANIFEST_SCHEMA=2
-            SELECTED_SURFACE_RUNTIME_SHA256=
-            return 0
-        fi
-    done
+    if "$AGENT" verify-portable-exact \
+        --trust "$TRUST_ANCHOR" \
+        --root "$PORTABLE_ROOT" \
+        --expected-commit "$commit" \
+        >"/run/portable-release-verify.json" 2>/dev/null; then
+        SELECTED_SLOT=$slot
+        SELECTED_COMMIT=$commit
+        SELECTED_MANIFEST_SCHEMA=2
+        SELECTED_SURFACE_RUNTIME_SHA256=
+        return 0
+    fi
+
     return 1
 }
 
+select_verified_release() {
+    attempt=0
+    while [ "$attempt" -lt 2 ]; do
+        selection="$(/sbin/ordax-portable-state select-boot "$STATE_MOUNT" "$PORTABLE_ROOT" 2>/dev/null || true)"
+        set -- $selection
+        slot=${1:-}
+        commit=${2:-}
+        extra=${3:-}
+        [ -z "$extra" ] || return 1
+        case "$slot" in
+            current|known-good|candidate) ;;
+            *) return 1 ;;
+        esac
+        is_sha "$commit" || return 1
+
+        if verify_selected_release "$slot" "$commit"; then
+            return 0
+        fi
+
+        [ "$slot" = "candidate" ] || return 1
+        /sbin/ordax-portable-state rollback \
+            "$STATE_MOUNT" "$PORTABLE_ROOT" "$commit" >/dev/null 2>&1 ||
+            return 1
+        attempt=$((attempt + 1))
+    done
+    return 1
+}
 select_verified_release ||
     rescue "neither current nor known-good is an exactly verified signed release"
 
@@ -219,6 +253,9 @@ export ORDAX_STABLE_LAYOUT=portable-v2
 export ORDAX_SOURCE_SHA="$SELECTED_COMMIT"
 export ORDAX_BOOT_SLOT="$SELECTED_SLOT"
 export ORDAX_RELEASE_MANIFEST_SCHEMA="$SELECTED_MANIFEST_SCHEMA"
+export ORDAX_PORTABLE_STATE_HELPER="$RUNTIME_STATE_HELPER"
+export ORDAX_PORTABLE_STATE_ROOT=/state
+export ORDAX_PORTABLE_ROOT=/ordax-data/.ordax
 
 if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ]; then
     export ORDAX_SURFACE_RUNTIME_MODE=verified-erofs-overlay
