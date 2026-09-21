@@ -1,0 +1,60 @@
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+QEMU = ROOT / "bootstrap" / "portable-v2" / "qemu_boot.py"
+WORKFLOW = ROOT / ".github" / "workflows" / "portable-v2-qemu-boot-proof.yml"
+BASELINE = ROOT / "docs" / "contracts" / "portable-v2-qemu-boot-proof.json"
+
+
+class PortableV3OneShotQemuProofTests(unittest.TestCase):
+    def test_runner_keeps_baseline_and_adds_optional_two_boot_mode(self):
+        text = QEMU.read_text(encoding="utf-8")
+        self.assertIn('parser.add_argument("--previous-commit")', text)
+        self.assertIn('expected_slot="candidate"', text)
+        self.assertIn('expected_slot="current"', text)
+        self.assertIn('"candidate_boot_count": 1', text)
+        self.assertIn('"fallback_boot_count": 1', text)
+        self.assertIn('"cold_health_commit_proven": False', text)
+        self.assertIn('"failure_fallback_proven": True', text)
+        self.assertIn('"rejected_state_proven": True', text)
+        self.assertIn('"candidate_file_removed"', text)
+        self.assertIn('"activation_transaction_removed"', text)
+        self.assertIn('"physical_target_device_untouched": True', text)
+        self.assertIn('"guest_disk_destroyed": not disk.exists()', text)
+        self.assertIn('"-net", "none"', text)
+
+    def test_final_state_is_inspected_from_a_read_only_copy(self):
+        text = QEMU.read_text(encoding="utf-8")
+        self.assertIn('"mount.exfat-fuse", "-o", "ro"', text)
+        self.assertIn('shutil.copyfile(state_image, state_copy)', text)
+        self.assertIn('"loop,ro,noload"', text)
+        self.assertIn('current == previous_commit', text)
+        self.assertIn('known_good == previous_commit', text)
+        self.assertIn('rejected == candidate_commit', text)
+
+    def test_workflow_uses_real_previous_source_and_same_ephemeral_trust(self):
+        text = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("fetch-depth: 0", text)
+        self.assertIn('git worktree add --detach "$previous_source" "$previous"', text)
+        self.assertIn('--source-commit "$previous"', text)
+        self.assertIn('--expected-commit "$previous"', text)
+        self.assertIn('ordax-portable-state" \\', text)
+        self.assertIn('prepare "$mountpoint" "$portable" "$candidate"', text)
+        self.assertIn('--previous-commit "$previous"', text)
+        self.assertIn("PORTABLE_V3_QEMU_ONE_SHOT_FALLBACK=PASS", text)
+        self.assertIn("PORTABLE_V3_QEMU_COLD_HEALTH_COMMIT_PROVEN=NO", text)
+
+        previous_build = text.index('git worktree add --detach "$previous_source" "$previous"')
+        key_destroy = text.index('rm -f "$work/private.pem"')
+        self.assertLess(previous_build, key_destroy)
+
+    def test_baseline_contract_does_not_get_rewritten_as_one_shot_evidence(self):
+        text = BASELINE.read_text(encoding="utf-8")
+        self.assertIn('"activation_transaction_scope": "baseline-current-boot-only"', text)
+        self.assertIn('"armed_candidate_one_shot_proven": false', text)
+        self.assertIn("requires a separate disposable proof", text)
+
+
+if __name__ == "__main__":
+    unittest.main()
