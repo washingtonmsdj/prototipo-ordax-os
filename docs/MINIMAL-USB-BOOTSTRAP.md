@@ -187,7 +187,7 @@ UEFI
 
 ### Durable portable-v2 target
 
-The final MVP path removes the physical `ORDAX` partition. The future v2 initramfs handoff must instead:
+The final MVP path removes the physical `ORDAX` partition. The source-controlled Portable v2 candidate handoff now follows:
 
 ```text
 UEFI
@@ -204,7 +204,7 @@ Activation metadata for the durable USB is intentionally **not** stored as a sym
 
 The repository now also has a disposable **mount-handoff proof** for this graph. It re-verifies a signed portable release offline, mounts the real EROFS system tree read-only, mounts the ext4 persistent-state image, composes an OverlayFS runtime system view and proves persistent writes do not mutate EROFS.
 
-That still does **not** mean the v2 boot handoff is implemented. The current fixed initramfs does not yet contain the required `losetup` capability or portable handoff helper, and release selection/known-good fallback metadata has not yet been connected. Until those boot/recovery gates are green, the current transitional boot path remains the hardware validation path.
+The Portable v2 handoff is now implemented in source as a candidate path: the fixed initramfs includes the loop/exFAT/EROFS/ext4/OverlayFS prerequisites, capsule/Base verification, `current -> known-good` state selection, exact signed release verification and `switch_root` into the Stable Base. Disposable direct-kernel QEMU and non-Secure-Boot OVMF/systemd-boot proofs have exercised that chain. This is still **not** a physical Stable/MVP proof: the candidate is not the default `/init`, no authorized physical boot entry or public apply path exists, canonical trust remains unresolved, and Secure Boot/real USB boot remain pending.
 
 Remote access is not needed for either Stable/MVP path.
 
@@ -280,7 +280,9 @@ BOOTSTRAP_SEED_PARTITIONS=2
 TRANSITIONAL_PREPARED_USB_PARTITIONS=3
 MVP_TARGET_PREPARED_USB_PARTITIONS=2
 MVP_TARGET_PORTABLE_LAYOUT=ORDAX-ESP+ORDAX-DATA
-MVP_TARGET_BOOT_HANDOFF_IMPLEMENTED=NO
+MVP_TARGET_BOOT_HANDOFF_IMPLEMENTED=YES_CANDIDATE
+MVP_TARGET_PHYSICAL_BOOT_PROVEN=NO
+MVP_TARGET_PUBLIC_PHYSICAL_APPLY=NO
 SEPARATE_HOME_PARTITION=NO
 REMOTE_CONTROL_PRESEEDED=NO
 SSH_PRESEEDED=NO
@@ -299,12 +301,12 @@ The durable USB now has a deterministic bootstrap-capsule candidate at `/ordax/b
 
 The capsule is deliberately small: the static release agent, local recovery entrypoint and official release-channel pointer. It excludes Surface, normal apps, user data, Git, build tools and every private signing key. The canonical public release trust anchor remains a separate bootstrap-owned object.
 
-CI builds the EROFS capsule twice from normalized tar metadata and requires byte-identical output plus EROFS integrity verification. This proves the candidate format only. The capsule is **not yet materialized into the physical ESP**, its hash is not yet pinned inside the fixed initramfs, and PID1 does not mount or execute it. Those remain independent promotion gates.
+CI builds the EROFS capsule twice from normalized tar metadata and requires byte-identical output plus EROFS integrity verification. The candidate initramfs composition now pins the exact capsule SHA-256, and the candidate PID1 verifies and mounts the capsule read-only before continuing. Disposable QEMU media stages those bytes on the ESP. This still does **not** mean a product USB has been physically promoted: canonical trust, authorized physical ESP materialization/public apply and real-hardware Stable/MVP boot remain independent gates.
 
 
 ### Portable-v2 candidate PID1
 
-The fixed initramfs now carries an isolated candidate orchestrator at `/sbin/ordax-portable-init`. It is **not** the default `/init`, and no physical systemd-boot entry points to it.
+The fixed initramfs now carries an isolated candidate orchestrator at `/sbin/ordax-portable-init`. It is **not** the default `/init`, and no authorized physical systemd-boot entry points to it. The disposable UEFI proof uses a dedicated loader entry only inside its test media; that does not authorize or prove a real USB boot.
 
 The candidate path is intended only for disposable boot proof through `rdinit=/sbin/ordax-portable-init`. It mounts the ESP read-only, verifies the bootstrap capsule against the initramfs-owned hash, mounts `ORDAX-DATA`, verifies the pinned Stable Base, attaches the ext4 state image, and then evaluates boot slots in this order:
 
@@ -318,12 +320,12 @@ current
 
 Only after a release passes exact signature/hash verification does the candidate compose the Stable Base overlay, bind the verified `system/` subtree read-only, move all required mounts under the new root and invoke `switch_root` into `ordax-stable-init`.
 
-This does not claim a bootable MVP yet. Canonical public trust is still not pinned, the candidate has no physical boot entry, QEMU end-to-end proof is still pending, and the transitional `/init` remains the actual physical boot path.
+This does not claim a physically bootable MVP yet. The candidate chain has passed disposable direct-kernel QEMU and non-Secure-Boot OVMF/systemd-boot proof, while canonical public trust, public physical apply, real USB boot and Secure Boot remain open. The transitional Owner/Development `/init` remains the only boot path physically proven on the target notebook.
 
 
 ### Pinned portable-v2 initramfs composition proof
 
-Before any portable-v2 QEMU or physical boot promotion, CI must prove that one **real bootstrap capsule** and one **real Stable Base** built from the exact source head are both cryptographically pinned into the same deterministic initramfs candidate.
+CI proves that one **real bootstrap capsule** and one **real Stable Base** built from the exact source identity are both cryptographically pinned into the same deterministic initramfs candidate before either artifact is trusted by the Portable PID1.
 
 The proof builds the capsule from the exact static release agent, builds the Stable Base from exact-source kernel modules, passes both EROFS artifacts into `bootstrap/initramfs/build.py`, and verifies that the resulting provenance and in-archive SHA-256 check files match the real bytes.
 
@@ -343,10 +345,10 @@ The disk contains the verified bootstrap capsule and bootstrap-owned CI trust on
 
 This gate invokes the candidate PID1 explicitly with `rdinit=/sbin/ordax-portable-init`, disables guest networking and requires both the portable PID1 handoff marker and the Stable Base handoff marker. It proves the durable runtime chain without silently changing the default boot path.
 
-This is deliberately **not yet a UEFI proof**. systemd-boot/OVMF, a public physical boot entry and real USB hardware remain later gates.
+This direct-kernel sub-proof is not itself a UEFI proof. A separate UEFI/OVMF gate exercises systemd-boot; neither disposable proof establishes Secure Boot, an authorized public physical boot entry or real USB hardware.
 
 ### Portable v2 UEFI/QEMU gate
 
 After the direct-kernel candidate proof, the same disposable final-layout disk is staged with the pinned `systemd-boot` candidate at the standard fallback path `EFI/BOOT/BOOTX64.EFI`, the exact kernel/initramfs and dedicated portable-v2 loader entries. QEMU then boots it through non-Secure-Boot OVMF with networking disabled.
 
-This gate proves the UEFI firmware -> systemd-boot -> exact kernel/initramfs -> portable PID1 -> Stable Base chain only when its workflow passes. It does **not** prove Secure Boot, physical USB boot or public promotion. The physical Creator writer remains blocked.
+The disposable UEFI workflow has exercised the firmware -> systemd-boot -> exact kernel/initramfs -> Portable PID1 -> Stable Base chain with networking disabled. It does **not** prove Secure Boot, physical USB boot or public promotion. The public Creator physical apply path remains blocked.
