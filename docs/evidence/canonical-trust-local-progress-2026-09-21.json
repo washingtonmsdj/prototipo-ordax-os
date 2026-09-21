@@ -9,11 +9,21 @@
   "public_trust_derivation_match": true,
   "proof_signature_created": true,
   "public_trust_sha256": "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
-  "offline_recovery_verified": false,
+  "offline_recovery_verified": true,
   "public_anchor_pinned": false,
   "physical_write_allowed": false,
   "private_key_material_recorded": false,
   "private_key_path_recorded": false,
   "evidence_origin": "operator-reported-local-toolkit-output",
-  "note": "Only non-secret ceremony progress is recorded. No PEM bytes, private-key hash, recovery password or backup secret are committed."
+  "note": "Operator-reported local toolkit recovery proof passed. Only non-secret recovery evidence and public handoff digest are recorded. No PEM bytes, private-key hash, recovery password, backup secret or local private-key path are committed.",
+  "recovered_private_path_distinct": true,
+  "recovered_public_derivation_match": true,
+  "recovered_signing_proof": true,
+  "recovered_envelope_verified": true,
+  "trust_proof_source_identity_match": true,
+  "toolkit_component_hashes_verified": true,
+  "public_handoff_contents_verified": true,
+  "public_handoff_secret_material": false,
+  "ready_to_pin_public_anchor": true,
+  "public_trust_handoff_zip_sha256": "85d4f8430f0a4066ebed84a410071409c112c65aa72a5818483a664a41b91e20"
 }
