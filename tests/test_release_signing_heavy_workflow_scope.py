@@ -12,6 +12,13 @@ HEAVY_WORKFLOWS = (
     ".github/workflows/creator-owner-dev-git.yml",
 )
 
+SIGNER_SOURCE_BOUND_HEAVY_WORKFLOWS = tuple(
+    relative
+    for relative in HEAVY_WORKFLOWS
+    if relative != ".github/workflows/full-bootstrap-media-proof.yml"
+)
+CANONICAL_TRUST_BOUND_WORKFLOW = ".github/workflows/full-bootstrap-media-proof.yml"
+
 BROAD_OWNER_WORKFLOWS = (
     ".github/workflows/release-signing.yml",
     ".github/workflows/release-pipeline.yml",
@@ -28,11 +35,19 @@ ADMIN_EXCLUDES = (
 
 class ReleaseSigningHeavyWorkflowScopeTests(unittest.TestCase):
     def test_heavy_media_workflows_ignore_administrative_trust_only_changes(self):
-        for relative in HEAVY_WORKFLOWS:
+        for relative in SIGNER_SOURCE_BOUND_HEAVY_WORKFLOWS:
             text = (ROOT / relative).read_text(encoding="utf-8")
             self.assertIn("tools/release-signing/**", text, relative)
             for excluded in ADMIN_EXCLUDES:
                 self.assertIn(excluded, text, f"{relative}: {excluded}")
+
+        canonical = (ROOT / CANONICAL_TRUST_BOUND_WORKFLOW).read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("bootstrap/trust/**", canonical)
+        self.assertNotIn("tools/release-signing/**", canonical)
+        for excluded in ADMIN_EXCLUDES:
+            self.assertNotIn(excluded, canonical)
 
     def test_dedicated_signing_and_toolkit_owners_remain_broad(self):
         for relative in BROAD_OWNER_WORKFLOWS:
