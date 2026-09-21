@@ -67,7 +67,15 @@ if ($ToolkitProvenance.source_repository -ne 'washingtonmsdj/prototipo-ordax-os'
     $ToolkitProvenance.source_event -ne 'push' -or
     $ToolkitProvenance.source_ref -ne 'refs/heads/main' -or
     $ToolkitProvenance.canonical_trust_ceremony_eligible -ne $true) {
-    throw 'Canonical trust ceremony requires a toolkit produced by a push of the canonical main branch.'
+    throw 'Canonical trust ceremony requires a toolkit produced by an eligible push of the canonical main branch.'
+}
+$TrustPrerequisites = $ToolkitProvenance.canonical_trust_prerequisites
+if ($null -eq $TrustPrerequisites -or
+    $TrustPrerequisites.portable_runtime_v3_direct_kernel_proven -ne $true -or
+    $TrustPrerequisites.portable_runtime_v3_uefi_ovmf_proven -ne $true -or
+    $TrustPrerequisites.portable_writer_v2_implemented_fail_closed -ne $true -or
+    $TrustPrerequisites.physical_authorization_still_fail_closed -ne $true) {
+    throw 'Canonical trust ceremony toolkit does not contain the required Portable runtime-v3 and fail-closed writer prerequisites.'
 }
 $ToolkitSourceCommit = [string]$ToolkitProvenance.source_commit
 if ($ToolkitSourceCommit -notmatch '^[0-9a-f]{40}$') {
