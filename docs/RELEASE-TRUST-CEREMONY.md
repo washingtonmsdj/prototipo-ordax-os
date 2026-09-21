@@ -33,6 +33,18 @@ repository: bootstrap/trust/release-ed25519.json
 runtime:    /ordax/bootstrap/trust/release-ed25519.json
 ```
 
+## Repository-state prerequisite for the first canonical identity
+
+The first canonical release identity must be created only after the Stable/MVP Portable architecture that it will authorize is already present on `main`. For the first prototype ceremony, the reviewed `main` source must include:
+
+- the final `ORDAX-ESP + ORDAX-DATA` Portable media authority rather than the transitional `ORDAX + ext4` layout;
+- the internal/tagged Portable writer implementation while the public writer and destructive authorization remain disabled;
+- signed `release-manifest/3` system + Surface-runtime binding;
+- recorded direct-kernel QEMU and OVMF/UEFI proof of the offline runtime-v3 handoff;
+- `physical_write_allowed=false` and no claim of physical USB boot or Secure Boot.
+
+This ordering prevents the canonical key ceremony from being bound to a source commit whose physical-media policy is immediately obsolete. The eligible Windows Prototype Toolkit must therefore come from a `push` of `main` **after** these prerequisites have landed. A toolkit from an earlier `main` commit, even if otherwise well formed, must not be used for the first canonical identity.
+
 ## Required local ceremony
 
 The actual canonical key generation is a local user action and must not be performed in CI, a chat session or a disposable runner. The signer under `tools/release-signing/` already supports the required operation and uses only standard Ed25519/PKCS#8 primitives from the Go standard library.
