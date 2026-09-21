@@ -7,6 +7,112 @@
   <title>OrdaX — ideias organizam realidades</title>
   <link rel="stylesheet" href="/assets/site.css">
   <link rel="stylesheet" href="/assets/playground.css">
+  <script id="playground-fixture" type="application/json">
+{
+  "$schema": "prototype-ordax.public-playground-fixture/1",
+  "source": {
+    "apps": "system/apps/catalog.mjs",
+    "home": "system/surface/ui/desktop-shell.mjs"
+  },
+  "home": {
+    "area_label": "Área 01",
+    "command_label": "Abrir aplicativo…",
+    "space_label": "Seu espaço",
+    "spaces": [
+      {
+        "label": "Documentos",
+        "target": "/Documentos"
+      },
+      {
+        "label": "Imagens",
+        "target": "/Imagens"
+      },
+      {
+        "label": "Downloads",
+        "target": "/Downloads"
+      }
+    ],
+    "rail_apps": [
+      "files",
+      "notes",
+      "internet",
+      "settings",
+      "account",
+      "system"
+    ],
+    "rail_labels": [
+      {
+        "id": "files",
+        "label": "Arquivos"
+      },
+      {
+        "id": "notes",
+        "label": "Notas"
+      },
+      {
+        "id": "internet",
+        "label": "Internet"
+      },
+      {
+        "id": "settings",
+        "label": "Ajustes"
+      },
+      {
+        "id": "account",
+        "label": "Conta"
+      },
+      {
+        "id": "system",
+        "label": "Sistema"
+      }
+    ]
+  },
+  "apps": [
+    {
+      "id": "files",
+      "title": "Arquivos",
+      "description": "Organize documentos, imagens, downloads e conteúdo persistente do usuário.",
+      "monogram": "AR",
+      "display_title": "Arquivos"
+    },
+    {
+      "id": "notes",
+      "title": "Seu espaço de escrita",
+      "description": "Escrita local, projetos, tarefas e referências disponíveis offline.",
+      "monogram": "NO",
+      "display_title": "Notas"
+    },
+    {
+      "id": "internet",
+      "title": "Internet",
+      "description": "Navegue, organize referências e conecte pesquisa ao seu trabalho.",
+      "monogram": "IN",
+      "display_title": "Internet"
+    },
+    {
+      "id": "settings",
+      "title": "Preferências do OrdaX",
+      "description": "Preferências compartilhadas, aparência e rede do OrdaX.",
+      "monogram": "AJ",
+      "display_title": "Ajustes"
+    },
+    {
+      "id": "account",
+      "title": "Identidade e continuidade",
+      "description": "Identidade, acesso e continuidade segura entre os modos do OrdaX.",
+      "monogram": "CO",
+      "display_title": "Conta"
+    },
+    {
+      "id": "system",
+      "title": "Visão geral",
+      "description": "Entrega, atualizações, conectividade e recursos desta execução do OrdaX.",
+      "monogram": "SI",
+      "display_title": "Sistema"
+    }
+  ]
+}
+</script>
   <script src="/assets/site.js" defer></script>
   <script src="/assets/playground.js" defer></script>
 </head>
@@ -14,182 +120,104 @@
   <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
 
   <header class="site-header">
-    <a class="brand" href="/" aria-label="OrdaX — início">
-      <span class="brand-mark" aria-hidden="true"><span></span><i></i></span>
-      <span class="brand-name">OrdaX</span>
-    </a>
+    <div class="brand-lockup">
+      <a class="brand" href="/" aria-label="OrdaX — início">
+        <span class="brand-mark" aria-hidden="true"><span></span><i></i></span>
+        <span class="brand-name">OrdaX</span>
+      </a>
+      <span class="status-chip" title="Protótipo em desenvolvimento">EM DESENVOLVIMENTO<span class="sr-only">Protótipo em desenvolvimento</span></span>
+    </div>
     <nav class="site-nav" aria-label="Navegação principal">
-      <a href="#experimente">Experimentar</a>
-      <a href="#produto">Produto</a>
-      <a href="#apps">Apps</a>
-      <a href="#atualizacoes">Atualizações</a>
-      <a href="/download/">Download</a>
-      <a href="/login/">Entrar</a>
-      <a class="nav-cta" href="/cadastro/">Criar conta</a>
+      <a href="#produto">Sistema</a>
+      <a href="#experimente">Experiência</a>
+      <a href="#dispositivos">Dispositivos</a>
     </nav>
+    <div class="site-actions">
+      <a href="/login/">Entrar</a>
+      <a class="nav-cta" href="/download/">Baixar OrdaX ↗</a>
+    </div>
   </header>
 
   <main id="conteudo">
     <section class="hero">
       <div class="hero-copy">
-        <div class="hero-kicker-row">
-          <p class="eyebrow">ORDA X · UM NOVO ESPAÇO PARA SUAS IDEIAS</p>
-          <span class="status-chip">Em desenvolvimento</span>
-        </div>
-        <h1>Comece aqui.<br>Continue <em>onde quiser.</em></h1>
-        <p class="hero-lead">Suas notas, seus arquivos, seu jeito de trabalhar. Experimente uma pequena ideia do OrdaX — e veja a mesma mudança aparecer em duas telas.</p>
+        <p class="eyebrow">UM NOVO ESPAÇO DIGITAL</p>
+        <h1>Seu mundo.<br>Em qualquer tela.</h1>
+        <p class="hero-lead">Um sistema. Seus arquivos, ideias e projetos. Uma experiência que continua com você.</p>
         <div class="hero-actions">
           <a class="button button-primary" href="#experimente">Experimentar agora ↗</a>
-          <a class="button button-quiet" href="/download/">Baixar OrdaX</a>
+          <a class="button button-quiet" href="#produto">Conhecer o sistema</a>
         </div>
-        <p class="prototype-note">Sem instalar. Sem conta. A demonstração usa dados de exemplo.<br>Login e downloads dependem da disponibilidade pública.</p>
+        <p class="prototype-note">Demonstração com dados de exemplo. Sem instalar.</p>
       </div>
-
-      <div class="hero-manifesto"><span class="manifesto-orbit" aria-hidden="true"></span><p>Menos distância<br>entre uma ideia<br>e o que você faz<br><em>com ela.</em></p><span class="manifesto-caption">PENSADO PARA CONTINUAR.</span></div>
     </section>
 
-    <section id="experimente" class="playground" aria-labelledby="demo-heading">
-      <div class="playground-heading"><div><p class="eyebrow">NÃO É UM VÍDEO. PODE TOCAR.</p><h2 id="demo-heading">Duas telas. <em>A mesma ideia.</em></h2></div><p>Escreva no notebook. Veja no telefone.<br>Ou faça o caminho contrário.</p></div>
-      <div class="demo-controls"><div class="demo-modes" role="group" aria-label="Dispositivos da demonstração"><button type="button" data-layout="both" aria-pressed="true">Notebook + telefone</button><button type="button" data-layout="laptop" aria-pressed="false">Só notebook</button></div><button type="button" data-reset>↺ Recomeçar</button></div>
+    <section id="experimente" class="playground landing-playground" aria-labelledby="demo-heading">
+      <div class="playground-heading"><div><p class="eyebrow">DEMONSTRAÇÃO INTERATIVA</p><h2 id="demo-heading">Duas telas. O mesmo espaço.</h2></div><p>Edite em uma tela. Veja na outra.</p></div>
       <div class="device-stage" data-layout="both">
-        <div class="laptop-device"><div class="laptop-lid"><span class="camera" aria-hidden="true"></span><div class="demo-screen" data-device="laptop" aria-label="Notebook de demonstração"></div></div><div class="laptop-base" aria-hidden="true"><span></span></div><p class="device-caption">01 / SEU ESPAÇO PARA CRIAR</p></div>
+        <div class="laptop-device"><div class="laptop-lid"><span class="camera" aria-hidden="true"></span><div class="demo-screen" data-device="laptop" aria-label="Home do OrdaX no notebook"></div></div><div class="laptop-base" aria-hidden="true"><span></span></div><p class="device-caption">01 / HOME DO SISTEMA</p></div>
         <div class="sync-bridge" aria-hidden="true"><span>↔</span><small>EM SINTONIA</small></div>
-        <div class="phone-device"><div class="phone-shell"><span class="phone-camera" aria-hidden="true"></span><div class="demo-screen" data-device="phone" aria-label="Telefone de demonstração"></div></div><p class="device-caption">02 / SUAS IDEIAS COM VOCÊ</p></div>
+        <div class="phone-device"><div class="phone-shell"><span class="phone-camera" aria-hidden="true"></span><div class="demo-screen" data-device="phone" aria-label="Home do OrdaX no telefone"></div></div><p class="device-caption">02 / CONTINUIDADE NO TELEFONE</p></div>
       </div>
-      <div class="demo-bottom"><p class="demo-status" role="status" aria-live="polite">Pronto para experimentar. Abra uma nota e escreva.</p><p>Simulação local nesta página. Sem nuvem, conta ou acesso aos seus arquivos. Ao sair, as alterações são descartadas.</p></div>
-      <div class="demo-recipes" aria-label="Experiências guiadas"><button type="button" data-recipe="notes"><span>01</span><strong>Escreva uma ideia</strong><small>Edite uma nota nas duas telas ↗</small></button><button type="button" data-recipe="files"><span>02</span><strong>Encontre seu espaço</strong><small>Explore pastas e arquivos de exemplo ↗</small></button><button type="button" data-recipe="theme"><span>03</span><strong>Deixe com a sua cara</strong><small>Troque o tema nos dois dispositivos ↗</small></button></div>
+      <div class="demo-controls landing-demo-toolbar">
+        <p class="demo-status" role="status" aria-live="polite"><span class="demo-status-label">DEMONSTRAÇÃO INTERATIVA</span><span class="demo-status-copy">Edite em uma tela. Veja na outra.</span></p>
+        <div class="demo-modes" role="group" aria-label="Dispositivos da demonstração"><button type="button" data-layout="laptop" data-expand-toggle aria-pressed="false">Expandir ↗</button></div>
+        <button type="button" data-reset>↻ Recomeçar</button>
+        <p class="demo-sync-note">Sincronização simulada nesta prévia.</p>
+      </div>
       <noscript><p>Ative JavaScript para usar a demonstração. As páginas de produto, login e downloads continuam acessíveis pelos links.</p></noscript>
     </section>
 
-    <section class="release-ribbon" aria-label="Estado do produto">
-      <div><span>01</span><strong>USB guiado</strong><p>Creator como caminho principal para preparar e verificar o pendrive OrdaX.</p></div>
-      <div><span>02</span><strong>Atualização oficial</strong><p>Stable/MVP não depende de Git para atualizar.</p></div>
-      <div><span>03</span><strong>Recuperação</strong><p>Atualizações críticas preservam um conhecido-bom para rollback.</p></div>
-    </section>
-
-    <section id="produto" class="section section-product">
-      <div class="section-heading">
-        <p class="eyebrow">O PRODUTO</p>
-        <h2>Um sistema feito para ser usado, não administrado.</h2>
+    <section id="produto" class="system-overview" aria-labelledby="system-heading">
+      <div class="system-overview-copy">
+        <p class="eyebrow">O ESSENCIAL DO ORDA X</p>
+        <h2 id="system-heading">Mais sistema.<br>Menos obstáculos.</h2>
+        <p>O essencial para criar, navegar e organizar. Com espaço para evoluir.</p>
       </div>
-
-      <div class="product-proof-grid">
-        <article>
-          <span class="proof-number">01</span>
-          <h3>OrdaX Creator</h3>
-          <p>O caminho público planejado para criar a mídia OrdaX sem exigir terminal, Git, partições ou compilação.</p>
-        </article>
-        <article>
-          <span class="proof-number">02</span>
-          <h3>Surface</h3>
-          <p>Uma experiência visual única para abrir apps, arquivos, rede, ajustes e informações do sistema.</p>
-        </article>
-        <article>
-          <span class="proof-number">03</span>
-          <h3>Componentes independentes</h3>
-          <p>Apps e serviços evoluem separadamente sempre que uma mudança não precisa substituir a Base inteira.</p>
-        </article>
-        <article>
-          <span class="proof-number">04</span>
-          <h3>Conhecido-bom</h3>
-          <p>Mudanças de Base usam staging e health para evitar que uma atualização defeituosa destrua o último estado funcional.</p>
-        </article>
+      <div id="apps" class="system-apps" aria-label="Apps principais do OrdaX">
+        <a href="#dispositivos" data-fixture-app="files"><span class="system-app-icon" aria-hidden="true">⌑</span><span data-fixture-label>Arquivos</span></a>
+        <a href="#dispositivos" data-fixture-app="internet"><span class="system-app-icon" aria-hidden="true">◎</span><span data-fixture-label>Internet</span></a>
+        <a class="is-featured" href="#experimente" data-fixture-app="notes"><span class="system-app-icon" aria-hidden="true">▤</span><span data-fixture-label>Notas</span></a>
+        <a href="#dispositivos" data-fixture-app="settings"><span class="system-app-icon" aria-hidden="true">⚙</span><span data-fixture-label>Ajustes</span></a>
+        <a href="#dispositivos" data-fixture-app="system"><span class="system-app-icon" aria-hidden="true">≋</span><span data-fixture-label>Sistema</span></a>
       </div>
     </section>
 
-    <section id="apps" class="section">
-      <div class="section-heading">
-        <p class="eyebrow">MVP · APPS PRINCIPAIS</p>
-        <h2>O essencial para trabalhar, navegar e cuidar do sistema.</h2>
+    <section id="dispositivos" class="mode-banner" aria-labelledby="mode-heading">
+      <div class="mode-banner-copy">
+        <p class="eyebrow">VISÃO DO PRODUTO · DISPONIBILIDADE POR MODO</p>
+        <h2 id="mode-heading">Uma experiência.<br>Diferentes possibilidades.</h2>
+        <nav class="mode-links" aria-label="Modos do OrdaX">
+          <a href="#dispositivos">Web</a><span>/</span>
+          <a href="#dispositivos">Mobile</a><span>/</span>
+          <a href="#dispositivos">Desktop</a><span>/</span>
+          <a href="#dispositivos">USB</a><span>/</span>
+          <a href="#dispositivos">Native</a>
+        </nav>
+        <p class="mode-banner-note">Visão do produto · disponibilidade por modo<span class="sr-only">Web, Mobile e continuidade sincronizada entram quando seus owners reais estiverem prontos. USB é o caminho Stable/MVP. O OrdaX Creator prepara o sistema para rodar diretamente pelo pendrive; instalação permanente fica para o pós-MVP. Atualizações oficiais preservam um conhecido-bom para rollback. Downloads públicos aparecem somente quando uma release autorizada estiver disponível.</span></p>
       </div>
-
-      <div class="mode-grid app-grid">
-        <article><span>01</span><h3>Arquivos</h3><p>Navegação pelos seus arquivos e pastas com uma interface nativa do OrdaX.</p></article>
-        <article><span>02</span><h3>Notas</h3><p>Notas, projetos e referências com salvamento local e funcionamento offline.</p></article>
-        <article><span>03</span><h3>Internet</h3><p>Navegação integrada ao sistema, respeitando as capacidades reais do ambiente.</p></article>
-        <article><span>04</span><h3>Ajustes</h3><p>Rede, data e hora, preferências e configurações do produto em um só lugar.</p></article>
-        <article><span>05</span><h3>Sistema</h3><p>Versão, canal, componentes, atualizações e estado do dispositivo sem ruído técnico desnecessário.</p></article>
-      </div>
+      <div class="mode-symbol" aria-hidden="true"><span></span></div>
     </section>
 
-    <section id="atualizacoes" class="section split-section update-section">
-      <div>
-        <p class="eyebrow">ATUALIZAÇÕES</p>
-        <h2>Evoluir deve ser simples.<br>Voltar também.</h2>
-        <p class="section-copy">O caminho planejado para o OrdaX público combina atualizações oficiais e recuperação. Para você continuar trabalhando, com clareza sobre o que mudou.</p>
-      </div>
-
-      <div class="feature-list">
-        <article>
-          <h3>Release verificada</h3>
-          <p>Downloads oficiais com versão, tamanho e informações de integridade para consultar antes de instalar.</p>
-        </article>
-        <article>
-          <h3>Atualize só o necessário</h3>
-          <p>Quando possível, apps e componentes recebem sua própria evolução sem transformar toda mudança em reinstalação do sistema.</p>
-        </article>
-        <article>
-          <h3>Base com rollback</h3>
-          <p>A recuperação é parte do projeto: preservar uma versão funcional quando uma atualização crítica não puder ser concluída.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="section creator-callout">
-      <div class="creator-copy">
-        <p class="eyebrow">ORDA X CREATOR</p>
-        <h2>Do download ao OrdaX, rodando diretamente pelo pendrive.</h2>
-        <p>O Creator seleciona uma mídia compatível, prepara o OrdaX e verifica a gravação. No MVP, o sistema é inicializado e utilizado pelo USB; instalação permanente em SSD/NVMe/HD fica para uma fase pós-MVP.</p>
-      </div>
-      <div class="creator-steps" aria-label="Fluxo do Creator">
-        <div><span>1</span><strong>Baixar</strong><p>Obter somente uma release pública autorizada.</p></div>
-        <div><span>2</span><strong>Criar</strong><p>Escolher o USB e deixar o Creator preparar a mídia.</p></div>
-        <div><span>3</span><strong>Iniciar</strong><p>Bootar um hardware suportado e continuar na Surface OrdaX.</p></div>
-        <div><span>4</span><strong>Usar</strong><p>Continuar trabalhando diretamente pelo USB. O disco interno não é alterado pelo MVP.</p></div>
-      </div>
-      <a class="button button-dark" href="/download/">Ir para Download</a>
-    </section>
-
-    <section class="section">
-      <div class="section-heading">
-        <p class="eyebrow">ECOSSISTEMA · EM BREVE</p>
-        <h2>Uma experiência que poderá continuar além do pendrive.</h2>
-      </div>
-      <div class="mode-grid app-grid">
-        <article><span>01</span><h3>OrdaX Web</h3><p>Em breve · experiência autenticada separada da landing pública.</p></article>
-        <article><span>02</span><h3>OrdaX Mobile</h3><p>Em breve · continuidade em Android e iPhone quando o produto estiver pronto.</p></article>
-        <article><span>03</span><h3>Sincronização</h3><p>Em breve · preferências, estado seguro e conteúdo autorizado entre experiências.</p></article>
-        <article><span>04</span><h3>Backup e continuidade</h3><p>Em breve · serviços de ecossistema planejados, sem preços ou planos definidos agora.</p></article>
-      </div>
-    </section>
-
-    <section class="section account-callout">
-      <div>
-        <p class="eyebrow">CONTA ORDA X</p>
-        <h2>Uma identidade para continuar sua experiência.</h2>
-        <p>Login e cadastro só serão habilitados quando o serviço real de identidade e os requisitos de privacidade/termos estiverem prontos. O portal não cria contas fictícias no navegador.</p>
-      </div>
-      <div class="callout-actions">
-        <a class="button button-dark" href="/login/">Entrar</a>
-        <a class="button button-quiet" href="/cadastro/">Criar conta</a>
-      </div>
-    </section>
   </main>
 
   <footer class="site-footer">
-    <a class="brand brand-small" href="/" aria-label="OrdaX — início">
-      <span class="brand-mark" aria-hidden="true"><span></span><i></i></span>
-      <span class="brand-name">OrdaX</span>
-    </a>
-    <p>OrdaX Stable/MVP · produto em preparação.</p>
+    <div class="footer-brand">
+      <a class="brand brand-small" href="/" aria-label="OrdaX — início">
+        <span class="brand-mark" aria-hidden="true"><span></span><i></i></span>
+        <span class="brand-name">OrdaX</span>
+      </a>
+      <p>OrdaX Stable/MVP · produto em preparação.</p>
+    </div>
     <nav aria-label="Rodapé">
+      <a href="/privacidade/">Privacidade</a>
+      <a href="/termos/">Termos</a>
+      <a href="/cadastro/">Contato</a>
       <a href="/download/">Download</a>
       <a href="/licencas/">Licenças</a>
       <a href="/login/">Entrar</a>
-      <a href="/cadastro/">Cadastro</a>
-      <a href="/privacidade/">Privacidade</a>
-      <a href="/termos/">Termos</a>
     </nav>
+    <span class="footer-caption">CONCEITO VISUAL</span>
   </footer>
 </body>
 </html>

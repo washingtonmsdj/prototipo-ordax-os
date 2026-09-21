@@ -23,6 +23,23 @@ Owner/Development remains an internal engineering profile. Public pages must not
 
 The portal may describe a capability only when its real owner/service exists or clearly mark it as not yet available.
 
+## Playground fixture
+
+The landing playground is a marketing demonstration, separate from OrdaX Web.
+Its app labels, order and Home spaces are generated from the shared product
+source into `assets/playground-fixture.json` and an inline copy in
+`index.html`:
+
+```bash
+python tools/public-site/playground_fixture.py --write
+python tools/public-site/build.py check
+```
+
+The fixture contains no account or user data. Playground edits stay anonymous
+and in memory; the browser mirrors them across the illustrated devices to show
+the intended continuity. Production synchronization still requires a real
+identity and sync owner.
+
 The route `/` is always the public landing page. The authenticated OrdaX/account experience must never replace the public root. OrdaX Web remains a separate product mode and is reached from an appropriate authenticated/product entry point rather than being rendered as the marketing homepage.
 
 ## MVP scope: USB-only

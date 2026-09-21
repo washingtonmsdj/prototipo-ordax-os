@@ -1,0 +1,104 @@
+{
+  "$schema": "prototype-ordax.public-playground-fixture/1",
+  "source": {
+    "apps": "system/apps/catalog.mjs",
+    "home": "system/surface/ui/desktop-shell.mjs"
+  },
+  "home": {
+    "area_label": "Área 01",
+    "command_label": "Abrir aplicativo…",
+    "space_label": "Seu espaço",
+    "spaces": [
+      {
+        "label": "Documentos",
+        "target": "/Documentos"
+      },
+      {
+        "label": "Imagens",
+        "target": "/Imagens"
+      },
+      {
+        "label": "Downloads",
+        "target": "/Downloads"
+      }
+    ],
+    "rail_apps": [
+      "files",
+      "notes",
+      "internet",
+      "settings",
+      "account",
+      "system"
+    ],
+    "rail_labels": [
+      {
+        "id": "files",
+        "label": "Arquivos"
+      },
+      {
+        "id": "notes",
+        "label": "Notas"
+      },
+      {
+        "id": "internet",
+        "label": "Internet"
+      },
+      {
+        "id": "settings",
+        "label": "Ajustes"
+      },
+      {
+        "id": "account",
+        "label": "Conta"
+      },
+      {
+        "id": "system",
+        "label": "Sistema"
+      }
+    ]
+  },
+  "apps": [
+    {
+      "id": "files",
+      "title": "Arquivos",
+      "description": "Organize documentos, imagens, downloads e conteúdo persistente do usuário.",
+      "monogram": "AR",
+      "display_title": "Arquivos"
+    },
+    {
+      "id": "notes",
+      "title": "Seu espaço de escrita",
+      "description": "Escrita local, projetos, tarefas e referências disponíveis offline.",
+      "monogram": "NO",
+      "display_title": "Notas"
+    },
+    {
+      "id": "internet",
+      "title": "Internet",
+      "description": "Navegue, organize referências e conecte pesquisa ao seu trabalho.",
+      "monogram": "IN",
+      "display_title": "Internet"
+    },
+    {
+      "id": "settings",
+      "title": "Preferências do OrdaX",
+      "description": "Preferências compartilhadas, aparência e rede do OrdaX.",
+      "monogram": "AJ",
+      "display_title": "Ajustes"
+    },
+    {
+      "id": "account",
+      "title": "Identidade e continuidade",
+      "description": "Identidade, acesso e continuidade segura entre os modos do OrdaX.",
+      "monogram": "CO",
+      "display_title": "Conta"
+    },
+    {
+      "id": "system",
+      "title": "Visão geral",
+      "description": "Entrega, atualizações, conectividade e recursos desta execução do OrdaX.",
+      "monogram": "SI",
+      "display_title": "Sistema"
+    }
+  ]
+}

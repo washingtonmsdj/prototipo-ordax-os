@@ -19,6 +19,7 @@ from public_release_catalog import (
     validate_catalog,
     write_catalog,
 )
+from playground_fixture import PlaygroundFixtureError, validate_fixture
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "sites" / "public"
@@ -49,6 +50,7 @@ REQUIRED_FILES = (
     "termos/index.html",
     "assets/site.css",
     "assets/site.js",
+    "assets/playground-fixture.json",
     "config/public-site.json",
 )
 
@@ -78,6 +80,12 @@ def source_files(root: Path = SOURCE) -> list[Path]:
     )
     if not files:
         raise PublicSiteError("public site source is empty")
+    if root.resolve() == SOURCE.resolve():
+        try:
+            validate_fixture()
+        except PlaygroundFixtureError as exc:
+            raise PublicSiteError(str(exc)) from exc
+
     return files
 
 
@@ -279,6 +287,7 @@ def command_check() -> int:
     print("PUBLIC_SITE_SOURCE=PASS")
     print(f"PUBLIC_SITE_SOURCE_FILE_COUNT={len(files)}")
     print("PUBLIC_SITE_REMOTE_RUNTIME_DEPENDENCIES=NO")
+    print("PUBLIC_PLAYGROUND_FIXTURE=PASS")
     print(f"PUBLIC_RELEASE_PUBLICATION_COUNT={len(publications['releases'])}")
     return 0
 
@@ -317,6 +326,7 @@ def main(argv: list[str] | None = None) -> int:
     except (
         PublicSiteError,
         PublicReleaseCatalogError,
+        PlaygroundFixtureError,
         OSError,
         ValueError,
         json.JSONDecodeError,
