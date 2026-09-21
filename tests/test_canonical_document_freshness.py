@@ -16,6 +16,7 @@ PHYSICAL_SEED = ROOT / "docs" / "contracts" / "physical-media.json"
 PHYSICAL_PREPARED = ROOT / "docs" / "contracts" / "physical-prepared-media.json"
 MINIMAL_USB_BOOTSTRAP = ROOT / "docs" / "MINIMAL-USB-BOOTSTRAP.md"
 PORTABLE_BOOTSTRAP = ROOT / "docs" / "contracts" / "portable-bootstrap-v2.json"
+PORTABLE_MAIN_EVIDENCE = ROOT / "docs" / "evidence" / "portable-runtime-v3-main-proof.json"
 
 
 def assignment_map(text):
@@ -208,6 +209,35 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertIn("KNOWN_GOOD_PERSISTED=PENDING_PHYSICAL", promotion)
         self.assertIn("ROLLBACK=PENDING_PHYSICAL", promotion)
         self.assertNotIn("portable-v2-activation-not-connected", current)
+
+    def test_portable_main_evidence_matches_current_baseline_markers(self):
+        evidence = json.loads(PORTABLE_MAIN_EVIDENCE.read_text(encoding="utf-8"))
+        state = assignment_map(CURRENT_STATE.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            evidence["$schema"],
+            "prototype-ordax.portable-runtime-v3-main-proof/1",
+        )
+        self.assertEqual(evidence["status"], "pass")
+        self.assertEqual(
+            evidence["source_commit"],
+            state["PORTABLE_RUNTIME_V3_LAST_PROVEN_SOURCE_COMMIT"],
+        )
+        self.assertEqual(
+            str(evidence["workflow_run_id"]),
+            state["PORTABLE_RUNTIME_V3_LAST_PROVEN_WORKFLOW_RUN_ID"],
+        )
+        self.assertEqual(
+            evidence["artifact"]["sha256"],
+            state["PORTABLE_RUNTIME_V3_PROOF_ARTIFACT_SHA256"],
+        )
+        self.assertTrue(evidence["proven"]["direct_kernel_current_slot_boot"])
+        self.assertTrue(evidence["proven"]["ovmf_systemd_boot_current_slot_boot"])
+        self.assertTrue(evidence["not_proven"]["armed_candidate_one_shot"])
+        self.assertTrue(evidence["not_proven"]["cold_health_commit"])
+        self.assertTrue(evidence["not_proven"]["physical_usb_boot"])
+        self.assertFalse(evidence["safety"]["physical_target_device_touched"])
+        self.assertFalse(evidence["safety"]["physical_write_authorized"])
 
     def test_surface_smoke_gate_tracks_fail_closed_finalizer(self):
         promotion_text = PROMOTION_GATES.read_text(encoding="utf-8")
