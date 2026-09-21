@@ -1868,7 +1868,9 @@ handle_portable_candidate_boot() {
 
     if surface_stays_running 4 && wait_for_surface_health "$candidate_sha" "$INITIAL_SURFACE_HEALTH_TIMEOUT"; then
         if ! portable_commit_candidate "$candidate_sha"; then
-            fail_closed "healthy Portable candidate could not commit activation state"
+            set_update_context error "$candidate_sha" "$attempt_id" "portable-activation-commit-ambiguous"
+            write_update_state "$candidate_sha" activation-error signed-release-v3
+            portable_reboot_now "Portable candidate health passed but activation commit was ambiguous; rebooting for transaction recovery"
         fi
         record_applied "$candidate_sha" signed-release-v3
         record_runtime_surface_sha "$candidate_sha"
@@ -2156,7 +2158,8 @@ if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] &&
    [ "$STABLE_LAYOUT" = "portable-v2" ] &&
    [ "$PORTABLE_BOOT_SLOT" = "candidate" ]; then
     handle_portable_candidate_boot "$initial_sha"
-elif [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] && [ -s "$STABLE_ACTIVATION_GUARD_FILE" ]; then    handle_stable_activation_guard "$initial_sha"
+elif [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] && [ -s "$STABLE_ACTIVATION_GUARD_FILE" ]; then
+    handle_stable_activation_guard "$initial_sha"
 elif [ -s "$SUPERVISOR_GUARD_FILE" ]; then
     guard_line=$(read_state_value "$SUPERVISOR_GUARD_FILE")
     set -- $guard_line
