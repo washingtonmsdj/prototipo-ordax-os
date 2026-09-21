@@ -73,6 +73,8 @@ Only after that succeeds, start the actual local ceremony through:
 2-Initialize-OrdaXTrust.cmd
 ```
 
+The underlying PowerShell initializer is fail-closed: direct invocation without the explicit `-GenerateKey` switch refuses key generation. The step-2 wrapper supplies that switch only after the operator deliberately chooses the generation step.
+
 Before any key is generated, the initializer fails closed unless:
 
 1. `provenance.json` has schema `prototype-ordax.windows-prototype-toolkit/2` and status `candidate`;
