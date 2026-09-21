@@ -7,6 +7,7 @@ SEED="${1:-}"
 HELPER="${2:-$ROOT/out/initramfs-work/ordax-grow-ext4}"
 PROOF="${3:-$ROOT/out/full-media-proof/creator-prepared-ext4-growth-proof.json}"
 TARGET_BYTES="${4:-805306368}"
+EXPECTED_TRUST_SHA256="${5:-}"
 SECTOR_BYTES=512
 
 fail() {
@@ -19,6 +20,9 @@ fail() {
 [[ -f "$HELPER" && ! -L "$HELPER" && -x "$HELPER" ]] || fail "growth helper is missing or unsafe"
 [[ "$TARGET_BYTES" =~ ^[0-9]+$ ]] || fail "target bytes must be an integer"
 (( TARGET_BYTES > 0 && TARGET_BYTES % SECTOR_BYTES == 0 )) || fail "target bytes must be positive and 512-byte aligned"
+if [[ -n "$EXPECTED_TRUST_SHA256" && ! "$EXPECTED_TRUST_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+  fail "expected canonical trust SHA-256 must be 64 lowercase hexadecimal characters"
+fi
 
 for command in go sgdisk losetup mount umount mountpoint blockdev blkid dumpe2fs resize2fs e2fsck sha256sum awk sed stat python3 readelf; do
   command -v "$command" >/dev/null 2>&1 || fail "required program not found: $command"
@@ -161,6 +165,20 @@ BOOTSTRAP_MODE_BEFORE="$(sudo stat -c '%a' "$BOOTSTRAP_ENTRYPOINT")"
 BOOTSTRAP_SHA256_BEFORE="$(sudo sha256sum "$BOOTSTRAP_ENTRYPOINT" | awk '{print $1}')"
 [[ "$BOOTSTRAP_MODE_BEFORE" =~ ^[0-7]{3,4}$ ]] || fail "cannot read prepared /bootstrap/entrypoint mode"
 [[ "$BOOTSTRAP_SHA256_BEFORE" =~ ^[0-9a-f]{64}$ ]] || fail "cannot hash prepared /bootstrap/entrypoint"
+
+CANONICAL_TRUST=false
+CANONICAL_TRUST_SHA256_JSON=null
+TRUST_PATH="$MOUNT/bootstrap/trust/release-ed25519.json"
+TRUST_SHA256_BEFORE=""
+if [[ -n "$EXPECTED_TRUST_SHA256" ]]; then
+  sudo test -f "$TRUST_PATH" || fail "prepared ORDAX is missing canonical public trust"
+  sudo test ! -L "$TRUST_PATH" || fail "prepared canonical public trust may not be a symlink"
+  TRUST_SHA256_BEFORE="$(sudo sha256sum "$TRUST_PATH" | awk '{print $1}')"
+  [[ "$TRUST_SHA256_BEFORE" == "$EXPECTED_TRUST_SHA256" ]] || fail "prepared canonical public trust hash mismatch"
+  CANONICAL_TRUST=true
+  CANONICAL_TRUST_SHA256_JSON="\"$TRUST_SHA256_BEFORE\""
+fi
+
 GROW_OUTPUT="$(sudo "$HELPER_ABS" "$LOOP" "$MOUNT")"
 printf '%s\n' "$GROW_OUTPUT"
 grep -q '^ORDAX_EXT4_GROWTH=PASS ' <<<"$GROW_OUTPUT" || fail "initramfs helper did not grow Creator-prepared ORDAX filesystem"
@@ -173,6 +191,12 @@ BOOTSTRAP_MODE_AFTER="$(sudo stat -c '%a' "$BOOTSTRAP_ENTRYPOINT")"
 BOOTSTRAP_SHA256_AFTER="$(sudo sha256sum "$BOOTSTRAP_ENTRYPOINT" | awk '{print $1}')"
 [[ "$BOOTSTRAP_MODE_AFTER" == "$BOOTSTRAP_MODE_BEFORE" ]] || fail "/bootstrap/entrypoint mode changed during online ext4 growth"
 [[ "$BOOTSTRAP_SHA256_AFTER" == "$BOOTSTRAP_SHA256_BEFORE" ]] || fail "/bootstrap/entrypoint bytes changed during online ext4 growth"
+if [[ -n "$EXPECTED_TRUST_SHA256" ]]; then
+  sudo test -f "$TRUST_PATH" || fail "grown ORDAX lost canonical public trust"
+  sudo test ! -L "$TRUST_PATH" || fail "grown canonical public trust became a symlink"
+  TRUST_SHA256_AFTER="$(sudo sha256sum "$TRUST_PATH" | awk '{print $1}')"
+  [[ "$TRUST_SHA256_AFTER" == "$TRUST_SHA256_BEFORE" ]] || fail "canonical public trust bytes changed during online ext4 growth"
+fi
 sudo umount "$MOUNT"
 AFTER_BLOCKS="$(ext4_value "$LOOP" 'Block count')"
 
@@ -236,7 +260,8 @@ cat >"$PROOF_ABS" <<EOF
     "unused_tail_less_than_one_block_group": true,
     "grown_ext4_passes_read_only_e2fsck": true
   },
-  "canonical_trust": false,
+  "canonical_trust": $CANONICAL_TRUST,
+  "canonical_trust_sha256": $CANONICAL_TRUST_SHA256_JSON,
   "physical_write_authorized": false,
   "physical_hardware_proven": false,
   "real_hardware_touched": false
