@@ -71,7 +71,7 @@
     "verified_source_identity_env": "ORDAX_SOURCE_SHA",
     "runtime_layout_env": "ORDAX_STABLE_LAYOUT",
     "legacy_current_symlink_required": false,
-    "portable_update_activation_connected": false,
+    "portable_update_activation_connected": true,
     "portable_guardian_refresh_connected": false,
     "initial_surface_runtime_supported": true,
     "first_boot_network_required": false,
@@ -96,7 +96,9 @@
     "surface_runtime_source": "signed-release-manifest-v3",
     "surface_runtime_store": "content-addressed-sha256",
     "surface_runtime_view": "ephemeral-overlayfs",
-    "surface_runtime_persistent_upper": false
+    "surface_runtime_persistent_upper": false,
+    "portable_update_activation_mode": "signed-v3-materialize-arm-reboot-cold-health",
+    "portable_update_reboot_required": true
   },
   "initramfs_integration_requirements": {
     "busybox_losetup_applet_required": true,
@@ -127,15 +129,20 @@
     "activation_state_reader_operations": [
       "read-slot",
       "resolve",
-      "select"
+      "select",
+      "prepare",
+      "select-boot",
+      "commit",
+      "rollback"
     ],
     "activation_selection_helper_implemented": true,
     "activation_selection_helper_pid1_connected": true,
     "activation_selection_order": [
+      "candidate-one-shot",
       "current",
       "known-good"
     ],
-    "candidate_is_boot_authority": false,
+    "candidate_is_boot_authority": true,
     "selection_requires_materialized_release_shape": true,
     "selection_signature_verification_delegated_to_release_agent": true,
     "bootstrap_capsule_hash_check_primitive_implemented": true,
@@ -175,7 +182,11 @@
     "known_good_exact_resolver_signature_handoff_compatibility": [
       "ordax-release-agent verify-portable-v3-exact",
       "ordax-release-agent verify-portable-exact"
-    ]
+    ],
+    "candidate_boot_authority_policy": "armed-one-shot-transaction-only",
+    "activation_transaction_writer_implemented": true,
+    "activation_transaction_writer_runtime_path": "/run/ordax/bootstrap-tools/ordax-portable-state",
+    "activation_transaction_survives_switch_root": true
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",
@@ -200,22 +211,30 @@
     "atomic_replace_required": true,
     "current_must_reference_exact_verified_materialized_release": true,
     "known_good_must_reference_exact_verified_materialized_release": true,
-    "candidate_is_not_boot_authority_until_promoted": true,
+    "candidate_is_not_boot_authority_until_promoted": false,
     "rollback_must_not_require_network": true,
     "selection_helper_implemented": true,
-    "selection_helper_read_only": true,
+    "selection_helper_read_only": false,
     "selection_helper_order": [
+      "candidate-one-shot",
       "current",
       "known-good"
     ],
-    "selection_helper_candidate_ignored": true,
+    "selection_helper_candidate_ignored": false,
     "selection_helper_signature_authority": false,
     "exact_boot_slot_resolver_implemented": true,
     "exact_boot_slot_resolver_slots": [
+      "candidate",
       "current",
       "known-good"
     ],
-    "exact_boot_slot_resolver_candidate_allowed": false
+    "exact_boot_slot_resolver_candidate_allowed": true,
+    "rejected_file": "/state/ordax/portable-release/rejected",
+    "candidate_boot_authority": "one-shot-only-when-armed",
+    "rejected_candidate_blocks_rearm_until_channel_advances": true,
+    "commit_requires_cold_health": true,
+    "rollback_requires_no_network": true,
+    "runtime_supervisor_connected": true
   },
   "boot_sequence_target": [
     "mount-ORDAX-ESP-read-only-for-bootstrap-substrate",
@@ -224,7 +243,7 @@
     "attach-persistent-state-img-loop",
     "validate-ext4-state-before-writable-mount",
     "mount-persistent-state-ext4",
-    "resolve-current-or-known-good-from-ext4-activation-state",
+    "resolve-one-shot-candidate-or-current-or-known-good-from-ext4-activation-state",
     "verify-selected-release-exactly-offline",
     "verify-stable-base-against-initramfs-owned-pin",
     "attach-stable-base-erofs-read-only",
