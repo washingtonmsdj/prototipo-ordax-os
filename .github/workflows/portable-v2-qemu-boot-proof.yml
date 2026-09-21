@@ -80,6 +80,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Python
@@ -280,6 +281,241 @@ jobs:
           assert manifest['artifacts'][1]['sha256'] == runtime_sha
           print('PORTABLE_V3_RELEASE_RUNTIME_BOUND=PASS')
           PY
+
+          previous="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if ! printf '%s' "$previous" | grep -Eq '^[0-9a-f]{40}          test ! -e "$work/private.pem"
+
+      - name: Build persistent ext4 state with current and known-good
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-qemu"
+          commit="${{ github.event.pull_request.head.sha || github.sha }}"
+          state="$work/persistent-state.img"
+          current="$work/current.txt"
+          known="$work/known-good.txt"
+          printf '%s\n' "$commit" > "$current"
+          printf '%s\n' "$commit" > "$known"
+
+          truncate -s 268435456 "$state"
+          mkfs.ext4 -q -F -L ORDAX-STATE "$state"
+          debugfs -w -R 'mkdir /ordax' "$state"
+          debugfs -w -R 'mkdir /ordax/base' "$state"
+          debugfs -w -R 'mkdir /ordax/base/upper' "$state"
+          debugfs -w -R 'mkdir /ordax/base/work' "$state"
+          debugfs -w -R 'mkdir /ordax/portable-release' "$state"
+          debugfs -w -R 'mkdir /ordax/runtime' "$state"
+          debugfs -w -R 'mkdir /home' "$state"
+          debugfs -w -R "write $current /ordax/portable-release/current" "$state"
+          debugfs -w -R "write $known /ordax/portable-release/known-good" "$state"
+          e2fsck -fn "$state"
+
+      - name: Build armed one-shot Portable activation state
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-qemu"
+          candidate="${{ github.event.pull_request.head.sha || github.sha }}"
+          previous="$(cat "$work/previous-commit.txt")"
+          portable="$work/portable/.ordax"
+          state="$work/persistent-state-one-shot.img"
+          current="$work/one-shot-current.txt"
+          known="$work/one-shot-known-good.txt"
+          mountpoint="$work/one-shot-state-mount"
+
+          printf '%s\n' "$previous" > "$current"
+          printf '%s\n' "$previous" > "$known"
+          truncate -s 268435456 "$state"
+          mkfs.ext4 -q -F -L ORDAX-STATE "$state"
+          debugfs -w -R 'mkdir /ordax' "$state"
+          debugfs -w -R 'mkdir /ordax/base' "$state"
+          debugfs -w -R 'mkdir /ordax/base/upper' "$state"
+          debugfs -w -R 'mkdir /ordax/base/work' "$state"
+          debugfs -w -R 'mkdir /ordax/portable-release' "$state"
+          debugfs -w -R 'mkdir /ordax/runtime' "$state"
+          debugfs -w -R 'mkdir /home' "$state"
+          debugfs -w -R "write $current /ordax/portable-release/current" "$state"
+          debugfs -w -R "write $known /ordax/portable-release/known-good" "$state"
+
+          mkdir -p "$mountpoint"
+          sudo mount -t ext4 -o loop,rw "$state" "$mountpoint"
+          trap 'sudo umount "$mountpoint" >/dev/null 2>&1 || true' EXIT
+          prepared="$(sudo "$work/initramfs-work/ordax-portable-state"             prepare "$mountpoint" "$portable" "$candidate")"
+          test "$prepared" = "$candidate"
+          sudo sync
+          sudo umount "$mountpoint"
+          trap - EXIT
+          e2fsck -fn "$state"
+
+          echo "PORTABLE_V3_ONE_SHOT_STATE_ARMED=YES"
+          echo "PORTABLE_V3_ONE_SHOT_PREVIOUS=$previous"
+          echo "PORTABLE_V3_ONE_SHOT_CANDIDATE=$candidate"
+
+      - name: Boot portable-v2 candidate PID1 in QEMU
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-qemu"
+          rm -rf "$work/qemu-proof"
+          mkdir -p "$work/qemu-proof"
+          sudo -E python3 bootstrap/portable-v2/qemu_boot.py \
+            --kernel "$work/kernel/vmlinuz-6.6.52" \
+            --initramfs "$work/initramfs/initramfs.cpio.gz" \
+            --initramfs-provenance "$work/initramfs/initramfs-provenance.json" \
+            --capsule "$work/capsule/bootstrap.erofs" \
+            --stable-base "$work/stable-base/stable-base.erofs" \
+            --state-image "$work/persistent-state.img" \
+            --portable-root "$work/portable/.ordax" \
+            --trust "$work/release-trust.json" \
+            --source-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --out "$work/qemu-proof/proof.json"
+          sudo chown -R "$(id -u):$(id -g)" "$work/qemu-proof"
+
+          python - "$work/qemu-proof/proof.json" <<'PY'
+          import json, pathlib, sys
+          proof = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert proof['status'] == 'pass'
+          assert proof['qemu_direct_kernel_boot_proven'] is True
+          assert proof['qemu_uefi_boot_proven'] is False
+          assert proof['physical_usb_boot_proven'] is False
+          assert proof['physical_target_device_touched'] is False
+          assert proof['physical_write_authorized'] is False
+          assert proof['public_physical_promotion_allowed'] is False
+          assert proof['candidate_pid1_default_changed'] is False
+          assert proof['network_required_for_first_boot'] is False
+          assert proof['guest_disk']['retained'] is False
+          assert all(proof['checks'].values())
+          print('PORTABLE_V2_QEMU_DIRECT_KERNEL_BOOT=PASS')
+          print('PORTABLE_V2_UEFI_BOOT_PROVEN=NO')
+          print('PORTABLE_V2_PHYSICAL_BOOT_PROVEN=NO')
+          print('PORTABLE_V2_PUBLIC_PROMOTION=NO')
+          PY
+
+      - name: Prove armed candidate one-shot fallback in QEMU
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-qemu"
+          previous="$(cat "$work/previous-commit.txt")"
+          rm -rf "$work/qemu-one-shot-proof"
+          mkdir -p "$work/qemu-one-shot-proof"
+
+          sudo -E python3 bootstrap/portable-v2/qemu_boot.py             --kernel "$work/kernel/vmlinuz-6.6.52"             --initramfs "$work/initramfs/initramfs.cpio.gz"             --initramfs-provenance "$work/initramfs/initramfs-provenance.json"             --capsule "$work/capsule/bootstrap.erofs"             --stable-base "$work/stable-base/stable-base.erofs"             --state-image "$work/persistent-state-one-shot.img"             --portable-root "$work/portable/.ordax"             --trust "$work/release-trust.json"             --source-commit "${{ github.event.pull_request.head.sha || github.sha }}"             --previous-commit "$previous"             --out "$work/qemu-one-shot-proof/proof.json"
+          sudo chown -R "$(id -u):$(id -g)" "$work/qemu-one-shot-proof"
+
+          python - "$work/qemu-one-shot-proof/proof.json" <<'PY'
+          import json, pathlib, sys
+          proof = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          activation = proof['activation_one_shot']
+          assert proof['status'] == 'pass'
+          assert proof['armed_candidate_one_shot_proven'] is True
+          assert activation['proven'] is True
+          assert activation['candidate_boot_count'] == 1
+          assert activation['fallback_boot_count'] == 1
+          assert activation['cold_health_commit_proven'] is False
+          assert activation['failure_fallback_proven'] is True
+          assert activation['rejected_state_proven'] is True
+          assert all(activation['checks'].values())
+          assert proof['physical_usb_boot_proven'] is False
+          assert proof['physical_target_device_touched'] is False
+          assert proof['physical_write_authorized'] is False
+          assert proof['public_physical_promotion_allowed'] is False
+          assert proof['guest_disk']['retained'] is False
+          print('PORTABLE_V3_QEMU_ONE_SHOT_FALLBACK=PASS')
+          print('PORTABLE_V3_QEMU_COLD_HEALTH_COMMIT_PROVEN=NO')
+          print('PORTABLE_V3_PHYSICAL_BOOT_PROVEN=NO')
+          PY
+
+      - name: Build pinned systemd-boot for portable UEFI proof
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-qemu"
+          python boot/esp/build.py check
+          python boot/esp/build.py build \
+            --work-dir "$work/esp-work" \
+            --out-dir "$work/esp"
+          python boot/esp/build.py verify --out-dir "$work/esp"
+          test -s "$work/esp/systemd-bootx64.efi"
+
+      - name: Validate portable UEFI proof contract
+        run: |
+          set -euo pipefail
+          python -m unittest tests.test_portable_v2_uefi_boot_proof_contract -v
+
+      - name: Boot same portable-v2 disk through OVMF and systemd-boot
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-qemu"
+          rm -rf "$work/uefi-proof"
+          mkdir -p "$work/uefi-proof"
+          sudo -E python3 bootstrap/portable-v2/uefi_boot.py \
+            --kernel "$work/kernel/vmlinuz-6.6.52" \
+            --initramfs "$work/initramfs/initramfs.cpio.gz" \
+            --initramfs-provenance "$work/initramfs/initramfs-provenance.json" \
+            --capsule "$work/capsule/bootstrap.erofs" \
+            --stable-base "$work/stable-base/stable-base.erofs" \
+            --state-image "$work/persistent-state.img" \
+            --portable-root "$work/portable/.ordax" \
+            --trust "$work/release-trust.json" \
+            --source-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --bootloader "$work/esp/systemd-bootx64.efi" \
+            --loader-conf boot/portable-v2/loader/loader.conf \
+            --normal-entry boot/portable-v2/loader/entries/ordax-portable.conf \
+            --recovery-entry boot/portable-v2/loader/entries/ordax-portable-recovery.conf \
+            --out "$work/uefi-proof/proof.json"
+          sudo chown -R "$(id -u):$(id -g)" "$work/uefi-proof"
+
+          python - "$work/uefi-proof/proof.json" <<'PY'
+          import json, pathlib, sys
+          proof = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert proof['status'] == 'pass'
+          assert proof['qemu_uefi_boot_proven'] is True
+          assert proof['secure_boot_proven'] is False
+          assert proof['physical_usb_boot_proven'] is False
+          assert proof['public_physical_promotion_allowed'] is False
+          assert proof['physical_target_device_touched'] is False
+          assert proof['physical_write_authorized'] is False
+          assert proof['guest_disk']['retained'] is False
+          assert proof['ovmf_vars']['retained'] is False
+          assert all(proof['checks'].values())
+          print('PORTABLE_V2_QEMU_UEFI_BOOT=PASS')
+          print('PORTABLE_V2_SECURE_BOOT_PROVEN=NO')
+          print('PORTABLE_V2_PHYSICAL_BOOT_PROVEN=NO')
+          print('PORTABLE_V2_PUBLIC_PROMOTION=NO')
+          PY
+
+      - name: Upload proof metadata only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: portable-v2-qemu-boot-proof-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ${{ runner.temp }}/portable-v2-qemu/qemu-proof/proof.json
+            ${{ runner.temp }}/portable-v2-qemu/qemu-one-shot-proof/proof.json
+            ${{ runner.temp }}/portable-v2-qemu/uefi-proof/proof.json
+            ${{ runner.temp }}/portable-v2-qemu/metadata/
+          if-no-files-found: error
+          retention-days: 14
+ ||              [ "$previous" = "0000000000000000000000000000000000000000" ]; then
+            previous="$(git rev-parse "$commit^")"
+          fi
+          test "$previous" != "$commit"
+          git cat-file -e "$previous^{commit}"
+          printf '%s\n' "$previous" > "$work/previous-commit.txt"
+
+          previous_source="$work/previous-source"
+          previous_release="$portable/releases/$previous"
+          rm -rf "$previous_source"
+          git worktree add --detach "$previous_source" "$previous"
+          mkdir -p "$previous_release"
+
+          "$work/bin/release-bundle"             --root "$previous_source"             --out "$work/previous-system.tar"
+          python tools/portable-release-image/build.py build             --tar "$work/previous-system.tar"             --out "$previous_release/system.erofs"             > "$work/metadata/previous-release-image.json"
+          printf '%s\n' "$runtime_sha" > "$previous_release/surface-runtime.sha256"
+
+          "$work/bin/release-manifest"             --manifest-schema 3             --artifact "$previous_release/system.erofs"             --runtime-artifact "$runtime_image"             --source-commit "$previous"             --artifact-url "https://example.invalid/releases/$previous/system.erofs"             --runtime-artifact-url "https://example.invalid/runtimes/$runtime_sha/native-surface-runtime.erofs"             --out "$previous_release/release-manifest.json"
+          "$work/bin/release-signing" sign             --manifest "$previous_release/release-manifest.json"             --private-key "$work/private.pem"             --trust "$work/release-trust.json"             --key-id ci-portable-v3-qemu             --out "$previous_release/release-envelope.json"
+          "$work/bin/release-signing" verify-envelope             --envelope "$previous_release/release-envelope.json"             --trust "$work/release-trust.json"
+          "$work/bin/ordax-release-agent" verify-portable-v3-exact             --trust "$work/release-trust.json"             --root "$portable"             --expected-commit "$previous"             > "$work/metadata/previous-release-v3-exact-verify.json"
+          git worktree remove --force "$previous_source"
+
+          echo "PORTABLE_V3_PREVIOUS_RELEASE=VERIFIED"
+          echo "PORTABLE_V3_PREVIOUS_SOURCE_COMMIT=$previous"
 
           rm -f "$work/private.pem"
           test ! -e "$work/private.pem"
