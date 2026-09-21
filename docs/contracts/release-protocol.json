@@ -162,5 +162,31 @@
     "offline_exact_verification_network_access": false,
     "offline_exact_verification_mutates_release": false,
     "offline_exact_verification_activation_performed": false
+  },
+  "trust_transition_v1": {
+    "transition_schema": "prototype-ordax.release-trust-transition/1",
+    "envelope_schema": "prototype-ordax.release-trust-transition-envelope/1",
+    "current_trust_schema": "prototype-ordax.release-trust/1",
+    "signer_support": true,
+    "signer_command": "ordax-release-signing sign-trust-transition",
+    "signer_verifier_support": true,
+    "signer_verify_command": "ordax-release-signing verify-trust-transition",
+    "acquisition_agent_verifier_support": true,
+    "acquisition_agent_verify_command": "ordax-release-agent verify-trust-transition",
+    "sequence_must_be_positive_and_exact": true,
+    "previous_key_id_must_match_current_trust": true,
+    "previous_trust_exact_sha256_required": true,
+    "transition_signed_by_current_key": true,
+    "next_key_id_must_differ": true,
+    "next_ed25519_key_material_must_differ": true,
+    "canonical_next_trust_sha256_required": true,
+    "verification_writes_only_new_output": true,
+    "current_trust_mutation_allowed": false,
+    "stateful_device_activation_support": false,
+    "bootstrap_effective_trust_selection_support": false,
+    "production_rotation_ready": false,
+    "ci_cross_component_proof": true,
+    "ci_signer_agent_run_id": 35640416446,
+    "ci_release_agent_run_id": 35640416481
   }
 }

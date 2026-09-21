@@ -44,3 +44,11 @@ Then derive the public file from the actual private key with `tools/release-sign
 A CI-only test key may be used by isolated protocol tests, but it must remain test-scoped and must never satisfy the physical bootstrap manifest.
 
 See `docs/RELEASE-SIGNING.md`.
+
+## Rotation protocol candidate
+
+The immutable bootstrap anchor remains the initial root of release trust. A separate signed transition protocol now exists in source so the currently trusted release key can authorize a successor without changing release-envelope semantics.
+
+The protocol binds an exact current-trust SHA-256, monotonic sequence, successor key id/public key and canonical successor-trust SHA-256, then requires an Ed25519 signature by the current trusted key. Signer and release-agent verification exist and fail closed.
+
+This is **not yet device activation**. No installed OrdaX may silently replace its effective trust anchor from this protocol until persistent monotonic trust state, atomic activation and bootstrap effective-trust selection are implemented and proven. The first controlled physical MVP proof does not depend on production rotation.

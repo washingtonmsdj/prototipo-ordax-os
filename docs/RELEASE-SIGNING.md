@@ -110,6 +110,52 @@ managed-kms-hsm
 ```
 
 The managed backend is intentionally deferred while the prototype does not justify paid infrastructure. AWS KMS is a candidate implementation, not a protocol dependency. GitHub may orchestrate builds and obtain short-lived authorization, but it is not private-key custody. Before broad public distribution, signed trust rotation must exist so an operational key can be revoked/replaced without redefining release-manifest/envelope semantics or reprovisioning every device.
+## Signed trust transition protocol
+
+Trust rotation is a separate versioned protocol; it does not change `release-envelope/1` or any published release-manifest semantics.
+
+The source candidate implements:
+
+```text
+prototype-ordax.release-trust-transition/1
+ -> exact source repository
+ -> positive monotonic sequence
+ -> exact previous key id
+ -> SHA-256 of the exact current trust file
+ -> canonical next release-trust/1 object
+ -> SHA-256 of canonical next trust
+
+prototype-ordax.release-trust-transition-envelope/1
+ -> exact transition payload
+ -> Ed25519 signature by the CURRENT trusted key
+ -> current key id
+```
+
+Local-PKCS#8 tooling can create the protocol envelope today:
+
+```text
+ordax-release-signing sign-trust-transition \
+  --current-private-key <current-private.pem> \
+  --current-trust <current-release-ed25519.json> \
+  --next-trust <next-release-ed25519.json> \
+  --sequence <N> \
+  --out <trust-transition.json>
+```
+
+Both the signer and `ordax-release-agent` independently verify the transition. Verification may materialize only a new canonical next-trust file; it does **not** overwrite the current trust:
+
+```text
+ordax-release-agent verify-trust-transition \
+  --envelope <trust-transition.json> \
+  --current-trust <current-release-ed25519.json> \
+  --expected-sequence <N> \
+  --out-next-trust <verified-next-trust.json>
+```
+
+The verifier fails closed on a wrong sequence, wrong current trust bytes, wrong current key id, tampering, repository mismatch, reuse of the same Ed25519 key under another id, or a next-trust hash mismatch.
+
+**Important:** stateful device activation is not implemented yet. The current protocol proves safe authorization of a successor key but does not yet change the effective trust used by an installed OrdaX. Production rotation remains `NO` until a persistent monotonic trust-state owner and bootstrap effective-trust selection are implemented and proven.
+
 ## CI policy
 
 Repository CI may generate an ephemeral test key solely to prove the signing protocol and tooling. CI also proves that the signer refuses private/trust mismatches and that the resulting envelope is accepted by the real release-acquisition agent.

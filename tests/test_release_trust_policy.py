@@ -63,6 +63,27 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
         self.assertTrue(rotation["signed_rotation_required_before_broad_public_distribution"])
         self.assertTrue(rotation["single_lost_key_or_host_must_not_permanently_block_updates"])
 
+    def test_signed_transition_protocol_does_not_claim_production_activation(self):
+        rotation = self.load_policy()["rotation"]
+        self.assertTrue(rotation["signed_transition_protocol_source_implemented"])
+        self.assertEqual(
+            rotation["signed_transition_protocol_schema"],
+            "prototype-ordax.release-trust-transition/1",
+        )
+        self.assertEqual(
+            rotation["signed_transition_envelope_schema"],
+            "prototype-ordax.release-trust-transition-envelope/1",
+        )
+        self.assertTrue(
+            rotation["signed_transition_protocol_ci_cross_compatibility_required"]
+        )
+        self.assertTrue(rotation["signed_transition_protocol_ci_cross_compatibility_proven"])
+        self.assertEqual(rotation["signed_transition_protocol_ci_run_id"], 35640416446)
+        self.assertEqual(rotation["release_agent_transition_ci_run_id"], 35640416481)
+        self.assertFalse(rotation["device_stateful_rotation_activation_implemented"])
+        self.assertFalse(rotation["bootstrap_effective_trust_selection_implemented"])
+        self.assertFalse(rotation["production_rotation_implemented"])
+
     def test_private_key_locations_explicitly_forbid_repository_and_usb(self):
         forbidden = set(self.load_policy()["private_key"]["forbidden_locations"])
         for location in {"git", "usb-bootstrap", "github-actions-artifacts", "logs", "chat"}:
