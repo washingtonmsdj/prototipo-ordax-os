@@ -413,10 +413,17 @@ static int write_transaction_at(
 }
 
 static int cleanup_transaction(int parent) {
-    if (remove_file_at_sync(parent, "candidate") != 0) {
+    /*
+     * Revoke boot authority before removing the advisory candidate identity.
+     * If power is lost between these durable unlinks, an orphan candidate is
+     * harmless because select/select-boot never grants it authority without
+     * activation-transaction.json. prepare() removes that orphan before
+     * arming a later transaction.
+     */
+    if (remove_file_at_sync(parent, TRANSACTION_FILE) != 0) {
         return -1;
     }
-    return remove_file_at_sync(parent, TRANSACTION_FILE);
+    return remove_file_at_sync(parent, "candidate");
 }
 
 static int write_all(const char *value, size_t length) {
