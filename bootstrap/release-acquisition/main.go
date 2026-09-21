@@ -1787,7 +1787,7 @@ func materializeCommand(args []string) error {
 
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: ordax-release-agent <verify-envelope|inspect|materialize|materialize-portable|verify-portable-exact|materialize-portable-v3|verify-portable-v3-exact|activate-exact|install> [options]")
+	fmt.Fprintln(os.Stderr, "usage: ordax-release-agent <verify-envelope|verify-trust-transition|inspect|materialize|materialize-portable|verify-portable-exact|materialize-portable-v3|verify-portable-v3-exact|activate-exact|install> [options]")
 }
 
 func main() {
@@ -1799,6 +1799,8 @@ func main() {
 	switch os.Args[1] {
 	case "verify-envelope":
 		err = verifyCommand(os.Args[2:])
+	case "verify-trust-transition":
+		err = verifyTrustTransitionCommand(os.Args[2:])
 	case "inspect":
 		err = inspectCommand(os.Args[2:])
 	case "materialize":
