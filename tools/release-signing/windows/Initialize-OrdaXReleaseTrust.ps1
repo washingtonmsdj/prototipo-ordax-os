@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$PrivateKeyPath,
-    [string]$ReviewDirectory
+    [string]$ReviewDirectory,
+    [switch]$PreflightOnly
 )
 
 Set-StrictMode -Version Latest
@@ -74,6 +75,18 @@ if ($ActualSignerSha256 -ne $ExpectedSignerSha256) {
 }
 if ($ActualInitializerSha256 -ne $ExpectedInitializerSha256) {
     throw 'Trust initializer bytes do not match toolkit provenance.'
+}
+
+if ($PreflightOnly) {
+    Write-Host ''
+    Write-Host 'TOOLKIT_TRUST_PREFLIGHT=PASS'
+    Write-Host "SOURCE_COMMIT=$ToolkitSourceCommit"
+    Write-Host 'CANONICAL_TRUST_CEREMONY_ELIGIBLE=YES'
+    Write-Host 'TOOLKIT_COMPONENT_HASHES_VERIFIED=YES'
+    Write-Host 'PRIVATE_KEY_TOUCHED=NO'
+    Write-Host 'FILESYSTEM_MUTATION=NO'
+    Write-Host ''
+    return
 }
 
 $PrivateKeyPath = [IO.Path]::GetFullPath($PrivateKeyPath)
