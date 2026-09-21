@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.creator-component-channel/1",
-  "status": "blocked-canonical-trust-pending",
+  "status": "candidate-enabled",
   "purpose": "creator-inspection-windows-amd64",
   "source_repository": "washingtonmsdj/prototipo-ordax-os",
   "release_tag": "creator-components",
