@@ -287,11 +287,13 @@ jobs:
           previous_source="$work/previous-source"
           rm -rf "$previous_source"
           git worktree add --detach "$previous_source" "$previous"
+          previous_bundle="$work/previous-bundle"
+          mkdir -p "$previous_bundle"
           "$work/bin/release-bundle" \
             --root "$previous_source" \
-            --out "$work/previous-system.tar"
+            --out "$previous_bundle/system.tar"
           python tools/portable-release-image/build.py build \
-            --tar "$work/previous-system.tar" \
+            --tar "$previous_bundle/system.tar" \
             --out "$previous_release/system.erofs" \
             > "$work/metadata/previous-release-image.json"
           printf '%s\n' "$runtime_sha" > "$previous_release/surface-runtime.sha256"
