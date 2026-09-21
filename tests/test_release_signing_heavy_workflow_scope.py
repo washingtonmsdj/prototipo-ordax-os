@@ -1,0 +1,70 @@
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+HEAVY_WORKFLOWS = (
+    ".github/workflows/base-update-fat32-proof.yml",
+    ".github/workflows/portable-release-image.yml",
+    ".github/workflows/portable-boot-handoff-proof.yml",
+    ".github/workflows/full-bootstrap-media-proof.yml",
+    ".github/workflows/portable-v2-qemu-boot-proof.yml",
+    ".github/workflows/creator-owner-dev-git.yml",
+)
+
+BROAD_OWNER_WORKFLOWS = (
+    ".github/workflows/release-signing.yml",
+    ".github/workflows/release-pipeline.yml",
+    ".github/workflows/windows-prototype-toolkit.yml",
+)
+
+ADMIN_EXCLUDES = (
+    "!tools/release-signing/windows/**",
+    "!tools/release-signing/promote_public_trust.py",
+    "!tools/release-signing/cmd/ordax-physical-release-signing/**",
+    "!tools/release-signing/README.md",
+)
+
+
+class ReleaseSigningHeavyWorkflowScopeTests(unittest.TestCase):
+    def test_heavy_media_workflows_ignore_administrative_trust_only_changes(self):
+        for relative in HEAVY_WORKFLOWS:
+            text = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("tools/release-signing/**", text, relative)
+            for excluded in ADMIN_EXCLUDES:
+                self.assertIn(excluded, text, f"{relative}: {excluded}")
+
+    def test_dedicated_signing_and_toolkit_owners_remain_broad(self):
+        for relative in BROAD_OWNER_WORKFLOWS:
+            text = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("tools/release-signing/**", text, relative)
+            self.assertNotIn(
+                "!tools/release-signing/promote_public_trust.py",
+                text,
+                relative,
+            )
+
+    def test_heavy_media_jobs_do_not_execute_administrative_trust_tools(self):
+        forbidden = (
+            "promote_public_trust.py",
+            "Initialize-OrdaXReleaseTrust.ps1",
+            "Complete-OrdaXReleaseTrust.ps1",
+            "ordax-physical-release-signing",
+        )
+        for relative in HEAVY_WORKFLOWS:
+            body = (ROOT / relative).read_text(encoding="utf-8")
+            executable_body = "\n".join(
+                line
+                for line in body.splitlines()
+                if not line.strip().startswith("- '!tools/release-signing/")
+            )
+            for token in forbidden:
+                self.assertNotIn(
+                    token,
+                    executable_body,
+                    f"{relative}: {token}",
+                )
+
+
+if __name__ == "__main__":
+    unittest.main()
