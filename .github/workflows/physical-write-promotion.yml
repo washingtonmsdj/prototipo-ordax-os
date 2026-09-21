@@ -112,7 +112,7 @@ jobs:
 
   build-authorized-candidate:
     needs: preflight
-    if: ${{ needs.preflight.outputs.ready == 'true' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.preflight.outputs.ready == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
