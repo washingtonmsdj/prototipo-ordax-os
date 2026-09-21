@@ -27,6 +27,8 @@ def test_read_only_preflight_reuses_initializer_checks_before_key_generation():
     assert "PRIVATE_KEY_TOUCHED=NO" in INITIALIZER
     assert "FILESYSTEM_MUTATION=NO" in INITIALIZER
     assert INITIALIZER.index("if ($PreflightOnly)") < INITIALIZER.index("New-Item -ItemType Directory")
+    assert INITIALIZER.index("if ($PreflightOnly)") < INITIALIZER.index("USERPROFILE is unavailable")
+    assert INITIALIZER.index("if ($PreflightOnly)") < INITIALIZER.index("$PrivateKeyPath = [IO.Path]::GetFullPath")
     assert '-PreflightOnly' in PREFLIGHT_WRAPPER
     assert '1-Verify-OrdaXTrustToolkit.cmd' in TOOLKIT
     assert '1-Verify-OrdaXTrustToolkit.cmd \\' in TOOLKIT
