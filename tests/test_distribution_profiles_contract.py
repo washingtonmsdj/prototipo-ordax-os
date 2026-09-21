@@ -96,19 +96,19 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(stable["signed_release_seed_media_includes_inspect"])
         self.assertEqual(
             stable["signed_release_discovery_physical_agent_target_sha256"],
-            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
+            "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
         )
         self.assertEqual(
             stable["signed_release_seed_media_agent_sha256"],
-            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
+            "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
         )
         self.assertEqual(
             stable["portable_v3_release_agent_seed_sha256"],
-            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
+            "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
         )
         self.assertEqual(
             stable["portable_v3_release_agent_target_sha256"],
-            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
+            "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
         )
         self.assertEqual(
             stable["portable_v3_release_agent_previous_seed_sha256"],
@@ -230,7 +230,7 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(stable["exact_release_activation_supervisor_connected"])
         self.assertEqual(
             stable["exact_release_activation_physical_agent_target_sha256"],
-            "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
+            "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
         )
         self.assertTrue(stable["exact_release_activation_seed_media_includes_primitive"])
         self.assertTrue(stable["exact_release_activation_asset_published"])
