@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.release-trust-policy/1",
-  "status": "prototype-recovery-verified-external-backup-pending",
+  "status": "canonical-public-trust-pinned",
   "scope": "prototype-first-physical-proof",
   "algorithm": "ed25519",
   "canonical_key_id": "ordax-prototype-release-v1",
@@ -9,7 +9,14 @@
     "repository_path": "bootstrap/trust/release-ed25519.json",
     "runtime_path": "/ordax/bootstrap/trust/release-ed25519.json",
     "may_be_committed": true,
-    "pin_only_after_private_custody_ready": true
+    "pin_only_after_private_custody_ready": true,
+    "sha256": "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
+    "ceremony_evidence_repository_path": "docs/evidence/release-trust-ceremony.json",
+    "ceremony_evidence_sha256": "cf33cb21e1c6a26db8e72556dbc4005f41caa690ca955894a4ca8c73c732b34d",
+    "proof_manifest_repository_path": "docs/evidence/release-trust-proof-manifest.json",
+    "proof_manifest_sha256": "a1eba2227f877cb24aff41d5d9fef820d23062e1fc4c78e44f9710a815cdfba6",
+    "recovery_envelope_repository_path": "docs/evidence/release-trust-recovery-envelope.json",
+    "recovery_envelope_sha256": "0b70543a7b430787f78700f326fb87b01620a86350cde726d993c1d5bdcb4fd4"
   },
   "consumer_creator": {
     "role": "verify-and-provision-only",
@@ -62,13 +69,16 @@
     "loss_before_distribution": "generate-new-key-and-repin-before-first-physical-write",
     "loss_after_prototype_provisioning": "reprovision-prototype-media-with-new-trust",
     "silent_key_replacement_allowed": false,
-    "ready_to_pin_public_anchor": false,
+    "ready_to_pin_public_anchor": true,
     "verification_evidence_repository_path": "docs/evidence/canonical-trust-local-progress-2026-09-21.json",
     "public_trust_sha256": "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
     "public_handoff_zip_sha256": "85d4f8430f0a4066ebed84a410071409c112c65aa72a5818483a664a41b91e20",
     "cryptographic_recovery_verified": true,
     "external_offline_backup_custody_confirmed": false,
-    "public_anchor_blocker": "external-offline-backup-custody-and-public-handoff-validation"
+    "public_anchor_blocker": null,
+    "local_encrypted_backup_copy_verified": true,
+    "external_offline_backup_deferred_for_controlled_prototype": true,
+    "external_offline_backup_required_before_broad_distribution": true
   },
   "rotation": {
     "prototype_policy": "signed-transition-available-stateful-activation-not-implemented",
@@ -92,9 +102,9 @@
   },
   "gates": {
     "key_material_generated": true,
-    "public_anchor_pinned": false,
-    "minimal_bootstrap_resolved": false,
-    "physical_authorization_eligible": false
+    "public_anchor_pinned": true,
+    "minimal_bootstrap_resolved": true,
+    "physical_authorization_eligible": true
   },
   "canonical_ceremony_prerequisites": [
     "portable_runtime_v3_direct_kernel_proven",
