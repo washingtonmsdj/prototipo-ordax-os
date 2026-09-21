@@ -32,10 +32,12 @@ AUTHORIZATION_CONTEXT_PATTERNS = (
     ".github/workflows/physical-write-promotion.yml",
     "tools/creator/physical_promotion.py",
     "tools/creator/authorize_physical_write.py",
+    "tools/creator/go.*",
     "tools/creator/core/*.go",
     "tools/creator/host/windows/*.go",
     "tools/creator/physicalchannel/*.go",
     "tools/creator/cmd/ordax-creator-physical-test/*.go",
+    "tools/release-signing/go.*",
     "tools/release-signing/cmd/ordax-physical-release-signing/*.go",
 )
 
