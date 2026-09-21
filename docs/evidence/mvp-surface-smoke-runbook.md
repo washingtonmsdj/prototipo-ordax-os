@@ -67,6 +67,16 @@ Qualquer `FAIL` precisa ser tratado como evidência de que o recorte integrado a
 
 ## Tour manual obrigatório da Surface
 
+Antes do tour, gere o checklist machine-readable da mesma sessão:
+
+```sh
+/workspace/ordax/system/surface/bin/ordax-mvp-smoke tour-template \
+  --label mvp-surface-tour \
+  --output /var/lib/ordax/mvp-smoke/tour.json
+```
+
+O template nasce com todos os itens em `pending` e, portanto, **não pode** fechar a prova. Durante o tour, alterar somente o campo `status` de cada item para `pass` ou `fail`. O schema rejeita campos livres/notas para não carregar conteúdo privado acidentalmente para a evidência.
+
 Depois da coleta inicial, registrar PASS/FAIL separadamente para cada item:
 
 1. **Surface:** desktop chega ao estado utilizável; launcher, rail, janelas e troca de apps continuam responsivos.
@@ -116,6 +126,24 @@ Ela falha se qualquer coleta já contiver `FAIL`, se os `boot_id` forem diferent
 
 Uma atualização automática que ocorra entre baseline e pós-tour também invalida esta execução do smoke integrado. Nesse caso, iniciar uma nova sequência baseline -> tour -> pós-tour -> comparação sobre o estado já estabilizado, em vez de reinterpretar as duas sessões como equivalentes.
 
+## Finalização fail-closed da sessão
+
+Depois que `comparison.json` estiver em PASS e os 10 itens de `tour.json` tiverem sido revisados, finalize a sessão:
+
+```sh
+/workspace/ordax/system/surface/bin/ordax-mvp-smoke finalize \
+  --label mvp-surface-final \
+  --baseline /var/lib/ordax/mvp-smoke/baseline.json \
+  --after /var/lib/ordax/mvp-smoke/after-tour.json \
+  --comparison /var/lib/ordax/mvp-smoke/comparison.json \
+  --checklist /var/lib/ordax/mvp-smoke/tour.json \
+  --output /var/lib/ordax/mvp-smoke/final.json
+```
+
+`finalize` não confia cegamente no arquivo de comparação: ele recalcula baseline x pós-tour e exige equivalência semântica com `comparison.json`. Também exige exatamente os 10 ids de tour, todos em `pass`. Um item pendente/falho, comparação editada/stale ou qualquer FAIL automático produz `FAIL>0`.
+
+O relatório final não copia `boot_id`, hashes das fontes nem a identidade sanitizada do updater. Ele registra explicitamente `physical_write=false` e `reboot_required=false`.
+
 ## Evidência mínima para declarar esta prova física
 
 Antes de atualizar qualquer snapshot canônico para PASS, devem existir juntos:
@@ -124,6 +152,8 @@ Antes de atualizar qualquer snapshot canônico para PASS, devem existir juntos:
 - checklist manual com resultado explícito por item;
 - `after-tour.json` revisado com `FAIL=0`;
 - `comparison.json` revisado com `FAIL=0`;
+- `tour.json` com exatamente os 10 itens em `pass`;
+- `final.json` revisado com `FAIL=0`;
 - referência ao SHA exato do checkout testado;
 - confirmação `PHYSICAL_WRITE=NO` e `REBOOT_REQUIRED=NO` para esta operação;
 - quando Internet fizer parte da afirmação de isolamento/persistência, evidência do runbook específico de Internet.
