@@ -201,7 +201,7 @@ It verifies the signed envelope/manifest, exact SHA-256 and size, checks the ERO
 └─ release-envelope.json
 ```
 
-This path deliberately **does not activate** the release and does not create the legacy `current` symlink. The old `materialize`, `install` and `activate-exact` paths remain v1-only. Portable v2 activation stays fail-closed until the dedicated initramfs/boot handoff and recovery model are implemented and proven.
+This command deliberately **does not activate** the release and does not create the legacy `current` symlink. The old `materialize`, `install` and `activate-exact` paths remain legacy-tree primitives. Portable activation is owned separately by the ext4 `ordax-portable-state` transaction and the shared supervisor: only an exactly verified, safely materialized candidate can be armed for a one-shot boot, and `current/known-good` are committed only after cold health. The command itself never acquires activation authority.
 
 
 Before any portable-v2 boot handoff, the already materialized release can be revalidated offline:
@@ -261,4 +261,4 @@ ordax-release-agent verify-portable-v3-exact \
   --root /ordax-data/.ordax
 ```
 
-Both v3 commands are non-activating. They do not create `current`, do not perform a boot handoff and do not authorize physical USB writing or publication.
+Both v3 release-agent commands are non-activating. They do not create or mutate Portable activation slots and do not authorize physical USB writing or publication. The Stable supervisor may subsequently arm an exact verified v3 release through `ordax-portable-state prepare`; PID1 grants that candidate one boot attempt, and the supervisor commits it only after cold Surface health. Failure persists the rejected SHA and falls back to the previous release without Git or network.
