@@ -1,6 +1,6 @@
 # OrdaX — estado atual e prioridades de execução
 
-**Status:** overlay factual de execução. **Data:** 20/09/2026. **Base inspecionada:** `main` em `9e47a9bbd3b0ecb17d7b9d069a655933744ee98c`.
+**Status:** overlay factual de execução. **Revisão:** 21/09/2026. **Base:** `main`, sempre revalidada contra contratos e source estruturado; este documento não fixa um SHA como autoridade.
 
 Este arquivo existe para impedir que inventários históricos dos planos longos sejam usados como se fossem o estado atual do repositório. Ele **não substitui a especificação de produto** de `PLANO-FUNCIONAL-SURFACE-E-APPS.md` nem a análise de legado de `PLANO-02-EVOLUCAO-E-REAPROVEITAMENTO-DO-LEGADO.md`. Quando houver divergência sobre **o que já existe, o que já foi provado ou qual é a próxima prioridade**, prevalecem, nesta ordem:
 
@@ -52,6 +52,11 @@ O harness read-only do smoke integrado existe no source e a comparação baselin
 Estados canônicos que permanecem explícitos em `docs/PROMOTION-GATES.md`:
 
 ```text
+PORTABLE_V2_PID1_INTEGRATION=PASS_SOURCE
+PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PASS_CI_DISPOSABLE
+PORTABLE_QEMU_UEFI_BOOT=PASS_CI_DISPOSABLE_OVMF_NON_SECURE_BOOT
+PORTABLE_PHYSICAL_WRITER=PASS_TAGGED_INTERNAL
+PORTABLE_PHYSICAL_USB_BOOT=NO
 MVP_SURFACE_SMOKE_HARNESS=PASS_SOURCE
 MVP_SURFACE_SMOKE_PHYSICAL=PENDING
 CANONICAL_STABLE_GRAPHICAL_MODE=PENDING
@@ -63,13 +68,13 @@ O USB Owner/Development possui provas físicas próprias; elas não equivalem à
 
 ## 2. Prioridades atuais do sistema
 
-### P0 — fechar a consolidação USB-only sem regressão
+### P0 — consolidar o Stable/MVP portátil a partir do estado já implementado
 
-A PR #357 concentra a fundação USB Stable/MVP e Native pós-MVP. Ela deve ser reconciliada com a `main` atual antes de merge; não aceitar conflitos em bloco quando ambos os lados contêm avanços válidos.
+A consolidação USB-only da antiga PR #357 já foi integrada à `main`. Depois dela, o source avançou: o Portable v2 possui PID1 candidato conectado, seleção `current -> known-good`, verificação offline, Stable Base, runtime gráfico separado por conteúdo e provas descartáveis de boot direto e UEFI/OVMF; o Creator também possui writer Portable v2 interno/tagged para o layout final `ORDAX-ESP + ORDAX-DATA`.
 
-No head `9f1c9ec8f088a7d43fcb99402f4c65eb5cd07a81`, o gate **Portable v2 QEMU Boot Proof** chega ao PID1, mas entra em recovery com `ORDAX-ESP partition not found`. A causa diagnosticada é objetiva: o BusyBox do initramfs habilita `findfs`/`blkid`, volume ID EXT e EXFAT, porém não `CONFIG_FEATURE_VOLUMEID_FAT=y`; assim o label FAT32 `ORDAX-ESP` não pode ser resolvido. A correção deve habilitar o volume-ID FAT e adicionar regressão de contrato, sem aumentar timeout ou contornar a descoberta por label.
+A falha histórica `ORDAX-ESP partition not found` de um head antigo foi superada e não é uma pendência atual. Não voltar a habilitar flags BusyBox, aumentar timeouts ou criar rotas alternativas por causa daquele log sem primeiro reproduzir a falha no source e CI atuais.
 
-Este diagnóstico é uma observação do head acima, não uma declaração de correção. Após mudança do head, revalidar source e CI antes de manter esta nota.
+O que permanece aberto é de outra classe: trust canônico, autorização pública de escrita, boot físico Stable/MVP no USB final, Secure Boot e validação gráfica integrada em hardware. Se um contrato de evidência ficar atrás do source, reconciliar a evidência com o último commit realmente provado; não reconstruir o handoff que já existe.
 
 ### P0 — trust canônico de release
 
@@ -79,9 +84,9 @@ O próximo marco é uma cerimônia real de operador conforme `docs/RELEASE-TRUST
 
 ### P0 — prova Stable/MVP integrada
 
-Depois de trust canônico e da consolidação USB v2 estarem consistentes, fechar em ambiente descartável os gates de boot/aquisição/assinatura/health/rollback do perfil Stable e, só depois, executar a prova física aplicável no notebook/USB autorizado.
+Com o handoff Portable v2 já implementado e exercitado em mídia descartável, o próximo fechamento canônico é trust real + publicação autorizada + prova física do USB final. A partir daí, fechar no hardware os gates de aquisição/assinatura/health/rollback do perfil Stable sem reaproveitar evidência Owner/Development como se fosse prova de produto.
 
-QEMU, CI, Web candidate e USB de desenvolvimento são evidências úteis, mas não substituem `CANONICAL_NOTEBOOK_UEFI_BOOT`, `CANONICAL_STABLE_GRAPHICAL_MODE` nem outras provas físicas canônicas pendentes.
+QEMU direto e UEFI/OVMF já reduzem o risco do boot candidato, mas continuam sendo prova descartável. CI, Web candidate e USB de desenvolvimento não substituem `CANONICAL_NOTEBOOK_UEFI_BOOT`, `CANONICAL_STABLE_GRAPHICAL_MODE`, Secure Boot nem outras provas físicas canônicas pendentes.
 
 ### P0 — smoke físico da Surface
 
@@ -109,6 +114,7 @@ Se uma frente externa estiver mexendo no mesmo arquivo/owner, prefira diagnósti
 ## 4. O que não fazer agora
 
 - Não reconstruir Sistema/Diagnóstico porque um inventário de 18/09 ainda os descreve como incompletos.
+- Não reabrir a falha histórica `ORDAX-ESP partition not found` nem a antiga reconciliação da PR #357 sem reprodução no source atual.
 - Não criar updater/store de produção para app `git-app`; Git é mecanismo de desenvolvimento, não atualização independente Stable.
 - Não transformar prova QEMU ou CI em prova física.
 - Não habilitar escrita física/destrutiva para “testar mais rápido”.
