@@ -22,17 +22,30 @@ WORKFLOW = (
 
 
 class PortableV2QEMUBootProofTests(unittest.TestCase):
-    def test_contract_does_not_overclaim_uefi_or_physical_boot(self):
+    def test_contract_records_direct_kernel_proof_without_overclaiming_physical_boot(self):
         self.assertEqual(
             CONTRACT["$schema"],
             "prototype-ordax.portable-v2-qemu-boot-proof/1",
         )
         self.assertEqual(CONTRACT["boot_mode"], "direct-kernel-candidate-only")
         self.assertFalse(CONTRACT["uefi_boot_proven"])
-        self.assertFalse(CONTRACT["qemu_direct_kernel_boot_proven"])
+        self.assertTrue(CONTRACT["qemu_direct_kernel_boot_proven"])
         self.assertFalse(CONTRACT["physical_boot_proven"])
         self.assertFalse(CONTRACT["physical_write_authorized"])
         self.assertFalse(CONTRACT["physical_target_device_touched"])
+        self.assertEqual(CONTRACT["last_proven_source_commit"], "b9e1b164d7510f2dfc7572e473642b8fb885fa8c")
+        self.assertEqual(CONTRACT["proof_artifact_sha256"], "0f5b922cb3f24c1c339e7c0c5f4abe9d9b72322ee1da527aee6f54fc65fc730c")
+        self.assertEqual(
+            CONTRACT["last_proven_surface_runtime_sha256"],
+            "5b44729139777b610c300864d6f41c0580a3d6ca0b694b8dc53e38f505f99236",
+        )
+        self.assertFalse(CONTRACT["last_proven_network_required_for_first_boot"])
+        self.assertFalse(CONTRACT["last_proven_physical_target_device_touched"])
+        self.assertFalse(CONTRACT["last_proven_guest_disk_retained"])
+        self.assertFalse(CONTRACT["promotion_effect"]["uefi_gate_still_required"])
+        self.assertTrue(
+            CONTRACT["promotion_effect"]["uefi_gate_satisfied_by_separate_contract"]
+        )
 
     def test_harness_uses_final_two_partition_layout_and_candidate_rdinit(self):
         text = SCRIPT.read_text(encoding="utf-8")
