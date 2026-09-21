@@ -48,9 +48,22 @@ class MVPSeedArtifactBindingsTests(unittest.TestCase):
             refresh["allowed_from_sha256"],
         )
 
-    def test_only_canonical_release_trust_remains_unresolved(self):
+    def test_canonical_release_trust_binding_is_resolved_and_write_stays_blocked(self):
         unresolved = [g["id"] for g in self.contract["artifact_groups"] if not g["resolved"]]
-        self.assertEqual(unresolved, ["bootstrap-release-trust"])
+        self.assertEqual(unresolved, [])
+        self.assertTrue(self.contract["all_artifacts_resolved"])
+
+        trust = self.artifact("bootstrap-release-trust")
+        self.assertEqual(trust["source_path"], "bootstrap/trust/release-ed25519.json")
+        self.assertEqual(
+            trust["target_path"],
+            "/ordax/bootstrap/trust/release-ed25519.json",
+        )
+        self.assertEqual(
+            trust["sha256"],
+            "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
+        )
+        self.assertEqual(trust["mode"], "0644")
         self.assertFalse(self.contract["physical_write_allowed"])
 
 
