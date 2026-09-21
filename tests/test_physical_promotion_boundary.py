@@ -222,12 +222,13 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         )
         self.assertEqual(
             auth["status"],
-            "blocked-canonical-trust-pending",
+            "blocked-explicit-physical-authorization-pending",
         )
         self.assertFalse(auth["physical_write_allowed"])
         self.assertFalse(auth["explicit_owner_authorization"])
         self.assertIsNone(auth["authorization_context_sha256"])
         self.assertEqual(auth["scope"], "first-real-stable-mvp-usb-proof")
+        self.assertTrue(all(auth["bindings"].values()))
 
     def _set_pending_owner_authorization(self, root: Path) -> Path:
         auth_path = root / "docs/contracts/physical-write-authorization.json"
