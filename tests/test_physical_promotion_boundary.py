@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = ROOT / "tools" / "creator" / "physical_promotion.py"
@@ -422,6 +423,50 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             self.assertTrue(status["owner_authorization_required"])
             self.assertFalse(status["authorized_candidate_materialization_allowed"])
             self.assertEqual(status["next_stage"], "explicit-owner-authorization")
+
+    def test_authorization_context_is_stable_across_lf_and_crlf_checkouts(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            before, count_before = promotion.authorization_context_sha256(root)
+
+            source = root / "tools/creator/physical_promotion.py"
+            payload = source.read_bytes()
+            self.assertNotIn(b"\r", payload)
+            source.write_bytes(payload.replace(b"\n", b"\r\n"))
+
+            after, count_after = promotion.authorization_context_sha256(root)
+
+            self.assertEqual(after, before)
+            self.assertEqual(count_after, count_before)
+
+    def test_authorization_pre_replace_failure_does_not_attempt_rollback(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            auth_path = self._set_pending_owner_authorization(root)
+            before = auth_path.read_bytes()
+
+            with mock.patch.object(
+                authorization,
+                "_atomic_replace",
+                side_effect=authorization.AuthorizationError(
+                    "simulated pre-replace failure"
+                ),
+            ) as replace:
+                with self.assertRaisesRegex(
+                    authorization.AuthorizationError,
+                    "simulated pre-replace failure",
+                ):
+                    authorization.apply_authorization(
+                        root,
+                        confirm_scope=authorization.EXPECTED_SCOPE,
+                        confirm_release_sequence=1,
+                        confirmation=authorization.CONFIRMATION,
+                    )
+
+            self.assertEqual(replace.call_count, 1)
+            self.assertEqual(auth_path.read_bytes(), before)
 
     def test_authorization_context_invalidates_consent_after_writer_source_change(self):
         with tempfile.TemporaryDirectory() as temporary:
