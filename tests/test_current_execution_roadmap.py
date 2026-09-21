@@ -58,7 +58,7 @@ class CurrentExecutionRoadmapTests(unittest.TestCase):
             "MVP_SURFACE_SMOKE_HARNESS": "PASS_SOURCE",
             "MVP_SURFACE_SMOKE_PHYSICAL": "PENDING",
             "CANONICAL_STABLE_GRAPHICAL_MODE": "PENDING",
-            "CANONICAL_RELEASE_TRUST": "PENDING_EXTERNAL_BACKUP_AND_PUBLIC_ANCHOR",
+            "CANONICAL_RELEASE_TRUST": "PASS_PUBLIC_ANCHOR_PINNED",
             "PUBLIC_PHYSICAL_APPLY": "NO",
         }
         for key, value in expected.items():
@@ -70,7 +70,7 @@ class CurrentExecutionRoadmapTests(unittest.TestCase):
         self.assertIn("não converte execução pendente em PASS físico", ROADMAP)
         self.assertNotIn("MVP_SURFACE_SMOKE_PHYSICAL=PASS", ROADMAP)
         self.assertNotIn("CANONICAL_STABLE_GRAPHICAL_MODE=PASS", ROADMAP)
-        self.assertNotIn("CANONICAL_RELEASE_TRUST=PASS", ROADMAP)
+        self.assertNotIn("PHYSICAL_USB_WRITE=PASS", ROADMAP)
 
 
 if __name__ == "__main__":
