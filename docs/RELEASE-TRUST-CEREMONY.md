@@ -339,18 +339,19 @@ Silent public-key replacement is forbidden.
 
 A signed trust-transition protocol v1 is now implemented and CI-proven between the signer and release agent. It requires the currently trusted key to authorize a distinct successor key, binds the exact current-trust SHA-256 and an exact monotonic sequence, and fails closed on rollback/tampering. Stateful device activation of the successor trust is still disabled, so production rotation is not yet complete. Until that activation owner is implemented and physically proven, the first controlled prototype remains bound to the pinned canonical anchor.
 
-Current fail-closed state after local generation and verified cryptographic recovery, but before independent external/offline backup custody and public-anchor promotion:
+Current fail-closed state after public-anchor promotion:
 
 ```text
 TRUST_POLICY_RESOLVED=YES
 CANONICAL_KEY_MATERIAL_GENERATED=YES
 OFFLINE_RECOVERY_VERIFIED=YES
-TOOL_REPORTED_READY_TO_PIN_PUBLIC_ANCHOR=YES
-EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED=NO
-REPOSITORY_POLICY_READY_TO_PIN_PUBLIC_ANCHOR=NO
-PUBLIC_ANCHOR_PINNED=NO
-BOOTSTRAP_RELEASE_TRUST_RESOLVED=NO
+PUBLIC_HANDOFF_SHA256=85d4f8430f0a4066ebed84a410071409c112c65aa72a5818483a664a41b91e20
+PUBLIC_ANCHOR_PINNED=YES
+BOOTSTRAP_RELEASE_TRUST_RESOLVED=YES
+PHYSICAL_AUTHORIZATION_ELIGIBLE=YES
+EXPLICIT_OWNER_AUTHORIZATION=NO
 PHYSICAL_WRITE_ALLOWED=NO
+EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED=NO_DEFERRED_BEFORE_BROAD_PUBLIC_DISTRIBUTION
 ```
 
 See also:
