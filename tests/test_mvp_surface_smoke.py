@@ -286,6 +286,72 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
         failed_after = self._comparison_report(fail_count=1, label="after")
         self.assertGreater(proof.compare_reports(baseline, failed_after)["summary"]["fail"], 0)
 
+    def test_tour_checklist_and_finalizer_fail_closed(self):
+        baseline = self._comparison_report(label="baseline")
+        after = self._comparison_report(label="after")
+        comparison = proof.compare_reports(baseline, after, "comparison")
+        checklist = {
+            "schema": proof.TOUR_SCHEMA,
+            "label": "tour",
+            "items": [{"id": item_id, "status": "pass"} for item_id in proof.TOUR_ITEMS],
+        }
+
+        final = proof.finalize_evidence(baseline, after, comparison, checklist, "final")
+        self.assertEqual(final["schema"], proof.FINAL_SCHEMA)
+        self.assertEqual(final["summary"]["fail"], 0, final["checks"])
+        self.assertFalse(final["physical_write"])
+        self.assertFalse(final["reboot_required"])
+        serialized = json.dumps(final)
+        self.assertNotIn("boot-secret", serialized)
+        self.assertNotIn("a" * 64, serialized)
+        self.assertNotIn("b" * 64, serialized)
+
+        edited = json.loads(json.dumps(comparison))
+        edited["checks"][0]["detail"] = "manually edited"
+        self.assertGreater(
+            proof.finalize_evidence(baseline, after, edited, checklist)["summary"]["fail"],
+            0,
+        )
+
+        failed_tour = json.loads(json.dumps(checklist))
+        failed_tour["items"][0]["status"] = "fail"
+        self.assertGreater(
+            proof.finalize_evidence(baseline, after, comparison, failed_tour)["summary"]["fail"],
+            0,
+        )
+
+    def test_tour_template_is_non_pass_and_loader_rejects_unreviewed_or_extra_fields(self):
+        template = proof.tour_template("tour")
+        self.assertEqual(template["schema"], proof.TOUR_SCHEMA)
+        self.assertEqual(
+            [item["id"] for item in template["items"]],
+            list(proof.TOUR_ITEMS),
+        )
+        self.assertTrue(all(item["status"] == "pending" for item in template["items"]))
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pending = root / "pending.json"
+            pending.write_text(json.dumps(template), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                proof.load_tour_checklist(pending)
+
+            valid = {
+                **template,
+                "items": [{"id": item["id"], "status": "pass"} for item in template["items"]],
+            }
+            valid_path = root / "valid.json"
+            valid_path.write_text(json.dumps(valid), encoding="utf-8")
+            loaded = proof.load_tour_checklist(valid_path)
+            self.assertEqual(len(loaded["items"]), len(proof.TOUR_ITEMS))
+
+            extra = json.loads(json.dumps(valid))
+            extra["items"][0]["notes"] = "private free text"
+            extra_path = root / "extra.json"
+            extra_path.write_text(json.dumps(extra), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                proof.load_tour_checklist(extra_path)
+
     def test_load_report_is_bounded_and_requires_current_schema(self):
         report = self._comparison_report()
         with tempfile.TemporaryDirectory() as directory:
