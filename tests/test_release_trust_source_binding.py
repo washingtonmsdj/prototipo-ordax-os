@@ -43,6 +43,26 @@ def test_key_generation_requires_explicit_switch_after_preflight():
     assert "-GenerateKey" not in PREFLIGHT_WRAPPER
 
 
+def test_canonical_toolkit_eligibility_requires_portable_runtime_v3_prerequisites():
+    for marker in (
+        "'portable_runtime_v3_direct_kernel_proven'",
+        "'portable_runtime_v3_uefi_ovmf_proven'",
+        "'portable_writer_v2_implemented_fail_closed'",
+        "'physical_authorization_still_fail_closed'",
+        "'canonical_trust_prerequisites': trust_prerequisites",
+        "canonical_main_push and all(trust_prerequisites.values())",
+    ):
+        assert marker in TOOLKIT
+
+    for source in (INITIALIZER, FINALIZER):
+        assert "$ToolkitProvenance.canonical_trust_prerequisites" in source
+        assert "$TrustPrerequisites.portable_runtime_v3_direct_kernel_proven -ne $true" in source
+        assert "$TrustPrerequisites.portable_runtime_v3_uefi_ovmf_proven -ne $true" in source
+        assert "$TrustPrerequisites.portable_writer_v2_implemented_fail_closed -ne $true" in source
+        assert "$TrustPrerequisites.physical_authorization_still_fail_closed -ne $true" in source
+        assert "required Portable runtime-v3 and fail-closed writer prerequisites" in source
+
+
 def test_trust_ceremony_binds_proof_to_toolkit_source_commit():
     assert "$ToolkitProvenancePath = Join-Path $ScriptRoot 'provenance.json'" in INITIALIZER
     assert "prototype-ordax.windows-prototype-toolkit/2" in INITIALIZER
@@ -99,4 +119,4 @@ def test_canonical_trust_rejects_pr_and_manual_toolkits():
         assert "$ToolkitProvenance.source_event -ne 'push'" in source
         assert "$ToolkitProvenance.source_ref -ne 'refs/heads/main'" in source
         assert "$ToolkitProvenance.canonical_trust_ceremony_eligible -ne $true" in source
-        assert "Canonical trust ceremony requires a toolkit produced by a push of the canonical main branch." in source
+        assert "Canonical trust ceremony requires a toolkit produced by an eligible push of the canonical main branch." in source
