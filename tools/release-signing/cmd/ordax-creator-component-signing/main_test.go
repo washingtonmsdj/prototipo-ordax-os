@@ -153,6 +153,21 @@ func TestComponentSignerRejectsWrongKeyAndOverwrite(t *testing.T) {
 	}
 }
 
+func TestReadRegularRejectsFinalSymlink(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "target.json")
+	if err := os.WriteFile(target, []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "link.json")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlink creation unavailable on this platform: %v", err)
+	}
+	if _, err := readRegular(link, maxDocument, false); err == nil || !strings.Contains(err.Error(), "regular non-symlink") {
+		t.Fatalf("symlink input error=%v", err)
+	}
+}
+
 func TestComponentSignerRejectsUnknownManifestField(t *testing.T) {
 	data := []byte(`{"$schema":"prototype-ordax.creator-component-manifest/1","purpose":"creator-inspection-windows-amd64","source_repository":"washingtonmsdj/prototipo-ordax-os","source_commit":"0123456789abcdef0123456789abcdef01234567","version":"1.0.0","release_sequence":1,"created_from_recipe":"creator/component/windows/1","bundle":{"url":"https://github.com/washingtonmsdj/prototipo-ordax-os/releases/download/creator-components/ordax-creator-components-windows-amd64.zip","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","size":1},"file":{"name":"ordax-creator-physical-test.exe","sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","size":1},"unexpected":true}`)
 	if _, err := validateManifest(data); err == nil {
