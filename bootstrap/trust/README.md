@@ -1,8 +1,8 @@
 # Release Trust Bootstrap
 
-Status: UNRESOLVED PROMOTION INPUT — PHYSICAL USE NOT AUTHORIZED
+Status: CANONICAL PUBLIC TRUST PINNED — PHYSICAL WRITE NOT AUTHORIZED
 
-This owner will contain only the public trust material required to authenticate the first signed OrdaX release envelope.
+This owner contains only the canonical public trust material required to authenticate signed OrdaX release envelopes. The exact anchor is pinned by `docs/contracts/minimal-bootstrap.json`; no private signing material belongs here.
 
 Canonical runtime path:
 
@@ -16,17 +16,17 @@ The release acquisition agent expects schema `prototype-ordax.release-trust/1`, 
 
 - private release-signing keys are never stored in this repository;
 - private signing keys are never shipped in the Creator payload or device bootstrap;
-- the public trust anchor may be versioned only after its corresponding private signing key has an explicit secure owner outside the repository;
+- the pinned public trust anchor is versioned only because its corresponding private signing key has an explicit owner outside the repository and recovery was cryptographically proven;
 - a random, disposable or CI-ephemeral key must not be promoted as the physical trust anchor;
-- Creator physical authorization remains blocked while this owner is unresolved.
+- public trust promotion does not authorize physical media mutation; Creator physical authorization remains blocked until fresh explicit Stable/MVP owner authorization and the remaining physical gates pass.
 
 `tools/release-signing/` provides standard-library tooling to generate an external PKCS#8 Ed25519 key during an explicit operator ceremony, derive the public trust JSON from an existing external private key, and sign exact release-manifest bytes. The tool does not make a key canonical merely by generating it.
 
 The signer is fail-closed against trust drift: `sign` requires the public trust JSON and refuses to create an envelope unless the supplied external private key derives exactly the same Ed25519 public key and the requested `key_id` equals the trust anchor `key_id`.
 
-## Canonicalization gate
+## Canonicalization result
 
-Before adding `bootstrap/trust/release-ed25519.json` to the minimal bootstrap, record at minimum:
+The canonicalization gate has passed for the first controlled prototype. The public anchor is present at `bootstrap/trust/release-ed25519.json`, and the minimal bootstrap binds its exact SHA-256. The non-secret ceremony evidence records:
 
 ```text
 PRIVATE_KEY_CUSTODY_OWNER=<explicit owner/system outside Git>
@@ -39,9 +39,9 @@ SIGNER_PRIVATE_TRUST_MATCH=PASS
 PRIVATE_KEY_IN_GIT=NO
 ```
 
-Then derive the public file from the actual private key with `tools/release-signing`, independently review its public fingerprint, exercise a signing proof using that same public trust input, and only then bind its exact SHA-256 in `docs/contracts/minimal-bootstrap.json`.
+The public file was derived from the actual external private key, independently recovered from an encrypted backup, and the recovered key produced a signing proof verified against this public anchor. The exact public bytes are now bound in `docs/contracts/minimal-bootstrap.json`.
 
-A CI-only test key may be used by isolated protocol tests, but it must remain test-scoped and must never satisfy the physical bootstrap manifest.
+A CI-only test key may still be used by isolated protocol tests, but it remains test-scoped and can never replace or satisfy the canonical physical bootstrap identity.
 
 See `docs/RELEASE-SIGNING.md`.
 
