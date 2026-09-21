@@ -23,6 +23,23 @@ ordax-release-signing sign \
   --trust <canonical-public-path>/release-ed25519.json \
   --key-id prototype-1 \
   --out release-envelope.json
+
+ordax-release-signing verify-envelope \
+  --envelope release-envelope.json \
+  --trust <canonical-public-path>/release-ed25519.json
+
+ordax-release-signing sign-trust-transition \
+  --current-private-key <external-path>/ordax-release-private.pem \
+  --current-trust <current-public-trust.json> \
+  --next-trust <next-public-trust.json> \
+  --sequence <N> \
+  --out trust-transition.json
+
+ordax-release-signing verify-trust-transition \
+  --envelope trust-transition.json \
+  --current-trust <current-public-trust.json> \
+  --expected-sequence <N> \
+  --out-next-trust <verified-next-public-trust.json>
 ```
 
 ## Private-key boundary
@@ -74,6 +91,47 @@ Before signing, the tool validates the same v1 release-manifest invariants consu
 - exact SHA-256 syntax and positive bounded size.
 
 The signature is standard Ed25519 over the **exact manifest file bytes**. Whitespace is preserved in the signed payload. The output envelope uses the existing `prototype-ordax.release-envelope/1` protocol.
+
+## Signed trust transition
+
+Trust rotation is a separate protocol from release envelopes. `sign-trust-transition` requires the currently trusted private key and binds:
+
+- the exact SHA-256 of the current public trust file;
+- the current key id;
+- a positive exact sequence number;
+- a distinct successor key id and distinct Ed25519 public key;
+- the canonical SHA-256 of the successor trust file.
+
+`verify-trust-transition` verifies all of those bindings using only the current public trust and writes the successor trust only to a new output path. It does not mutate the active device trust. Stateful device activation remains a separate future owner and production rotation is not yet enabled.
+
+## Public trust promotion
+
+After the offline recovery ceremony succeeds, the only ceremony artifact that needs repository promotion is:
+
+```text
+OrdaX-Public-Trust-Handoff.zip
+```
+
+Use the existing fail-closed promoter directly on the ZIP; manual extraction is unnecessary:
+
+```text
+python tools/release-signing/promote_public_trust.py check \
+  --promotion-zip <path>/OrdaX-Public-Trust-Handoff.zip \
+  --verifier <reviewed-toolkit>/ordax-release-signing.exe
+
+python tools/release-signing/promote_public_trust.py apply \
+  --promotion-zip <path>/OrdaX-Public-Trust-Handoff.zip \
+  --verifier <reviewed-toolkit>/ordax-release-signing.exe
+```
+
+The promoter re-verifies the recovery signature and public hashes, pins only public trust/evidence, resolves the minimal-bootstrap trust group and prepares later physical-authorization bindings. It always leaves:
+
+```text
+PHYSICAL_WRITE_ALLOWED=NO
+EXPLICIT_OWNER_AUTHORIZATION=NO
+```
+
+Public trust promotion is therefore not permission to write a USB.
 
 ## CI policy
 
