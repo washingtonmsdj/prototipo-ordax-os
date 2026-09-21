@@ -318,18 +318,40 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
                 "authorized-candidate-materialization",
             )
 
-    def test_owner_authorization_refuses_before_canonical_trust_is_ready(self):
+    def test_owner_authorization_check_reports_real_pretrust_blockers(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.make_ready_fixture(root)
-            self._set_pending_owner_authorization(root)
+            auth_path = root / "docs/contracts/physical-write-authorization.json"
+            auth = json.loads(auth_path.read_text(encoding="utf-8"))
+            auth["status"] = "blocked-canonical-trust-pending"
+            auth["physical_write_allowed"] = False
+            auth["explicit_owner_authorization"] = False
+            auth["authorization_context_sha256"] = None
+            auth["bindings"] = {
+                "minimal_bootstrap_sha256": None,
+                "release_trust_sha256": None,
+                "portable_usb_contract_sha256": None,
+                "creator_portable_media_contract_sha256": None,
+            }
+            write_json(auth_path, auth)
             (root / "bootstrap/trust/release-ed25519.json").unlink()
 
             with self.assertRaisesRegex(
                 authorization.AuthorizationError,
                 "prerequisites are not ready",
-            ):
+            ) as raised:
                 authorization.prepare_authorization(root)
+
+            self.assertIn(
+                "canonical-public-trust-file-invalid",
+                str(raised.exception),
+            )
+            self.assertFalse(
+                json.loads(auth_path.read_text(encoding="utf-8"))[
+                    "explicit_owner_authorization"
+                ]
+            )
 
     def test_ready_promotion_uses_only_portable_layout_authority(self):
         with tempfile.TemporaryDirectory() as temporary:
