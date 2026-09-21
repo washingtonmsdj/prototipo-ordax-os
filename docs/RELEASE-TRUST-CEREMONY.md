@@ -1,6 +1,6 @@
 # Canonical Release Trust Ceremony
 
-Status: LOCAL KEY GENERATED — RECOVERY PENDING — PUBLIC ANCHOR NOT PINNED
+Status: LOCAL KEY GENERATED — CRYPTOGRAPHIC RECOVERY VERIFIED — EXTERNAL OFFLINE BACKUP PENDING — PUBLIC ANCHOR NOT PINNED
 
 This ceremony exists so the first physical OrdaX prototype can be created without Codex, without committing a private key, and without inventing a CI-only trust anchor.
 
@@ -10,19 +10,19 @@ The machine-readable authority for this policy is `docs/contracts/release-trust-
 
 ## Current operator state — 2026-09-21
 
-The eligible toolkit bound to source commit `2172eb6a18430910afd036199ec492ad63dc185d` has completed local steps 1 and 2. The read-only preflight passed, key material was generated locally, independent public derivation matched and the proof signing step succeeded. The public trust file SHA-256 reported by the ceremony is `d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250`.
+The eligible toolkit bound to source commit `2172eb6a18430910afd036199ec492ad63dc185d` has completed local steps 1, 2 and 3. The read-only preflight passed, key material was generated locally, independent public derivation matched, the initial proof signing step succeeded, and a distinct restored private copy from the encrypted backup independently derived the same public trust and produced a recovery signing proof that verified successfully. The public trust file SHA-256 is `d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250`. The resulting public handoff ZIP SHA-256 is `85d4f8430f0a4066ebed84a410071409c112c65aa72a5818483a664a41b91e20`.
 
 ```text
 TOOLKIT_TRUST_PREFLIGHT=PASS
 CANONICAL_KEY_MATERIAL_GENERATED=YES
 PUBLIC_TRUST_DERIVATION_MATCH=PASS
 PROOF_SIGNATURE_CREATED=YES
-OFFLINE_RECOVERY_VERIFIED=NO
+OFFLINE_RECOVERY_VERIFIED=YES
 PUBLIC_ANCHOR_PINNED=NO
 PHYSICAL_WRITE_ALLOWED=NO
 ```
 
-No private PEM bytes, private-key hash, backup secret or recovery password are recorded in source. Step 3 remains pending.
+No private PEM bytes, private-key hash, backup secret, recovery password or private-key path are recorded in source. The cryptographic recovery proof is verified. The encrypted archive used for this test was still on the same host, so independent external/offline custody remains pending before repository policy considers the public anchor ready to pin.
 
 ## Boundary
 
@@ -339,12 +339,15 @@ Silent public-key replacement is forbidden.
 
 A signed trust-transition protocol v1 is now implemented and CI-proven between the signer and release agent. It requires the currently trusted key to authorize a distinct successor key, binds the exact current-trust SHA-256 and an exact monotonic sequence, and fails closed on rollback/tampering. Stateful device activation of the successor trust is still disabled, so production rotation is not yet complete. Until that activation owner is implemented and physically proven, the first controlled prototype remains bound to the pinned canonical anchor.
 
-Current fail-closed state after local generation but before recovery/public promotion:
+Current fail-closed state after local generation and verified cryptographic recovery, but before independent external/offline backup custody and public-anchor promotion:
 
 ```text
 TRUST_POLICY_RESOLVED=YES
 CANONICAL_KEY_MATERIAL_GENERATED=YES
-OFFLINE_RECOVERY_VERIFIED=NO
+OFFLINE_RECOVERY_VERIFIED=YES
+TOOL_REPORTED_READY_TO_PIN_PUBLIC_ANCHOR=YES
+EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED=NO
+REPOSITORY_POLICY_READY_TO_PIN_PUBLIC_ANCHOR=NO
 PUBLIC_ANCHOR_PINNED=NO
 BOOTSTRAP_RELEASE_TRUST_RESOLVED=NO
 PHYSICAL_WRITE_ALLOWED=NO
