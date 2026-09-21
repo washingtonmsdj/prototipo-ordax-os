@@ -78,7 +78,10 @@
     "signed_transition_envelope_schema": "prototype-ordax.release-trust-transition-envelope/1",
     "signed_transition_protocol_ci_cross_compatibility_required": true,
     "device_stateful_rotation_activation_implemented": false,
-    "bootstrap_effective_trust_selection_implemented": false
+    "bootstrap_effective_trust_selection_implemented": false,
+    "signed_transition_protocol_ci_cross_compatibility_proven": true,
+    "signed_transition_protocol_ci_run_id": 35640416446,
+    "release_agent_transition_ci_run_id": 35640416481
   },
   "gates": {
     "key_material_generated": true,
