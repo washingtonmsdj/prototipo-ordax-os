@@ -45,6 +45,10 @@ class ExecutionRoadmapFreshnessTests(unittest.TestCase):
         self.assertIn("PORTABLE_PHYSICAL_WRITER=PASS_TAGGED_INTERNAL", roadmap)
         self.assertIn("PORTABLE_PHYSICAL_USB_BOOT=NO", roadmap)
         self.assertIn("PUBLIC_PHYSICAL_APPLY=NO", roadmap)
+        self.assertIn(
+            "PORTABLE_COLD_HEALTH_PROOF_SCOPE=PHYSICAL_STABLE_MVP_REQUIRED_NO_SYNTHETIC_CI",
+            roadmap,
+        )
 
     def test_roadmap_tracks_structured_surface_smoke_finalization(self):
         roadmap = ROADMAP.read_text(encoding="utf-8")

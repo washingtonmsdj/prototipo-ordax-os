@@ -64,6 +64,7 @@ MVP_SURFACE_SMOKE_HARNESS=PASS_SOURCE
 MVP_SURFACE_SMOKE_PHYSICAL=PENDING
 CANONICAL_STABLE_GRAPHICAL_MODE=PENDING
 CANONICAL_RELEASE_TRUST=PENDING_CANONICAL_KEY
+PORTABLE_COLD_HEALTH_PROOF_SCOPE=PHYSICAL_STABLE_MVP_REQUIRED_NO_SYNTHETIC_CI
 PUBLIC_PHYSICAL_APPLY=NO
 ```
 
@@ -89,7 +90,7 @@ A prova one-shot/rejected já passou em CI e agora também é pré-requisito obr
 
 Com o handoff Portable v2 implementado e a transação de update Portable v3 agora conectada em source, o próximo fechamento técnico é provar esse ciclo em mídia descartável: canal assinado -> materialização v3 -> arm one-shot -> reboot -> cold-health -> commit e também candidato falho -> rejected -> rollback offline. Depois disso, o fechamento canônico continua sendo trust real + publicação autorizada + prova física do USB final. Não reaproveitar evidência Owner/Development como se fosse prova de produto.
 
-As provas baseline de QEMU direto e UEFI/OVMF reduzem o risco do boot candidato, mas continuam sendo prova descartável. O baseline do commit corrente da `main` está registrado em `docs/evidence/portable-runtime-v3-main-proof.json`; a prova dedicada `previous -> candidate one-shot -> previous + rejected` já passou em CI; o próximo fechamento técnico é o **cold-health commit** sem falsificar uma sessão gráfica e, depois, a prova no USB Stable/MVP físico. CI, Web candidate e USB de desenvolvimento não substituem `CANONICAL_NOTEBOOK_UEFI_BOOT`, `CANONICAL_STABLE_GRAPHICAL_MODE`, Secure Boot nem outras provas físicas canônicas pendentes.
+As provas baseline de QEMU direto e UEFI/OVMF reduzem o risco do boot candidato, mas continuam sendo prova descartável. O baseline do commit corrente da `main` está registrado em `docs/evidence/portable-runtime-v3-main-proof.json`; a prova dedicada `previous -> candidate one-shot -> previous + rejected` já passou em CI. A auditoria do runtime gráfico confirmou que o cold-health real depende do caminho Cage/Wayland/WebKit/seatd + host nativo + heartbeat/health com SHA exato; não existe hoje um modo headless equivalente que preserve essa semântica. Portanto, **não criar mock/synthetic cold-health só para fechar CI**: o próximo fechamento saudável deve ocorrer no USB Stable/MVP físico depois do trust/autorização. CI, Web candidate e USB de desenvolvimento não substituem `CANONICAL_NOTEBOOK_UEFI_BOOT`, `CANONICAL_STABLE_GRAPHICAL_MODE`, Secure Boot nem outras provas físicas canônicas pendentes.
 
 ### P0 — smoke físico da Surface
 

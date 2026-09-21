@@ -198,6 +198,10 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
             state["PORTABLE_V3_UPDATE_ACTIVATION_PHYSICAL_PROOF"],
             "NO",
         )
+        self.assertEqual(
+            state["PORTABLE_COLD_HEALTH_PROOF_SCOPE"],
+            "PHYSICAL_STABLE_MVP_REQUIRED_NO_SYNTHETIC_CI",
+        )
 
         self.assertEqual(promotion["MVP_SURFACE_SMOKE_HARNESS"], "PASS_SOURCE")
         self.assertEqual(promotion["MVP_SURFACE_SMOKE_PHYSICAL"], "PENDING")
