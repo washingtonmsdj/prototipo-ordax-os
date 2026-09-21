@@ -2,11 +2,16 @@
 param(
     [string]$PrivateKeyPath,
     [string]$ReviewDirectory,
-    [switch]$PreflightOnly
+    [switch]$PreflightOnly,
+    [switch]$GenerateKey
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+if ($PreflightOnly -and $GenerateKey) {
+    throw 'PreflightOnly and GenerateKey are mutually exclusive.'
+}
 
 $ScriptPath = $PSCommandPath
 if ([string]::IsNullOrWhiteSpace($ScriptPath)) {
@@ -87,6 +92,10 @@ if ($PreflightOnly) {
     Write-Host 'FILESYSTEM_MUTATION=NO'
     Write-Host ''
     return
+}
+
+if (-not $GenerateKey) {
+    throw 'Canonical key generation requires the explicit -GenerateKey switch. Run 1-Verify-OrdaXTrustToolkit.cmd first, then 2-Initialize-OrdaXTrust.cmd.'
 }
 
 $PrivateKeyPath = [IO.Path]::GetFullPath($PrivateKeyPath)
