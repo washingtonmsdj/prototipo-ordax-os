@@ -39,7 +39,9 @@
     "guest_disk_retained": false,
     "cold_health_commit_proven": false,
     "physical_usb_boot_proven": false,
-    "secure_boot_proven": false
+    "secure_boot_proven": false,
+    "qemu_disk_cache_mode": "directsync",
+    "final_state_inspection": "read-only-copy-fail-closed"
   },
   "promotion_effect": {
     "baseline_current_boot_contract_unchanged": true,
