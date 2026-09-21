@@ -77,11 +77,11 @@ Current non-secret trust state is:
 LOCAL_PREFLIGHT=PASS
 LOCAL_KEY_MATERIAL_GENERATED=YES
 CRYPTOGRAPHIC_RECOVERY_VERIFIED=YES
-EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED=NO
-PUBLIC_ANCHOR_PINNED=NO
+EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED=NO_DEFERRED_BEFORE_BROAD_PUBLIC_DISTRIBUTION
+PUBLIC_ANCHOR_PINNED=YES
 PHYSICAL_WRITE_ALLOWED=NO
 CURRENT_SIGNING_BACKEND=local-pem (controlled prototype)
 FUTURE_CUSTODY_TARGET=managed non-exportable KMS/HSM
 ```
 
-The future managed backend is provider-neutral and intentionally deferred; the current local PEM must not become an unrecoverable long-term production single point of failure.
+The canonical public anchor is now pinned and the minimal bootstrap trust group is resolved. Physical writes remain separately blocked. Independent external/offline backup custody is deferred for the controlled prototype but remains required before broad public distribution. The future managed backend is provider-neutral and intentionally deferred; the current local PEM must not become an unrecoverable long-term production single point of failure.
