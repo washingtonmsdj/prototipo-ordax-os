@@ -54,9 +54,10 @@ $TrustPrerequisites = $ToolkitProvenance.canonical_trust_prerequisites
 if ($null -eq $TrustPrerequisites -or
     $TrustPrerequisites.portable_runtime_v3_direct_kernel_proven -ne $true -or
     $TrustPrerequisites.portable_runtime_v3_uefi_ovmf_proven -ne $true -or
+    $TrustPrerequisites.portable_v3_one_shot_failure_fallback_proven -ne $true -or
     $TrustPrerequisites.portable_writer_v2_implemented_fail_closed -ne $true -or
     $TrustPrerequisites.physical_authorization_still_fail_closed -ne $true) {
-    throw 'Canonical trust ceremony toolkit does not contain the required Portable runtime-v3 and fail-closed writer prerequisites.'
+    throw 'Canonical trust ceremony toolkit does not contain the required Portable runtime-v3, one-shot fallback and fail-closed writer prerequisites.'
 }
 $ToolkitSourceCommit = [string]$ToolkitProvenance.source_commit
 if ($ToolkitSourceCommit -notmatch '^[0-9a-f]{40}$') {
