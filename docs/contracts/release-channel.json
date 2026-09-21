@@ -110,5 +110,24 @@
     "failed_release_rejected": true,
     "known_good_preserved": true,
     "reboot_requested": false
+  },
+  "portable_runtime_activation": {
+    "profile": "stable-mvp",
+    "runtime_layout": "portable-v2",
+    "discovery_command": "ordax-release-agent inspect",
+    "materialization_command": "ordax-release-agent materialize-portable-v3",
+    "exact_verification_command": "ordax-release-agent verify-portable-v3-exact",
+    "activation_state_helper": "ordax-portable-state",
+    "activation_state_root": "/state/ordax/portable-release",
+    "portable_root": "/ordax-data/.ordax",
+    "candidate_policy": "armed-one-shot-boot",
+    "candidate_reboot_required": true,
+    "candidate_cold_health_required": true,
+    "commit_after_cold_health": true,
+    "failed_candidate_persisted": true,
+    "same_failed_candidate_retried": false,
+    "rollback_network_required": false,
+    "rollback_git_required": false,
+    "physical_boot_proven": false
   }
 }
