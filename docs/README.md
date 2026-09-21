@@ -77,11 +77,15 @@ Current non-secret trust state is:
 LOCAL_PREFLIGHT=PASS
 LOCAL_KEY_MATERIAL_GENERATED=YES
 CRYPTOGRAPHIC_RECOVERY_VERIFIED=YES
+LOCAL_ENCRYPTED_BACKUP_COPY_VERIFIED=YES
 EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED=NO
-PUBLIC_ANCHOR_PINNED=NO
+EXTERNAL_OFFLINE_BACKUP_REQUIRED_BEFORE_BROAD_DISTRIBUTION=YES
+PUBLIC_ANCHOR_PINNED=YES
+MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=YES
+PHYSICAL_AUTHORIZATION_ELIGIBLE=YES
 PHYSICAL_WRITE_ALLOWED=NO
 CURRENT_SIGNING_BACKEND=local-pem (controlled prototype)
 FUTURE_CUSTODY_TARGET=managed non-exportable KMS/HSM
 ```
 
-The future managed backend is provider-neutral and intentionally deferred; the current local PEM must not become an unrecoverable long-term production single point of failure.
+The future managed backend is provider-neutral and intentionally deferred. The same-host encrypted backup copy is sufficient for the first controlled prototype because cryptographic recovery was proven, but it is not treated as independent off-device custody; an external/off-device encrypted copy remains required before broad public distribution.
