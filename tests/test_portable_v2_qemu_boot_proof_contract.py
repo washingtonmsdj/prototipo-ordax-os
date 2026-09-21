@@ -42,6 +42,9 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
         self.assertFalse(CONTRACT["last_proven_network_required_for_first_boot"])
         self.assertFalse(CONTRACT["last_proven_physical_target_device_touched"])
         self.assertFalse(CONTRACT["last_proven_guest_disk_retained"])
+        self.assertEqual(CONTRACT["activation_transaction_scope"], "baseline-current-boot-only")
+        self.assertFalse(CONTRACT["armed_candidate_one_shot_proven"])
+        self.assertIn("unarmed-candidate-is-not-boot-authority", CONTRACT["required_checks"])
         self.assertFalse(CONTRACT["promotion_effect"]["uefi_gate_still_required"])
         self.assertTrue(
             CONTRACT["promotion_effect"]["uefi_gate_satisfied_by_separate_contract"]
