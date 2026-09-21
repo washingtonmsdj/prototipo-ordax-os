@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 QEMU = ROOT / "bootstrap" / "portable-v2" / "qemu_boot.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "portable-v2-qemu-boot-proof.yml"
 BASELINE = ROOT / "docs" / "contracts" / "portable-v2-qemu-boot-proof.json"
+SPEC = ROOT / "docs" / "contracts" / "portable-v3-one-shot-qemu-proof-spec.json"
 
 
 class PortableV3OneShotQemuProofTests(unittest.TestCase):
@@ -49,6 +50,32 @@ class PortableV3OneShotQemuProofTests(unittest.TestCase):
         key_destroy = text.index('rm -f "$work/private.pem"')
         self.assertLess(previous_build, key_destroy)
 
+    def test_one_shot_spec_keeps_ci_and_physical_boundaries_explicit(self):
+        import json
+
+        spec = json.loads(SPEC.read_text(encoding="utf-8"))
+        self.assertEqual(
+            spec["$schema"],
+            "prototype-ordax.portable-v3-one-shot-qemu-proof-spec/1",
+        )
+        self.assertEqual(spec["status"], "candidate-proof-not-yet-promoted")
+        self.assertEqual(spec["proof_mode"], "armed-candidate-one-shot-fallback")
+        self.assertTrue(spec["source_identity"]["previous_source_tree_required"])
+        self.assertTrue(spec["source_identity"]["same_ephemeral_ci_trust_required"])
+        self.assertEqual(spec["required_final_state"]["current"], "previous")
+        self.assertEqual(spec["required_final_state"]["rejected"], "candidate")
+        self.assertEqual(spec["required_final_state"]["candidate_file"], "absent")
+        self.assertEqual(spec["required_final_state"]["activation_transaction"], "absent")
+        self.assertTrue(spec["safety"]["qemu_network"] == "disabled")
+        self.assertFalse(spec["safety"]["physical_target_device_touched"])
+        self.assertFalse(spec["safety"]["physical_write_authorized"])
+        self.assertFalse(spec["safety"]["public_physical_promotion_allowed"])
+        self.assertFalse(spec["safety"]["cold_health_commit_proven"])
+        self.assertFalse(spec["safety"]["physical_usb_boot_proven"])
+        self.assertFalse(spec["safety"]["secure_boot_proven"])
+        self.assertFalse(spec["promotion_effect"]["cold_health_commit_gate_closed"])
+        self.assertFalse(spec["promotion_effect"]["physical_known_good_gate_closed"])
+        self.assertFalse(spec["promotion_effect"]["physical_rollback_gate_closed"])
     def test_baseline_contract_does_not_get_rewritten_as_one_shot_evidence(self):
         text = BASELINE.read_text(encoding="utf-8")
         self.assertIn('"activation_transaction_scope": "baseline-current-boot-only"', text)
