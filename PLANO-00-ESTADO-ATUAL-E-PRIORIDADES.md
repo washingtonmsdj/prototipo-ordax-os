@@ -63,7 +63,7 @@ PORTABLE_PHYSICAL_USB_BOOT=NO
 MVP_SURFACE_SMOKE_HARNESS=PASS_SOURCE
 MVP_SURFACE_SMOKE_PHYSICAL=PENDING
 CANONICAL_STABLE_GRAPHICAL_MODE=PENDING
-CANONICAL_RELEASE_TRUST=PENDING_CANONICAL_KEY
+CANONICAL_RELEASE_TRUST=PENDING_RECOVERY_AND_PUBLIC_ANCHOR
 PORTABLE_COLD_HEALTH_PROOF_SCOPE=PHYSICAL_STABLE_MVP_REQUIRED_NO_SYNTHETIC_CI
 PUBLIC_PHYSICAL_APPLY=NO
 ```
@@ -84,7 +84,7 @@ O que permanece aberto é de outra classe: trust canônico, autorização públi
 
 A infraestrutura para cerimônia, promoção do trust público, verificação e recuperação já existe no repositório. O bloqueio não deve ser “resolvido” gerando uma chave privada dentro do Git, CI ou USB.
 
-A prova one-shot/rejected já passou em CI e agora também é pré-requisito obrigatório da primeira identidade canônica. O Windows Prototype Toolkit produzido pelo push canônico da main em `2172eb6a18430910afd036199ec492ad63dc185d` / run `35617567458` foi inspecionado: todos os cinco pré-requisitos estão `true`, `canonical_trust_ceremony_eligible=true`, o ZIP tem SHA-256 `cb8232d20a9cdbaa81e73d55b52e2d6047b3b800a06a73a14869e6dc2245af31`, os `SHA256SUMS` internos passam e não há material privado. O próximo marco agora é **local e inevitável**: executar primeiro `1-Verify-OrdaXTrustToolkit.cmd`; somente com `TOOLKIT_TRUST_PREFLIGHT=PASS` executar `2-Initialize-OrdaXTrust.cmd`, mantendo chave privada e backup/recovery fora do Git/toolkit/USB. Enquanto isso, `CANONICAL_RELEASE_TRUST=PENDING_CANONICAL_KEY` continua correto.
+A prova one-shot/rejected já passou em CI e continua sendo pré-requisito obrigatório da primeira identidade canônica. O Windows Prototype Toolkit produzido pelo push canônico da main em `2172eb6a18430910afd036199ec492ad63dc185d` / run `35617567458` foi inspecionado e os passos locais 1 e 2 já foram executados pelo operador em 2026-09-21: `TOOLKIT_TRUST_PREFLIGHT=PASS`, material Ed25519 local gerado, derivação pública independente igual e proof signature criada. O SHA-256 público reportado é `d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250`. O próximo gate é verificar recovery criptografado por caminho distinto; somente depois o anchor público pode ser promovido. A chave local é backend controlado de protótipo, não custódia final de produção; KMS/HSM gerenciado fica como evolução provider-neutral sem bloquear o primeiro proof físico, enquanto rotação assinada é obrigatória antes de distribuição pública ampla.
 
 ### P0 — prova Stable/MVP integrada
 
