@@ -49,15 +49,16 @@ Current state:
 
 ```text
 BOOTSTRAP_SOURCE=PASS
-MINIMAL_BOOTSTRAP_MANIFEST=PARTIAL_UNTIL_RELEASE_TRUST
+MINIMAL_BOOTSTRAP_MANIFEST=PASS_CANONICAL_BYTES_RESOLVED
 KERNEL_PROVENANCE=PASS_PINNED_REPEAT_PROOF
 INITRAMFS_PROVENANCE=PASS
 RELEASE_CHANNEL=PASS
 RELEASE_TRUST_POLICY=PASS
 RELEASE_TRUST_KEY_MATERIAL=GENERATED_LOCAL_RECOVERY_VERIFIED
 RELEASE_TRUST_RECOVERY=PASS_CRYPTOGRAPHIC_OPERATOR
-RELEASE_TRUST_EXTERNAL_OFFLINE_BACKUP=PENDING
-REAL_PUBLIC_TRUST_ANCHOR=BLOCKED_PENDING_EXTERNAL_BACKUP_AND_PUBLIC_HANDOFF
+RELEASE_TRUST_LOCAL_ENCRYPTED_BACKUP_COPY=PASS_BYTE_IDENTICAL
+RELEASE_TRUST_EXTERNAL_OFFLINE_BACKUP=DEFERRED_BEFORE_BROAD_DISTRIBUTION
+REAL_PUBLIC_TRUST_ANCHOR=PASS_PINNED
 PRIVATE_SIGNING_KEY_IN_GIT=NO
 PRIVATE_SIGNING_KEY_IN_USB=NO
 FULL_SYSTEM_PRESEEDED=NO
@@ -72,9 +73,9 @@ WSL_REQUIRED=NO
 QEMU_REQUIRED=NO
 ```
 
-The trust custody/recovery/rotation policy is defined in `docs/contracts/release-trust-policy.json`; policy completion does not resolve the actual public trust artifact.
+The trust custody/recovery/rotation policy is defined in `docs/contracts/release-trust-policy.json`; the actual canonical public trust artifact is now pinned and bound into the minimal bootstrap.
 
-The signed trust-transition protocol is implemented and CI-proven as a separate forward-resilience boundary. The cryptographic recovery proof is operator-proven, while independent external/offline backup custody remains pending; neither fact pins the current public anchor or authorizes the first controlled physical write. Production rotation remains blocked until stateful device activation and effective-trust selection exist.
+The signed trust-transition protocol is implemented and CI-proven as a separate forward-resilience boundary. The cryptographic recovery proof and canonical public-anchor promotion are complete for the first controlled prototype. Independent off-device backup custody is still deferred and remains required before broad public distribution. None of these facts authorizes a physical write; production rotation also remains blocked until stateful device activation and effective-trust selection exist.
 
 ## Gate 3 - Two-partition bootstrap-seed provisioning in disposable media
 
@@ -199,8 +200,8 @@ NATIVE_WINDOWS_RAW_DISK_BACKEND=PASS_TAGGED_UNBOUND
 RAW_BACKEND_IN_PUBLIC_BUILD=NO
 PUBLIC_PHYSICAL_APPLY=NO
 SOURCE_LAYOUT_CONTRACT=PASS
-MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=PENDING_CANONICAL_TRUST
-CANONICAL_RELEASE_TRUST=PENDING_EXTERNAL_BACKUP_AND_PUBLIC_ANCHOR
+MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=YES
+CANONICAL_RELEASE_TRUST=PASS_CANONICAL_PUBLIC_ANCHOR_PINNED
 CANONICAL_TRUST_TOOLKIT=PASS_MAIN_PUSH_PROVENANCE_ELIGIBLE
 CANONICAL_TRUST_TOOLKIT_LOCAL_PREFLIGHT=PASS_OPERATOR_2026_09_21
 CANONICAL_KEY_MATERIAL_GENERATED=YES_LOCAL_RECOVERY_VERIFIED
