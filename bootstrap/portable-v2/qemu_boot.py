@@ -112,7 +112,7 @@ def load_json(path: Path, label: str) -> dict[str, Any]:
 def require_programs() -> None:
     names = (
         "sgdisk", "losetup", "mkfs.vfat", "mkfs.exfat", "mount.exfat-fuse",
-        "mount", "umount", "qemu-system-x86_64", "debugfs",
+        "mount", "umount", "qemu-system-x86_64",
     )
     missing = [name for name in names if shutil.which(name) is None]
     if missing:
@@ -507,7 +507,11 @@ def inspect_one_shot_state(
             "one-shot persistent-state image",
             minimum=16 * 1024 * 1024,
         )
-        run(["mount", "-t", "ext4", "-o", "loop,ro,noload", str(state_image), str(state_mount)])
+        state_copy = work / "inspected-persistent-state.img"
+        shutil.copyfile(state_image, state_copy)
+        unmount(data_mount)
+        data_mounted = False
+        run(["mount", "-t", "ext4", "-o", "loop,ro,noload", str(state_copy), str(state_mount)])
         state_mounted = True
         release_state = state_mount / "ordax/portable-release"
         current = (release_state / "current").read_text(encoding="ascii").strip()
@@ -654,6 +658,32 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         if not all(checks.values()):
             raise ProofError(f"portable-v2 QEMU checks incomplete: {checks}")
 
+        if activation:
+            serial_markers = [
+                SUCCESS,
+                STABLE,
+                "ORDAX_PORTABLE_V2_SLOT=candidate",
+                "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit,
+                "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.source_commit,
+                "ORDAX_PORTABLE_V2_SLOT=current",
+                "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.previous_commit,
+                "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.previous_commit,
+                "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3",
+                "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED",
+                "ORDAX_SURFACE_RUNTIME_SHA256=" + inputs["runtime_sha256"],
+            ]
+        else:
+            serial_markers = [
+                SUCCESS,
+                STABLE,
+                "ORDAX_PORTABLE_V2_SLOT=current",
+                "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit,
+                "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.source_commit,
+                "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3",
+                "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED",
+                "ORDAX_SURFACE_RUNTIME_SHA256=" + inputs["runtime_sha256"],
+            ]
+
         result = {
             "$schema": SCHEMA,
             "status": "pass",
@@ -669,16 +699,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
             "network_required_for_first_boot": False,
             "armed_candidate_one_shot_proven": bool(activation),
             "activation_one_shot": activation,
-            "serial_markers": [
-                SUCCESS,
-                STABLE,
-                "ORDAX_PORTABLE_V2_SLOT=current",
-                "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit,
-                "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.source_commit,
-                "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3",
-                "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED",
-                "ORDAX_SURFACE_RUNTIME_SHA256=" + inputs["runtime_sha256"],
-            ],
+            "serial_markers": serial_markers,
             "guest_disk": {
                 "sha256_before_destruction": disk_sha,
                 "retained": False,
