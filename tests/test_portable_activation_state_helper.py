@@ -16,6 +16,7 @@ SOURCE = ROOT / "bootstrap" / "initramfs" / "portable_state.c"
 OLD = "1" * 40
 OLDER = "0" * 40
 NEW = "2" * 40
+NEXT = "3" * 40
 
 
 def write_release(root: Path, commit: str) -> None:
@@ -64,7 +65,7 @@ class PortableActivationStateHelperTests(unittest.TestCase):
         activation = state / "ordax" / "portable-release"
         activation.mkdir(parents=True)
         portable.mkdir()
-        for commit in (OLDER, OLD, NEW):
+        for commit in (OLDER, OLD, NEW, NEXT):
             write_release(portable, commit)
         (activation / "current").write_text(OLD + "\n", encoding="ascii")
         (activation / "known-good").write_text(OLDER + "\n", encoding="ascii")
@@ -110,6 +111,30 @@ class PortableActivationStateHelperTests(unittest.TestCase):
         self.assertEqual((activation / "current").read_text().strip(), OLD)
         self.assertFalse((activation / "candidate").exists())
         self.assertFalse((activation / "activation-transaction.json").exists())
+        self.assertEqual((activation / "rejected").read_text().strip(), NEW)
+
+    def test_rejected_candidate_is_not_rearmed_until_channel_advances(self):
+        state, portable, activation = self.fixture()
+
+        self.run_helper("prepare", state, portable, NEW)
+        self.run_helper("select-boot", state, portable)
+        self.run_helper("select-boot", state, portable)
+
+        rejected = self.run_helper(
+            "prepare",
+            state,
+            portable,
+            NEW,
+            check=False,
+        )
+        self.assertEqual(rejected.returncode, 4)
+        self.assertIn("candidate was already rejected", rejected.stderr)
+        self.assertEqual((activation / "rejected").read_text().strip(), NEW)
+
+        prepared = self.run_helper("prepare", state, portable, NEXT)
+        self.assertEqual(prepared.stdout.strip(), NEXT)
+        self.assertFalse((activation / "rejected").exists())
+        self.assertEqual((activation / "candidate").read_text().strip(), NEXT)
 
     def test_successful_candidate_commit_rotates_known_good(self):
         state, portable, activation = self.fixture()
@@ -143,6 +168,7 @@ class PortableActivationStateHelperTests(unittest.TestCase):
         self.assertEqual((activation / "known-good").read_text().strip(), OLDER)
         self.assertFalse((activation / "candidate").exists())
         self.assertFalse((activation / "activation-transaction.json").exists())
+        self.assertEqual((activation / "rejected").read_text().strip(), NEW)
 
     def test_interrupted_commit_is_finalized_on_next_boot(self):
         state, portable, activation = self.fixture()
