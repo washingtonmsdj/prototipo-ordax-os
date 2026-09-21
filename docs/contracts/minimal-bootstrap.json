@@ -104,10 +104,10 @@
         {
           "source_path": "bootstrap/initramfs/initramfs.cpio.gz",
           "target_path": "/ordax/initrd.gz",
-          "sha256": "380e22fef11c5c25f96360c5e66cd6ebcc66256c11b1233629463cf20b1bb68d",
+          "sha256": "6bedeb8409012532d6944264819227586083462b48d1f40433e1d92291713453",
           "mode": "0644",
           "logical_owner": "initramfs",
-          "reason": "Fixed clean-room capsule with legacy physical boot unchanged plus isolated portable-v2 helpers, exact current/known-good selection, loop/exFAT/FAT-volume-ID primitives, BusyBox mount security-flag parsing, POSIX test/[ support and fail-closed candidate PID1 support"
+          "reason": "Fixed clean-room capsule with legacy physical boot unchanged plus isolated Portable helpers, armed one-shot activation-state transactions, rejected-candidate persistence, exact candidate/current/known-good selection, loop/exFAT/FAT-volume-ID primitives, BusyBox mount security-flag parsing, POSIX test/[ support and fail-closed candidate PID1 support"
         }
       ]
     },
