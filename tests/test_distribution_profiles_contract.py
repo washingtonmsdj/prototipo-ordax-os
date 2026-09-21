@@ -121,7 +121,24 @@ class DistributionProfilesContractTests(unittest.TestCase):
         self.assertTrue(
             stable["portable_v3_release_agent_supports_content_addressed_runtime"]
         )
-        self.assertFalse(stable["portable_v3_release_agent_activation_connected"])
+        self.assertTrue(stable["portable_v3_release_agent_activation_connected"])
+        self.assertEqual(
+            stable["portable_v3_activation_primitive"],
+            "ordax-portable-state",
+        )
+        self.assertEqual(
+            stable["portable_v3_activation_state_root"],
+            "/state/ordax/portable-release",
+        )
+        self.assertFalse(stable["portable_v3_activation_physical_proven"])
+        self.assertTrue(stable["portable_v2_update_activation_connected"])
+        self.assertEqual(
+            stable["portable_v2_update_activation_mode"],
+            "signed-v3-one-shot-reboot-cold-health",
+        )
+        self.assertTrue(stable["portable_v2_update_requires_reboot"])
+        self.assertTrue(stable["portable_v2_candidate_rejected_sha_persisted"])
+        self.assertFalse(stable["portable_v2_candidate_rearm_same_sha_allowed"])
         self.assertTrue(stable["periodic_signed_channel_polling_connected"])
         self.assertEqual(stable["periodic_signed_channel_default_seconds"], 60)
         self.assertTrue(stable["signed_release_materialization_connected"])
