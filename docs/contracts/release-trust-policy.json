@@ -72,7 +72,13 @@
     "managed_kms_hsm_target": true,
     "managed_kms_hsm_required_for_first_physical_proof": false,
     "signed_rotation_required_before_broad_public_distribution": true,
-    "single_lost_key_or_host_must_not_permanently_block_updates": true
+    "single_lost_key_or_host_must_not_permanently_block_updates": true,
+    "signed_transition_protocol_source_implemented": true,
+    "signed_transition_protocol_schema": "prototype-ordax.release-trust-transition/1",
+    "signed_transition_envelope_schema": "prototype-ordax.release-trust-transition-envelope/1",
+    "signed_transition_protocol_ci_cross_compatibility_required": true,
+    "device_stateful_rotation_activation_implemented": false,
+    "bootstrap_effective_trust_selection_implemented": false
   },
   "gates": {
     "key_material_generated": true,
