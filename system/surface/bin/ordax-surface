@@ -53,8 +53,13 @@ POWER_PENDING_STALE_SECONDS=120
 SEATD_SOCKET=/run/seatd.sock
 RUNTIME_STATE=$STATE_ROOT/runtime/native-surface
 RUNTIME_ID=alpine-v3.22-cage-webkitgtk-v1
-RUNTIME_ROOT=$RUNTIME_STATE/$RUNTIME_ID/rootfs
-RUNTIME_READY=$RUNTIME_STATE/$RUNTIME_ID/ready
+DYNAMIC_RUNTIME_ROOT=$RUNTIME_STATE/$RUNTIME_ID/rootfs
+DYNAMIC_RUNTIME_READY=$RUNTIME_STATE/$RUNTIME_ID/ready
+VERIFIED_RUNTIME_MODE=${ORDAX_SURFACE_RUNTIME_MODE:-}
+VERIFIED_RUNTIME_ROOT=${ORDAX_SURFACE_RUNTIME_ROOT:-}
+VERIFIED_RUNTIME_SHA256=${ORDAX_SURFACE_RUNTIME_SHA256:-}
+RUNTIME_ROOT=$DYNAMIC_RUNTIME_ROOT
+RUNTIME_READY=$DYNAMIC_RUNTIME_READY
 LEGACY_RUNTIME_ID=alpine-v3.22-cage-barkery-v1
 LEGACY_RUNTIME_ROOT=$RUNTIME_STATE/$LEGACY_RUNTIME_ID/rootfs
 LEGACY_RUNTIME_READY=$RUNTIME_STATE/$LEGACY_RUNTIME_ID/ready
@@ -99,6 +104,37 @@ esac
 # Stable/MVP is USB-only. Native installation remains compiled/testable
 # foundation, but the public profile cannot activate its broker or token.
 [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ] && NATIVE_INSTALL_CAPABILITY=disabled
+
+if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+    case "$VERIFIED_RUNTIME_MODE" in
+        verified-erofs-overlay)
+            [ "$VERIFIED_RUNTIME_ROOT" = "/run/ordax/runtime/native-surface/rootfs" ] || {
+                echo "ordax-surface: verified Stable runtime root is invalid" >&2
+                exit 1
+            }
+            [ "${#VERIFIED_RUNTIME_SHA256}" -eq 64 ] || {
+                echo "ordax-surface: verified Stable runtime digest is invalid" >&2
+                exit 1
+            }
+            case "$VERIFIED_RUNTIME_SHA256" in
+                *[!0-9a-f]*)
+                    echo "ordax-surface: verified Stable runtime digest is invalid" >&2
+                    exit 1
+                    ;;
+            esac
+            RUNTIME_ROOT=$VERIFIED_RUNTIME_ROOT
+            RUNTIME_READY=
+            ;;
+        "")
+            # Portable v2 remains a compatibility boot shape, but Stable/MVP
+            # must never provision its graphical runtime from the network.
+            ;;
+        *)
+            echo "ordax-surface: unsupported Stable runtime mode" >&2
+            exit 1
+            ;;
+    esac
+fi
 
 case "$RUNTIME_INSTALL_TIMEOUT" in
     ''|*[!0-9]*) RUNTIME_INSTALL_TIMEOUT=180 ;;
@@ -556,8 +592,13 @@ fallback_with_reason() {
 }
 
 runtime_base_is_ready() {
-    [ -f "$RUNTIME_READY" ] &&
-        [ -x "$RUNTIME_ROOT/usr/bin/cage" ] &&
+    if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+        [ "$VERIFIED_RUNTIME_MODE" = "verified-erofs-overlay" ] || return 1
+        [ "$RUNTIME_ROOT" = "$VERIFIED_RUNTIME_ROOT" ] || return 1
+    else
+        [ -f "$RUNTIME_READY" ] || return 1
+    fi
+    [ -x "$RUNTIME_ROOT/usr/bin/cage" ] &&
         [ -x "$RUNTIME_ROOT/usr/bin/python3" ] &&
         [ -f "$RUNTIME_ROOT/usr/lib/girepository-1.0/Gtk-3.0.typelib" ] &&
         [ -f "$RUNTIME_ROOT/usr/lib/girepository-1.0/WebKit2-4.1.typelib" ] &&
@@ -694,6 +735,15 @@ upgrade_existing_runtime() {
 }
 
 ensure_runtime() {
+    if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then
+        runtime_is_ready || {
+            echo "ordax-surface: Stable/MVP requires the preverified offline graphical runtime" >>"$HOST_LOG"
+            return 1
+        }
+        echo "ordax-surface: using verified immutable Surface runtime with ephemeral overlay" >>"$HOST_LOG"
+        return 0
+    fi
+
     runtime_is_ready && return 0
     if runtime_base_is_ready; then
         upgrade_existing_runtime || return 1

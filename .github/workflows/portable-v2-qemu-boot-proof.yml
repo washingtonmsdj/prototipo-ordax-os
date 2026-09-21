@@ -8,6 +8,7 @@ on:
       - 'bootstrap/base/**'
       - 'bootstrap/kernel/**'
       - 'bootstrap/stable-base/**'
+      - 'bootstrap/surface-runtime/**'
       - 'bootstrap/initramfs/**'
       - 'bootstrap/portable-v2/**'
       - 'bootstrap/release-acquisition/**'
@@ -33,6 +34,7 @@ on:
       - 'bootstrap/base/**'
       - 'bootstrap/kernel/**'
       - 'bootstrap/stable-base/**'
+      - 'bootstrap/surface-runtime/**'
       - 'bootstrap/initramfs/**'
       - 'bootstrap/portable-v2/**'
       - 'bootstrap/release-acquisition/**'
@@ -139,6 +141,23 @@ jobs:
             --out-dir "$work/stable-base" \
             > "$work/metadata/stable-base-verify.json"
 
+      - name: Build and verify exact offline Surface runtime
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-qemu"
+          sudo -E env ORDAX_SOURCE_COMMIT="$ORDAX_SOURCE_COMMIT" \
+            python bootstrap/surface-runtime/build.py build \
+              --out-dir "$work/surface-runtime" \
+              --cache-dir "$work/surface-runtime-cache" \
+              > "$work/metadata/surface-runtime-build.json"
+          sudo chown -R "$(id -u):$(id -g)" "$work/surface-runtime"
+          python bootstrap/surface-runtime/build.py verify \
+            --out-dir "$work/surface-runtime" \
+            > "$work/metadata/surface-runtime-verify.json"
+          test -s "$work/surface-runtime/native-surface-runtime.erofs"
+
       - name: Build exact release agent and bootstrap capsule
         run: |
           set -euo pipefail
@@ -177,14 +196,17 @@ jobs:
             --out-dir "$work/initramfs" \
             > "$work/metadata/initramfs-verify.json"
 
-      - name: Build one real signed portable release v2
+      - name: Build one real signed portable release v3 with offline Surface runtime
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP/portable-v2-qemu"
           commit="${{ github.event.pull_request.head.sha || github.sha }}"
           portable="$work/portable/.ordax"
           release="$portable/releases/$commit"
-          mkdir -p "$release"
+          runtime_image="$work/surface-runtime/native-surface-runtime.erofs"
+          runtime_sha="$(sha256sum "$runtime_image" | awk '{print $1}')"
+          runtime_store="$portable/runtimes/sha256/$runtime_sha"
+          mkdir -p "$release" "$runtime_store"
 
           (
             cd tools/release-bundle
@@ -210,31 +232,46 @@ jobs:
             --out "$release/system.erofs" \
             > "$work/metadata/release-image.json"
 
+          cp "$runtime_image" "$runtime_store/native-surface-runtime.erofs"
+          printf '%s\n' "$runtime_sha" > "$release/surface-runtime.sha256"
+
           "$work/bin/release-manifest" \
-            --manifest-schema 2 \
+            --manifest-schema 3 \
             --artifact "$release/system.erofs" \
+            --runtime-artifact "$runtime_image" \
             --source-commit "$commit" \
             --artifact-url "https://example.invalid/releases/$commit/system.erofs" \
+            --runtime-artifact-url "https://example.invalid/runtimes/$runtime_sha/native-surface-runtime.erofs" \
             --out "$release/release-manifest.json"
 
           "$work/bin/release-signing" generate-key \
             --private-key "$work/private.pem" \
             --trust "$work/release-trust.json" \
-            --key-id ci-portable-v2-qemu
+            --key-id ci-portable-v3-qemu
           "$work/bin/release-signing" sign \
             --manifest "$release/release-manifest.json" \
             --private-key "$work/private.pem" \
             --trust "$work/release-trust.json" \
-            --key-id ci-portable-v2-qemu \
+            --key-id ci-portable-v3-qemu \
             --out "$release/release-envelope.json"
           "$work/bin/release-signing" verify-envelope \
             --envelope "$release/release-envelope.json" \
             --trust "$work/release-trust.json"
-          "$work/bin/ordax-release-agent" verify-portable-exact \
+          "$work/bin/ordax-release-agent" verify-portable-v3-exact \
             --trust "$work/release-trust.json" \
             --root "$portable" \
             --expected-commit "$commit" \
-            > "$work/metadata/release-exact-verify.json"
+            > "$work/metadata/release-v3-exact-verify.json"
+
+          python - "$release/release-manifest.json" "$runtime_sha" <<'PY'
+          import json, pathlib, sys
+          manifest = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          runtime_sha = sys.argv[2]
+          assert manifest['$schema'] == 'prototype-ordax.release-manifest/3'
+          assert [a['role'] for a in manifest['artifacts']] == ['system-image', 'surface-runtime']
+          assert manifest['artifacts'][1]['sha256'] == runtime_sha
+          print('PORTABLE_V3_RELEASE_RUNTIME_BOUND=PASS')
+          PY
 
           rm -f "$work/private.pem"
           test ! -e "$work/private.pem"

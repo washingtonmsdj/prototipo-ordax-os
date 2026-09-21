@@ -291,12 +291,15 @@
     "name": "native-surface-runtime.erofs",
     "format": "erofs",
     "compression": "lz4",
-    "target_path": ".ordax/runtime/native-surface-runtime.erofs",
+    "target_path": ".ordax/runtimes/sha256/<runtime-sha256>/native-surface-runtime.erofs",
     "immutable_lower": true,
     "ephemeral_overlay_required": true,
     "persistent_user_data_inside_artifact": false,
     "physical_artifact_authorized": false,
-    "portable_v2_boot_connected": false
+    "release_manifest_schema": "prototype-ordax.release-manifest/3",
+    "portable_v3_boot_handoff_candidate_connected": true,
+    "physical_boot_connected": false,
+    "runtime_view": "erofs-read-only-lower-plus-ephemeral-run-overlay"
   },
   "discovery": {
     "entrypoint": "bootstrap/surface-runtime/discover_lock.py",
@@ -304,10 +307,9 @@
     "purpose": "resolve-and-review-the-full-transitive-apk-lock-before-any-runtime-artifact-is-promotable"
   },
   "promotion_blockers": [
-    "bind-runtime-hash-to-portable-v2-trust-chain",
-    "preseed-runtime-through-creator",
-    "prove-stable-first-surface-boot-with-network-disabled",
-    "prove-physical-stable-surface-on-supported-usb-hardware"
+    "prove-stable-first-surface-boot-with-network-disabled-on-current-head",
+    "prove-physical-stable-surface-on-supported-usb-hardware",
+    "prove-or-explicitly-defer-secure-boot-boundary-before-public-promotion"
   ],
   "apk_package_lock_count": 253,
   "apk_package_lock_status": "pinned-from-ci-discovery-148c0fc9a3d40c8629186c6da4c16dcfecd1bc1e",
@@ -322,7 +324,11 @@
   },
   "closed_gates": [
     "full-transitive-apk-lock-pinned",
-    "byte-reproducible-erofs-runtime-ci"
+    "byte-reproducible-erofs-runtime-ci",
+    "signed-release-manifest-v3-runtime-binding-implemented",
+    "creator-content-addressed-runtime-preseed-implemented",
+    "initramfs-runtime-erofs-ephemeral-overlay-handoff-implemented",
+    "stable-launcher-network-package-provisioning-disabled"
   ],
   "reproducibility_proof": {
     "workflow": ".github/workflows/surface-runtime-lock-discovery.yml",
@@ -337,7 +343,7 @@
     "repeat_digest_passed": true,
     "runtime_image_retained": false,
     "physical_artifact_authorized": false,
-    "portable_v2_boot_connected": false
+    "boot_handoff_connected_at_proof_time": false
   },
   "runtime_generated_state": {
     "machine_identity_baked_into_image": false,
@@ -345,5 +351,14 @@
     "fontconfig_cache_baked_into_image": false,
     "fontconfig_cache_owner": "writable-runtime-overlay",
     "reason": "device identity and derived font caches must not make the signed immutable runtime nondeterministic or shared across devices"
+  },
+  "integration": {
+    "signed_release_v3_binding_implemented": true,
+    "creator_content_addressed_preseed_implemented": true,
+    "initramfs_verified_mount_handoff_implemented": true,
+    "stable_launcher_offline_runtime_required": true,
+    "qemu_current_head_proof_passed": false,
+    "physical_usb_boot_proven": false,
+    "secure_boot_proven": false
   }
 }

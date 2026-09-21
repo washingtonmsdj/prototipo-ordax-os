@@ -1,22 +1,22 @@
 {
   "$schema": "prototype-ordax.portable-boot-handoff/1",
-  "status": "disposable-mount-proof-only",
+  "status": "ci-boot-handoff-proven-runtime-v3-candidate",
   "product_mode": "usb",
   "storage_profile": "portable-usb-v2",
-  "release_manifest_schema": "prototype-ordax.release-manifest/2",
+  "release_manifest_schema": "prototype-ordax.release-manifest/3",
   "release_artifact": "system.erofs",
   "release_root": ".ordax/releases/<source_commit>",
   "persistent_state": ".ordax/state/persistent-state.img",
   "physical_boot_connected": false,
-  "bootable_proven": false,
+  "bootable_proven": true,
   "physical_write_authorized": false,
-  "activation_selection_implemented": false,
-  "rollback_selection_implemented": false,
-  "initramfs_integration_implemented": false,
+  "activation_selection_implemented": true,
+  "rollback_selection_implemented": true,
+  "initramfs_integration_implemented": true,
   "proof": {
     "owner": "bootstrap/portable-v2/proof.py",
     "requires_exact_offline_release_verification": true,
-    "release_verifier_command": "ordax-release-agent verify-portable-exact",
+    "release_verifier_command": "ordax-release-agent verify-portable-v3-exact",
     "regular_file_images_only": true,
     "host_loop_devices_only": true,
     "release_mount": {
@@ -46,7 +46,18 @@
       "system-write-is-rejected",
       "persistent-ext4-state-survives-remount",
       "erofs-release-hash-unchanged-after-runtime-write-attempt"
-    ]
+    ],
+    "release_verifier_commands": [
+      "ordax-release-agent verify-portable-exact",
+      "ordax-release-agent verify-portable-v3-exact"
+    ],
+    "surface_runtime_mount": {
+      "filesystem": "erofs",
+      "read_only_lower": true,
+      "runtime_view": "overlayfs",
+      "upper": "tmpfs-under-/run",
+      "persistent_upper": false
+    }
   },
   "runtime_boundary": {
     "system_erofs_is_complete_rootfs": false,
@@ -65,7 +76,7 @@
     "initial_surface_runtime_supported": true,
     "first_boot_network_required": false,
     "creator_preseeded_release_required": true,
-    "bootstrap_capsule_verified_mount_implemented": false,
+    "bootstrap_capsule_verified_mount_implemented": true,
     "bootstrap_capsule_candidate_builder_implemented": true,
     "bootstrap_capsule_hash_pin_builder_support": true,
     "bootstrap_capsule_hash_pin_disposable_proof_implemented": true,
@@ -73,13 +84,19 @@
     "system_persistent_overlay_allowed": false,
     "stable_base_overlay_required": true,
     "bootstrap_capsule_hash_pin_candidate_implemented": true,
-    "bootstrap_capsule_hash_pin_pid1_enforced": false,
+    "bootstrap_capsule_hash_pin_pid1_enforced": true,
     "stable_base_is_complete_minimal_rootfs": true,
     "switch_root_target": "stable-base-overlay-root",
     "system_erofs_switch_root_target": false,
     "product_system_view": "read-only-bind",
     "mutable_base_owner": "ext4-persistent-state-image",
-    "mutable_system_owner": null
+    "mutable_system_owner": null,
+    "stable_boot_package_download_allowed": false,
+    "stable_boot_package_install_allowed": false,
+    "surface_runtime_source": "signed-release-manifest-v3",
+    "surface_runtime_store": "content-addressed-sha256",
+    "surface_runtime_view": "ephemeral-overlayfs",
+    "surface_runtime_persistent_upper": false
   },
   "initramfs_integration_requirements": {
     "busybox_losetup_applet_required": true,
@@ -96,7 +113,7 @@
     "activation_state_reader_currently_installed": true,
     "activation_state_reader_path": "/sbin/ordax-portable-state",
     "portable_handoff_helper_path": "/sbin/ordax-portable-mount",
-    "portable_handoff_helper_pid1_connected": false,
+    "portable_handoff_helper_pid1_connected": true,
     "portable_handoff_helper_selects_release": false,
     "portable_handoff_helper_verifies_signature": false,
     "portable_handoff_helper_writes_activation_state": false,
@@ -104,7 +121,8 @@
       "mount-state",
       "mount-capsule",
       "mount-base",
-      "mount-system"
+      "mount-system",
+      "mount-surface-runtime"
     ],
     "activation_state_reader_operations": [
       "read-slot",
@@ -112,7 +130,7 @@
       "select"
     ],
     "activation_selection_helper_implemented": true,
-    "activation_selection_helper_pid1_connected": false,
+    "activation_selection_helper_pid1_connected": true,
     "activation_selection_order": [
       "current",
       "known-good"
@@ -125,22 +143,22 @@
     "bootstrap_capsule_mount_helper_implemented": true,
     "bootstrap_capsule_mount_read_only": true,
     "bootstrap_capsule_payload_shape_checked": true,
-    "bootstrap_capsule_pid1_connected": false,
+    "bootstrap_capsule_pid1_connected": true,
     "known_good_exact_resolver_implemented": true,
     "known_good_exact_resolver_verifies_materialized_shape": true,
     "known_good_exact_resolver_verifies_signature": false,
-    "known_good_exact_resolver_signature_handoff": "ordax-release-agent verify-portable-exact",
+    "known_good_exact_resolver_signature_handoff": "ordax-release-agent verify-portable-v3-exact",
     "capsule_hash_verification_helper_installed": true,
     "capsule_hash_verification_helper_path": "/sbin/ordax-portable-capsule-verify",
-    "capsule_hash_verification_helper_pid1_connected": false,
+    "capsule_hash_verification_helper_pid1_connected": true,
     "capsule_hash_verification_fixed_paths": true,
     "capsule_hash_verification_mounts_capsule": false,
     "stable_base_hash_pin_builder_support": true,
     "stable_base_hash_pin_candidate_implemented": true,
     "stable_base_hash_verification_helper_installed": true,
     "stable_base_hash_verification_helper_path": "/sbin/ordax-portable-base-verify",
-    "stable_base_hash_verification_helper_pid1_connected": false,
-    "stable_base_pid1_hash_enforcement_implemented": false,
+    "stable_base_hash_verification_helper_pid1_connected": true,
+    "stable_base_pid1_hash_enforcement_implemented": true,
     "portable_candidate_pid1_installed": true,
     "portable_candidate_pid1_path": "/sbin/ordax-portable-init",
     "portable_candidate_pid1_default": false,
@@ -148,7 +166,16 @@
     "portable_candidate_pid1_physical_entry_implemented": false,
     "portable_candidate_pid1_current_then_known_good": true,
     "portable_candidate_pid1_exact_signature_verification": true,
-    "portable_candidate_pid1_network_required": false
+    "portable_candidate_pid1_network_required": false,
+    "portable_v3_release_verification": true,
+    "surface_runtime_reference_verified": true,
+    "surface_runtime_mount_operation": "mount-surface-runtime",
+    "surface_runtime_overlay_root": "/run/ordax/runtime/native-surface/rootfs",
+    "surface_runtime_persistent_upper": false,
+    "known_good_exact_resolver_signature_handoff_compatibility": [
+      "ordax-release-agent verify-portable-v3-exact",
+      "ordax-release-agent verify-portable-exact"
+    ]
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",
@@ -203,9 +230,12 @@
     "attach-stable-base-erofs-read-only",
     "compose-stable-base-overlay-with-ext4-upper-work",
     "attach-selected-system-erofs-read-only",
+    "resolve-signed-surface-runtime-sha256-reference",
+    "attach-selected-surface-runtime-erofs-read-only",
+    "compose-surface-runtime-overlay-with-tmpfs-upper-work",
     "bind-verified-system-subtree-read-only",
     "switch-root-into-stable-base-overlay",
-    "launch-ordax-stable-init-with-verified-portable-release-identity"
+    "launch-ordax-stable-init-with-verified-portable-release-and-surface-runtime-identity"
   ],
   "portable_bootstrap_contract": "docs/contracts/portable-bootstrap-v2.json",
   "pinned_initramfs_composition_proof": {
@@ -232,5 +262,14 @@
     "secure_boot_proven": false,
     "physical_boot_proven": false,
     "public_physical_promotion_allowed": false
-  }
+  },
+  "compatible_release_manifest_schemas": [
+    "prototype-ordax.release-manifest/2",
+    "prototype-ordax.release-manifest/3"
+  ],
+  "release_artifacts": [
+    "system.erofs",
+    "native-surface-runtime.erofs"
+  ],
+  "surface_runtime_store": ".ordax/runtimes/sha256/<runtime-sha256>/native-surface-runtime.erofs"
 }

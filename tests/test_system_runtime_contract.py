@@ -131,6 +131,25 @@ class SystemRuntimeContractTests(unittest.TestCase):
         self.assertIn("$RUNTIME_ROOT/sbin/udevd", text)
         self.assertIn("$RUNTIME_ROOT/bin/udevadm", text)
 
+    def test_stable_mvp_uses_preverified_runtime_and_never_provisions_with_apk(self):
+        text = SURFACE_RUNTIME.read_text(encoding="utf-8")
+        self.assertIn('VERIFIED_RUNTIME_MODE=${ORDAX_SURFACE_RUNTIME_MODE:-}', text)
+        self.assertIn('VERIFIED_RUNTIME_ROOT=${ORDAX_SURFACE_RUNTIME_ROOT:-}', text)
+        self.assertIn('VERIFIED_RUNTIME_SHA256=${ORDAX_SURFACE_RUNTIME_SHA256:-}', text)
+        self.assertIn('verified-erofs-overlay', text)
+        self.assertIn('/run/ordax/runtime/native-surface/rootfs', text)
+        self.assertIn(
+            'Stable/MVP requires the preverified offline graphical runtime',
+            text,
+        )
+        ensure = text.split("ensure_runtime() {", 1)[1].split("\n}", 1)[0]
+        stable_branch = ensure.split('if [ "$DISTRIBUTION_PROFILE" = "stable-mvp" ]; then', 1)[1]
+        stable_branch = stable_branch.split("\n    fi", 1)[0]
+        self.assertNotIn("run_bounded_apk", stable_branch)
+        self.assertNotIn("install_runtime", stable_branch)
+        self.assertNotIn("upgrade_existing_runtime", stable_branch)
+        self.assertIn("runtime_is_ready", stable_branch)
+
     def test_existing_runtime_is_extended_without_full_reprovision(self):
         text = SURFACE_RUNTIME.read_text(encoding="utf-8")
         self.assertIn("runtime_base_is_ready", text)

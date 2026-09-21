@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.portable-v2-uefi-boot-proof/1",
-  "status": "candidate-workflow-not-yet-green",
+  "status": "runtime-v3-candidate-workflow-implemented-awaiting-current-head-proof",
   "product_scope": "stable-mvp-usb-only",
   "workflow": ".github/workflows/portable-v2-qemu-boot-proof.yml",
   "proof_owner": "bootstrap/portable-v2/uefi_boot.py",
@@ -31,12 +31,18 @@
     "ORDAX_PORTABLE_V2_SLOT=current",
     "ORDAX_PORTABLE_V2_SOURCE_SHA=<exact-source-commit>",
     "ORDAX_STABLE_INIT_HANDOFF=VERIFIED",
-    "ORDAX_STABLE_INIT_SOURCE_SHA=<exact-source-commit>"
+    "ORDAX_STABLE_INIT_SOURCE_SHA=<exact-source-commit>",
+    "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3",
+    "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED",
+    "ORDAX_SURFACE_RUNTIME_SHA256=<exact-runtime-sha256>"
   ],
   "forbidden_claims": [
     "secure-boot-proven",
     "physical-usb-boot-proven",
     "public-physical-promotion-allowed",
     "qemu-required-for-end-users"
-  ]
+  ],
+  "release_manifest_schema": "prototype-ordax.release-manifest/3",
+  "surface_runtime_required": true,
+  "surface_runtime_content_addressed": true
 }

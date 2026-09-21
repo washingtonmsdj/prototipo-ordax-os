@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.portable-v2-qemu-boot-proof/1",
-  "status": "candidate-workflow-implemented",
+  "status": "runtime-v3-candidate-workflow-implemented-awaiting-current-head-proof",
   "product_scope": "stable-mvp-usb-only",
   "workflow": ".github/workflows/portable-v2-qemu-boot-proof.yml",
   "boot_mode": "direct-kernel-candidate-only",
@@ -30,7 +30,8 @@
     "bootstrap-capsule",
     "stable-base",
     "pinned-initramfs",
-    "signed-portable-release-v2",
+    "signed-portable-release-v3",
+    "content-addressed-surface-runtime-erofs",
     "bootstrap-owned-public-trust",
     "persistent-state-image-with-current-and-known-good"
   ],
@@ -39,7 +40,10 @@
     "ORDAX_PORTABLE_V2_SLOT=current",
     "ORDAX_PORTABLE_V2_SOURCE_SHA=<exact-source-commit>",
     "ORDAX_STABLE_INIT_HANDOFF=VERIFIED",
-    "ORDAX_STABLE_INIT_SOURCE_SHA=<exact-source-commit>"
+    "ORDAX_STABLE_INIT_SOURCE_SHA=<exact-source-commit>",
+    "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3",
+    "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED",
+    "ORDAX_SURFACE_RUNTIME_SHA256=<exact-runtime-sha256>"
   ],
   "required_checks": [
     "initramfs-capsule-pin-matches-staged-capsule",
@@ -55,7 +59,13 @@
     "no-physical-target-device-touched",
     "current-slot-selected",
     "portable-pid1-source-sha-is-exact-head",
-    "stable-init-source-sha-is-exact-head"
+    "stable-init-source-sha-is-exact-head",
+    "portable-release-v3-signature-system-and-runtime-hashes-verified-offline",
+    "surface-runtime-reference-matches-signed-manifest",
+    "surface-runtime-content-addressed-digest-is-exact",
+    "surface-runtime-erofs-mounted-read-only",
+    "surface-runtime-overlay-upper-is-ephemeral-run",
+    "stable-boot-does-not-install-runtime-packages"
   ],
   "promotion_effect": {
     "portable_v2_pid1_default_changed": false,
@@ -63,5 +73,6 @@
     "public_physical_promotion_allowed": false,
     "uefi_gate_still_required": true,
     "physical_usb_gate_still_required": true
-  }
+  },
+  "release_manifest_schema": "prototype-ordax.release-manifest/3"
 }

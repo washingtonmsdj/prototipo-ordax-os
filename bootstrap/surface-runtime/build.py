@@ -82,8 +82,10 @@ def load_contract() -> dict:
     artifact = value.get("artifact", {})
     if artifact.get("physical_artifact_authorized") is not False:
         raise RuntimeBuildError("Surface runtime candidate may not authorize physical use")
-    if artifact.get("portable_v2_boot_connected") is not False:
-        raise RuntimeBuildError("Surface runtime candidate may not claim boot integration")
+    if artifact.get("portable_v3_boot_handoff_candidate_connected") is not True:
+        raise RuntimeBuildError("Surface runtime candidate must be bound to the portable v3 boot handoff")
+    if artifact.get("physical_boot_connected") is not False:
+        raise RuntimeBuildError("Surface runtime candidate may not claim physical boot integration")
     return value
 
 
@@ -374,7 +376,8 @@ def build(out_dir: Path, cache_dir: Path) -> dict:
             "machine_identity_baked_into_image": False,
             "fontconfig_cache_baked_into_image": False,
             "physical_artifact_authorized": False,
-            "portable_v2_boot_connected": False,
+            "portable_v3_boot_handoff_candidate_connected": True,
+            "physical_boot_connected": False,
         }
         (out_dir / "surface-runtime-provenance.json").write_text(
             json.dumps(result, indent=2, sort_keys=True) + "\n",
@@ -412,8 +415,10 @@ def verify(out_dir: Path) -> dict:
         raise RuntimeBuildError("Surface runtime tree manifest SHA-256 differs from provenance")
     if provenance.get("physical_artifact_authorized") is not False:
         raise RuntimeBuildError("Surface runtime provenance unexpectedly authorizes physical use")
-    if provenance.get("portable_v2_boot_connected") is not False:
-        raise RuntimeBuildError("Surface runtime provenance unexpectedly claims boot integration")
+    if provenance.get("portable_v3_boot_handoff_candidate_connected") is not True:
+        raise RuntimeBuildError("Surface runtime provenance lost portable v3 handoff binding")
+    if provenance.get("physical_boot_connected") is not False:
+        raise RuntimeBuildError("Surface runtime provenance unexpectedly claims physical boot integration")
     identity = erofs_identity(image)
     if identity.get("TYPE") != "erofs" or identity.get("LABEL") != VOLUME_LABEL:
         raise RuntimeBuildError("Surface runtime EROFS filesystem identity mismatch")

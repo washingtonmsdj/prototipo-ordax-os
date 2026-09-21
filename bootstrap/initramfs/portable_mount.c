@@ -33,7 +33,8 @@ static void usage(void) {
         "  ordax-portable-mount mount-state <state.img> <state-mount>\n"
         "  ordax-portable-mount mount-capsule <bootstrap.erofs> <capsule-mount>\n"
         "  ordax-portable-mount mount-base <stable-base.erofs> <state-mount> <base-mount> <root-mount>\n"
-        "  ordax-portable-mount mount-system <system.erofs> <release-mount> <system-mount>\n",
+        "  ordax-portable-mount mount-system <system.erofs> <release-mount> <system-mount>\n"
+        "  ordax-portable-mount mount-surface-runtime <runtime.erofs> <runtime-lower> <runtime-upper> <runtime-work> <runtime-root>\n",
         stderr
     );
 }
@@ -491,6 +492,108 @@ static int mount_system(
     return 0;
 }
 
+
+static int mount_surface_runtime(
+    const char *runtime_image,
+    const char *runtime_lower,
+    const char *runtime_upper,
+    const char *runtime_work,
+    const char *runtime_root
+) {
+    if (!safe_overlay_path(runtime_lower) ||
+        !safe_overlay_path(runtime_upper) ||
+        !safe_overlay_path(runtime_work) ||
+        !safe_overlay_path(runtime_root) ||
+        !real_directory(runtime_lower) ||
+        !real_directory(runtime_upper) ||
+        !real_directory(runtime_work) ||
+        !real_directory(runtime_root) ||
+        strcmp(runtime_lower, runtime_upper) == 0 ||
+        strcmp(runtime_lower, runtime_work) == 0 ||
+        strcmp(runtime_lower, runtime_root) == 0 ||
+        strcmp(runtime_upper, runtime_work) == 0 ||
+        strcmp(runtime_upper, runtime_root) == 0 ||
+        strcmp(runtime_work, runtime_root) == 0) {
+        fputs("ordax-portable-mount: Surface runtime mount path is unsafe\n", stderr);
+        return EXIT_UNSAFE;
+    }
+
+    struct loop_binding runtime;
+    if (loop_attach(&runtime, runtime_image, 0, 0, 1) != 0) {
+        fprintf(stderr, "ordax-portable-mount: cannot attach Surface runtime EROFS: %s\n", strerror(errno));
+        return EXIT_LOOP;
+    }
+
+    unsigned long ro_flags = MS_RDONLY | MS_NODEV | MS_NOSUID;
+    if (mount(runtime.device, runtime_lower, "erofs", ro_flags, NULL) != 0) {
+        fprintf(stderr, "ordax-portable-mount: cannot mount Surface runtime EROFS: %s\n", strerror(errno));
+        loop_binding_cleanup(&runtime);
+        return EXIT_MOUNT;
+    }
+
+    static const char *required_exec[] = {
+        "usr/bin/cage",
+        "usr/bin/python3",
+        "usr/bin/Xwayland",
+        "usr/bin/seatd-launch",
+        "sbin/udevd",
+        "bin/udevadm",
+        "bin/busybox",
+    };
+    for (size_t i = 0; i < sizeof(required_exec) / sizeof(required_exec[0]); i++) {
+        if (!safe_executable_below(runtime_lower, required_exec[i])) {
+            fprintf(stderr, "ordax-portable-mount: Surface runtime lacks executable %s\n", required_exec[i]);
+            (void)umount2(runtime_lower, MNT_DETACH);
+            loop_binding_cleanup(&runtime);
+            return EXIT_UNSAFE;
+        }
+    }
+
+    static const char *required_files[] = {
+        "usr/lib/girepository-1.0/Gtk-3.0.typelib",
+        "usr/lib/girepository-1.0/WebKit2-4.1.typelib",
+        "usr/lib/udev/rules.d/60-input-id.rules",
+    };
+    for (size_t i = 0; i < sizeof(required_files) / sizeof(required_files[0]); i++) {
+        if (!safe_regular_below(runtime_lower, required_files[i])) {
+            fprintf(stderr, "ordax-portable-mount: Surface runtime lacks required file %s\n", required_files[i]);
+            (void)umount2(runtime_lower, MNT_DETACH);
+            loop_binding_cleanup(&runtime);
+            return EXIT_UNSAFE;
+        }
+    }
+
+    char options[PATH_MAX * 3];
+    int written = snprintf(
+        options,
+        sizeof(options),
+        "lowerdir=%s,upperdir=%s,workdir=%s",
+        runtime_lower,
+        runtime_upper,
+        runtime_work
+    );
+    if (written <= 0 || written >= (int)sizeof(options)) {
+        fputs("ordax-portable-mount: Surface runtime overlay paths are too long\n", stderr);
+        (void)umount2(runtime_lower, MNT_DETACH);
+        loop_binding_cleanup(&runtime);
+        return EXIT_UNSAFE;
+    }
+    if (mount("overlay", runtime_root, "overlay", MS_NODEV | MS_NOSUID, options) != 0) {
+        fprintf(stderr, "ordax-portable-mount: cannot compose ephemeral Surface runtime overlay: %s\n", strerror(errno));
+        (void)umount2(runtime_lower, MNT_DETACH);
+        loop_binding_cleanup(&runtime);
+        return EXIT_MOUNT;
+    }
+
+    runtime.attached = 0;
+    close(runtime.backing_fd);
+    close(runtime.loop_fd);
+    close(runtime.control_fd);
+    printf("ORDAX_SURFACE_RUNTIME_LOOP=%s\n", runtime.device);
+    printf("ORDAX_SURFACE_RUNTIME_ROOT=%s\n", runtime_root);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     if (argc == 4 && strcmp(argv[1], "mount-state") == 0) {
         return mount_state(argv[2], argv[3]);
@@ -503,6 +606,9 @@ int main(int argc, char **argv) {
     }
     if (argc == 5 && strcmp(argv[1], "mount-system") == 0) {
         return mount_system(argv[2], argv[3], argv[4]);
+    }
+    if (argc == 7 && strcmp(argv[1], "mount-surface-runtime") == 0) {
+        return mount_surface_runtime(argv[2], argv[3], argv[4], argv[5], argv[6]);
     }
     usage();
     return EXIT_USAGE;

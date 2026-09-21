@@ -45,6 +45,9 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
         self.assertIn('"base/stable-base.erofs"', text)
         self.assertIn('"state/persistent-state.img"', text)
         self.assertIn('"ordax/bootstrap/trust/release-ed25519.json"', text)
+        self.assertIn('"surface-runtime.sha256"', text)
+        self.assertIn('"runtimes"', text)
+        self.assertIn('"native-surface-runtime.erofs"', text)
 
     def test_harness_requires_both_handoff_markers_and_disables_network(self):
         text = SCRIPT.read_text(encoding="utf-8")
@@ -53,6 +56,9 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
         self.assertIn("ORDAX_PORTABLE_V2_SLOT=current", text)
         self.assertIn("ORDAX_PORTABLE_V2_SOURCE_SHA=", text)
         self.assertIn("ORDAX_STABLE_INIT_SOURCE_SHA=", text)
+        self.assertIn("ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3", text)
+        self.assertIn("ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED", text)
+        self.assertIn("ORDAX_SURFACE_RUNTIME_SHA256=", text)
         self.assertIn('"-net", "none"', text)
         self.assertIn('"qemu_direct_kernel_boot_proven": True', text)
         self.assertIn('"qemu_uefi_boot_proven": False', text)
@@ -101,7 +107,11 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
             "bootstrap/stable-base/build.py build",
             "bootstrap/portable-v2/capsule/build.py build",
             "tools/portable-release-image/build.py build",
-            "--manifest-schema 2",
+            "bootstrap/surface-runtime/build.py build",
+            "--manifest-schema 3",
+            "--runtime-artifact",
+            "--runtime-artifact-url",
+            "verify-portable-v3-exact",
             "release-signing",
             "--portable-bootstrap-capsule",
             "--portable-stable-base",

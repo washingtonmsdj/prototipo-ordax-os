@@ -175,8 +175,42 @@ def validate_inputs(args: argparse.Namespace) -> dict[str, Any]:
     release = portable / "releases" / args.source_commit
     if release.is_symlink() or not release.is_dir():
         raise ProofError("exact portable release directory is missing")
-    for name in ("system.erofs", "release-manifest.json", "release-envelope.json"):
+    for name in (
+        "system.erofs",
+        "surface-runtime.sha256",
+        "release-manifest.json",
+        "release-envelope.json",
+    ):
         regular(release / name, f"portable release {name}", minimum=2)
+
+    runtime_sha = (release / "surface-runtime.sha256").read_text(
+        encoding="utf-8"
+    ).strip()
+    if SHA256_RE.fullmatch(runtime_sha) is None:
+        raise ProofError("portable v3 Surface runtime reference is not lowercase SHA-256")
+    runtime = regular(
+        portable / "runtimes" / "sha256" / runtime_sha / "native-surface-runtime.erofs",
+        "portable v3 Surface runtime",
+        minimum=4096,
+    )
+    if sha256_file(runtime) != runtime_sha:
+        raise ProofError("portable v3 Surface runtime digest differs from release reference")
+
+    manifest = load_json(release / "release-manifest.json", "portable release manifest")
+    if manifest.get("$schema") != "prototype-ordax.release-manifest/3":
+        raise ProofError("QEMU proof requires a signed release-manifest/3 release")
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, list) or len(artifacts) != 2:
+        raise ProofError("portable v3 manifest artifact set is invalid")
+    runtime_artifact = artifacts[1]
+    if (
+        not isinstance(runtime_artifact, dict)
+        or runtime_artifact.get("name") != "native-surface-runtime.erofs"
+        or runtime_artifact.get("role") != "surface-runtime"
+        or runtime_artifact.get("sha256") != runtime_sha
+    ):
+        raise ProofError("portable v3 manifest runtime binding differs from materialized store")
+
     return {
         "kernel": kernel,
         "initramfs": initramfs,
@@ -185,6 +219,8 @@ def validate_inputs(args: argparse.Namespace) -> dict[str, Any]:
         "state_image": state,
         "trust": trust,
         "portable_root": portable,
+        "runtime": runtime,
+        "runtime_sha256": runtime_sha,
         "provenance": provenance,
     }
 
@@ -245,12 +281,23 @@ def stage_disk(args: argparse.Namespace, inputs: dict[str, Any], work: Path) -> 
         (internal / "base").mkdir(parents=True)
         (internal / "state").mkdir(parents=True)
         (internal / "releases").mkdir(parents=True)
+        runtime_target = (
+            internal
+            / "runtimes"
+            / "sha256"
+            / inputs["runtime_sha256"]
+        )
+        runtime_target.mkdir(parents=True)
         shutil.copyfile(inputs["stable_base"], internal / "base/stable-base.erofs")
         shutil.copyfile(inputs["state_image"], internal / "state/persistent-state.img")
         shutil.copytree(
             inputs["portable_root"] / "releases" / args.source_commit,
             internal / "releases" / args.source_commit,
             symlinks=False,
+        )
+        shutil.copyfile(
+            inputs["runtime"],
+            runtime_target / "native-surface-runtime.erofs",
         )
         os.sync()
     finally:
@@ -296,12 +343,18 @@ def boot_qemu(args: argparse.Namespace, inputs: dict[str, Any], disk: Path, work
             source_marker = "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit
             stable_source_marker = "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.source_commit
             slot_marker = "ORDAX_PORTABLE_V2_SLOT=current"
+            schema_marker = "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3"
+            runtime_marker = "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED"
+            runtime_sha_marker = "ORDAX_SURFACE_RUNTIME_SHA256=" + inputs["runtime_sha256"]
             if (
                 SUCCESS in text
                 and STABLE in text
                 and source_marker in text
                 and stable_source_marker in text
                 and slot_marker in text
+                and schema_marker in text
+                and runtime_marker in text
+                and runtime_sha_marker in text
             ):
                 process.terminate()
                 try:
@@ -317,6 +370,9 @@ def boot_qemu(args: argparse.Namespace, inputs: dict[str, Any], disk: Path, work
                     "current_slot_selected": slot_marker in text,
                     "portable_source_sha_exact": source_marker in text,
                     "stable_init_source_sha_exact": stable_source_marker in text,
+                    "portable_manifest_v3_selected": schema_marker in text,
+                    "surface_runtime_handoff_marker": runtime_marker in text,
+                    "surface_runtime_sha_exact": runtime_sha_marker in text,
                 }
                 return text, checks
             if process.poll() is not None:
@@ -357,6 +413,9 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         "current_slot_selected": False,
         "portable_source_sha_exact": False,
         "stable_init_source_sha_exact": False,
+        "portable_manifest_v3_selected": False,
+        "surface_runtime_handoff_marker": False,
+        "surface_runtime_sha_exact": False,
         "physical_target_device_untouched": True,
         "guest_disk_destroyed": False,
     }
@@ -391,6 +450,9 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
                 "ORDAX_PORTABLE_V2_SLOT=current",
                 "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit,
                 "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.source_commit,
+                "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3",
+                "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED",
+                "ORDAX_SURFACE_RUNTIME_SHA256=" + inputs["runtime_sha256"],
             ],
             "guest_disk": {
                 "sha256_before_destruction": disk_sha,
@@ -403,6 +465,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
                 "capsule_sha256": sha256_file(inputs["capsule"]),
                 "stable_base_sha256": sha256_file(inputs["stable_base"]),
                 "state_image_sha256": sha256_file(inputs["state_image"]),
+                "surface_runtime_sha256": sha256_file(inputs["runtime"]),
             },
             "checks": checks,
         }

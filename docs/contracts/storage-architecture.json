@@ -222,14 +222,17 @@
     "migration_requires-new-contract-major-and-regression-gates-before-destructive-use": true,
     "portable_usb_v2_contract": "docs/contracts/portable-usb-v2.json",
     "portable_usb_v2_disposable_storage_proof_implemented": true,
-    "portable_usb_v2_boot_handoff_implemented": false,
+    "portable_usb_v2_boot_handoff_implemented": true,
     "portable_usb_v2_physical_write_enabled": false,
     "transitional_layout_remains_active_physical_writer": true,
     "portable_release_image_contract": "docs/contracts/portable-release-image.json",
     "portable_release_image_candidate_implemented": true,
-    "portable_release_protocol_v2_implemented": false,
+    "portable_release_protocol_v2_implemented": true,
     "portable_usb_v2_mount_handoff_contract": "docs/contracts/portable-boot-handoff.json",
-    "portable_usb_v2_mount_handoff_disposable_proof_implemented": true
+    "portable_usb_v2_mount_handoff_disposable_proof_implemented": true,
+    "portable_release_protocol_v3_implemented": true,
+    "portable_surface_runtime_v3_boot_handoff_implemented": true,
+    "public_physical_promotion_allowed": false
   },
   "portable_usb_v2_activation_state": {
     "owner": "ext4-persistent-state-image",

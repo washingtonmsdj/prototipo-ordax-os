@@ -194,27 +194,35 @@ ORDAX-ESP   FAT32
 ORDAX-DATA  exFAT
   -> .ordax/base/stable-base.erofs
   -> .ordax/releases/<commit>/system.erofs
+  -> .ordax/releases/<commit>/surface-runtime.sha256
+  -> .ordax/runtimes/sha256/<runtime-sha256>/native-surface-runtime.erofs
   -> .ordax/state/persistent-state.img   # ext4-in-file
 ```
 
-Mutable activation authority (`current`, `known-good`, `candidate`) lives inside the ext4 persistent-state image, never as a mutable exFAT symlink/pointer. The product release is a signed `release-manifest/2` EROFS image; the Stable Base is a separate immutable minimal OS EROFS. The fixed initramfs contains candidate helpers for exact release selection, EROFS/ext4/OverlayFS handoff, capsule/Base SHA-256 verification and a non-default portable PID1.
+Mutable activation authority (`current`, `known-good`, `candidate`) lives inside the ext4 persistent-state image, never as a mutable exFAT symlink/pointer. Portable v2 remains a compatibility release shape; the current Stable/MVP candidate uses signed `release-manifest/3`, binding both `system.erofs` and the content-addressed Surface runtime. The Stable Base remains a separate immutable minimal OS EROFS. The fixed initramfs candidate owns exact release selection, capsule/Base verification, system/runtime EROFS mounts and the read-only-to-ephemeral OverlayFS handoff; signature authority remains in the bootstrap-owned release agent.
 
 ```text
 PORTABLE_USB_V2_STORAGE_PROOF=PASS_CI_DISPOSABLE
 PORTABLE_RELEASE_EROFS_REPRODUCIBLE=PASS_CI
-PORTABLE_RELEASE_MANIFEST_V2_SIGN_VERIFY=PASS_CI
-PORTABLE_RELEASE_OFFLINE_EXACT_VERIFY=PASS_CI
+PORTABLE_RELEASE_MANIFEST_V2_SIGN_VERIFY=PASS_CI_COMPATIBILITY
+PORTABLE_RELEASE_MANIFEST_V3_SIGN_VERIFY=PASS_CI
+PORTABLE_RELEASE_V3_CONTENT_ADDRESSED_RUNTIME=PASS_CI
+PORTABLE_RELEASE_OFFLINE_EXACT_VERIFY=PASS_CI_V2_AND_V3
 PORTABLE_MOUNT_HANDOFF_PROOF=PASS_CI_DISPOSABLE
 PORTABLE_BOOTSTRAP_CAPSULE_REPRODUCIBLE=PASS_CI
 PORTABLE_INITRAMFS_HELPERS=PASS_CI
 PORTABLE_SURFACE_RUNTIME_APK_LOCK=PASS_CI_253_EXACT_PACKAGES
 PORTABLE_SURFACE_RUNTIME_EROFS_REPRODUCIBLE=PASS_CI
 PORTABLE_SURFACE_RUNTIME_EROFS_SHA256=170d306b38cfdbadba47a7548a6757a920ceaedea98697270aaa8ca4f4d8d038
-PORTABLE_SURFACE_RUNTIME_BOOT_CONNECTED=NO
-PORTABLE_STABLE_FIRST_SURFACE_OFFLINE_PROVEN=NO
-PORTABLE_PINNED_INITRAMFS_COMPOSITION=PASS_CI
-PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PASS_CI
-PORTABLE_QEMU_UEFI_BOOT=PASS_CI_OVMF_NON_SECURE_BOOT
+PORTABLE_SURFACE_RUNTIME_BOOT_CONNECTED=YES_CANDIDATE_IMPLEMENTED
+PORTABLE_STABLE_FIRST_SURFACE_OFFLINE_PROVEN=PENDING_CURRENT_HEAD_QEMU_UEFI
+PORTABLE_STABLE_BOOT_APK_INSTALL_ALLOWED=NO
+PORTABLE_SURFACE_RUNTIME_EPHEMERAL_OVERLAY=/run
+PORTABLE_PINNED_INITRAMFS_COMPOSITION=PASS_CI_V2_BASELINE
+PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PASS_CI_V2_BASELINE
+PORTABLE_QEMU_UEFI_BOOT=PASS_CI_V2_BASELINE_OVMF_NON_SECURE_BOOT
+PORTABLE_RUNTIME_V3_QEMU_DIRECT_KERNEL_BOOT=PENDING_CURRENT_HEAD
+PORTABLE_RUNTIME_V3_QEMU_UEFI_BOOT=PENDING_CURRENT_HEAD
 PORTABLE_QEMU_NETWORK_REQUIRED=NO
 PORTABLE_QEMU_PHYSICAL_TARGET_TOUCHED=NO
 PORTABLE_QEMU_SECURE_BOOT=NO
@@ -222,7 +230,7 @@ PORTABLE_PHYSICAL_USB_BOOT=NO
 PORTABLE_V2_PUBLIC_WRITER_ENABLED=NO
 ```
 
-The offline Stable/MVP graphical runtime is now a separate candidate EROFS artifact with a full 253-package Alpine lock and repeat-digest proof. It deliberately excludes generated machine identity and Fontconfig caches from signed bytes. The artifact is **not yet connected to the Portable v2 boot/runtime handoff** and therefore does not yet prove that a fresh Stable USB reaches the Surface with networking disabled.
+The offline Stable/MVP graphical runtime is a separate EROFS artifact with a full 253-package Alpine lock and repeat-digest proof. It deliberately excludes generated machine identity and Fontconfig caches from signed bytes. Release-manifest/3 now binds that runtime by SHA-256, Creator preseeds the content-addressed bytes, the candidate PID1 re-verifies v3 offline and mounts the runtime read-only beneath an ephemeral OverlayFS in `/run`, and the Stable launcher refuses boot-time `apk add` provisioning. **The implementation is connected; the fresh-USB graphical boot claim remains pending until the current-head QEMU/UEFI proof passes.**
 
 Portable v2 itself has now crossed the CI boot-handoff gate with the final two-partition layout: the direct-kernel QEMU proof and the UEFI/OVMF + systemd-boot proof both reached `ORDAX_PORTABLE_V2_HANDOFF=VERIFIED` and `ORDAX_STABLE_INIT_HANDOFF=VERIFIED`, selected the exact `current` slot/source identity, ran with QEMU networking disabled, destroyed disposable guest state afterward and did not touch a physical target device. The UEFI proof uses non-Secure-Boot OVMF; **Secure Boot and physical USB boot remain unproven**.
 

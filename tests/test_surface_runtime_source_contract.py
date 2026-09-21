@@ -22,8 +22,18 @@ class SurfaceRuntimeSourceContractTests(unittest.TestCase):
         self.assertEqual(contract["apk_package_lock_count"], len(contract["apk_package_lock"]))
         self.assertEqual(contract["apk_package_lock_count"], 253)
         self.assertFalse(contract["artifact"]["physical_artifact_authorized"])
-        self.assertFalse(contract["artifact"]["portable_v2_boot_connected"])
-        self.assertIn("prove-stable-first-surface-boot-with-network-disabled", contract["promotion_blockers"])
+        self.assertTrue(
+            contract["artifact"]["portable_v3_boot_handoff_candidate_connected"]
+        )
+        self.assertFalse(contract["artifact"]["physical_boot_connected"])
+        self.assertEqual(
+            contract["artifact"]["release_manifest_schema"],
+            "prototype-ordax.release-manifest/3",
+        )
+        self.assertIn(
+            "prove-stable-first-surface-boot-with-network-disabled-on-current-head",
+            contract["promotion_blockers"],
+        )
 
     def test_candidate_reuses_exact_stable_base_alpine_identity(self):
         contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
@@ -37,7 +47,8 @@ class SurfaceRuntimeSourceContractTests(unittest.TestCase):
         self.assertIn("resolved package lock differs from committed candidate lock", text)
         self.assertIn('"physical_artifact_created": False', text)
         self.assertIn('"physical_write_authorized": False', text)
-        self.assertIn('"portable_v2_boot_connected": False', text)
+        self.assertIn('"portable_v3_boot_handoff_candidate_connected": True', text)
+        self.assertIn('"physical_boot_connected": False', text)
         self.assertNotIn("/dev/sd", text)
         self.assertNotIn("/dev/nvme", text)
 
@@ -48,7 +59,8 @@ class SurfaceRuntimeSourceContractTests(unittest.TestCase):
         self.assertIn('apk_package_versions_pinned") is not True', text)
         self.assertIn("Surface runtime cannot build before reviewed APK lock is committed", text)
         self.assertIn('"physical_artifact_authorized": False', text)
-        self.assertIn('"portable_v2_boot_connected": False', text)
+        self.assertIn('"portable_v3_boot_handoff_candidate_connected": True', text)
+        self.assertIn('"physical_boot_connected": False', text)
 
 
     def test_immutable_runtime_excludes_device_identity_and_derived_font_cache(self):

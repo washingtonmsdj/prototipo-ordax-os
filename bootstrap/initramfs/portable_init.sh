@@ -18,6 +18,11 @@ STATE_IMAGE="$DATA_MOUNT/.ordax/state/persistent-state.img"
 STABLE_BASE_IMAGE="$DATA_MOUNT/.ordax/base/stable-base.erofs"
 PORTABLE_ROOT="$DATA_MOUNT/.ordax"
 
+SURFACE_RUNTIME_LOWER=/run/ordax/lower/surface-runtime
+SURFACE_RUNTIME_UPPER=/run/ordax/runtime/native-surface/upper
+SURFACE_RUNTIME_WORK=/run/ordax/runtime/native-surface/work
+SURFACE_RUNTIME_ROOT=/run/ordax/runtime/native-surface/rootfs
+
 rescue() {
     echo "ordax-portable-init: entering local read-only recovery shell: $*" >&2
     echo "No network or automatic mutation is started from this recovery path." >&2
@@ -32,7 +37,18 @@ is_sha() {
     esac
 }
 
-mkdir -p /proc /sys /dev /run "$ESP_MOUNT" "$DATA_MOUNT"     "$STATE_MOUNT" "$CAPSULE_MOUNT" "$BASE_MOUNT" "$RELEASE_MOUNT" "$NEWROOT"
+is_sha256() {
+    value=${1:-}
+    [ "${#value}" -eq 64 ] || return 1
+    case "$value" in
+        ''|*[!0-9a-f]*) return 1 ;;
+    esac
+}
+
+mkdir -p \
+    /proc /sys /dev /run \
+    "$ESP_MOUNT" "$DATA_MOUNT" "$STATE_MOUNT" "$CAPSULE_MOUNT" \
+    "$BASE_MOUNT" "$RELEASE_MOUNT" "$NEWROOT"
 mount -t proc proc /proc || rescue "cannot mount /proc"
 mount -t sysfs sysfs /sys || rescue "cannot mount /sys"
 mount -t devtmpfs devtmpfs /dev || rescue "cannot mount /dev"
@@ -78,18 +94,48 @@ mount -t exfat -o rw,nodev,nosuid "$DATA_DEVICE" "$DATA_MOUNT" ||
     rescue "cannot mount persistent ext4 state"
 
 AGENT="$CAPSULE_MOUNT/bootstrap/release-acquisition/ordax-release-agent"
-cat "$AGENT" >/dev/null 2>&1 || rescue "release agent is missing from verified capsule"
-cat "$TRUST_ANCHOR" >/dev/null 2>&1 || rescue "bootstrap-owned release trust anchor is missing"
+cat "$AGENT" >/dev/null 2>&1 ||
+    rescue "release agent is missing from verified capsule"
+cat "$TRUST_ANCHOR" >/dev/null 2>&1 ||
+    rescue "bootstrap-owned release trust anchor is missing"
 
 SELECTED_SLOT=
 SELECTED_COMMIT=
+SELECTED_MANIFEST_SCHEMA=
+SELECTED_SURFACE_RUNTIME_SHA256=
+
 select_verified_release() {
     for slot in current known-good; do
         commit="$(/sbin/ordax-portable-state resolve "$STATE_MOUNT" "$PORTABLE_ROOT" "$slot" 2>/dev/null || true)"
         is_sha "$commit" || continue
-        if "$AGENT" verify-portable-exact             --trust "$TRUST_ANCHOR"             --root "$PORTABLE_ROOT"             --expected-commit "$commit"             >"/run/portable-release-verify.json"; then
+
+        if "$AGENT" verify-portable-v3-exact \
+            --trust "$TRUST_ANCHOR" \
+            --root "$PORTABLE_ROOT" \
+            --expected-commit "$commit" \
+            >"/run/portable-release-verify.json" 2>/dev/null; then
+            runtime_ref="$PORTABLE_ROOT/releases/$commit/surface-runtime.sha256"
+            runtime_sha="$(cat "$runtime_ref" 2>/dev/null || true)"
+            is_sha256 "$runtime_sha" || continue
+            runtime_image="$PORTABLE_ROOT/runtimes/sha256/$runtime_sha/native-surface-runtime.erofs"
+            [ -f "$runtime_image" ] || continue
+
             SELECTED_SLOT=$slot
             SELECTED_COMMIT=$commit
+            SELECTED_MANIFEST_SCHEMA=3
+            SELECTED_SURFACE_RUNTIME_SHA256=$runtime_sha
+            return 0
+        fi
+
+        if "$AGENT" verify-portable-exact \
+            --trust "$TRUST_ANCHOR" \
+            --root "$PORTABLE_ROOT" \
+            --expected-commit "$commit" \
+            >"/run/portable-release-verify.json" 2>/dev/null; then
+            SELECTED_SLOT=$slot
+            SELECTED_COMMIT=$commit
+            SELECTED_MANIFEST_SCHEMA=2
+            SELECTED_SURFACE_RUNTIME_SHA256=
             return 0
         fi
     done
@@ -99,18 +145,51 @@ select_verified_release() {
 select_verified_release ||
     rescue "neither current nor known-good is an exactly verified signed release"
 
+if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ]; then
+    SURFACE_RUNTIME_IMAGE="$PORTABLE_ROOT/runtimes/sha256/$SELECTED_SURFACE_RUNTIME_SHA256/native-surface-runtime.erofs"
+    mkdir -p \
+        "$SURFACE_RUNTIME_LOWER" \
+        "$SURFACE_RUNTIME_UPPER" \
+        "$SURFACE_RUNTIME_WORK" \
+        "$SURFACE_RUNTIME_ROOT"
+    /sbin/ordax-portable-mount mount-surface-runtime \
+        "$SURFACE_RUNTIME_IMAGE" \
+        "$SURFACE_RUNTIME_LOWER" \
+        "$SURFACE_RUNTIME_UPPER" \
+        "$SURFACE_RUNTIME_WORK" \
+        "$SURFACE_RUNTIME_ROOT" ||
+        rescue "cannot compose exactly verified Surface runtime"
+fi
+
 mkdir -p "$BASE_MOUNT" "$NEWROOT" "$RELEASE_MOUNT"
-/sbin/ordax-portable-mount mount-base     "$STABLE_BASE_IMAGE" "$STATE_MOUNT" "$BASE_MOUNT" "$NEWROOT" ||
+/sbin/ordax-portable-mount mount-base \
+    "$STABLE_BASE_IMAGE" "$STATE_MOUNT" "$BASE_MOUNT" "$NEWROOT" ||
     rescue "cannot compose verified Stable Base runtime"
 
 mkdir -p "$NEWROOT/system"
-/sbin/ordax-portable-mount mount-system     "$PORTABLE_ROOT/releases/$SELECTED_COMMIT/system.erofs"     "$RELEASE_MOUNT"     "$NEWROOT/system" ||
+/sbin/ordax-portable-mount mount-system \
+    "$PORTABLE_ROOT/releases/$SELECTED_COMMIT/system.erofs" \
+    "$RELEASE_MOUNT" \
+    "$NEWROOT/system" ||
     rescue "cannot mount exactly verified product system release"
 
-mkdir -p     "$NEWROOT/proc"     "$NEWROOT/sys"     "$NEWROOT/dev"     "$NEWROOT/run"     "$NEWROOT/state"     "$NEWROOT/ordax-data"     "$NEWROOT/ordax-esp"     "$NEWROOT/ordax/bootstrap"
+mkdir -p \
+    "$NEWROOT/proc" \
+    "$NEWROOT/sys" \
+    "$NEWROOT/dev" \
+    "$NEWROOT/run" \
+    "$NEWROOT/state" \
+    "$NEWROOT/ordax-data" \
+    "$NEWROOT/ordax-esp" \
+    "$NEWROOT/ordax/bootstrap"
 
-mount --move /run "$NEWROOT/run" || rescue "cannot move /run into Stable Base"
-mkdir -p     "$NEWROOT/run/ordax/lower/base"     "$NEWROOT/run/ordax/lower/release"     "$NEWROOT/run/ordax/lower/capsule"
+mount --move /run "$NEWROOT/run" ||
+    rescue "cannot move /run into Stable Base"
+
+mkdir -p \
+    "$NEWROOT/run/ordax/lower/base" \
+    "$NEWROOT/run/ordax/lower/release" \
+    "$NEWROOT/run/ordax/lower/capsule"
 
 mount --move "$BASE_MOUNT" "$NEWROOT/run/ordax/lower/base" ||
     rescue "cannot retain Stable Base lower mount"
@@ -139,9 +218,21 @@ export ORDAX_PRODUCT_MODE=usb
 export ORDAX_STABLE_LAYOUT=portable-v2
 export ORDAX_SOURCE_SHA="$SELECTED_COMMIT"
 export ORDAX_BOOT_SLOT="$SELECTED_SLOT"
+export ORDAX_RELEASE_MANIFEST_SCHEMA="$SELECTED_MANIFEST_SCHEMA"
+
+if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ]; then
+    export ORDAX_SURFACE_RUNTIME_MODE=verified-erofs-overlay
+    export ORDAX_SURFACE_RUNTIME_ROOT=/run/ordax/runtime/native-surface/rootfs
+    export ORDAX_SURFACE_RUNTIME_SHA256="$SELECTED_SURFACE_RUNTIME_SHA256"
+fi
 
 echo "ORDAX_PORTABLE_V2_HANDOFF=VERIFIED"
 echo "ORDAX_PORTABLE_V2_SLOT=$SELECTED_SLOT"
 echo "ORDAX_PORTABLE_V2_SOURCE_SHA=$SELECTED_COMMIT"
+echo "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=$SELECTED_MANIFEST_SCHEMA"
+if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ]; then
+    echo "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED"
+    echo "ORDAX_SURFACE_RUNTIME_SHA256=$SELECTED_SURFACE_RUNTIME_SHA256"
+fi
 
 exec switch_root "$NEWROOT" /sbin/ordax-stable-init

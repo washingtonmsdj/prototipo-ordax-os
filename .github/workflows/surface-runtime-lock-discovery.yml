@@ -55,7 +55,8 @@ jobs:
           assert result['first_boot_offline_required'] is True
           assert result['physical_artifact_created'] is False
           assert result['physical_write_authorized'] is False
-          assert result['portable_v2_boot_connected'] is False
+          assert result['portable_v3_boot_handoff_candidate_connected'] is True
+          assert result['physical_boot_connected'] is False
           assert result['resolved_package_count'] == len(result['apk_package_lock'])
           assert result['resolved_package_count'] >= len(result['requested_packages'])
           print('SURFACE_RUNTIME_PINNED_LOCK=PASS')
@@ -133,7 +134,8 @@ jobs:
           assert a['fontconfig_cache_baked_into_image'] is False
           assert b['fontconfig_cache_baked_into_image'] is False
           assert a['physical_artifact_authorized'] is False
-          assert a['portable_v2_boot_connected'] is False
+          assert a['portable_v3_boot_handoff_candidate_connected'] is True
+          assert a['physical_boot_connected'] is False
           PY
 
           sha_a="$(sha256sum "$a" | awk '{print $1}')"

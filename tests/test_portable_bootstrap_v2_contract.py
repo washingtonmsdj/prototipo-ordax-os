@@ -22,8 +22,25 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         self.assertFalse(first["network_required"])
         self.assertTrue(first["offline_capable_required"])
         self.assertTrue(first["creator_must_preseed_verified_release"])
-        self.assertEqual(first["release_schema"], "prototype-ordax.release-manifest/2")
-        self.assertEqual(first["release_artifact"], "system.erofs")
+        self.assertEqual(first["release_schema"], "prototype-ordax.release-manifest/3")
+        self.assertEqual(
+            first["compatible_release_schemas"],
+            [
+                "prototype-ordax.release-manifest/2",
+                "prototype-ordax.release-manifest/3",
+            ],
+        )
+        self.assertEqual(
+            first["release_artifacts"],
+            ["system.erofs", "native-surface-runtime.erofs"],
+        )
+        self.assertTrue(first["surface_runtime_content_addressed"])
+        self.assertEqual(
+            first["surface_runtime_ephemeral_overlay"],
+            "/run/ordax/runtime/native-surface/rootfs",
+        )
+        self.assertFalse(first["stable_boot_package_download_allowed"])
+        self.assertFalse(first["stable_boot_package_install_allowed"])
         self.assertTrue(first["initial_current_equals_known_good"])
         self.assertTrue(first["initial_candidate_absent"])
         self.assertTrue(first["initial_transaction_absent"])
@@ -45,9 +62,10 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         self.assertTrue(capsule["initramfs_hash_pin_implemented"])
         self.assertTrue(capsule["initramfs_hash_pin_candidate_only"])
         self.assertFalse(capsule["initramfs_hash_pin_default_candidate_build_enabled"])
-        self.assertFalse(capsule["pid1_hash_enforcement_implemented"])
-        self.assertFalse(capsule["pid1_verified_mount_implemented"])
-        self.assertFalse(capsule["implemented"])
+        self.assertTrue(capsule["pid1_hash_enforcement_implemented"])
+        self.assertTrue(capsule["pid1_verified_mount_implemented"])
+        self.assertTrue(capsule["implemented"])
+        self.assertTrue(capsule["hash_verification_helper_pid1_connected"])
 
     def test_release_trust_is_bootstrap_owned_and_private_key_never_on_media(self):
         trust = CONTRACT["release_trust"]
@@ -71,13 +89,13 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         self.assertFalse(CONTRACT["physical_write_authorized"])
         self.assertFalse(CONTRACT["physical_boot_proven"])
 
-    def test_initramfs_helpers_are_installed_but_not_pid1_connected(self):
+    def test_initramfs_helpers_are_connected_to_candidate_pid1_without_extra_authority(self):
         helpers = CONTRACT["initramfs_helpers"]
         state = helpers["portable_state_reader"]
         mount = helpers["portable_mount_helper"]
         self.assertTrue(state["installed"])
         self.assertTrue(state["read_only"])
-        self.assertFalse(state["pid1_connected"])
+        self.assertTrue(state["pid1_connected"])
         self.assertTrue(mount["installed"])
         self.assertTrue(mount["mounts_state_ext4"])
         self.assertTrue(mount["mounts_release_erofs_read_only"])
@@ -87,7 +105,10 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         self.assertFalse(mount["selects_release"])
         self.assertFalse(mount["verifies_signature"])
         self.assertFalse(mount["writes_activation_state"])
-        self.assertFalse(mount["pid1_connected"])
+        self.assertTrue(mount["pid1_connected"])
+        self.assertTrue(mount["mounts_surface_runtime_erofs_read_only"])
+        self.assertEqual(mount["surface_runtime_view"], "overlayfs-ephemeral-run")
+        self.assertFalse(mount["surface_runtime_persistent_upper"])
 
     def test_boot_sequence_mounts_stable_base_before_immutable_system(self):
         sequence = CONTRACT["boot_sequence_target"]
@@ -95,11 +116,17 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
             "mount-stable-base-erofs-read-only-and-compose-base-overlay-with-ext4-upper-work"
         )
         system = sequence.index("mount-selected-system-erofs-read-only")
+        runtime = sequence.index(
+            "mount-selected-surface-runtime-erofs-read-only-and-compose-ephemeral-overlay"
+        )
         bind = sequence.index("bind-verified-system-subtree-read-only")
         switch_root = sequence.index("switch-root-into-stable-base-overlay")
-        launch = sequence.index("launch-ordax-stable-init-with-portable-v2-identity")
+        launch = sequence.index(
+            "launch-ordax-stable-init-with-verified-portable-release-and-surface-runtime-identity"
+        )
         self.assertLess(base, system)
-        self.assertLess(system, bind)
+        self.assertLess(system, runtime)
+        self.assertLess(runtime, bind)
         self.assertLess(bind, switch_root)
         self.assertLess(switch_root, launch)
         self.assertNotIn("compose-system-overlay-with-ext4-upper-work", sequence)
@@ -109,7 +136,7 @@ class PortableBootstrapV2ContractTests(unittest.TestCase):
         self.assertTrue(migration["transitional_minimal_bootstrap_contract_unchanged"])
         self.assertTrue(migration["transitional_three_partition_writer_unchanged"])
         self.assertFalse(migration["portable_v2_writer_migration_implemented"])
-        self.assertFalse(migration["portable_v2_pid1_integration_implemented"])
+        self.assertTrue(migration["portable_v2_pid1_integration_implemented"])
         self.assertFalse(migration["public_physical_promotion_allowed"])
         self.assertEqual(TRANSITIONAL["policy"], "minimum-release-acquisition-first")
         self.assertTrue(TRANSITIONAL["boot_policy"]["first_release_requires_network"])

@@ -208,23 +208,27 @@ Estado atual do caminho v2:
 
 - storage `ORDAX-ESP + ORDAX-DATA`: prova descartável verde;
 - release `system.erofs`: determinística e byte-reprodutível em CI;
-- `release-manifest/2`: generator + signer + verifier implementados;
+- `release-manifest/2`: compatibilidade preservada;
+- `release-manifest/3`: generator + signer + verifier + aquisição não-ativante implementados e verdes em CI, com `system.erofs` + `native-surface-runtime.erofs`;
+- runtime gráfico v3: armazenamento content-addressed por SHA-256 e reuso de bytes verificados entre releases implementados;
 - materialização portátil: implementada sem ativação implícita;
-- revalidação offline exata da release assinada: implementada;
+- revalidação offline exata da release assinada: implementada para v2 e v3;
 - mount EROFS + estado ext4 + runtime system read-only: prova descartável verde;
-- helper de mount portátil dentro do initramfs: implementado, ainda desconectado do PID1;
+- helper de mount portátil dentro do initramfs: conectado ao PID1 candidato; continua sem autoridade de assinatura/ativação própria;
 - leitura de estado `current/known-good/candidate`: implementada no initramfs;
-- seleção read-only `current -> known-good`: implementada como helper e permanece desconectada do PID1 até os gates de boot;
-- bootstrap capsule EROFS: candidata determinística e reprodutível;
-- pin SHA-256 da bootstrap capsule dentro de initramfs candidato: implementado/provado, mas ainda não enforced pelo PID1;
-- Stable Base EROFS: Alpine e conjunto APK transitivo pinados; builder candidato verificável; integração final de boot continua em gate QEMU/UEFI/físico;
-- runtime gráfico offline: lock exato de 253 pacotes e EROFS byte-reprodutível provados em CI; artifact ainda não conectado ao handoff Portable v2;
+- seleção read-only `current -> known-good`: conectada ao PID1 candidato; `candidate` continua sem autoridade de boot;
+- bootstrap capsule EROFS: determinística, reprodutível, pinada e verificada pelo PID1 candidato;
+- Stable Base EROFS: Alpine e conjunto APK transitivo pinados; handoff QEMU/UEFI v2-base já provado em CI, prova física ainda pendente;
+- runtime gráfico offline: lock exato de 253 pacotes e EROFS byte-reprodutível provados em CI; handoff v3, preseed Creator e launcher Stable offline já implementados no candidato atual;
+- Stable/MVP não instala nem atualiza o runtime gráfico via `apk add` durante o boot; o runtime assinado usa EROFS read-only + OverlayFS efêmero em `/run`;
+- prova QEMU/UEFI do **head atual com runtime v3**: pendente; não confundir com a prova v2-base já verde;
 - writer físico v2: desativado;
-- boot físico v2: não provado;
+- boot físico v2/v3: não provado;
+- Secure Boot: não provado;
 - canonical release trust público: pendente;
 - Native continua fora do MVP.
 
-A mídia transitória atual continua apenas como caminho de validação de hardware até que o v2 tenha **Stable Base reproduzível, trust canônico, PID1 v2, current/known-good, recovery, QEMU boot e prova física**. Não habilitar o writer v2 antes desses gates.
+A mídia transitória atual continua apenas como caminho de validação de hardware. Não habilitar o writer público antes de **trust canônico, prova QEMU/UEFI do runtime v3 no head final e prova física do USB Stable/MVP**.
 
 ## 9. Site público e rotas
 
