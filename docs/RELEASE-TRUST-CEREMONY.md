@@ -1,6 +1,6 @@
 # Canonical Release Trust Ceremony
 
-Status: LOCAL KEY GENERATED — CRYPTOGRAPHIC RECOVERY VERIFIED — EXTERNAL OFFLINE BACKUP PENDING — PUBLIC ANCHOR NOT PINNED
+Status: LOCAL KEY GENERATED — CRYPTOGRAPHIC RECOVERY VERIFIED — PUBLIC ANCHOR PINNED — PHYSICAL WRITE STILL BLOCKED
 
 This ceremony exists so the first physical OrdaX prototype can be created without Codex, without committing a private key, and without inventing a CI-only trust anchor.
 
@@ -18,11 +18,11 @@ CANONICAL_KEY_MATERIAL_GENERATED=YES
 PUBLIC_TRUST_DERIVATION_MATCH=PASS
 PROOF_SIGNATURE_CREATED=YES
 OFFLINE_RECOVERY_VERIFIED=YES
-PUBLIC_ANCHOR_PINNED=NO
+PUBLIC_ANCHOR_PINNED=YES
 PHYSICAL_WRITE_ALLOWED=NO
 ```
 
-No private PEM bytes, private-key hash, backup secret, recovery password or private-key path are recorded in source. The cryptographic recovery proof is verified. The encrypted archive used for this test was still on the same host, so independent external/offline custody remains pending before repository policy considers the public anchor ready to pin.
+No private PEM bytes, private-key hash, backup secret, recovery password or private-key path are recorded in source. The cryptographic recovery proof is verified and the reviewed public handoff has now been pinned into the repository. The encrypted archive used for this test was still on the same host, so independent external/offline custody remains deferred and must be completed before broad public distribution; it no longer blocks this controlled prototype trust pin.
 
 ## Boundary
 
