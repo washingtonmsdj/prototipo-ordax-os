@@ -7,12 +7,27 @@ on:
       - 'bootstrap/trust/**'
       - 'docs/contracts/minimal-bootstrap.json'
       - 'docs/contracts/release-trust-policy.json'
-      - 'docs/contracts/physical-media.json'
+      - 'docs/contracts/portable-usb-v2.json'
+      - 'docs/contracts/creator-portable-media-plan.json'
       - 'docs/contracts/physical-write-authorization.json'
       - 'tools/creator/physical_promotion.py'
-      - 'tools/creator/assemble.py'
       - 'tools/creator/core/**'
-      - 'tools/creator/proof/**'
+      - 'tools/creator/host/windows/**'
+      - 'tools/creator/cmd/ordax-creator-physical-test/**'
+      - 'tools/creator/physicalchannel/**'
+      - 'tools/release-signing/cmd/ordax-physical-release-signing/**'
+      - '.github/workflows/physical-write-promotion.yml'
+  pull_request:
+    paths:
+      - 'bootstrap/trust/**'
+      - 'docs/contracts/minimal-bootstrap.json'
+      - 'docs/contracts/release-trust-policy.json'
+      - 'docs/contracts/portable-usb-v2.json'
+      - 'docs/contracts/creator-portable-media-plan.json'
+      - 'docs/contracts/physical-write-authorization.json'
+      - 'tools/creator/physical_promotion.py'
+      - 'tools/creator/core/**'
+      - 'tools/creator/host/windows/**'
       - 'tools/creator/cmd/ordax-creator-physical-test/**'
       - 'tools/creator/physicalchannel/**'
       - 'tools/release-signing/cmd/ordax-physical-release-signing/**'
@@ -46,7 +61,9 @@ jobs:
           ready="$(python - "$status" <<'PY'
           import json, pathlib, sys
           data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
-          assert data['$schema'] == 'prototype-ordax.physical-promotion-status/1'
+          assert data['$schema'] == 'prototype-ordax.physical-promotion-status/2'
+          assert data['legacy_physical_media_contract_authoritative'] is False
+          assert data['portable_layout_authority'] == 'tools/creator/core/portable_media.go'
           assert data['consumer_key_setup_required'] is False
           assert data['development_channel_can_authorize_write'] is False
           assert isinstance(data['release_sequence'], int) and data['release_sequence'] > 0
@@ -95,130 +112,69 @@ jobs:
           (cd tools/creator && go test -count=1 ./physicalchannel)
           (cd tools/release-signing && go test -count=1 ./cmd/ordax-physical-release-signing)
 
-      - name: Install bounded bootstrap image dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            gcc gcc-13 make bc perl bison flex openssl libssl-dev libelf-dev \
-            dwarves kmod xz-utils pkg-config musl-tools binutils bzip2 \
-            meson ninja-build gperf libcap-dev libmount-dev libblkid-dev \
-            liblz4-dev libzstd-dev liblzma-dev libpcre2-dev \
-            gdisk dosfstools e2fsprogs mtools util-linux
-          python -m pip install --disable-pip-version-check --no-cache-dir jinja2 pyelftools
-
-      - name: Build canonical bootstrap owners
-        env:
-          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          python boot/esp/build.py check
-          python boot/esp/build.py build
-          python boot/esp/build.py verify
-          python bootstrap/kernel/build.py check
-          python bootstrap/kernel/build.py build --jobs 4
-          python bootstrap/kernel/verify.py out/kernel
-          python bootstrap/initramfs/build.py check
-          python bootstrap/initramfs/build.py build --jobs 4
-          python bootstrap/initramfs/build.py verify
-          python bootstrap/network/build.py check
-          python bootstrap/network/build.py build --jobs 4
-          python bootstrap/network/build.py verify
-          (
-            cd bootstrap/release-acquisition
-            go test -count=1 ./...
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-              go build -trimpath -buildvcs=false -ldflags='-s -w' \
-              -o ../../out/release-acquisition/ordax-release-agent .
-          )
-
-      - name: Assemble and verify canonical payload
-        run: |
-          set -euo pipefail
-          payload="$RUNNER_TEMP/physical-payload"
-          stage="$RUNNER_TEMP/physical-stage"
-          python tools/creator/assemble.py build --out-dir "$payload"
-          python tools/creator/assemble.py verify --payload-root "$payload"
-          pushd tools/creator >/dev/null
-          go run ./cmd/ordax-creator verify-payload \
-            --manifest ../../docs/contracts/minimal-bootstrap.json \
-            --payload-root "$payload"
-          go run ./cmd/ordax-creator stage-tree \
-            --manifest ../../docs/contracts/minimal-bootstrap.json \
-            --payload-root "$payload" \
-            --output-root "$stage"
-          popd >/dev/null
-          echo "$stage" > "$RUNNER_TEMP/physical-stage-path"
-
-      - name: Materialize and verify exact seed bytes using proof-only media builder
-        run: |
-          set -euo pipefail
-          stage="$(cat "$RUNNER_TEMP/physical-stage-path")"
-          proof="$RUNNER_TEMP/physical-seed-proof"
-          python tools/creator/proof/disposable_media.py \
-            --contract docs/contracts/physical-media.json \
-            --stage-root "$stage" \
-            --output-root "$proof"
-          python - "$proof/proof.json" <<'PY'
-          import json, pathlib, sys
-          proof = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
-          assert proof['status'] == 'pass'
-          assert proof['physical_write_authorized'] is False
-          assert all(proof['checks'].values())
-          PY
-          echo "$proof/ordax-disposable.raw" > "$RUNNER_TEMP/physical-seed-path"
-
-      - name: Bind raw writer to canonical trust manifest and generated seed
+      - name: Bind Portable writer to canonical trust and final policy contracts
         shell: bash
         run: |
           set -euo pipefail
-          seed="$(cat "$RUNNER_TEMP/physical-seed-path")"
           out="$GITHUB_WORKSPACE/out/physical-write-candidate"
           mkdir -p "$out"
-          trust_sha="$(sha256sum bootstrap/trust/release-ed25519.json | cut -d' ' -f1)"
-          manifest_sha="$(sha256sum docs/contracts/minimal-bootstrap.json | cut -d' ' -f1)"
-          media_sha="$(sha256sum docs/contracts/physical-media.json | cut -d' ' -f1)"
-          seed_sha="$(sha256sum "$seed" | cut -d' ' -f1)"
-          seed_size="$(stat -c '%s' "$seed")"
 
-          python - docs/contracts/physical-write-authorization.json "$manifest_sha" "$trust_sha" "$media_sha" <<'PY'
+          trust_sha="$(sha256sum bootstrap/trust/release-ed25519.json | cut -d' ' -f1)"
+          minimal_sha="$(sha256sum docs/contracts/minimal-bootstrap.json | cut -d' ' -f1)"
+          portable_sha="$(sha256sum docs/contracts/portable-usb-v2.json | cut -d' ' -f1)"
+          creator_sha="$(sha256sum docs/contracts/creator-portable-media-plan.json | cut -d' ' -f1)"
+          auth_sha="$(sha256sum docs/contracts/physical-write-authorization.json | cut -d' ' -f1)"
+
+          python - \
+            docs/contracts/physical-write-authorization.json \
+            "$minimal_sha" "$trust_sha" "$portable_sha" "$creator_sha" <<'PY'
           import json, pathlib, sys
           auth = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          assert auth['$schema'] == 'prototype-ordax.physical-write-authorization/2'
           expected = auth['bindings']
           actual = {
               'minimal_bootstrap_sha256': sys.argv[2],
               'release_trust_sha256': sys.argv[3],
-              'physical_media_sha256': sys.argv[4],
+              'portable_usb_contract_sha256': sys.argv[4],
+              'creator_portable_media_contract_sha256': sys.argv[5],
           }
           if expected != actual:
-              raise SystemExit(f'authorization binding changed after preflight: expected={expected!r} actual={actual!r}')
+              raise SystemExit(
+                  f'authorization binding changed after preflight: expected={expected!r} actual={actual!r}'
+              )
           sequence = auth.get('release_sequence')
           if isinstance(sequence, bool) or not isinstance(sequence, int) or sequence <= 0:
               raise SystemExit('physical release_sequence is missing or invalid')
           PY
 
-          cp --sparse=always "$seed" "$out/ordax-bootstrap-seed.raw"
           cp bootstrap/trust/release-ed25519.json "$out/release-ed25519.json"
+          cp docs/contracts/minimal-bootstrap.json "$out/minimal-bootstrap.json"
+          cp docs/contracts/portable-usb-v2.json "$out/portable-usb-v2.json"
+          cp docs/contracts/creator-portable-media-plan.json "$out/creator-portable-media-plan.json"
+          cp docs/contracts/physical-write-authorization.json "$out/physical-write-authorization.json"
 
           pushd tools/creator >/dev/null
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
             go build -trimpath -buildvcs=false -tags ordax_raw_backend \
-              -ldflags="-s -w -X main.buildSourceCommit=$GITHUB_SHA -X main.buildCanonicalTrustSHA256=$trust_sha -X main.buildManifestSHA256=$manifest_sha -X main.buildSeedImageSHA256=$seed_sha -X main.buildSeedImageSize=$seed_size -X main.buildPhysicalWriteAuthorized=YES" \
+              -ldflags="-s -w -X main.buildSourceCommit=$GITHUB_SHA -X main.buildCanonicalTrustSHA256=$trust_sha -X main.buildManifestSHA256=$minimal_sha -X main.buildPortableUSBContractSHA256=$portable_sha -X main.buildCreatorPortableContractSHA256=$creator_sha -X main.buildPhysicalWriteAuthorized=YES" \
               -o "$out/ordax-creator-physical-test.exe" \
               ./cmd/ordax-creator-physical-test
           popd >/dev/null
 
-          strings "$out/ordax-creator-physical-test.exe" | grep -F "$trust_sha" >/dev/null
-          strings "$out/ordax-creator-physical-test.exe" | grep -F "$manifest_sha" >/dev/null
-          strings "$out/ordax-creator-physical-test.exe" | grep -F "$seed_sha" >/dev/null
+          for binding in "$trust_sha" "$minimal_sha" "$portable_sha" "$creator_sha"; do
+            strings "$out/ordax-creator-physical-test.exe" | grep -F "$binding" >/dev/null
+          done
 
-          python - "$out/provenance.json" "$trust_sha" "$manifest_sha" "$media_sha" "$seed_sha" "$seed_size" <<'PY'
-          import json, pathlib, sys, os
-          auth = json.loads(pathlib.Path('docs/contracts/physical-write-authorization.json').read_text(encoding='utf-8'))
-          release_sequence = auth.get('release_sequence')
-          if isinstance(release_sequence, bool) or not isinstance(release_sequence, int) or release_sequence <= 0:
-              raise SystemExit('physical release_sequence is missing or invalid')
+          python - \
+            "$out/provenance.json" \
+            "$trust_sha" "$minimal_sha" "$portable_sha" "$creator_sha" "$auth_sha" <<'PY'
+          import json, os, pathlib, sys
+          auth = json.loads(
+              pathlib.Path('docs/contracts/physical-write-authorization.json').read_text(encoding='utf-8')
+          )
+          release_sequence = auth['release_sequence']
           data = {
-              '$schema': 'prototype-ordax.physical-write-candidate/1',
+              '$schema': 'prototype-ordax.physical-write-candidate/2',
               'status': 'authorized-candidate-not-published',
               'source_commit': os.environ['GITHUB_SHA'],
               'release_sequence': release_sequence,
@@ -226,30 +182,56 @@ jobs:
               'development_channel': False,
               'canonical_trust_sha256': sys.argv[2],
               'minimal_bootstrap_sha256': sys.argv[3],
-              'physical_media_sha256': sys.argv[4],
-              'seed_sha256': sys.argv[5],
-              'seed_size': int(sys.argv[6]),
-              'raw_backend_linked': True,
+              'portable_usb_contract_sha256': sys.argv[4],
+              'creator_portable_media_contract_sha256': sys.argv[5],
+              'physical_write_authorization_sha256': sys.argv[6],
+              'portable_writer_linked': True,
+              'portable_application_plan_schema': 'prototype-ordax.portable-application-plan/1',
+              'portable_application_operation_count': 35,
+              'portable_artifact_count': 15,
+              'per_artifact_readback_sha256_size': True,
+              'whole_disk_raw_image_required': False,
+              'target_specific_plan_required': True,
+              'payload_artifacts_in_candidate': False,
+              'public_creator_reachable': False,
               'physical_write_authorized_in_binary': True,
               'release_published': False,
               'private_key_in_candidate': False,
           }
-          pathlib.Path(sys.argv[1]).write_text(json.dumps(data, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          pathlib.Path(sys.argv[1]).write_text(
+              json.dumps(data, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
           PY
 
           (
             cd "$out"
-            sha256sum ordax-creator-physical-test.exe ordax-bootstrap-seed.raw release-ed25519.json provenance.json > SHA256SUMS
+            sha256sum \
+              ordax-creator-physical-test.exe \
+              release-ed25519.json \
+              minimal-bootstrap.json \
+              portable-usb-v2.json \
+              creator-portable-media-plan.json \
+              physical-write-authorization.json \
+              provenance.json \
+              > SHA256SUMS
           )
+
           if find "$out" -type f \( -name '*.pem' -o -name '*.key' -o -name '*.p12' -o -name '*.pfx' -o -name '*.dpapi' \) -print -quit | grep -q .; then
             echo 'private signing material entered physical candidate' >&2
             exit 1
           fi
-          echo 'AUTHORIZED_PHYSICAL_CANDIDATE_BUILT=YES'
+          if find "$out" -type f -iname '*.raw' -print -quit | grep -q .; then
+            echo 'whole-disk RAW image entered final Portable writer candidate' >&2
+            exit 1
+          fi
+          echo 'AUTHORIZED_PORTABLE_WRITER_CANDIDATE_BUILT=YES'
+          echo 'WHOLE_DISK_RAW_IMAGE_IN_CANDIDATE=NO'
+          echo 'PAYLOAD_ARTIFACTS_IN_WRITER_CANDIDATE=NO'
           echo 'PRIVATE_KEY_IN_CANDIDATE=NO'
           echo 'PHYSICAL_CANDIDATE_PUBLISHED=NO'
 
-      - name: Package exact physical release bytes and unsigned manifest
+      - name: Package exact Portable writer release bytes and unsigned manifest v2
         shell: bash
         run: |
           set -euo pipefail
@@ -267,8 +249,11 @@ jobs:
           manifest_path = pathlib.Path(sys.argv[3])
           names = [
               'ordax-creator-physical-test.exe',
-              'ordax-bootstrap-seed.raw',
               'release-ed25519.json',
+              'minimal-bootstrap.json',
+              'portable-usb-v2.json',
+              'creator-portable-media-plan.json',
+              'physical-write-authorization.json',
               'provenance.json',
               'SHA256SUMS',
           ]
@@ -288,19 +273,33 @@ jobs:
           for name in names:
               path = candidate / name
               if not path.is_file():
-                  raise SystemExit(f'missing physical candidate file: {name}')
+                  raise SystemExit(f'missing Portable writer candidate file: {name}')
+          if any(candidate.glob('*.raw')):
+              raise SystemExit('Portable writer candidate unexpectedly contains whole-disk RAW bytes')
 
           provenance = json.loads((candidate / 'provenance.json').read_text(encoding='utf-8'))
-          if not isinstance(provenance.get('release_sequence'), int) or provenance['release_sequence'] <= 0:
-              raise SystemExit('physical candidate has no valid release_sequence')
+          if provenance.get('$schema') != 'prototype-ordax.physical-write-candidate/2':
+              raise SystemExit('Portable writer provenance schema is invalid')
+          if provenance.get('whole_disk_raw_image_required') is not False:
+              raise SystemExit('Portable writer provenance regressed to whole-disk RAW')
+          if provenance.get('portable_application_operation_count') != 35:
+              raise SystemExit('Portable writer provenance operation count is invalid')
+          if provenance.get('portable_artifact_count') != 15:
+              raise SystemExit('Portable writer provenance artifact count is invalid')
 
-          with zipfile.ZipFile(bundle, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+          with zipfile.ZipFile(
+              bundle, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9
+          ) as archive:
               for name in names:
                   path = candidate / name
                   info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
                   info.compress_type = zipfile.ZIP_DEFLATED
-                  info.external_attr = (0o100755 if name.endswith('.exe') else 0o100644) << 16
-                  with path.open('rb') as source, archive.open(info, 'w', force_zip64=True) as target:
+                  info.external_attr = (
+                      (0o100755 if name.endswith('.exe') else 0o100644) << 16
+                  )
+                  with path.open('rb') as source, archive.open(
+                      info, 'w', force_zip64=True
+                  ) as target:
                       while True:
                           chunk = source.read(1024 * 1024)
                           if not chunk:
@@ -314,34 +313,51 @@ jobs:
               files.append({'name': name, 'sha256': digest, 'size': size})
 
           manifest = {
-              '$schema': 'prototype-ordax.creator-physical-manifest/1',
-              'purpose': 'creator-physical-windows-amd64',
+              '$schema': 'prototype-ordax.creator-physical-manifest/2',
+              'purpose': 'creator-portable-physical-windows-amd64',
               'source_repository': 'washingtonmsdj/prototipo-ordax-os',
               'source_commit': os.environ['GITHUB_SHA'],
-              'created_from_recipe': 'creator/physical/windows/1',
+              'created_from_recipe': 'creator/physical/portable-windows/2',
               'bundle': {
-                  'url': 'https://github.com/washingtonmsdj/prototipo-ordax-os/releases/download/creator-physical/ordax-creator-physical-windows-amd64.zip',
+                  'url': (
+                      'https://github.com/washingtonmsdj/prototipo-ordax-os/'
+                      'releases/download/creator-physical/'
+                      'ordax-creator-physical-windows-amd64.zip'
+                  ),
                   'sha256': bundle_sha,
                   'size': bundle_size,
               },
               'files': files,
           }
-          manifest_path.write_text(json.dumps(manifest, indent=2, separators=(',', ': ')) + '\n', encoding='utf-8', newline='\n')
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2, separators=(',', ': ')) + '\n',
+              encoding='utf-8',
+              newline='\n',
+          )
           PY
 
-          (cd tools/release-signing && go run ./cmd/ordax-physical-release-signing --help >/dev/null 2>&1 || true)
           python - "$manifest" <<'PY'
           import json, pathlib, sys
           m = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
-          assert m['$schema'] == 'prototype-ordax.creator-physical-manifest/1'
-          assert m['purpose'] == 'creator-physical-windows-amd64'
-          assert len(m['files']) == 5
+          assert m['$schema'] == 'prototype-ordax.creator-physical-manifest/2'
+          assert m['purpose'] == 'creator-portable-physical-windows-amd64'
+          assert m['created_from_recipe'] == 'creator/physical/portable-windows/2'
+          assert len(m['files']) == 8
           assert {x['name'] for x in m['files']} == {
-              'ordax-creator-physical-test.exe', 'ordax-bootstrap-seed.raw',
-              'release-ed25519.json', 'provenance.json', 'SHA256SUMS'
+              'ordax-creator-physical-test.exe',
+              'release-ed25519.json',
+              'minimal-bootstrap.json',
+              'portable-usb-v2.json',
+              'creator-portable-media-plan.json',
+              'physical-write-authorization.json',
+              'provenance.json',
+              'SHA256SUMS',
           }
+          assert not any(x['name'].endswith('.raw') for x in m['files'])
           PY
-          echo 'PHYSICAL_RELEASE_PACKAGE_READY_FOR_OFFLINE_SIGNING=YES'
+
+          (cd tools/release-signing && go test -count=1 ./cmd/ordax-physical-release-signing)
+          echo 'PORTABLE_PHYSICAL_RELEASE_PACKAGE_READY_FOR_OFFLINE_SIGNING=YES'
           echo 'PHYSICAL_RELEASE_ENVELOPE_PRESENT=NO'
           echo 'PRIVATE_KEY_REQUIRED_IN_CI=NO'
 

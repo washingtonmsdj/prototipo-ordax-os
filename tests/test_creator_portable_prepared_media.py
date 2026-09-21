@@ -32,7 +32,17 @@ class CreatorPortablePreparedMediaTests(unittest.TestCase):
         self.assertFalse(runtime["physical_write_authorized"])
         self.assertIn("/.ordax/runtimes/sha256/", runtime["image_target"])
         self.assertTrue(runtime["reference_target"].endswith("/surface-runtime.sha256"))
-        self.assertFalse(contract["physical_writer_v2_implemented"])
+        self.assertTrue(contract["physical_writer_v2_implemented"])
+        writer = contract["physical_writer_v2"]
+        self.assertTrue(writer["implemented"])
+        self.assertEqual(writer["build_tag"], "ordax_raw_backend")
+        self.assertEqual(writer["exact_operation_count"], 35)
+        self.assertEqual(writer["exact_artifact_count"], 15)
+        self.assertTrue(writer["readback_sha256_and_size_per_artifact"])
+        self.assertFalse(writer["whole_disk_raw_image_required"])
+        self.assertFalse(writer["public_creator_reachable"])
+        self.assertFalse(writer["physical_write_authorized"])
+        self.assertFalse(writer["public_mvp_default_enabled"])
         self.assertFalse(contract["public_mvp_default_enabled"])
         application = contract["application_planner"]
         self.assertTrue(application["implemented"])

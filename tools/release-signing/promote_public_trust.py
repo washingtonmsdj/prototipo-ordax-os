@@ -31,9 +31,10 @@ EVIDENCE_SCHEMA = "prototype-ordax.release-trust-ceremony-evidence/1"
 ENVELOPE_SCHEMA = "prototype-ordax.release-envelope/1"
 POLICY_SCHEMA = "prototype-ordax.release-trust-policy/1"
 MINIMAL_SCHEMA = "prototype-ordax.minimal-bootstrap/4"
-AUTH_SCHEMA = "prototype-ordax.physical-write-authorization/1"
-MEDIA_SCHEMA = "prototype-ordax.physical-media/1"
-RESULT_SCHEMA = "prototype-ordax.release-trust-public-promotion/1"
+AUTH_SCHEMA = "prototype-ordax.physical-write-authorization/2"
+PORTABLE_USB_SCHEMA = "prototype-ordax.portable-usb-v2/1"
+CREATOR_PORTABLE_SCHEMA = "prototype-ordax.creator-portable-media-plan/1"
+RESULT_SCHEMA = "prototype-ordax.release-trust-public-promotion/2"
 KEY_ID = "ordax-prototype-release-v1"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -52,7 +53,8 @@ RECOVERY_ENVELOPE_REPOSITORY_PATH = Path(
 MINIMAL_PATH = Path("docs/contracts/minimal-bootstrap.json")
 POLICY_PATH = Path("docs/contracts/release-trust-policy.json")
 AUTH_PATH = Path("docs/contracts/physical-write-authorization.json")
-MEDIA_PATH = Path("docs/contracts/physical-media.json")
+PORTABLE_USB_PATH = Path("docs/contracts/portable-usb-v2.json")
+CREATOR_PORTABLE_PATH = Path("docs/contracts/creator-portable-media-plan.json")
 
 TRUST_KEYS = {"$schema", "key_id", "public_key_base64"}
 EVIDENCE_KEYS = {
@@ -614,8 +616,11 @@ def _load_repository_contracts(
     authorization = load_json(
         root / AUTH_PATH, "physical write authorization"
     )
-    media = load_json(
-        root / MEDIA_PATH, "physical media contract"
+    portable = load_json(
+        root / PORTABLE_USB_PATH, "portable USB contract"
+    )
+    creator_portable = load_json(
+        root / CREATOR_PORTABLE_PATH, "Creator portable media contract"
     )
 
     if minimal.get("$schema") != MINIMAL_SCHEMA:
@@ -626,8 +631,16 @@ def _load_repository_contracts(
         raise PromotionError(
             "physical write authorization schema is invalid"
         )
-    if media.get("$schema") != MEDIA_SCHEMA:
-        raise PromotionError("physical media schema is invalid")
+    if portable.get("$schema") != PORTABLE_USB_SCHEMA:
+        raise PromotionError("portable USB schema is invalid")
+    if creator_portable.get("$schema") != CREATOR_PORTABLE_SCHEMA:
+        raise PromotionError("Creator portable media schema is invalid")
+    if portable.get("physical_write_authorized") is not False:
+        raise PromotionError("portable USB policy must remain non-destructive")
+    if creator_portable.get("physical_write_authorized") is not False:
+        raise PromotionError(
+            "Creator portable media policy must remain non-destructive"
+        )
     if minimal.get("physical_write_allowed") is not False:
         raise PromotionError(
             "minimal bootstrap must remain non-destructive"
@@ -641,7 +654,7 @@ def _load_repository_contracts(
         raise PromotionError(
             "release trust policy canonical key_id is invalid"
         )
-    return minimal, policy, authorization, media
+    return minimal, policy, authorization, portable, creator_portable
 
 
 def prepare_repository_promotion(
@@ -659,7 +672,7 @@ def prepare_repository_promotion(
     proof_manifest_sha = public["proof_manifest_sha256"]
     recovery_envelope_sha = public["recovery_envelope_sha256"]
 
-    minimal, policy, authorization, _media = (
+    minimal, policy, authorization, _portable, _creator_portable = (
         _load_repository_contracts(root)
     )
 
@@ -773,10 +786,12 @@ def prepare_repository_promotion(
         raise PromotionError(
             "physical authorization bindings are invalid"
         )
-    media_sha = sha256_file(root / MEDIA_PATH)
+    portable_sha = sha256_file(root / PORTABLE_USB_PATH)
+    creator_portable_sha = sha256_file(root / CREATOR_PORTABLE_PATH)
     bindings["minimal_bootstrap_sha256"] = minimal_sha
     bindings["release_trust_sha256"] = trust_sha
-    bindings["physical_media_sha256"] = media_sha
+    bindings["portable_usb_contract_sha256"] = portable_sha
+    bindings["creator_portable_media_contract_sha256"] = creator_portable_sha
     auth_bytes = json_bytes(promoted_authorization)
 
     return {
@@ -788,7 +803,8 @@ def prepare_repository_promotion(
         "proof_manifest_sha256": proof_manifest_sha,
         "recovery_envelope_sha256": recovery_envelope_sha,
         "minimal_bootstrap_sha256": minimal_sha,
-        "physical_media_sha256": media_sha,
+        "portable_usb_contract_sha256": portable_sha,
+        "creator_portable_media_contract_sha256": creator_portable_sha,
         "physical_write_allowed": False,
         "physical_authorization_eligible": True,
         "outputs": {
@@ -832,7 +848,7 @@ def validate_promoted_repository(
     proof_manifest_sha = public["proof_manifest_sha256"]
     recovery_envelope_sha = public["recovery_envelope_sha256"]
 
-    minimal, policy, authorization, _media = (
+    minimal, policy, authorization, _portable, _creator_portable = (
         _load_repository_contracts(root)
     )
     if minimal.get("all_artifacts_resolved") is not True:
@@ -935,11 +951,13 @@ def validate_promoted_repository(
         )
     bindings = authorization.get("bindings")
     minimal_sha = sha256_file(root / MINIMAL_PATH)
-    media_sha = sha256_file(root / MEDIA_PATH)
+    portable_sha = sha256_file(root / PORTABLE_USB_PATH)
+    creator_portable_sha = sha256_file(root / CREATOR_PORTABLE_PATH)
     if bindings != {
         "minimal_bootstrap_sha256": minimal_sha,
         "release_trust_sha256": trust_sha,
-        "physical_media_sha256": media_sha,
+        "portable_usb_contract_sha256": portable_sha,
+        "creator_portable_media_contract_sha256": creator_portable_sha,
     }:
         raise PromotionError(
             "physical write authorization public bindings are invalid"
@@ -954,7 +972,8 @@ def validate_promoted_repository(
         "proof_manifest_sha256": proof_manifest_sha,
         "recovery_envelope_sha256": recovery_envelope_sha,
         "minimal_bootstrap_sha256": minimal_sha,
-        "physical_media_sha256": media_sha,
+        "portable_usb_contract_sha256": portable_sha,
+        "creator_portable_media_contract_sha256": creator_portable_sha,
         "physical_write_allowed": False,
         "physical_authorization_eligible": True,
     }

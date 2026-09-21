@@ -21,20 +21,35 @@ var (
 	buildSourceCommit            = "UNRESOLVED"
 	buildCanonicalTrustSHA256    = "UNRESOLVED"
 	buildManifestSHA256          = "UNRESOLVED"
-	buildSeedImageSHA256         = "UNRESOLVED"
-	buildSeedImageSize           = "0"
-	buildPhysicalWriteAuthorized = "NO"
-	applyDiagnosticLog           string
+	buildSeedImageSHA256               = "UNRESOLVED"
+	buildSeedImageSize                 = "0"
+	buildPortableUSBContractSHA256     = "UNRESOLVED"
+	buildCreatorPortableContractSHA256 = "UNRESOLVED"
+	buildPhysicalWriteAuthorized       = "NO"
+	applyDiagnosticLog                 string
 )
+
+type stringListFlag []string
+
+func (values *stringListFlag) String() string {
+	return strings.Join(*values, ",")
+}
+
+func (values *stringListFlag) Set(value string) error {
+	*values = append(*values, value)
+	return nil
+}
 
 type buildBinding struct {
 	SourceCommit            string `json:"source_commit"`
 	CanonicalTrustSHA256    string `json:"canonical_trust_sha256"`
 	ManifestSHA256          string `json:"manifest_sha256"`
-	SeedImageSHA256         string `json:"seed_image_sha256"`
-	SeedImageSize           int64  `json:"seed_image_size"`
-	PhysicalWriteAuthorized bool   `json:"physical_write_authorized"`
-	Ready                   bool   `json:"ready"`
+	SeedImageSHA256                 string `json:"seed_image_sha256"`
+	SeedImageSize                   int64  `json:"seed_image_size"`
+	PortableUSBContractSHA256       string `json:"portable_usb_contract_sha256"`
+	CreatorPortableContractSHA256   string `json:"creator_portable_contract_sha256"`
+	PhysicalWriteAuthorized         bool   `json:"physical_write_authorized"`
+	Ready                           bool   `json:"ready"`
 }
 
 func validLowerHex(value string, bytes int) bool {
@@ -53,7 +68,17 @@ func binding() buildBinding {
 		validLowerHex(buildManifestSHA256, sha256.Size) &&
 		validLowerHex(buildSeedImageSHA256, sha256.Size) &&
 		size > 0 && authorized
-	return buildBinding{SourceCommit: buildSourceCommit, CanonicalTrustSHA256: buildCanonicalTrustSHA256, ManifestSHA256: buildManifestSHA256, SeedImageSHA256: buildSeedImageSHA256, SeedImageSize: size, PhysicalWriteAuthorized: authorized, Ready: ready}
+	return buildBinding{
+		SourceCommit: buildSourceCommit,
+		CanonicalTrustSHA256: buildCanonicalTrustSHA256,
+		ManifestSHA256: buildManifestSHA256,
+		SeedImageSHA256: buildSeedImageSHA256,
+		SeedImageSize: size,
+		PortableUSBContractSHA256: buildPortableUSBContractSHA256,
+		CreatorPortableContractSHA256: buildCreatorPortableContractSHA256,
+		PhysicalWriteAuthorized: authorized,
+		Ready: ready,
+	}
 }
 
 func encode(value any) error {
@@ -117,8 +142,10 @@ func runStatus() error {
 		Mode                    string       `json:"mode"`
 		RawBackendLinked        bool         `json:"raw_backend_linked"`
 		PublicCreatorUnaffected bool         `json:"public_creator_unaffected"`
+		PortableWriterLinked    bool         `json:"portable_writer_linked"`
+		PortableWriterReady     bool         `json:"portable_writer_ready"`
 		Build                   buildBinding `json:"build"`
-	}{Schema: "prototype-ordax.creator-physical-test-status/2", Mode: "physical-test-only", RawBackendLinked: true, PublicCreatorUnaffected: true, Build: b})
+	}{Schema: "prototype-ordax.creator-physical-test-status/3", Mode: "physical-test-only", RawBackendLinked: true, PublicCreatorUnaffected: true, PortableWriterLinked: true, PortableWriterReady: portableBindingReady(b), Build: b})
 }
 
 func runTargets() error {
@@ -131,6 +158,176 @@ func runTargets() error {
 		Mode    string                  `json:"mode"`
 		Targets []windowsadapter.Target `json:"targets"`
 	}{Schema: "prototype-ordax.creator-physical-test-targets/1", Mode: "read-only", Targets: targets})
+}
+
+func portableBindingReady(b buildBinding) bool {
+	return validLowerHex(b.SourceCommit, 20) &&
+		validLowerHex(b.CanonicalTrustSHA256, sha256.Size) &&
+		validLowerHex(b.PortableUSBContractSHA256, sha256.Size) &&
+		validLowerHex(b.CreatorPortableContractSHA256, sha256.Size) &&
+		b.PhysicalWriteAuthorized
+}
+
+func requirePortableReady() buildBinding {
+	b := binding()
+	if !portableBindingReady(b) {
+		fmt.Fprintln(os.Stderr, "ordax-creator-physical-test: Portable writer is linked but not authorized; canonical trust and physical promotion must be bound first")
+		os.Exit(1)
+	}
+	return b
+}
+
+func loadPortableApplicationPlan(path string) (creatorcore.PortableApplicationPlan, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return creatorcore.PortableApplicationPlan{}, err
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > 2<<20 {
+		return creatorcore.PortableApplicationPlan{}, fmt.Errorf("portable application plan must be a bounded regular non-symlink file")
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return creatorcore.PortableApplicationPlan{}, err
+	}
+	defer file.Close()
+	decoder := json.NewDecoder(io.LimitReader(file, 2<<20))
+	decoder.DisallowUnknownFields()
+	var plan creatorcore.PortableApplicationPlan
+	if err := decoder.Decode(&plan); err != nil {
+		return creatorcore.PortableApplicationPlan{}, fmt.Errorf("decode portable application plan: %w", err)
+	}
+	var extra any
+	if err := decoder.Decode(&extra); err != io.EOF {
+		return creatorcore.PortableApplicationPlan{}, fmt.Errorf("portable application plan has trailing JSON")
+	}
+	return plan, nil
+}
+
+func portableSourcesFromFlags(plan creatorcore.PortableApplicationPlan, specs []string) ([]windowsadapter.PortablePhysicalArtifactSource, error) {
+	expected := map[string]creatorcore.PortableApplicationOperation{}
+	for _, op := range plan.Operations {
+		if op.Kind == "materialize-artifact" {
+			expected[op.ArtifactID] = op
+		}
+	}
+	if len(expected) != 15 || len(specs) != 15 {
+		return nil, fmt.Errorf("Portable apply requires exactly 15 canonical artifact sources")
+	}
+	seen := map[string]bool{}
+	sources := make([]windowsadapter.PortablePhysicalArtifactSource, 0, len(specs))
+	for _, spec := range specs {
+		id, path, ok := strings.Cut(spec, "=")
+		if !ok || id == "" || path == "" || seen[id] {
+			return nil, fmt.Errorf("invalid or duplicate --source %q; expected artifact-id=path", spec)
+		}
+		op, ok := expected[id]
+		if !ok {
+			return nil, fmt.Errorf("source artifact %q is not in the canonical plan", id)
+		}
+		seen[id] = true
+		sources = append(sources, windowsadapter.PortablePhysicalArtifactSource{
+			ArtifactID: id,
+			Path: path,
+			SHA256: op.SHA256,
+			SizeBytes: op.SizeBytes,
+		})
+	}
+	return sources, nil
+}
+
+func runPreparePortable(args []string) error {
+	b := requirePortableReady()
+	fs := flag.NewFlagSet("prepare-portable", flag.ContinueOnError)
+	confirm := fs.String("confirm", "", "confirmation token from targets")
+	planPath := fs.String("plan", "", "canonical Portable application-plan JSON")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *confirm == "" || *planPath == "" || fs.NArg() != 0 {
+		return fmt.Errorf("prepare-portable requires --confirm and --plan")
+	}
+	target, err := enumerateConfirmed(*confirm)
+	if err != nil {
+		return err
+	}
+	plan, err := loadPortableApplicationPlan(*planPath)
+	if err != nil {
+		return err
+	}
+	if plan.SourceCommit != b.SourceCommit {
+		return fmt.Errorf("Portable application plan source_commit does not match authorized build")
+	}
+	if plan.TargetBytes != target.PhysicalDiskBytes {
+		return fmt.Errorf("Portable application plan capacity does not match confirmed USB target")
+	}
+	planSHA, err := creatorcore.PortableApplicationPlanSHA256(plan)
+	if err != nil {
+		return err
+	}
+	token := windowsadapter.PortableDestructiveAuthorizationToken(target, planSHA)
+	return encode(struct {
+		Schema string `json:"$schema"`
+		Target windowsadapter.Target `json:"target"`
+		ApplicationPlanSHA256 string `json:"application_plan_sha256"`
+		DestructiveAuthorization string `json:"destructive_authorization"`
+		WholeDiskRawImageRequired bool `json:"whole_disk_raw_image_required"`
+		Next string `json:"next"`
+	}{
+		Schema:"prototype-ordax.creator-portable-physical-preparation/1",
+		Target:target,
+		ApplicationPlanSHA256:planSHA,
+		DestructiveAuthorization:token,
+		WholeDiskRawImageRequired:false,
+		Next:"request UAC elevation and invoke apply-portable with the exact same plan, 15 sources, confirmation token and authorization token",
+	})
+}
+
+func runApplyPortable(args []string) error {
+	b := requirePortableReady()
+	fs := flag.NewFlagSet("apply-portable", flag.ContinueOnError)
+	confirm := fs.String("confirm", "", "confirmation token from selected target")
+	planPath := fs.String("plan", "", "canonical Portable application-plan JSON")
+	authorize := fs.String("authorize", "", "destructive authorization emitted by prepare-portable")
+	progressLog := fs.String("progress-log", "", "optional JSON progress path")
+	var sourceSpecs stringListFlag
+	fs.Var(&sourceSpecs, "source", "canonical artifact source in artifact-id=path form; repeat exactly 15 times")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *confirm == "" || *planPath == "" || *authorize == "" || fs.NArg() != 0 {
+		return fmt.Errorf("apply-portable requires --confirm, --plan, --authorize and exactly 15 --source values")
+	}
+	plan, err := loadPortableApplicationPlan(*planPath)
+	if err != nil {
+		return err
+	}
+	if plan.SourceCommit != b.SourceCommit {
+		return fmt.Errorf("Portable application plan source_commit does not match authorized build")
+	}
+	sources, err := portableSourcesFromFlags(plan, sourceSpecs)
+	if err != nil {
+		return err
+	}
+	target, err := enumerateConfirmed(*confirm)
+	if err != nil {
+		return err
+	}
+	progressReporter := newApplyProgressReporter(*progressLog)
+	progressReporter(windowsadapter.PhysicalApplyProgress{Phase:"starting-portable"})
+	result, err := windowsadapter.ApplyPortablePhysicalWithProgress(windowsadapter.PortablePhysicalApplyRequest{
+		Target:target,
+		ConfirmationToken:*confirm,
+		ApplicationPlan:plan,
+		Sources:sources,
+		CanonicalTrustResolved:validLowerHex(b.CanonicalTrustSHA256, sha256.Size),
+		PhysicalPromotionAuthorized:b.PhysicalWriteAuthorized,
+		DestructiveAuthorization:*authorize,
+	}, progressReporter)
+	if err != nil {
+		return err
+	}
+	progressReporter(windowsadapter.PhysicalApplyProgress{Phase:"complete-portable", CompletedBytes:1, TotalBytes:1})
+	return encode(result)
 }
 
 func runPrepare(args []string) error {
@@ -232,7 +429,7 @@ func runApply(args []string) error {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: ordax-creator-physical-test <status|targets|prepare|apply> [options]")
+	fmt.Fprintln(os.Stderr, "usage: ordax-creator-physical-test <status|targets|prepare|apply|prepare-portable|apply-portable> [options]")
 }
 
 func main() {
@@ -250,6 +447,10 @@ func main() {
 		err = runPrepare(os.Args[2:])
 	case "apply":
 		err = runApply(os.Args[2:])
+	case "prepare-portable":
+		err = runPreparePortable(os.Args[2:])
+	case "apply-portable":
+		err = runApplyPortable(os.Args[2:])
 	default:
 		usage()
 		os.Exit(2)

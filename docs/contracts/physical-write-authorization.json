@@ -1,24 +1,29 @@
 {
-  "$schema": "prototype-ordax.physical-write-authorization/1",
-  "status": "blocked-canonical-trust-pending",
+  "$schema": "prototype-ordax.physical-write-authorization/2",
+  "status": "blocked-portable-policy-and-canonical-trust-pending",
   "physical_write_allowed": false,
   "explicit_owner_authorization": true,
-  "scope": "first-real-usb-proof",
+  "scope": "first-real-stable-mvp-usb-proof",
   "source_repository": "washingtonmsdj/prototipo-ordax-os",
   "release_sequence": 1,
   "bindings": {
     "minimal_bootstrap_sha256": null,
     "release_trust_sha256": null,
-    "physical_media_sha256": null
+    "portable_usb_contract_sha256": null,
+    "creator_portable_media_contract_sha256": null
   },
   "requirements": {
     "canonical_public_trust_pinned": true,
     "minimal_bootstrap_all_artifacts_resolved": true,
     "minimal_bootstrap_remains_non_destructive": true,
-    "disposable_media_proof_required": true,
-    "writer_binds_generated_seed_sha256_and_size": true,
-    "writer_binds_manifest_sha256": true,
+    "portable_usb_contract_canonical": true,
+    "creator_portable_media_policy_canonical": true,
+    "disposable_portable_media_proof_required": true,
+    "portable_physical_writer_implemented": true,
+    "writer_binds_portable_media_plan_sha256": true,
+    "writer_binds_generated_media_sha256_and_size": true,
     "writer_binds_public_trust_sha256": true,
+    "writer_requires_exact_15_artifact_readback": true,
     "signed_release_sequence_must_never_decrease": true,
     "live_usb_reenumeration_required": true,
     "end_user_destructive_confirmation_required": true,
@@ -29,6 +34,7 @@
     "user_selects_image_file": false,
     "user_manages_signing_keys": false,
     "user_manages_trust_backup": false,
-    "development_channel_may_satisfy_this_authorization": false
+    "development_channel_may_satisfy_this_authorization": false,
+    "legacy_ordax_ext4_layout_may_satisfy_this_authorization": false
   }
 }

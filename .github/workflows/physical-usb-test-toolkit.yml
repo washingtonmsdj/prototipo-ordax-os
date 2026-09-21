@@ -70,6 +70,8 @@ jobs:
           $exe = Join-Path $PWD 'out/physical-backend-safety/ordax-creator-physical-test.exe'
           $status = & $exe status | ConvertFrom-Json
           if ($status.raw_backend_linked -ne $true) { throw 'tagged raw backend is not linked' }
+          if ($status.portable_writer_linked -ne $true) { throw 'Portable writer is not linked into tagged backend' }
+          if ($status.portable_writer_ready -ne $false) { throw 'unbound Portable writer unexpectedly reports ready' }
           if ($status.build.ready -ne $false) { throw 'unbound backend unexpectedly reports ready' }
           if ($status.build.physical_write_authorized -ne $false) { throw 'unbound backend unexpectedly authorizes physical write' }
 
@@ -82,11 +84,57 @@ jobs:
           if (($applyOutput -join "`n") -notmatch 'inspection-only') { throw 'apply did not fail closed' }
           $global:LASTEXITCODE = 0
 
+          $portablePrepare = & $exe prepare-portable --confirm ('0' * 64) --plan missing-plan.json 2>&1
+          if ($LASTEXITCODE -eq 0) { throw 'unbound prepare-portable unexpectedly succeeded' }
+          if (($portablePrepare -join "`n") -notmatch 'not authorized') { throw 'prepare-portable did not fail closed on authorization' }
+          $global:LASTEXITCODE = 0
+
+          $portableApply = & $exe apply-portable --confirm ('0' * 64) --plan missing-plan.json --authorize ('0' * 64) 2>&1
+          if ($LASTEXITCODE -eq 0) { throw 'unbound apply-portable unexpectedly succeeded' }
+          if (($portableApply -join "`n") -notmatch 'not authorized') { throw 'apply-portable did not fail closed on authorization' }
+          $global:LASTEXITCODE = 0
+
           Write-Host 'RAW_BACKEND_INTERNAL_CI=PASS'
+          Write-Host 'PORTABLE_WRITER_LINKED=YES'
+          Write-Host 'PORTABLE_WRITER_READY=NO'
           Write-Host 'RAW_BACKEND_READY=NO'
           Write-Host 'PHYSICAL_WRITE_AUTHORIZED=NO'
           Write-Host 'END_USER_TOOLKIT_PUBLISHED=NO'
           Write-Host 'PUBLISHER_SIGNING_TOOL_IN_CONSUMER_ARTIFACT=NO'
+
+      - name: Prove Portable writer implements plan not whole-disk RAW
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $runtime = Get-Content -LiteralPath 'tools/creator/host/windows/portable_apply_windows.go' -Raw
+          $core = Get-Content -LiteralPath 'tools/creator/core/portable_application_executor.go' -Raw
+          foreach ($required in @(
+            'ExecutePortableApplication',
+            'Clear-Disk',
+            'Initialize-Disk',
+            'ORDAX-ESP',
+            'ORDAX-DATA',
+            'Format-Volume',
+            'FAT32',
+            'exFAT',
+            'Readback',
+            'revalidatePortableTarget'
+          )) {
+            if ($runtime -notmatch [regex]::Escape($required)) {
+              throw "Portable writer is missing required boundary: $required"
+            }
+          }
+          if ($runtime -match 'PreparePhysicalStorageImage') {
+            throw 'Portable writer regressed to whole-disk RAW preparation'
+          }
+          if ($core -notmatch 'requires 35 operations' -or
+              $core -notmatch 'exactly 15 artifact materializations and readbacks') {
+            throw 'Core Portable executor no longer fixes the canonical 35-operation policy'
+          }
+          Write-Host 'PORTABLE_WRITER_WHOLE_DISK_RAW=NO'
+          Write-Host 'PORTABLE_WRITER_OPERATION_POLICY=35'
+          Write-Host 'PORTABLE_WRITER_ARTIFACT_READBACKS=15'
 
       - name: Ensure no end-user toolkit is emitted
         shell: pwsh

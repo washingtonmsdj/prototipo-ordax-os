@@ -40,7 +40,8 @@ class PublicReleaseTrustPromotionTests(unittest.TestCase):
             "docs/contracts/minimal-bootstrap.json",
             "docs/contracts/release-trust-policy.json",
             "docs/contracts/physical-write-authorization.json",
-            "docs/contracts/physical-media.json",
+            "docs/contracts/portable-usb-v2.json",
+            "docs/contracts/creator-portable-media-plan.json",
         ):
             destination = root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -236,9 +237,16 @@ class PublicReleaseTrustPromotionTests(unittest.TestCase):
                 authorization["status"],
                 "blocked-explicit-physical-authorization-pending",
             )
-            self.assertTrue(
-                all(authorization["bindings"].values())
+            self.assertEqual(
+                set(authorization["bindings"]),
+                {
+                    "minimal_bootstrap_sha256",
+                    "release_trust_sha256",
+                    "portable_usb_contract_sha256",
+                    "creator_portable_media_contract_sha256",
+                },
             )
+            self.assertTrue(all(authorization["bindings"].values()))
             self.assertGreaterEqual(run.call_count, 2)
 
     @mock.patch.object(promotion.subprocess, "run")

@@ -36,10 +36,13 @@ func validPhysicalManifestBytes() []byte {
 		Bundle: bundle{URL: "https://github.com/washingtonmsdj/prototipo-ordax-os/releases/download/creator-physical/ordax-creator-physical-windows-amd64.zip", SHA256: strings.Repeat("a", 64), Size: 1234},
 		Files: []fileBinding{
 			{Name: "ordax-creator-physical-test.exe", SHA256: strings.Repeat("1", 64), Size: 11},
-			{Name: "ordax-bootstrap-seed.raw", SHA256: strings.Repeat("2", 64), Size: 22},
-			{Name: "release-ed25519.json", SHA256: strings.Repeat("3", 64), Size: 33},
-			{Name: "provenance.json", SHA256: strings.Repeat("4", 64), Size: 44},
-			{Name: "SHA256SUMS", SHA256: strings.Repeat("5", 64), Size: 55},
+			{Name: "release-ed25519.json", SHA256: strings.Repeat("2", 64), Size: 22},
+			{Name: "minimal-bootstrap.json", SHA256: strings.Repeat("3", 64), Size: 33},
+			{Name: "portable-usb-v2.json", SHA256: strings.Repeat("4", 64), Size: 44},
+			{Name: "creator-portable-media-plan.json", SHA256: strings.Repeat("5", 64), Size: 55},
+			{Name: "physical-write-authorization.json", SHA256: strings.Repeat("6", 64), Size: 66},
+			{Name: "provenance.json", SHA256: strings.Repeat("7", 64), Size: 77},
+			{Name: "SHA256SUMS", SHA256: strings.Repeat("8", 64), Size: 88},
 		},
 	}
 	data, _ := json.MarshalIndent(m, "", "  ")

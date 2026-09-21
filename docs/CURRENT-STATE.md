@@ -291,12 +291,18 @@ CREATOR_WINDOWS_RAW_BACKEND_BUILD_TAG=ordax_raw_backend
 CREATOR_WINDOWS_RAW_BACKEND_BUILD_TAG_ISOLATION=PASS
 CREATOR_WINDOWS_RAW_BACKEND_IN_PUBLIC_BUILD=NO
 CREATOR_NATIVE_BACKEND_PUBLICLY_REACHABLE=NO
+CREATOR_PORTABLE_PHYSICAL_WRITER_IMPLEMENTED=YES_TAGGED_INTERNAL
+CREATOR_PORTABLE_PHYSICAL_WRITER_OPERATION_COUNT=35
+CREATOR_PORTABLE_PHYSICAL_WRITER_ARTIFACT_READBACKS=15
+CREATOR_PORTABLE_PHYSICAL_WRITER_WHOLE_DISK_RAW=NO
+CREATOR_PORTABLE_PHYSICAL_WRITER_UAC_REQUIRED=YES
+CREATOR_PORTABLE_PHYSICAL_WRITER_LIVE_USB_REVALIDATION=YES
 CREATOR_PUBLIC_PHYSICAL_APPLY_IMPLEMENTED=NO
 PHYSICAL_WRITE_AUTHORIZED=NO
 DESTRUCTIVE_AUTHORIZATION=NO
 ```
 
-The internal Windows raw-disk implementation remains compile-time isolated and unreachable from the public Creator command. Nothing in the successful owner/development USB bring-up changes that destructive-write authorization boundary.
+The Windows destructive backend remains compile-time isolated behind `ordax_raw_backend` and unreachable from the public Creator command. The final Portable writer is now implemented inside that tagged boundary: it executes the Core-owned 35-operation `ORDAX-ESP + ORDAX-DATA` plan directly on a revalidated USB, copies 15 exact artifacts, performs per-artifact sync/readback SHA-256+size verification, and does not require a target-sized whole-disk RAW image. **Implementation does not authorize use**: canonical trust, physical-promotion bindings, public reachability and explicit destructive authorization remain separate closed gates.
 
 The byte-complete media workflow remains proven with ephemeral CI trust and disposable media only. That proof establishes composition and growth behavior; it does not establish canonical public trust or authorize a product-media write. The notebook development-USB boot is a separate physical proof and must not be used to collapse those boundaries.
 
