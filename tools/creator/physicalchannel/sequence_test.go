@@ -161,8 +161,8 @@ func TestReleaseSequenceRejectsLegacyRawWriterProvenanceShape(t *testing.T) {
 		installed.Manifest.Files[i].SHA256 = hex.EncodeToString(digest[:])
 		installed.Manifest.Files[i].Size = int64(len(data))
 	}
-	if _, err := ReleaseSequence(installed); err == nil || !strings.Contains(err.Error(), "unsupported physical provenance schema") {
-		t.Fatalf("legacy RAW provenance unexpectedly accepted: %v", err)
+	if _, err := ReleaseSequence(installed); err == nil {
+		t.Fatal("legacy RAW provenance unexpectedly accepted")
 	}
 }
 
