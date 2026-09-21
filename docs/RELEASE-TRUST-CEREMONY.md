@@ -264,11 +264,11 @@ python tools/release-signing/promote_public_trust.py check \
   --verifier <toolkit>\ordax-release-signing.exe
 
 python tools/release-signing/promote_public_trust.py apply \
-  --promotion-dir <trust-review>\public-promotion \
+  --promotion-zip <trust-review>\OrdaX-Public-Trust-Handoff.zip \
   --verifier <toolkit>\ordax-release-signing.exe
 ```
 
-The promoter re-verifies the Ed25519 recovery envelope, pins the exact public-anchor SHA-256 into `docs/contracts/minimal-bootstrap.json`, records the public proof material under `docs/evidence/`, updates the trust-policy gates, and computes public bindings for the later physical-write authorization.
+The ZIP path is canonical for both `check` and `apply`; manual extraction is not required for repository promotion. The promoter re-verifies the archive shape, Ed25519 recovery envelope, public hashes and proof bindings, pins the exact public-anchor SHA-256 into `docs/contracts/minimal-bootstrap.json`, records the public proof material under `docs/evidence/`, updates the trust-policy gates, and computes public bindings for the later physical-write authorization.
 
 It **does not** authorize destructive writes. After successful public trust promotion:
 
@@ -337,7 +337,7 @@ This is acceptable for the first notebook proof because the device population is
 
 Silent public-key replacement is forbidden.
 
-Until a signed trust-transition protocol is implemented, prototype key rotation requires reprovisioning. Production rotation will require the currently trusted key to authorize the successor key before the old key is retired.
+A signed trust-transition protocol v1 is now implemented and CI-proven between the signer and release agent. It requires the currently trusted key to authorize a distinct successor key, binds the exact current-trust SHA-256 and an exact monotonic sequence, and fails closed on rollback/tampering. Stateful device activation of the successor trust is still disabled, so production rotation is not yet complete. Until that activation owner is implemented and physically proven, the first controlled prototype remains bound to the pinned canonical anchor.
 
 Current fail-closed state after local generation but before recovery/public promotion:
 
