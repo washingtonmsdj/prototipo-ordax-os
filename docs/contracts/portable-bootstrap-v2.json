@@ -47,7 +47,10 @@
     "surface_runtime_content_addressed": true,
     "surface_runtime_ephemeral_overlay": "/run/ordax/runtime/native-surface/rootfs",
     "stable_boot_package_download_allowed": false,
-    "stable_boot_package_install_allowed": false
+    "stable_boot_package_install_allowed": false,
+    "initial_rejected_absent": true,
+    "update_activation_mode": "signed-v3-one-shot-reboot-cold-health",
+    "physical_update_activation_proven": false
   },
   "esp_substrate": {
     "system_or_apps_preinstalled": false,
@@ -139,7 +142,7 @@
     "verify-and-mount-bootstrap-capsule",
     "mount-ORDAX-DATA-exfat",
     "attach-and-mount-persistent-state-ext4",
-    "read-current-or-known-good-from-ext4",
+    "read-one-shot-candidate-or-current-or-known-good-from-ext4",
     "reverify-selected-release-envelope-manifest-hash-and-erofs-offline",
     "verify-stable-base-against-initramfs-owned-pin",
     "mount-stable-base-erofs-read-only-and-compose-base-overlay-with-ext4-upper-work",
@@ -162,26 +165,39 @@
     "portable_state_reader": {
       "path": "/sbin/ordax-portable-state",
       "installed": true,
-      "read_only": true,
+      "read_only": false,
       "pid1_connected": true,
       "operations": [
         "read-slot",
         "resolve",
-        "select"
+        "select",
+        "prepare",
+        "select-boot",
+        "commit",
+        "rollback"
       ],
       "selection_order": [
+        "candidate-one-shot",
         "current",
         "known-good"
       ],
       "selects_materialized_release_shape": true,
       "verifies_signature": false,
-      "candidate_is_boot_authority": false,
+      "candidate_is_boot_authority": true,
       "resolves_exact_boot_slots": [
+        "candidate",
         "current",
         "known-good"
       ],
       "resolve_candidate_allowed": false,
-      "resolve_verifies_signature": false
+      "resolve_verifies_signature": false,
+      "candidate_boot_authority_policy": "armed-one-shot-transaction-only",
+      "writes_activation_state": true,
+      "atomic_replace": true,
+      "fsync_required": true,
+      "directory_fsync_required": true,
+      "runtime_copy_path": "/run/ordax/bootstrap-tools/ordax-portable-state",
+      "rejected_slot": "rejected"
     },
     "portable_mount_helper": {
       "path": "/sbin/ordax-portable-mount",
@@ -209,16 +225,24 @@
       "default_init": false,
       "invocation_for_disposable_proof": "rdinit=/sbin/ordax-portable-init",
       "physical_boot_entry_implemented": false,
-      "current_then_known_good": true,
+      "current_then_known_good": false,
       "exact_signed_release_verification": true,
-      "candidate_boot_authority": false,
+      "candidate_boot_authority": true,
       "network_required": false,
       "switches_root_to": "stable-base-overlay",
       "physical_boot_authorized": false,
       "release_manifest_v3_supported": true,
       "surface_runtime_verified_handoff": true,
       "surface_runtime_overlay": "ephemeral-run",
-      "stable_boot_package_install_allowed": false
+      "stable_boot_package_install_allowed": false,
+      "release_selection": [
+        "candidate-one-shot",
+        "current",
+        "known-good"
+      ],
+      "candidate_boot_authority_policy": "armed-one-shot-transaction-only",
+      "failed_candidate_rolls_back_before_handoff": true,
+      "activation_helper_retained_after_switch_root": true
     }
   },
   "stable_base": {
