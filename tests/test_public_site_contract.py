@@ -131,8 +131,8 @@ class PublicSiteContractTests(unittest.TestCase):
         landing = (SITE / "index.html").read_text(encoding="utf-8")
         for href in ("/download/", "/login/", "/cadastro/", "/licencas/"):
             self.assertIn(f'href="{href}"', landing)
-        self.assertIn("Em desenvolvimento", landing)
-        self.assertIn("Login e downloads dependem da disponibilidade pública", landing)
+        self.assertIn("EM DESENVOLVIMENTO", landing)
+        self.assertIn("Downloads públicos aparecem somente quando uma release autorizada estiver disponível.", landing)
         self.assertIn("Stable/MVP", landing)
         self.assertIn("OrdaX Creator", landing)
         self.assertIn("diretamente pelo pendrive", landing)
@@ -154,9 +154,9 @@ class PublicSiteContractTests(unittest.TestCase):
         script = (SITE / "assets" / "playground.js").read_text(encoding="utf-8")
 
         self.assertIn('id="experimente"', landing)
-        self.assertIn("A demonstração usa dados de exemplo", landing)
-        self.assertIn("Simulação local nesta página", landing)
-        self.assertIn("Ao sair, as alterações são descartadas", landing)
+        self.assertIn("Demonstração com dados de exemplo. Sem instalar.", landing)
+        self.assertIn("Sincronização simulada nesta prévia.", landing)
+        self.assertIn("data-reset", landing)
 
         self.assertIn("Public marketing simulation only", script)
         self.assertIn("No product imports, persistence, network or identity", script)
