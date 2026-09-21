@@ -9,6 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 FOUNDATION_PATH = ROOT / "docs" / "contracts" / "foundation.json"
 STORAGE_PATH = ROOT / "docs" / "contracts" / "storage-architecture.json"
 PORTABLE_V2_PATH = ROOT / "docs" / "contracts" / "portable-usb-v2.json"
+PORTABLE_BOOTSTRAP_PATH = ROOT / "docs" / "contracts" / "portable-bootstrap-v2.json"
+PORTABLE_HANDOFF_PATH = ROOT / "docs" / "contracts" / "portable-boot-handoff.json"
 
 
 class StorageArchitectureContractTest(unittest.TestCase):
@@ -17,6 +19,8 @@ class StorageArchitectureContractTest(unittest.TestCase):
         cls.foundation = json.loads(FOUNDATION_PATH.read_text(encoding="utf-8"))
         cls.storage = json.loads(STORAGE_PATH.read_text(encoding="utf-8"))
         cls.portable_v2 = json.loads(PORTABLE_V2_PATH.read_text(encoding="utf-8"))
+        cls.portable_bootstrap = json.loads(PORTABLE_BOOTSTRAP_PATH.read_text(encoding="utf-8"))
+        cls.portable_handoff = json.loads(PORTABLE_HANDOFF_PATH.read_text(encoding="utf-8"))
 
     def test_foundation_points_to_storage_authority(self):
         storage = self.foundation["storage_architecture"]
@@ -101,6 +105,22 @@ class StorageArchitectureContractTest(unittest.TestCase):
         self.assertEqual(internal["persistent_state_image"]["filesystem"], "ext4")
         self.assertTrue(internal["persistent_state_image"]["overlayfs_upper_owner"])
         self.assertNotIn("ORDAX", [p["name"] for p in contract["partitions"]])
+
+    def test_portable_v2_storage_contract_tracks_connected_candidate_handoff(self):
+        contract = self.portable_v2
+        bootstrap = self.portable_bootstrap
+        handoff = self.portable_handoff
+
+        self.assertTrue(contract["mvp_boot_handoff_connected"])
+        self.assertTrue(contract["first_boot_target"]["pid1_integration_implemented"])
+        self.assertTrue(bootstrap["migration"]["portable_v2_pid1_integration_implemented"])
+        self.assertTrue(handoff["initramfs_integration_implemented"])
+
+        # Connected source/CI handoff is not a physical-product boot claim.
+        self.assertFalse(contract["bootable_proven"])
+        self.assertFalse(contract["physical_write_authorized"])
+        self.assertFalse(bootstrap["physical_boot_proven"])
+        self.assertFalse(handoff["physical_boot_connected"])
 
     def test_portable_v2_migration_cannot_replace_physical_writer_before_physical_boot_proof(self):
         migration = self.storage["prototype_migration"]
