@@ -315,12 +315,13 @@ GITHUB_IS_KEY_CUSTODIAN=NO
 MANAGED_KMS_HSM_REQUIRED_FOR_FIRST_PHYSICAL_PROOF=NO
 SIGNED_TRUST_ROTATION_REQUIRED_BEFORE_BROAD_PUBLIC_DISTRIBUTION=YES
 RECOVERY_PUBLIC_HANDOFF_SHA256=85d4f8430f0a4066ebed84a410071409c112c65aa72a5818483a664a41b91e20
-READY_TO_PIN_PUBLIC_ANCHOR=YES
+EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED=NO
+READY_TO_PIN_PUBLIC_ANCHOR=NO_PENDING_EXTERNAL_BACKUP
 MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=NO
 PHYSICAL_WRITE_ALLOWED=NO
 ```
 
-The eligible Windows trust toolkit from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`) completed operator steps 1, 2 and 3 on 2026-09-21: read-only preflight passed, local Ed25519 material was generated, independent public derivation matched, the proof signature succeeded, and the encrypted backup was restored to a distinct path whose derived trust and signing proof matched the canonical identity. The recovery envelope verified successfully with public trust only. The private key remains outside Git/USB/Actions artifacts and is not recorded here. The next gate is promotion of the public handoff ZIP into the repository; until that exact public bundle is validated and pinned, physical write remains blocked. The local PEM is accepted only as controlled-prototype custody; production custody remains provider-neutral with managed non-exportable KMS/HSM as a future backend and signed rotation required before broad public distribution.
+The eligible Windows trust toolkit from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`) completed operator steps 1, 2 and 3 on 2026-09-21: read-only preflight passed, local Ed25519 material was generated, independent public derivation matched, the proof signature succeeded, and the encrypted backup was restored to a distinct path whose derived trust and signing proof matched the canonical identity. The recovery envelope verified successfully with public trust only. The private key remains outside Git/USB/Actions artifacts and is not recorded here. The encrypted archive used for this cryptographic recovery test was still on the same host, so external/offline backup custody is deliberately not claimed yet. The next trust gates are to place an encrypted recovery archive on independent external/offline storage and then validate/promote the public handoff ZIP; until both are satisfied, the public anchor and physical write remain blocked. The local PEM is accepted only as controlled-prototype custody; production custody remains provider-neutral with managed non-exportable KMS/HSM as a future backend and signed rotation required before broad public distribution.
 
 ## Creator and physical-write boundary
 
