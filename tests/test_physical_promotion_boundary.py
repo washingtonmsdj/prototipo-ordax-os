@@ -344,7 +344,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
                 authorization.prepare_authorization(root)
 
             self.assertIn(
-                "canonical-public-trust-file-invalid",
+                "canonical-public-trust-missing-or-invalid",
                 str(raised.exception),
             )
             self.assertFalse(
