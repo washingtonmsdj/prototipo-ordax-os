@@ -199,7 +199,7 @@ ORDAX-DATA  exFAT
   -> .ordax/state/persistent-state.img   # ext4-in-file
 ```
 
-Mutable activation authority (`current`, `known-good`, `candidate`, `rejected` and `activation-transaction.json`) lives inside the ext4 persistent-state image, never as a mutable exFAT symlink/pointer. Portable v2 remains a compatibility release shape; the current Stable/MVP candidate uses signed `release-manifest/3`, binding both `system.erofs` and the content-addressed Surface runtime. The Stable Base remains a separate immutable minimal OS EROFS. The fixed initramfs candidate owns exact release selection, capsule/Base verification, system/runtime EROFS mounts and the read-only-to-ephemeral OverlayFS handoff; signature authority remains in the bootstrap-owned release agent. The Portable activation primitive is now connected in source: a verified v3 release is materialized without activation, armed as a one-shot candidate in ext4, cold-booted once, committed only after Surface health, or rejected/rolled back offline to the previous `current`. This source integration does **not** by itself prove the transaction in QEMU/UEFI or on the physical Stable/MVP USB.
+Mutable activation authority (`current`, `known-good`, `candidate`, `rejected` and `activation-transaction.json`) lives inside the ext4 persistent-state image, never as a mutable exFAT symlink/pointer. Portable v2 remains a compatibility release shape; the current Stable/MVP candidate uses signed `release-manifest/3`, binding both `system.erofs` and the content-addressed Surface runtime. The Stable Base remains a separate immutable minimal OS EROFS. The fixed initramfs candidate owns exact release selection, capsule/Base verification, system/runtime EROFS mounts and the read-only-to-ephemeral OverlayFS handoff; signature authority remains in the bootstrap-owned release agent. The Portable activation primitive is now connected in source: a verified v3 release is materialized without activation, armed as a one-shot candidate in ext4, cold-booted once, committed only after Surface health, or rejected/rolled back offline to the previous `current`. The dedicated disposable QEMU proof now also proves the armed one-shot **failure path** on the merged source: the candidate boots exactly once, the next boot returns to the exact previous release, the failed candidate is persisted as `rejected`, and both `candidate` and `activation-transaction.json` are removed. This still does **not** prove cold-health commit, physical Stable/MVP USB boot, Secure Boot, physical known-good or physical rollback.
 
 ```text
 PORTABLE_USB_V2_STORAGE_PROOF=PASS_CI_DISPOSABLE
@@ -220,9 +220,13 @@ PORTABLE_STABLE_GRAPHICAL_SURFACE_OFFLINE_PROVEN=NO_PHYSICAL_GRAPHICAL_EXERCISE_
 PORTABLE_STABLE_BOOT_APK_INSTALL_ALLOWED=NO
 PORTABLE_V3_UPDATE_ACTIVATION_SOURCE=CONNECTED_ONE_SHOT_REBOOT_COLD_HEALTH
 PORTABLE_V3_UPDATE_BASELINE_QEMU_REGRESSION=PASS_CI_CURRENT_MAIN_DIRECT_AND_UEFI
-PORTABLE_V3_UPDATE_ACTIVATION_QEMU_ONE_SHOT_PROOF=PENDING_DEDICATED_PROOF
+PORTABLE_V3_UPDATE_ACTIVATION_QEMU_ONE_SHOT_PROOF=PASS_CI_DISPOSABLE_EXACT_SOURCE
+PORTABLE_V3_UPDATE_ONE_SHOT_PROVEN_SOURCE_COMMIT=837a99733654943f08a400d6cc3fb28bf84605f8
+PORTABLE_V3_UPDATE_ONE_SHOT_WORKFLOW_RUN_ID=35607396175
+PORTABLE_V3_UPDATE_ONE_SHOT_PROOF_ARTIFACT_SHA256=57712b1364b5e6ee2efc44645238abc21e50d531fa41f6936f7674465cdf5a23
+PORTABLE_V3_UPDATE_COLD_HEALTH_COMMIT_PROOF=PENDING
 PORTABLE_V3_UPDATE_ACTIVATION_PHYSICAL_PROOF=NO
-PORTABLE_V3_REJECTED_SHA_PERSISTED=PASS_IN_AGENT_TESTS_MAIN
+PORTABLE_V3_REJECTED_SHA_PERSISTED=PASS_CI_DISPOSABLE_ONE_SHOT
 PORTABLE_SURFACE_RUNTIME_EPHEMERAL_OVERLAY=/run
 PORTABLE_PINNED_INITRAMFS_COMPOSITION=PASS_CI
 PORTABLE_QEMU_DIRECT_KERNEL_BOOT=PASS_CI_RUNTIME_V3

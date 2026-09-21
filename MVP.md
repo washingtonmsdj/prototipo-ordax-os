@@ -219,7 +219,7 @@ Estado atual do caminho v2:
 - transação Portable one-shot: `prepare -> select-boot -> commit/rollback`, com replace atômico + fsync e sem ponteiro mutável no exFAT;
 - `candidate` só ganha autoridade de boot quando existe uma transação armada; recebe **uma tentativa** e nunca substitui `current` antes do cold-health;
 - SHA rejeitado fica persistido e não é rearmado enquanto o canal oficial não avançar para outro commit;
-- o supervisor Stable já orquestra `inspect -> materialize-portable-v3 -> verify-portable-v3-exact -> arm -> reboot -> cold-health -> commit/rollback` na `main`; o commit `c8c8fe526d03ced7630420cd116dd954b08ef03a` passou o baseline exato QEMU direct-kernel + OVMF/UEFI, enquanto a prova dedicada do candidate one-shot/rejected e a prova no USB físico continuam separadas;
+- o supervisor Stable já orquestra `inspect -> materialize-portable-v3 -> verify-portable-v3-exact -> arm -> reboot -> cold-health -> commit/rollback` na `main`; o baseline exato QEMU direct-kernel + OVMF/UEFI passou em `c8c8fe526d03ced7630420cd116dd954b08ef03a`, e a prova dedicada no source `837a99733654943f08a400d6cc3fb28bf84605f8` passou o caminho de falha `previous -> candidate one-shot -> previous + rejected`; cold-health commit e USB físico continuam separados;
 - bootstrap capsule EROFS: determinística, reprodutível, pinada e verificada pelo PID1 candidato;
 - Stable Base EROFS: Alpine e conjunto APK transitivo pinados; handoff QEMU/UEFI v2-base já provado em CI, prova física ainda pendente;
 - runtime gráfico offline: lock exato de 253 pacotes e EROFS byte-reprodutível provados em CI; handoff v3, preseed Creator e launcher Stable offline já implementados no candidato atual;

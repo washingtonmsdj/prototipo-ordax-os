@@ -1,0 +1,38 @@
+{
+  "$schema": "prototype-ordax.portable-v3-one-shot-qemu-proof/1",
+  "status": "pass",
+  "source_commit": "837a99733654943f08a400d6cc3fb28bf84605f8",
+  "previous_commit": "7eabd7d3b25c5a058378175c90ef9aec669277cd",
+  "workflow": ".github/workflows/portable-v2-qemu-boot-proof.yml",
+  "workflow_run_id": 35607396175,
+  "artifact": {
+    "name": "portable-v2-qemu-boot-proof-837a99733654943f08a400d6cc3fb28bf84605f8",
+    "sha256": "57712b1364b5e6ee2efc44645238abc21e50d531fa41f6936f7674465cdf5a23"
+  },
+  "proven": {
+    "candidate_and_previous_signed_release_v3_verified": true,
+    "candidate_state_armed": true,
+    "candidate_boot_selected_once": true,
+    "candidate_source_sha_exact": true,
+    "fallback_previous_selected": true,
+    "fallback_previous_source_sha_exact": true,
+    "candidate_persisted_as_rejected": true,
+    "candidate_file_removed": true,
+    "activation_transaction_removed": true,
+    "guest_disk_destroyed": true,
+    "qemu_network_disabled": true
+  },
+  "not_proven": {
+    "cold_health_commit": true,
+    "physical_usb_boot": true,
+    "secure_boot": true,
+    "physical_known_good": true,
+    "physical_rollback": true
+  },
+  "safety": {
+    "physical_target_device_touched": false,
+    "physical_write_authorized": false,
+    "public_physical_promotion_allowed": false
+  },
+  "note": "Disposable CI proof of the failure path only: one candidate boot, exact fallback to previous on the second boot, rejected persistence, and transaction cleanup. It does not prove the healthy cold-health promotion path or any physical Stable/MVP USB gate."
+}

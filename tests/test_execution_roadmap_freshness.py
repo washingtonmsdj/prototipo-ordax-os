@@ -35,11 +35,11 @@ class ExecutionRoadmapFreshnessTests(unittest.TestCase):
             roadmap,
         )
         self.assertIn(
-            "PORTABLE_V3_UPDATE_ACTIVATION=PASS_SOURCE_MAIN_BASELINE_BOOT_REGRESSION_PASS_DEDICATED_ONE_SHOT_PENDING",
+            "PORTABLE_V3_UPDATE_ACTIVATION=PASS_CI_DISPOSABLE_ONE_SHOT_FAILURE_FALLBACK",
             roadmap,
         )
         self.assertIn(
-            "PORTABLE_V3_UPDATE_ROLLBACK=PASS_IN_AGENT_TESTS_MAIN_REJECTED_SHA_DEDICATED_BOOT_PENDING",
+            "PORTABLE_V3_UPDATE_ROLLBACK=PASS_CI_DISPOSABLE_REJECTED_SHA_FALLBACK_PHYSICAL_PENDING",
             roadmap,
         )
         self.assertIn("PORTABLE_PHYSICAL_WRITER=PASS_TAGGED_INTERNAL", roadmap)

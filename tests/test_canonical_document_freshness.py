@@ -17,6 +17,7 @@ PHYSICAL_PREPARED = ROOT / "docs" / "contracts" / "physical-prepared-media.json"
 MINIMAL_USB_BOOTSTRAP = ROOT / "docs" / "MINIMAL-USB-BOOTSTRAP.md"
 PORTABLE_BOOTSTRAP = ROOT / "docs" / "contracts" / "portable-bootstrap-v2.json"
 PORTABLE_MAIN_EVIDENCE = ROOT / "docs" / "evidence" / "portable-runtime-v3-main-proof.json"
+PORTABLE_ONE_SHOT_EVIDENCE = ROOT / "docs" / "evidence" / "portable-v3-one-shot-qemu-proof.json"
 
 
 def assignment_map(text):
@@ -161,7 +162,7 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertEqual(promotion["DEVELOPMENT_DEVICE_GIT_HOT_UPDATE"], "PASS_PHYSICAL_DEVELOPMENT_USB")
         self.assertEqual(
             promotion["STABLE_DEVICE_RELEASE_OR_DELTA_UPDATE"],
-            "PASS_SOURCE_PORTABLE_V3_MAIN_BASELINE_CI_PENDING_DEDICATED_AND_PHYSICAL",
+            "PASS_CI_PORTABLE_V3_FAILURE_FALLBACK_PENDING_COLD_HEALTH_AND_PHYSICAL",
         )
         self.assertEqual(
             promotion["STABLE_HEALTH_READINESS"],
@@ -177,7 +178,7 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         )
         self.assertEqual(
             state["PORTABLE_V3_UPDATE_ACTIVATION_QEMU_ONE_SHOT_PROOF"],
-            "PENDING_DEDICATED_PROOF",
+            "PASS_CI_DISPOSABLE_EXACT_SOURCE",
         )
         self.assertEqual(
             state["PORTABLE_V3_UPDATE_ACTIVATION_PHYSICAL_PROOF"],
@@ -201,11 +202,11 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
             current,
         )
         self.assertIn(
-            "PORTABLE_V3_UPDATE_ACTIVATION_QEMU_ONE_SHOT_PROOF=PENDING_DEDICATED_PROOF",
+            "PORTABLE_V3_UPDATE_ACTIVATION_QEMU_ONE_SHOT_PROOF=PASS_CI_DISPOSABLE_EXACT_SOURCE",
             current,
         )
         self.assertIn("PORTABLE_V3_UPDATE_ACTIVATION_PHYSICAL_PROOF=NO", current)
-        self.assertIn("PASS_SOURCE_MAIN_BASELINE_BOOT_REGRESSION_PASS_DEDICATED_PROOF_PENDING", promotion)
+        self.assertIn("PORTABLE_V3_ONE_SHOT_ACTIVATION=PASS_CI_DISPOSABLE_FAILURE_FALLBACK", promotion)
         self.assertIn("KNOWN_GOOD_PERSISTED=PENDING_PHYSICAL", promotion)
         self.assertIn("ROLLBACK=PENDING_PHYSICAL", promotion)
         self.assertNotIn("portable-v2-activation-not-connected", current)
@@ -236,6 +237,38 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertTrue(evidence["not_proven"]["armed_candidate_one_shot"])
         self.assertTrue(evidence["not_proven"]["cold_health_commit"])
         self.assertTrue(evidence["not_proven"]["physical_usb_boot"])
+        self.assertFalse(evidence["safety"]["physical_target_device_touched"])
+        self.assertFalse(evidence["safety"]["physical_write_authorized"])
+
+    def test_portable_one_shot_evidence_matches_current_markers(self):
+        evidence = json.loads(PORTABLE_ONE_SHOT_EVIDENCE.read_text(encoding="utf-8"))
+        state = assignment_map(CURRENT_STATE.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            evidence["$schema"],
+            "prototype-ordax.portable-v3-one-shot-qemu-proof/1",
+        )
+        self.assertEqual(evidence["status"], "pass")
+        self.assertEqual(
+            evidence["source_commit"],
+            state["PORTABLE_V3_UPDATE_ONE_SHOT_PROVEN_SOURCE_COMMIT"],
+        )
+        self.assertEqual(
+            str(evidence["workflow_run_id"]),
+            state["PORTABLE_V3_UPDATE_ONE_SHOT_WORKFLOW_RUN_ID"],
+        )
+        self.assertEqual(
+            evidence["artifact"]["sha256"],
+            state["PORTABLE_V3_UPDATE_ONE_SHOT_PROOF_ARTIFACT_SHA256"],
+        )
+        self.assertTrue(evidence["proven"]["candidate_boot_selected_once"])
+        self.assertTrue(evidence["proven"]["fallback_previous_selected"])
+        self.assertTrue(evidence["proven"]["candidate_persisted_as_rejected"])
+        self.assertTrue(evidence["proven"]["candidate_file_removed"])
+        self.assertTrue(evidence["proven"]["activation_transaction_removed"])
+        self.assertTrue(evidence["not_proven"]["cold_health_commit"])
+        self.assertTrue(evidence["not_proven"]["physical_usb_boot"])
+        self.assertTrue(evidence["not_proven"]["secure_boot"])
         self.assertFalse(evidence["safety"]["physical_target_device_touched"])
         self.assertFalse(evidence["safety"]["physical_write_authorized"])
 
