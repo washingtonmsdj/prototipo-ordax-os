@@ -41,8 +41,24 @@ class HotUpdateSupervisorContractTests(unittest.TestCase):
         self.assertIn("APPLY_MODE=reload", text)
         self.assertIn("APPLY_MODE=surface-restart", text)
         self.assertIn("APPLY_MODE=supervisor-restart", text)
-        self.assertNotIn("reboot -f", text)
         self.assertNotIn("poweroff -f", text)
+
+        # Owner/Development live updates remain rebootless. The single reboot
+        # primitive belongs only to immutable Portable Stable activation.
+        self.assertEqual(text.count("reboot -f"), 1)
+        portable_reboot = text.split("portable_reboot_now() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("/bin/busybox reboot -f", portable_reboot)
+        for owner_function in (
+            "apply_remote_checkout",
+            "stage_candidate_release",
+            "classify_changes",
+            "apply_update",
+        ):
+            marker = f"{owner_function}() {{"
+            if marker not in text:
+                continue
+            body = text.split(marker, 1)[1].split("\n}", 1)[0]
+            self.assertNotIn("reboot -f", body, owner_function)
 
     def test_surface_health_recovery_is_bounded_to_seconds_not_minutes(self):
         text = SYSTEM_SUPERVISOR.read_text(encoding="utf-8")
