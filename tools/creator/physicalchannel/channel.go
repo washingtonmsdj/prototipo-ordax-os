@@ -24,11 +24,11 @@ import (
 
 const (
 	EnvelopeSchema      = "prototype-ordax.creator-physical-envelope/1"
-	ManifestSchema      = "prototype-ordax.creator-physical-manifest/1"
+	ManifestSchema      = "prototype-ordax.creator-physical-manifest/2"
 	TrustSchema         = "prototype-ordax.release-trust/1"
-	Purpose             = "creator-physical-windows-amd64"
+	Purpose             = "creator-portable-physical-windows-amd64"
 	SourceRepository    = "washingtonmsdj/prototipo-ordax-os"
-	Recipe              = "creator/physical/windows/1"
+	Recipe              = "creator/physical/portable-windows/2"
 	DefaultEnvelopeURL  = "https://github.com/washingtonmsdj/prototipo-ordax-os/releases/download/creator-physical/creator-physical-envelope.json"
 	bundleReleasePrefix = "/washingtonmsdj/prototipo-ordax-os/releases/download/creator-physical/"
 
@@ -119,11 +119,14 @@ func validHTTPSAssetURL(raw string) error {
 
 func expectedFiles() map[string]struct{} {
 	return map[string]struct{}{
-		"ordax-creator-physical-test.exe": {},
-		"ordax-bootstrap-seed.raw":         {},
-		"release-ed25519.json":             {},
-		"provenance.json":                  {},
-		"SHA256SUMS":                       {},
+		"ordax-creator-physical-test.exe":      {},
+		"release-ed25519.json":                 {},
+		"minimal-bootstrap.json":               {},
+		"portable-usb-v2.json":                 {},
+		"creator-portable-media-plan.json":     {},
+		"physical-write-authorization.json":    {},
+		"provenance.json":                      {},
+		"SHA256SUMS":                           {},
 	}
 }
 
