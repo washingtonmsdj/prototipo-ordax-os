@@ -43,6 +43,16 @@ def test_key_generation_requires_explicit_switch_after_preflight():
     assert "-GenerateKey" not in PREFLIGHT_WRAPPER
 
 
+def test_toolkit_workflow_tracks_every_canonical_eligibility_input():
+    for path in (
+        "docs/contracts/portable-v2-qemu-boot-proof.json",
+        "docs/contracts/portable-v2-uefi-boot-proof.json",
+        "docs/contracts/creator-portable-media-plan.json",
+        "docs/contracts/physical-write-authorization.json",
+    ):
+        assert TOOLKIT.count(f"- '{path}'") == 2
+
+
 def test_canonical_toolkit_eligibility_requires_portable_runtime_v3_prerequisites():
     for marker in (
         "'portable_runtime_v3_direct_kernel_proven'",
