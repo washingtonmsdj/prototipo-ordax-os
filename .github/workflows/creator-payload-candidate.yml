@@ -168,26 +168,8 @@ jobs:
           printf '%s\n' "$verify_output"
           stage_output="$(go run ./cmd/ordax-creator stage-tree --manifest "$manifest" --payload-root "$payload" --output-root "$output")"
           printf '%s\n' "$stage_output"
-          grep -q '^DISPOSABLE_TREE_STAGED=YES
-
-      - name: Upload unified Creator payload candidate
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
-        with:
-          name: ordax-creator-payload-${{ github.sha }}
-          path: out/creator-payload/
-          if-no-files-found: error
-          retention-days: 14
- <<<"$stage_output"
-          grep -q '^PHYSICAL_WRITE_STATUS=blocked
-
-      - name: Upload unified Creator payload candidate
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
-        with:
-          name: ordax-creator-payload-${{ github.sha }}
-          path: out/creator-payload/
-          if-no-files-found: error
-          retention-days: 14
- <<<"$stage_output"
+          grep -q '^DISPOSABLE_TREE_STAGED=YES$' <<<"$stage_output"
+          grep -q '^PHYSICAL_WRITE_STATUS=blocked$' <<<"$stage_output"
           test -n "$(find "$output" -mindepth 1 -print -quit)"
 
       - name: Upload unified Creator payload candidate
