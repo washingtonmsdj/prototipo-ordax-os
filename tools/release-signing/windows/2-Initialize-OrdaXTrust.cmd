@@ -11,7 +11,7 @@ echo A chave privada sera criada FORA desta pasta, no armazenamento
 echo privado local do seu usuario. Ela NAO deve ser enviada ao Git,
 echo ao ChatGPT, ao pendrive OrdaX ou a artefatos do GitHub Actions.
 echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Initialize-OrdaXReleaseTrust.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Initialize-OrdaXReleaseTrust.ps1" -GenerateKey
 if errorlevel 1 goto :error
 echo.
 echo CERIMONIA_LOCAL=CONCLUIDA
