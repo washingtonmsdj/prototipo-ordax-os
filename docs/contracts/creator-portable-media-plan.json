@@ -18,7 +18,7 @@
   "physical_write_authorized": false,
   "physical_device_paths_allowed": false,
   "disposable_materializer_implemented": true,
-  "physical_writer_v2_implemented": false,
+  "physical_writer_v2_implemented": true,
   "public_mvp_default_enabled": false,
   "disposable_materializer": "tools/creator/proof/portable_prepared_media.py",
   "disposable_materializer_physical_device_allowed": false,
@@ -57,5 +57,24 @@
     "content_addressed": true,
     "release_manifest_schema": "prototype-ordax.release-manifest/3",
     "physical_write_authorized": false
+  },
+  "physical_writer_v2": {
+    "implemented": true,
+    "owner": "tools/creator/core/portable_application_executor.go + tools/creator/host/windows/portable_apply_windows.go",
+    "build_tag": "ordax_raw_backend",
+    "internal_command": "ordax-creator-physical-test apply-portable",
+    "preparation_command": "ordax-creator-physical-test prepare-portable",
+    "consumes_application_plan_schema": "prototype-ordax.portable-application-plan/1",
+    "exact_operation_count": 35,
+    "exact_artifact_count": 15,
+    "readback_sha256_and_size_per_artifact": true,
+    "whole_disk_raw_image_required": false,
+    "live_usb_revalidation": true,
+    "windows_uac_required": true,
+    "source_handles_locked_during_apply": true,
+    "public_creator_reachable": false,
+    "physical_write_authorized": false,
+    "public_mvp_default_enabled": false,
+    "safety_workflow": ".github/workflows/physical-usb-test-toolkit.yml"
   }
 }
