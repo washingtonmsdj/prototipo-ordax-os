@@ -1,0 +1,34 @@
+{
+  "$schema": "prototype-ordax.canonical-trust-toolkit-ready/1",
+  "status": "eligible-main-push-artifact",
+  "source_commit": "2172eb6a18430910afd036199ec492ad63dc185d",
+  "workflow": ".github/workflows/windows-prototype-toolkit.yml",
+  "workflow_run_id": 35617567458,
+  "artifact": {
+    "id": 10647555556,
+    "name": "ordax-windows-prototype-toolkit-2172eb6a18430910afd036199ec492ad63dc185d",
+    "sha256": "cb8232d20a9cdbaa81e73d55b52e2d6047b3b800a06a73a14869e6dc2245af31",
+    "internal_sha256sums_verified": true
+  },
+  "provenance": {
+    "canonical_trust_ceremony_eligible": true,
+    "source_event": "push",
+    "source_ref": "refs/heads/main",
+    "private_key_included": false,
+    "physical_write_authorized": false,
+    "public_physical_apply_implemented": false,
+    "canonical_trust_prerequisites": {
+      "portable_runtime_v3_direct_kernel_proven": true,
+      "portable_runtime_v3_uefi_ovmf_proven": true,
+      "portable_v3_one_shot_failure_fallback_proven": true,
+      "portable_writer_v2_implemented_fail_closed": true,
+      "physical_authorization_still_fail_closed": true
+    }
+  },
+  "local_operator_state": {
+    "read_only_preflight_executed": false,
+    "canonical_key_material_generated": false,
+    "public_anchor_pinned": false
+  },
+  "note": "Toolkit ZIP was downloaded from the canonical main push artifact, its archive SHA-256 matched the Actions artifact digest, every internal SHA256SUMS entry verified, and no private-key file extensions were present. Local Windows preflight and key ceremony remain intentionally unexecuted."
+}

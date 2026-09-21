@@ -159,6 +159,16 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
             state["CANONICAL_TRUST_TOOLKIT_REQUIRES_PORTABLE_ONE_SHOT_PROOF"],
             "YES",
         )
+        self.assertEqual(
+            state["CANONICAL_TRUST_TOOLKIT_PROVENANCE_ELIGIBLE"],
+            "YES",
+        )
+        self.assertEqual(
+            state["CANONICAL_TRUST_TOOLKIT_LOCAL_PREFLIGHT_EXECUTED"],
+            "NO",
+        )
+        self.assertEqual(state["CANONICAL_KEY_MATERIAL_GENERATED"], "NO")
+        self.assertEqual(state["PUBLIC_ANCHOR_PINNED"], "NO")
         self.assertEqual(promotion["NATIVE_GRAPHICAL_MODE"], "PASS_PHYSICAL_DEVELOPMENT_USB")
         self.assertEqual(promotion["CANONICAL_STABLE_GRAPHICAL_MODE"], "PENDING")
 

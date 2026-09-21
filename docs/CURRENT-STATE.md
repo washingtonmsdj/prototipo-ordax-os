@@ -94,6 +94,13 @@ NATIVE_RESCUE_CHANNEL=PASS_PHYSICAL_DEVELOPMENT_USB
 NATIVE_TELEMETRY_RELAY=PASS_PHYSICAL_DEVELOPMENT_USB
 NATIVE_CANDIDATE_PREFLIGHT_SUCCESS_PATH=PASS_PHYSICAL_DEVELOPMENT_USB
 CANONICAL_TRUST_TOOLKIT_REQUIRES_PORTABLE_ONE_SHOT_PROOF=YES
+CANONICAL_TRUST_TOOLKIT_PROVENANCE_ELIGIBLE=YES
+CANONICAL_TRUST_TOOLKIT_SOURCE_COMMIT=2172eb6a18430910afd036199ec492ad63dc185d
+CANONICAL_TRUST_TOOLKIT_WORKFLOW_RUN_ID=35617567458
+CANONICAL_TRUST_TOOLKIT_ARTIFACT_SHA256=cb8232d20a9cdbaa81e73d55b52e2d6047b3b800a06a73a14869e6dc2245af31
+CANONICAL_TRUST_TOOLKIT_LOCAL_PREFLIGHT_EXECUTED=NO
+CANONICAL_KEY_MATERIAL_GENERATED=NO
+PUBLIC_ANCHOR_PINNED=NO
 CANONICAL_KERNEL_ACPI_BATTERY_SUPPORT=EXPLICIT
 CANONICAL_KERNEL_SYSRQ_RESTART_FALLBACK=EXPLICIT
 REAL_SYSTEM_BUNDLE_REPRODUCIBLE=PASS
@@ -289,7 +296,7 @@ MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=NO
 PHYSICAL_WRITE_ALLOWED=NO
 ```
 
-The canonical private key must be generated and backed up outside Git according to `docs/RELEASE-TRUST-CEREMONY.md`; only the matching public trust document may enter source. CI/fixture keys never satisfy canonical trust. The first eligible Windows trust toolkit must be produced by a canonical `main` push whose provenance also proves the merged Portable v3 one-shot failure/fallback evidence; a toolkit from before that proof is ineligible.
+The canonical private key must be generated and backed up outside Git according to `docs/RELEASE-TRUST-CEREMONY.md`; only the matching public trust document may enter source. CI/fixture keys never satisfy canonical trust. An eligible Windows trust toolkit has now been produced from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`): its provenance reports all five prerequisites true and `canonical_trust_ceremony_eligible=true`, its ZIP digest is `cb8232d20a9cdbaa81e73d55b52e2d6047b3b800a06a73a14869e6dc2245af31`, and its internal `SHA256SUMS` pass. The next step is the **local read-only preflight**, followed only then by local key generation; no canonical key material has been generated yet.
 
 ## Creator and physical-write boundary
 
