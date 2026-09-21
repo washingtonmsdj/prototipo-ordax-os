@@ -7,6 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "docs" / "contracts" / "release-protocol.json"
 ACQUISITION = ROOT / "bootstrap" / "release-acquisition" / "main.go"
 SIGNING = ROOT / "tools" / "release-signing" / "main.go"
+SIGNING_TRANSITION = ROOT / "tools" / "release-signing" / "trust_transition.go"
+ACQUISITION_TRANSITION = ROOT / "bootstrap" / "release-acquisition" / "trust_transition.go"
 MANIFEST_TOOL = ROOT / "tools" / "release-manifest" / "main.go"
 
 
@@ -129,6 +131,41 @@ class ReleaseProtocolContractTests(unittest.TestCase):
         self.assertIn("verifyPortableV3Exact(", acquisition)
         self.assertIn('filepath.Join(root, "runtimes", "sha256"', acquisition)
         self.assertIn("surface-runtime.sha256", acquisition)
+
+    def test_trust_transition_v1_is_separate_fail_closed_protocol(self):
+        contract = self.load_contract()["trust_transition_v1"]
+        self.assertEqual(
+            contract["transition_schema"],
+            "prototype-ordax.release-trust-transition/1",
+        )
+        self.assertEqual(
+            contract["envelope_schema"],
+            "prototype-ordax.release-trust-transition-envelope/1",
+        )
+        self.assertTrue(contract["signer_support"])
+        self.assertTrue(contract["signer_verifier_support"])
+        self.assertTrue(contract["acquisition_agent_verifier_support"])
+        self.assertTrue(contract["sequence_must_be_positive_and_exact"])
+        self.assertTrue(contract["previous_trust_exact_sha256_required"])
+        self.assertTrue(contract["transition_signed_by_current_key"])
+        self.assertTrue(contract["next_key_id_must_differ"])
+        self.assertTrue(contract["next_ed25519_key_material_must_differ"])
+        self.assertTrue(contract["canonical_next_trust_sha256_required"])
+        self.assertTrue(contract["verification_writes_only_new_output"])
+        self.assertFalse(contract["current_trust_mutation_allowed"])
+        self.assertFalse(contract["stateful_device_activation_support"])
+        self.assertFalse(contract["bootstrap_effective_trust_selection_support"])
+        self.assertFalse(contract["production_rotation_ready"])
+
+        signer = self.read_source(SIGNING_TRANSITION)
+        acquisition = self.read_source(ACQUISITION_TRANSITION)
+        for source in (signer, acquisition):
+            self.assertIn("prototype-ordax.release-trust-transition/1", source)
+            self.assertIn("prototype-ordax.release-trust-transition-envelope/1", source)
+            self.assertIn("previous_trust_sha256", source)
+            self.assertIn("next_trust_sha256", source)
+            self.assertIn("sequence", source)
+            self.assertIn("different Ed25519 key material", source)
 
     def test_channel_inspection_is_signed_and_non_destructive(self):
         current = self.load_contract()["current"]
