@@ -87,6 +87,29 @@ The signature is standard Ed25519 over the **exact manifest file bytes**. Whites
 
 Signer support does not authorize publication or activation. Until the acquisition agent and boot handoff support v2, a signed v2 envelope remains a CI/protocol candidate only.
 
+## Signing backends and custody evolution
+
+The release protocol and device verifier must not depend on where the private signing operation is hosted.
+
+Current controlled-prototype backend:
+
+```text
+local-pem
+ -> explicit local Ed25519 private key
+ -> canonical ceremony + recovery proof
+ -> never committed or distributed
+```
+
+Future production custody target:
+
+```text
+managed-kms-hsm
+ -> non-exportable operational signing key
+ -> short-lived workload authorization (for example OIDC)
+ -> no permanent private-key file on the developer workstation
+```
+
+The managed backend is intentionally deferred while the prototype does not justify paid infrastructure. AWS KMS is a candidate implementation, not a protocol dependency. GitHub may orchestrate builds and obtain short-lived authorization, but it is not private-key custody. Before broad public distribution, signed trust rotation must exist so an operational key can be revoked/replaced without redefining release-manifest/envelope semantics or reprovisioning every device.
 ## CI policy
 
 Repository CI may generate an ephemeral test key solely to prove the signing protocol and tooling. CI also proves that the signer refuses private/trust mismatches and that the resulting envelope is accepted by the real release-acquisition agent.
