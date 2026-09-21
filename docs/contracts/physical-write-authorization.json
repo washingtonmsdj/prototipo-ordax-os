@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.physical-write-authorization/2",
-  "status": "blocked-canonical-trust-pending",
+  "status": "blocked-explicit-physical-authorization-pending",
   "physical_write_allowed": false,
   "explicit_owner_authorization": false,
   "scope": "first-real-stable-mvp-usb-proof",
@@ -8,10 +8,10 @@
   "release_sequence": 1,
   "authorization_context_sha256": null,
   "bindings": {
-    "minimal_bootstrap_sha256": null,
-    "release_trust_sha256": null,
-    "portable_usb_contract_sha256": null,
-    "creator_portable_media_contract_sha256": null
+    "minimal_bootstrap_sha256": "43e4c1f35816c3fe1561cee9eb15b5d810e2c7cd8da0e3308a40f9417bcd98d0",
+    "release_trust_sha256": "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
+    "portable_usb_contract_sha256": "d5f28c165b07c4d1201ac79f542a494f87ad520b31c98baa836313162f47c4c0",
+    "creator_portable_media_contract_sha256": "63b098c1e948c2336935e17060f21455a838fab73f481b547a6c7f7d0d38c408"
   },
   "requirements": {
     "canonical_public_trust_pinned": true,

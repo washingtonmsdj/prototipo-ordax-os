@@ -204,7 +204,7 @@ Activation metadata for the durable USB is intentionally **not** stored as a sym
 
 The repository now also has a disposable **mount-handoff proof** for this graph. It re-verifies a signed portable release offline, mounts the real EROFS system tree read-only, mounts the ext4 persistent-state image, composes an OverlayFS runtime system view and proves persistent writes do not mutate EROFS.
 
-The Portable v2 handoff is now implemented in source as a candidate path: the fixed initramfs includes the loop/exFAT/EROFS/ext4/OverlayFS prerequisites, capsule/Base verification, `current -> known-good` state selection, exact signed release verification and `switch_root` into the Stable Base. Disposable direct-kernel QEMU and non-Secure-Boot OVMF/systemd-boot proofs have exercised that chain. This is still **not** a physical Stable/MVP proof: the candidate is not the default `/init`, no authorized physical boot entry or public apply path exists, canonical trust remains unresolved, and Secure Boot/real USB boot remain pending.
+The Portable v2 handoff is now implemented in source as a candidate path: the fixed initramfs includes the loop/exFAT/EROFS/ext4/OverlayFS prerequisites, capsule/Base verification, `current -> known-good` state selection, exact signed release verification and `switch_root` into the Stable Base. Disposable direct-kernel QEMU and non-Secure-Boot OVMF/systemd-boot proofs have exercised that chain. This is still **not** a physical Stable/MVP proof: the candidate is not the default `/init`, no authorized physical boot entry or public apply path exists, the canonical public trust is now pinned, and Secure Boot/real USB boot remain pending.
 
 Remote access is not needed for either Stable/MVP path.
 
@@ -270,7 +270,7 @@ Private/runtime data is not committed to public Git. The USB is never source aut
 
 The owner/development Creator may use explicitly marked ephemeral prototype trust for development provenance. This does not satisfy canonical release trust and must never be promoted as such.
 
-Canonical public release acquisition remains blocked until the user-controlled release signing ceremony/public anchor is completed.
+The user-controlled release signing ceremony and canonical public-anchor promotion are complete. Release acquisition remains fail-closed to that pinned trust; this does not authorize physical USB writing or claim a Stable/MVP hardware proof.
 
 ## Prototype rules
 
@@ -301,7 +301,7 @@ The durable USB now has a deterministic bootstrap-capsule candidate at `/ordax/b
 
 The capsule is deliberately small: the static release agent, local recovery entrypoint and official release-channel pointer. It excludes Surface, normal apps, user data, Git, build tools and every private signing key. The canonical public release trust anchor remains a separate bootstrap-owned object.
 
-CI builds the EROFS capsule twice from normalized tar metadata and requires byte-identical output plus EROFS integrity verification. The candidate initramfs composition now pins the exact capsule SHA-256, and the candidate PID1 verifies and mounts the capsule read-only before continuing. Disposable QEMU media stages those bytes on the ESP. This still does **not** mean a product USB has been physically promoted: canonical trust, authorized physical ESP materialization/public apply and real-hardware Stable/MVP boot remain independent gates.
+CI builds the EROFS capsule twice from normalized tar metadata and requires byte-identical output plus EROFS integrity verification. The candidate initramfs composition now pins the exact capsule SHA-256, and the candidate PID1 verifies and mounts the capsule read-only before continuing. Disposable QEMU media stages those bytes on the ESP. This still does **not** mean a product USB has been physically promoted: canonical trust is pinned, while authorized physical ESP materialization/public apply and real-hardware Stable/MVP boot remain independent pending gates.
 
 
 ### Portable-v2 candidate PID1
@@ -320,7 +320,7 @@ current
 
 Only after a release passes exact signature/hash verification does the candidate compose the Stable Base overlay, bind the verified `system/` subtree read-only, move all required mounts under the new root and invoke `switch_root` into `ordax-stable-init`.
 
-This does not claim a physically bootable MVP yet. The candidate chain has passed disposable direct-kernel QEMU and non-Secure-Boot OVMF/systemd-boot proof, while canonical public trust, public physical apply, real USB boot and Secure Boot remain open. The transitional Owner/Development `/init` remains the only boot path physically proven on the target notebook.
+This does not claim a physically bootable MVP yet. The candidate chain has passed disposable direct-kernel QEMU and non-Secure-Boot OVMF/systemd-boot proof, and canonical public trust is pinned; public physical apply, real USB boot and Secure Boot remain open. The transitional Owner/Development `/init` remains the only boot path physically proven on the target notebook.
 
 
 ### Pinned portable-v2 initramfs composition proof

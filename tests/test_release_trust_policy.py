@@ -14,7 +14,7 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
     def test_policy_resolves_custody_without_faking_key_material(self):
         policy = self.load_policy()
         self.assertEqual(policy["$schema"], "prototype-ordax.release-trust-policy/1")
-        self.assertEqual(policy["status"], "prototype-recovery-verified-external-backup-pending")
+        self.assertEqual(policy["status"], "canonical-public-trust-pinned")
         self.assertEqual(policy["algorithm"], "ed25519")
         self.assertEqual(policy["canonical_key_id"], "ordax-prototype-release-v1")
         self.assertEqual(policy["private_key"]["custody_owner"], "repository-owner-developer")
@@ -38,7 +38,12 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
         self.assertFalse(recovery["private_key_hash_in_public_evidence_allowed"])
         self.assertTrue(recovery["cryptographic_recovery_verified"])
         self.assertFalse(recovery["external_offline_backup_custody_confirmed"])
-        self.assertFalse(recovery["ready_to_pin_public_anchor"])
+        self.assertTrue(recovery["local_encrypted_backup_copy_verified"])
+        self.assertFalse(recovery["external_offline_backup_custody_confirmed"])
+        self.assertTrue(recovery["external_offline_backup_deferred_for_controlled_prototype"])
+        self.assertTrue(recovery["external_offline_backup_required_before_broad_distribution"])
+        self.assertTrue(recovery["ready_to_pin_public_anchor"])
+        self.assertIsNone(recovery["public_anchor_blocker"])
         self.assertEqual(
             recovery["verification_evidence_repository_path"],
             "docs/evidence/canonical-trust-local-progress-2026-09-21.json",
@@ -111,15 +116,19 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
         self.assertEqual(anchor["runtime_path"], "/ordax/bootstrap/trust/release-ed25519.json")
         self.assertTrue(anchor["pin_only_after_private_custody_ready"])
 
-    def test_recovery_verified_policy_keeps_public_promotion_gates_closed(self):
+    def test_promoted_policy_pins_public_anchor_without_authorizing_write(self):
         policy = self.load_policy()
         gates = policy["gates"]
         self.assertTrue(gates["key_material_generated"])
-        self.assertFalse(gates["public_anchor_pinned"])
-        self.assertFalse(gates["minimal_bootstrap_resolved"])
-        self.assertFalse(gates["physical_authorization_eligible"])
+        self.assertTrue(gates["public_anchor_pinned"])
+        self.assertTrue(gates["minimal_bootstrap_resolved"])
+        self.assertTrue(gates["physical_authorization_eligible"])
         self.assertNotIn("physical_write_allowed", gates)
-        self.assertFalse(TRUST_PATH.exists(), "generated local key must not imply a pinned public anchor")
+        self.assertTrue(TRUST_PATH.is_file())
+        self.assertEqual(
+            policy["public_anchor"]["sha256"],
+            "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
+        )
 
 
 if __name__ == "__main__":

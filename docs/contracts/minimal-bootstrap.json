@@ -1,8 +1,8 @@
 {
   "$schema": "prototype-ordax.minimal-bootstrap/4",
-  "status": "candidate-bytes-resolved-trust-pending",
+  "status": "canonical-bytes-resolved",
   "physical_write_allowed": false,
-  "all_artifacts_resolved": false,
+  "all_artifacts_resolved": true,
   "policy": "minimum-release-acquisition-first",
   "partitions": [
     {
@@ -171,10 +171,10 @@
         {
           "source_path": "bootstrap/release-acquisition/ordax-release-agent",
           "target_path": "/ordax/bootstrap/release-acquisition/ordax-release-agent",
-          "sha256": "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
+          "sha256": "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
           "mode": "0755",
           "logical_owner": "bootstrap-release-acquisition",
-          "reason": "Static Linux amd64 release agent with immutable v1 support, portable manifest v2 compatibility, and signed v3 system+Surface-runtime inspect/materialize/verify support; activation remains separately gated"
+          "reason": "Static Linux amd64 release agent with immutable v1, portable v2/v3, signed trust-transition v1, inspect/materialize/verify/activation support; physical activation remains separately gated"
         }
       ]
     },
@@ -183,8 +183,17 @@
       "partition": "ORDAX",
       "target_root": "/ordax/bootstrap/trust",
       "source_owner": "bootstrap/trust",
-      "resolved": false,
-      "artifacts": []
+      "resolved": true,
+      "artifacts": [
+        {
+          "source_path": "bootstrap/trust/release-ed25519.json",
+          "target_path": "/ordax/bootstrap/trust/release-ed25519.json",
+          "sha256": "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
+          "mode": "0644",
+          "logical_owner": "bootstrap-release-trust",
+          "reason": "Canonical public Ed25519 release trust anchor verified by offline-recovery ceremony"
+        }
+      ]
     },
     {
       "id": "bootstrap-release-channel",

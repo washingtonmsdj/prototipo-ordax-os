@@ -1,0 +1,16 @@
+{
+    "$schema":  "prototype-ordax.release-manifest/1",
+    "source_repository":  "washingtonmsdj/prototipo-ordax-os",
+    "source_commit":  "2172eb6a18430910afd036199ec492ad63dc185d",
+    "release_id":  "2172eb6a18430910afd036199ec492ad63dc185d",
+    "created_from_ci_recipe":  "release/native/1",
+    "artifacts":  [
+                      {
+                          "name":  "system.tar",
+                          "role":  "system",
+                          "url":  "https://example.invalid/releases/system.tar",
+                          "sha256":  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                          "size":  123
+                      }
+                  ]
+}

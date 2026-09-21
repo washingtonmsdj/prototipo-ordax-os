@@ -343,6 +343,38 @@ jobs:
                   archive.write(source / name, arcname=name)
           PY
 
+          python - <<'PY'
+          import hashlib, json, pathlib
+          trust = pathlib.Path('bootstrap/trust/release-ed25519.json')
+          assert trust.is_file()
+          assert hashlib.sha256(trust.read_bytes()).hexdigest() == (
+              'd2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250'
+          )
+          policy = json.loads(
+              pathlib.Path('docs/contracts/release-trust-policy.json').read_text(
+                  encoding='utf-8'
+              )
+          )
+          assert policy['status'] == 'canonical-public-trust-pinned'
+          assert policy['gates']['public_anchor_pinned'] is True
+          minimal = json.loads(
+              pathlib.Path('docs/contracts/minimal-bootstrap.json').read_text(
+                  encoding='utf-8'
+              )
+          )
+          assert minimal['all_artifacts_resolved'] is True
+          assert minimal['physical_write_allowed'] is False
+          authorization = json.loads(
+              pathlib.Path(
+                  'docs/contracts/physical-write-authorization.json'
+              ).read_text(encoding='utf-8')
+          )
+          assert authorization['explicit_owner_authorization'] is False
+          assert authorization['physical_write_allowed'] is False
+          print('CANONICAL_TRUST_ANCHOR=YES')
+          print('CANONICAL_TRUST_WORKING_REPOSITORY_VALIDATED=PASS')
+          PY
+
           python tools/release-signing/promote_public_trust.py check \
             --repo-root "$PWD" \
             --promotion-zip "$handoff" \
@@ -363,6 +395,11 @@ jobs:
           sandbox="$RUNNER_TEMP/public-trust-promotion-repository"
           mkdir -p "$sandbox"
           git archive --format=tar HEAD | tar -xf - -C "$sandbox"
+          rm -f \
+            "$sandbox/bootstrap/trust/release-ed25519.json" \
+            "$sandbox/docs/evidence/release-trust-ceremony.json" \
+            "$sandbox/docs/evidence/release-trust-proof-manifest.json" \
+            "$sandbox/docs/evidence/release-trust-recovery-envelope.json"
 
           python "$sandbox/tools/release-signing/promote_public_trust.py" apply \
             --repo-root "$sandbox" \
@@ -419,9 +456,11 @@ jobs:
 
           rm -f "$work/private.pem"
           test ! -e "$work/private.pem"
-          test ! -e bootstrap/trust/release-ed25519.json
+          test -f bootstrap/trust/release-ed25519.json
+          test "$(sha256sum bootstrap/trust/release-ed25519.json | awk '{print $1}')" = \
+            'd2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250'
           echo 'CI_TEST_KEY_REMOVED=YES'
           echo 'PUBLIC_TRUST_PROMOTION_APPLIED_TO_WORKING_REPOSITORY=NO'
           echo 'PUBLIC_TRUST_PROMOTION_APPLIED_TO_ISOLATED_COPY=YES'
-          echo 'CANONICAL_TRUST_ANCHOR=NO'
+          echo 'CANONICAL_TRUST_ANCHOR=YES'
           echo 'PHYSICAL_WRITE_AUTHORIZED=NO'

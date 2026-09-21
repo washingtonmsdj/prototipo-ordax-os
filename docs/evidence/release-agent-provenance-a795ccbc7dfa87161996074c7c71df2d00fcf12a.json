@@ -1,0 +1,18 @@
+{
+  "$schema": "prototype-ordax.release-agent-provenance/1",
+  "artifact": {
+    "name": "ordax-release-agent",
+    "sha256": "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
+    "size": 7196832
+  },
+  "cgo_enabled": false,
+  "go_version": "go version go1.27.1 linux/amd64",
+  "goarch": "amd64",
+  "goos": "linux",
+  "physical_artifact_authorized": false,
+  "source_commit": "a795ccbc7dfa87161996074c7c71df2d00fcf12a",
+  "status": "candidate",
+  "workflow_run_id": 35640781013,
+  "workflow_job_id": 106469286387,
+  "artifact_id": 10658366186
+}

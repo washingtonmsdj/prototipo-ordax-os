@@ -114,7 +114,7 @@ The release-channel pointer is now canonical and hash-bound in the minimal-boots
  -> https://github.com/washingtonmsdj/prototipo-ordax-os/releases/latest/download/release-envelope.json
 ```
 
-This URL is only a delivery selector. Authenticity still depends on the unresolved local Ed25519 public trust anchor:
+This URL is only a delivery selector. Authenticity depends on the canonical Ed25519 public trust anchor now pinned and hash-bound in the minimal bootstrap:
 
 ```text
 /ordax/bootstrap/trust/release-ed25519.json
@@ -141,9 +141,11 @@ PHYSICAL_SIGNED_CHANNEL=IMPLEMENTED
 OFFLINE_LAST_KNOWN_GOOD_PHYSICAL_BACKEND=IMPLEMENTED
 CREATOR_DEV_CHANNEL=READ_ONLY
 EXPLICIT_OWNER_AUTHORIZATION_STABLE_MVP=NO
-CANONICAL_RELEASE_TRUST=PENDING
-AUTHORIZED_PHYSICAL_CANDIDATE=PENDING_CANONICAL_TRUST_AND_OWNER_AUTHORIZATION
-PHYSICAL_USB_WRITE=BLOCKED_UNTIL_PROMOTION_GATES_PASS
+CANONICAL_RELEASE_TRUST=PASS_CANONICAL_PUBLIC_ANCHOR_PINNED
+MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=YES
+PHYSICAL_AUTHORIZATION_ELIGIBLE=YES
+AUTHORIZED_PHYSICAL_CANDIDATE=PENDING_EXPLICIT_OWNER_AUTHORIZATION_AND_CANONICAL_MEDIA_PROOF
+PHYSICAL_USB_WRITE=BLOCKED_UNTIL_EXPLICIT_AUTHORIZATION_AND_REMAINING_GATES_PASS
 NATIVE_INSTALL_GEOMETRY_PLAN=IMPLEMENTED
 NATIVE_INSTALL_PLAN=IMPLEMENTED_NON_DESTRUCTIVE
 NATIVE_INSTALL_TARGET_IDENTITY_BINDING=IMPLEMENTED_CORE
@@ -159,7 +161,7 @@ MVP_INTERNAL_DISK_WRITE=FORBIDDEN
 NATIVE_INSTALL_FOUNDATION_PHASE=POST_MVP
 ```
 
-The development `OrdaX-Creator.exe` is intentionally useful for the graphical workflow, automatic development updates and safe USB discovery, but it cannot acquire a raw writer because its physical trust binding is unresolved. This separation prevents an ordinary development build from becoming destructive by accident.
+The development `OrdaX-Creator.exe` is intentionally useful for the graphical workflow, automatic development updates and safe USB discovery, but it still cannot acquire a raw writer: canonical public trust is resolved, while explicit Stable/MVP owner authorization and the public physical-apply boundary remain closed. This separation prevents an ordinary development build from becoming destructive by accident.
 
 The final Portable physical flow is implemented behind the isolated tagged/publisher boundary, but it is not yet a public Creator capability:
 
@@ -179,7 +181,7 @@ canonical public trust
  -> success / fail-closed result
 ```
 
-There is no target-sized whole-disk RAW image in this final path. Canonical publisher trust must be pinned first; only then may the repository owner deliberately record a **new Stable/MVP-specific authorization**. The old first-USB development consent is not reusable.
+There is no target-sized whole-disk RAW image in this final path. Canonical publisher trust is now pinned; the next destructive boundary is still separate and requires the repository owner to deliberately record a **new Stable/MVP-specific authorization** only after the remaining canonical media proof is green. The old first-USB development consent is not reusable.
 
 Read-only authorization preflight:
 

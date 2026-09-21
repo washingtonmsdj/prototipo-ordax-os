@@ -222,7 +222,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         )
         self.assertEqual(
             auth["status"],
-            "blocked-canonical-trust-pending",
+            "blocked-explicit-physical-authorization-pending",
         )
         self.assertFalse(auth["physical_write_allowed"])
         self.assertFalse(auth["explicit_owner_authorization"])
