@@ -41,11 +41,14 @@ func sequencedCandidate(t *testing.T, root, commit string, sequence int64) Insta
 		t.Fatal(err)
 	}
 	bodies := map[string][]byte{
-		"ordax-creator-physical-test.exe": []byte("writer"),
-		"ordax-bootstrap-seed.raw":         []byte("seed"),
-		"release-ed25519.json":             []byte("trust"),
-		"provenance.json":                  provenanceBytes,
-		"SHA256SUMS":                       []byte("checksums"),
+		"ordax-creator-physical-test.exe":   []byte("writer"),
+		"release-ed25519.json":              []byte("trust"),
+		"minimal-bootstrap.json":            []byte("{\"schema\":\"minimal-bootstrap-fixture\"}"),
+		"portable-usb-v2.json":              []byte("{\"schema\":\"portable-usb-v2-fixture\"}"),
+		"creator-portable-media-plan.json":  []byte("{\"schema\":\"creator-portable-media-plan-fixture\"}"),
+		"physical-write-authorization.json": []byte("{\"schema\":\"physical-write-authorization-fixture\"}"),
+		"provenance.json":                   provenanceBytes,
+		"SHA256SUMS":                        []byte("checksums"),
 	}
 	for i := range manifest.Files {
 		body := bodies[manifest.Files[i].Name]
