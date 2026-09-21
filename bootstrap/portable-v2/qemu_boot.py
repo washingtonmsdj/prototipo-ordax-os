@@ -385,7 +385,7 @@ def boot_qemu_expected(
         "-kernel", str(inputs["kernel"]),
         "-initrd", str(inputs["initramfs"]),
         "-append", "console=ttyS0 rdinit=/sbin/ordax-portable-init loglevel=6",
-        "-drive", f"file={disk},format=raw,if=ide,index=0,media=disk",
+        "-drive", f"file={disk},format=raw,if=ide,index=0,media=disk,cache=directsync",
         "-display", "none",
         "-serial", f"file:{serial}",
         "-monitor", "none",
@@ -428,6 +428,9 @@ def boot_qemu_expected(
                     "portable_pid1_handoff_marker": True,
                     "stable_init_handoff_marker": True,
                     "qemu_network_disabled": "-net" in command and "none" in command,
+                    "qemu_durable_cache_mode": any(
+                        "cache=directsync" in item for item in command
+                    ),
                     "candidate_rdinit_used": any(
                         "rdinit=/sbin/ordax-portable-init" in item for item in command
                     ),
@@ -514,18 +517,36 @@ def inspect_one_shot_state(
         run(["mount", "-t", "ext4", "-o", "loop,ro,noload", str(state_copy), str(state_mount)])
         state_mounted = True
         release_state = state_mount / "ordax/portable-release"
-        current = (release_state / "current").read_text(encoding="ascii").strip()
-        known_good = (release_state / "known-good").read_text(encoding="ascii").strip()
-        rejected = (release_state / "rejected").read_text(encoding="ascii").strip()
-        return {
+
+        def slot_value(name: str) -> str | None:
+            path = release_state / name
+            if not path.exists():
+                return None
+            value = path.read_text(encoding="ascii").strip()
+            if COMMIT_RE.fullmatch(value) is None:
+                raise ProofError(f"final one-shot state has invalid {name} identity")
+            return value
+
+        current = slot_value("current")
+        known_good = slot_value("known-good")
+        rejected = slot_value("rejected")
+        candidate = slot_value("candidate")
+        transaction_present = (release_state / "activation-transaction.json").exists()
+        checks = {
             "current_restored_to_previous": current == previous_commit,
             "known_good_preserved_as_previous": known_good == previous_commit,
             "candidate_persisted_as_rejected": rejected == candidate_commit,
-            "candidate_file_removed": not (release_state / "candidate").exists(),
-            "activation_transaction_removed": not (
-                release_state / "activation-transaction.json"
-            ).exists(),
+            "candidate_file_removed": candidate is None,
+            "activation_transaction_removed": not transaction_present,
         }
+        if not all(checks.values()):
+            raise ProofError(
+                "final one-shot state mismatch: "
+                f"current={current!r}, known_good={known_good!r}, "
+                f"rejected={rejected!r}, candidate={candidate!r}, "
+                f"activation_transaction_present={transaction_present}, checks={checks}"
+            )
+        return checks
     finally:
         if state_mounted:
             unmount(state_mount)
@@ -550,6 +571,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         "portable_pid1_handoff_marker": False,
         "stable_init_handoff_marker": False,
         "qemu_network_disabled": False,
+        "qemu_durable_cache_mode": False,
         "candidate_rdinit_used": False,
         "current_slot_selected": False,
         "portable_source_sha_exact": False,
@@ -613,6 +635,10 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
                 "qemu_network_disabled": (
                     first_checks["qemu_network_disabled"]
                     and second_checks["qemu_network_disabled"]
+                ),
+                "qemu_durable_cache_mode": (
+                    first_checks["qemu_durable_cache_mode"]
+                    and second_checks["qemu_durable_cache_mode"]
                 ),
                 "candidate_rdinit_used": (
                     first_checks["candidate_rdinit_used"]
