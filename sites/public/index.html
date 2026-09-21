@@ -6,7 +6,9 @@
   <meta name="description" content="OrdaX — um sistema pensado para manter arquivos, apps, atualizações e recuperação em uma experiência simples.">
   <title>OrdaX — ideias organizam realidades</title>
   <link rel="stylesheet" href="/assets/site.css">
+  <link rel="stylesheet" href="/assets/playground.css">
   <script src="/assets/site.js" defer></script>
+  <script src="/assets/playground.js" defer></script>
 </head>
 <body data-page="landing">
   <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -17,6 +19,7 @@
       <span class="brand-name">OrdaX</span>
     </a>
     <nav class="site-nav" aria-label="Navegação principal">
+      <a href="#experimente">Experimentar</a>
       <a href="#produto">Produto</a>
       <a href="#apps">Apps</a>
       <a href="#atualizacoes">Atualizações</a>
@@ -30,27 +33,32 @@
     <section class="hero">
       <div class="hero-copy">
         <div class="hero-kicker-row">
-          <p class="eyebrow">ORDA X · MVP EM PREPARAÇÃO</p>
-          <span class="status-chip">Stable</span>
+          <p class="eyebrow">ORDA X · UM NOVO ESPAÇO PARA SUAS IDEIAS</p>
+          <span class="status-chip">Em desenvolvimento</span>
         </div>
-        <h1>Seu sistema.<br>Sua experiência.</h1>
-        <p class="hero-lead">O OrdaX está sendo construído para reunir arquivos, notas, internet, ajustes e atualizações em uma experiência direta — inicializada e usada pelo pendrive, com recuperação automática quando algo der errado.</p>
+        <h1>Comece aqui.<br>Continue <em>onde quiser.</em></h1>
+        <p class="hero-lead">Suas notas, seus arquivos, seu jeito de trabalhar. Experimente uma pequena ideia do OrdaX — e veja a mesma mudança aparecer em duas telas.</p>
         <div class="hero-actions">
-          <a class="button button-primary" href="/download/">Ver disponibilidade</a>
-          <a class="button button-quiet" href="#produto">Conhecer o OrdaX</a>
+          <a class="button button-primary" href="#experimente">Experimentar agora ↗</a>
+          <a class="button button-quiet" href="/download/">Baixar OrdaX</a>
         </div>
-        <p class="prototype-note">Protótipo em desenvolvimento. Downloads públicos aparecem somente quando uma release Stable/MVP estiver explicitamente autorizada.</p>
+        <p class="prototype-note">Sem instalar. Sem conta. A demonstração usa dados de exemplo.<br>Login e downloads dependem da disponibilidade pública.</p>
       </div>
 
-      <div class="hero-art" aria-hidden="true">
-        <span class="art-sun"></span>
-        <span class="art-arc"></span>
-        <span class="art-rule"></span>
-        <span class="art-slab art-slab-a"></span>
-        <span class="art-slab art-slab-b"></span>
-        <span class="art-slab art-slab-c"></span>
-        <span class="art-caption">IDEIAS<br>ORGANIZAM<br>REALIDADES</span>
+      <div class="hero-manifesto"><span class="manifesto-orbit" aria-hidden="true"></span><p>Menos distância<br>entre uma ideia<br>e o que você faz<br><em>com ela.</em></p><span class="manifesto-caption">PENSADO PARA CONTINUAR.</span></div>
+    </section>
+
+    <section id="experimente" class="playground" aria-labelledby="demo-heading">
+      <div class="playground-heading"><div><p class="eyebrow">NÃO É UM VÍDEO. PODE TOCAR.</p><h2 id="demo-heading">Duas telas. <em>A mesma ideia.</em></h2></div><p>Escreva no notebook. Veja no telefone.<br>Ou faça o caminho contrário.</p></div>
+      <div class="demo-controls"><div class="demo-modes" role="group" aria-label="Dispositivos da demonstração"><button type="button" data-layout="both" aria-pressed="true">Notebook + telefone</button><button type="button" data-layout="laptop" aria-pressed="false">Só notebook</button></div><button type="button" data-reset>↺ Recomeçar</button></div>
+      <div class="device-stage" data-layout="both">
+        <div class="laptop-device"><div class="laptop-lid"><span class="camera" aria-hidden="true"></span><div class="demo-screen" data-device="laptop" aria-label="Notebook de demonstração"></div></div><div class="laptop-base" aria-hidden="true"><span></span></div><p class="device-caption">01 / SEU ESPAÇO PARA CRIAR</p></div>
+        <div class="sync-bridge" aria-hidden="true"><span>↔</span><small>EM SINTONIA</small></div>
+        <div class="phone-device"><div class="phone-shell"><span class="phone-camera" aria-hidden="true"></span><div class="demo-screen" data-device="phone" aria-label="Telefone de demonstração"></div></div><p class="device-caption">02 / SUAS IDEIAS COM VOCÊ</p></div>
       </div>
+      <div class="demo-bottom"><p class="demo-status" role="status" aria-live="polite">Pronto para experimentar. Abra uma nota e escreva.</p><p>Simulação local nesta página. Sem nuvem, conta ou acesso aos seus arquivos. Ao sair, as alterações são descartadas.</p></div>
+      <div class="demo-recipes" aria-label="Experiências guiadas"><button type="button" data-recipe="notes"><span>01</span><strong>Escreva uma ideia</strong><small>Edite uma nota nas duas telas ↗</small></button><button type="button" data-recipe="files"><span>02</span><strong>Encontre seu espaço</strong><small>Explore pastas e arquivos de exemplo ↗</small></button><button type="button" data-recipe="theme"><span>03</span><strong>Deixe com a sua cara</strong><small>Troque o tema nos dois dispositivos ↗</small></button></div>
+      <noscript><p>Ative JavaScript para usar a demonstração. As páginas de produto, login e downloads continuam acessíveis pelos links.</p></noscript>
     </section>
 
     <section class="release-ribbon" aria-label="Estado do produto">
@@ -107,14 +115,14 @@
     <section id="atualizacoes" class="section split-section update-section">
       <div>
         <p class="eyebrow">ATUALIZAÇÕES</p>
-        <h2>O canal Stable não depende de Git.</h2>
-        <p class="section-copy">No MVP público, o OrdaX recebe somente releases disponibilizadas pelos canais oficiais. A interface normal do usuário não precisa conhecer branch, PR, commit ou repositório.</p>
+        <h2>Evoluir deve ser simples.<br>Voltar também.</h2>
+        <p class="section-copy">O caminho planejado para o OrdaX público combina atualizações oficiais e recuperação. Para você continuar trabalhando, com clareza sobre o que mudou.</p>
       </div>
 
       <div class="feature-list">
         <article>
           <h3>Release verificada</h3>
-          <p>Antes de aparecer ao usuário, uma release pública precisa carregar identidade, tamanho, integridade e os gates definidos pelo produto.</p>
+          <p>Downloads oficiais com versão, tamanho e informações de integridade para consultar antes de instalar.</p>
         </article>
         <article>
           <h3>Atualize só o necessário</h3>
@@ -122,7 +130,7 @@
         </article>
         <article>
           <h3>Base com rollback</h3>
-          <p>Kernel, initramfs e rootfs seguem um caminho mais controlado, com staging, tentativa limitada e promoção apenas após health.</p>
+          <p>A recuperação é parte do projeto: preservar uma versão funcional quando uma atualização crítica não puder ser concluída.</p>
         </article>
       </div>
     </section>

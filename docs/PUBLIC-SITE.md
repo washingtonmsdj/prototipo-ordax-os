@@ -108,6 +108,27 @@ A public release must also pass the release-compliance gate in `docs/RELEASE-COM
 
 ## Visual direction
 
+### Interactive landing demonstration
+
+The landing includes an explicitly labeled, disposable marketing playground in
+`assets/playground.js` and `assets/playground.css`. It is not OrdaX Web and does
+not import or fork the product Surface. A single in-memory fixture is presented
+inside notebook and phone illustrations. Note edits, a checklist and appearance
+changes are mirrored locally in either direction; file browsing reads fixed
+examples only. This demonstrates intended continuity, not production cloud sync.
+
+There are no requests, account credentials, user-file access, persistence,
+analytics or external dependencies in this demonstration. Reload/reset discards
+edits. Device navigation remains independent. On small screens devices stack;
+the visitor can also select notebook-only presentation. Login, registration and
+download continue through the existing fail-closed routes and owners.
+
+Handoff: this is source implementation only, not deployment evidence. The change
+was intentionally delivered without installing dependencies or running tests/builds
+at the user's request. Production hosting and configured identity/release owners
+remain separate requirements. Do not promote the demonstration into a second
+product runtime or treat its fixtures as real user data.
+
 The portal shares OrdaX brand language, not the desktop shell implementation:
 
 - mineral/off-white canvas;
