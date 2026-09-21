@@ -11,6 +11,22 @@ FINALIZER = (
 TOOLKIT = (
     ROOT / ".github/workflows/windows-prototype-toolkit.yml"
 ).read_text(encoding="utf-8")
+PREFLIGHT_WRAPPER = (
+    ROOT / "tools/release-signing/windows/1-Verify-OrdaXTrustToolkit.cmd"
+).read_text(encoding="utf-8")
+
+
+def test_read_only_preflight_reuses_initializer_checks_before_key_generation():
+    assert "[switch]$PreflightOnly" in INITIALIZER
+    assert "if ($PreflightOnly)" in INITIALIZER
+    assert "TOOLKIT_TRUST_PREFLIGHT=PASS" in INITIALIZER
+    assert "CANONICAL_TRUST_CEREMONY_ELIGIBLE=YES" in INITIALIZER
+    assert "PRIVATE_KEY_TOUCHED=NO" in INITIALIZER
+    assert "FILESYSTEM_MUTATION=NO" in INITIALIZER
+    assert INITIALIZER.index("if ($PreflightOnly)") < INITIALIZER.index("New-Item -ItemType Directory")
+    assert '-PreflightOnly' in PREFLIGHT_WRAPPER
+    assert '1-Verify-OrdaXTrustToolkit.cmd' in TOOLKIT
+    assert '1-Verify-OrdaXTrustToolkit.cmd \\' in TOOLKIT
 
 
 def test_trust_ceremony_binds_proof_to_toolkit_source_commit():
