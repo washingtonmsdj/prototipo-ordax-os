@@ -295,7 +295,7 @@ PUBLIC_TRUST_PROMOTION_PHYSICAL_WRITE_SIDE_EFFECT=NO
 
 The canonical release channel resolves `release-envelope.json`; the URL selects bytes and Ed25519 verification decides authenticity. The release acquisition code remains fail-closed with SHA-256 verification, exact source-commit binding, safe materialization, atomic activation and known-good preservation.
 
-### Canonical release trust — recovery verified, public anchor pending
+### Canonical release trust — recovery proof verified, external backup/public anchor pending
 
 ```text
 RELEASE_TRUST_POLICY=RESOLVED
@@ -305,7 +305,7 @@ CANONICAL_KEY_MATERIAL_GENERATED=YES
 CANONICAL_PUBLIC_TRUST_SHA256=d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250
 CANONICAL_TRUST_RECOVERY_VERIFIED=YES
 PUBLIC_ANCHOR_PINNED=NO
-RELEASE_TRUST=PENDING_PUBLIC_ANCHOR
+RELEASE_TRUST=PENDING_EXTERNAL_BACKUP_AND_PUBLIC_ANCHOR
 PRIVATE_SIGNING_KEY_IN_GIT=FORBIDDEN
 PRIVATE_SIGNING_KEY_IN_USB=FORBIDDEN
 PRIVATE_KEY_CUSTODY_OWNER=repository-owner-developer
