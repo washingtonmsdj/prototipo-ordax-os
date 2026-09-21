@@ -285,6 +285,11 @@ TRUST_TRANSITION_RELEASE_AGENT_WORKFLOW_RUN_ID=35640416481
 TRUST_TRANSITION_STATEFUL_DEVICE_ACTIVATION=NO
 BOOTSTRAP_EFFECTIVE_ROTATED_TRUST_SELECTION=NO
 PRODUCTION_ROTATION_READY=NO
+PUBLIC_TRUST_PROMOTION_TOOL=IMPLEMENTED_FAIL_CLOSED
+PUBLIC_TRUST_PROMOTION_CANONICAL_INPUT=OrdaX-Public-Trust-Handoff.zip
+PUBLIC_TRUST_PROMOTION_ZIP_CHECK=PASS_CI
+PUBLIC_TRUST_PROMOTION_ZIP_APPLY_ISOLATED=CI_PENDING
+PUBLIC_TRUST_PROMOTION_PHYSICAL_WRITE_SIDE_EFFECT=NO
 ```
 
 The canonical release channel resolves `release-envelope.json`; the URL selects bytes and Ed25519 verification decides authenticity. The release acquisition code remains fail-closed with SHA-256 verification, exact source-commit binding, safe materialization, atomic activation and known-good preservation.
