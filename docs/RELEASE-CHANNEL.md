@@ -66,7 +66,7 @@ Expected schema:
 ```json
 {
   "$schema": "prototype-ordax.release-trust/1",
-  "key_id": "prototype-1",
+  "key_id": "ordax-prototype-release-v1",
   "public_key_base64": "<32-byte Ed25519 public key>"
 }
 ```
@@ -77,12 +77,13 @@ Current state:
 
 ```text
 RELEASE_CHANNEL=RESOLVED
-RELEASE_TRUST=UNRESOLVED
-PRIVATE_SIGNING_KEY_CUSTODY=NOT_YET_ESTABLISHED
+RELEASE_TRUST=PASS_CANONICAL_PUBLIC_ANCHOR_PINNED
+PRIVATE_SIGNING_KEY_CUSTODY=CONTROLLED_PROTOTYPE_EXTERNAL_TO_REPOSITORY
+CRYPTOGRAPHIC_RECOVERY_VERIFIED=YES
 PHYSICAL_WRITE_ALLOWED=NO
 ```
 
-No placeholder key may satisfy the trust gate.
+The canonical trust gate is satisfied only by the pinned public anchor whose matching external private key passed the recorded recovery/signing proof. Placeholder or CI-ephemeral keys remain forbidden from satisfying this gate.
 
 ## Signed envelope
 
@@ -93,7 +94,7 @@ The release endpoint serves:
   "$schema": "prototype-ordax.release-envelope/1",
   "payload": "<base64 exact manifest bytes>",
   "signature": "<base64 Ed25519 signature over exact payload bytes>",
-  "key_id": "prototype-1"
+  "key_id": "ordax-prototype-release-v1"
 }
 ```
 
