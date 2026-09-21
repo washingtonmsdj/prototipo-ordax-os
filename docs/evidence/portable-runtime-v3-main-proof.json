@@ -1,0 +1,32 @@
+{
+  "$schema": "prototype-ordax.portable-runtime-v3-main-proof/1",
+  "status": "pass",
+  "source_commit": "c8c8fe526d03ced7630420cd116dd954b08ef03a",
+  "workflow": ".github/workflows/portable-v2-qemu-boot-proof.yml",
+  "workflow_run_id": 35598937763,
+  "artifact": {
+    "name": "portable-v2-qemu-boot-proof-c8c8fe526d03ced7630420cd116dd954b08ef03a",
+    "sha256": "73e7db317b1983f7cdf7f5be369b9e7d0509a8932235318176166d1469ca2bc3"
+  },
+  "proven": {
+    "direct_kernel_current_slot_boot": true,
+    "ovmf_systemd_boot_current_slot_boot": true,
+    "release_manifest_v3_exact": true,
+    "surface_runtime_handoff": true,
+    "qemu_network_disabled": true
+  },
+  "not_proven": {
+    "armed_candidate_one_shot": true,
+    "cold_health_commit": true,
+    "physical_usb_boot": true,
+    "secure_boot": true,
+    "physical_known_good": true,
+    "physical_rollback": true
+  },
+  "safety": {
+    "physical_target_device_touched": false,
+    "physical_write_authorized": false,
+    "public_physical_promotion_allowed": false
+  },
+  "note": "Exact-main regression evidence for the merged Portable v3 activation source. It proves ordinary current-slot direct-kernel and OVMF/UEFI boot on the merged source, not the armed one-shot activation transition."
+}
