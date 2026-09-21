@@ -103,15 +103,37 @@ jobs:
             --out "$work/derived-trust.json"
           cmp "$work/trust.json" "$work/derived-trust.json"
           test "$(stat -c '%a' "$work/private.pem")" = 600
+          "$signer" generate-key \
+            --private-key "$work/next-private.pem" \
+            --trust "$work/next-trust.json" \
+            --key-id ci-test-2
+          "$signer" sign-trust-transition \
+            --current-private-key "$work/private.pem" \
+            --current-trust "$work/trust.json" \
+            --next-trust "$work/next-trust.json" \
+            --sequence 1 \
+            --out "$work/trust-transition.json"
+          transition_output="$("$agent" verify-trust-transition \
+            --envelope "$work/trust-transition.json" \
+            --current-trust "$work/trust.json" \
+            --expected-sequence 1 \
+            --out-next-trust "$work/verified-next-trust.json")"
+          printf '%s\n' "$transition_output"
+          grep -q '"status": "trust-transition-verified"' <<<"$transition_output"
+          grep -q '"sequence": 1' <<<"$transition_output"
+          grep -q '"next_key_id": "ci-test-2"' <<<"$transition_output"
+          cmp "$work/next-trust.json" "$work/verified-next-trust.json"
           verify_output="$("$agent" verify-envelope \
             --envelope "$work/release-envelope.json" \
             --trust "$work/trust.json")"
           printf '%s\n' "$verify_output"
           grep -q '"status": "verified"' <<<"$verify_output"
           grep -q '"source_commit": "0123456789abcdef0123456789abcdef01234567"' <<<"$verify_output"
-          rm -f "$work/private.pem"
+          rm -f "$work/private.pem" "$work/next-private.pem"
           test ! -e "$work/private.pem"
+          test ! -e "$work/next-private.pem"
           echo 'SIGNER_TRUST_MATCH=PASS'
+          echo 'TRUST_TRANSITION_PROTOCOL=PASS'
           echo 'SIGNER_AGENT_PROTOCOL=PASS'
           echo 'CI_TEST_KEY_REMOVED=YES'
           echo 'CANONICAL_TRUST_ANCHOR=NO'
