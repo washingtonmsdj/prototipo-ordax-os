@@ -22,7 +22,7 @@ PUBLIC_ANCHOR_PINNED=NO
 PHYSICAL_WRITE_ALLOWED=NO
 ```
 
-No private PEM bytes, private-key hash, backup secret, recovery password or private-key path are recorded in source. Recovery is verified; only public-anchor promotion remains pending.
+No private PEM bytes, private-key hash, backup secret, recovery password or private-key path are recorded in source. The cryptographic recovery proof is verified. The encrypted archive used for this test was still on the same host, so independent external/offline custody remains pending before repository policy considers the public anchor ready to pin.
 
 ## Boundary
 
@@ -345,7 +345,9 @@ Current fail-closed state after local generation and verified offline recovery, 
 TRUST_POLICY_RESOLVED=YES
 CANONICAL_KEY_MATERIAL_GENERATED=YES
 OFFLINE_RECOVERY_VERIFIED=YES
-READY_TO_PIN_PUBLIC_ANCHOR=YES
+TOOL_REPORTED_READY_TO_PIN_PUBLIC_ANCHOR=YES
+EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED=NO
+REPOSITORY_POLICY_READY_TO_PIN_PUBLIC_ANCHOR=NO
 PUBLIC_ANCHOR_PINNED=NO
 BOOTSTRAP_RELEASE_TRUST_RESOLVED=NO
 PHYSICAL_WRITE_ALLOWED=NO
