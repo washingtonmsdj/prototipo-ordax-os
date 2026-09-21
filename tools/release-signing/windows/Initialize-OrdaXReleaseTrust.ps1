@@ -26,19 +26,6 @@ if ([string]::IsNullOrWhiteSpace($ScriptRoot)) {
     throw 'Unable to resolve the trust ceremony script directory.'
 }
 
-if ([string]::IsNullOrWhiteSpace($PrivateKeyPath)) {
-    if ([string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
-        throw 'USERPROFILE is unavailable; specify -PrivateKeyPath explicitly.'
-    }
-    # Keep canonical private material in a direct child of the user profile.
-    # LOCALAPPDATA can be backed by Windows reparse/junction paths on some hosts,
-    # which the signing tool intentionally rejects for private-key custody.
-    $PrivateKeyPath = Join-Path $env:USERPROFILE 'OrdaX-Private\release-signing\ordax-release-private.pem'
-}
-if ([string]::IsNullOrWhiteSpace($ReviewDirectory)) {
-    $ReviewDirectory = Join-Path $ScriptRoot 'trust-review'
-}
-
 $KeyId = 'ordax-prototype-release-v1'
 $Signer = Join-Path $ScriptRoot 'ordax-release-signing.exe'
 $ToolkitProvenancePath = Join-Path $ScriptRoot 'provenance.json'
@@ -104,6 +91,19 @@ if ($PreflightOnly) {
 
 if (-not $GenerateKey) {
     throw 'Canonical key generation requires the explicit -GenerateKey switch. Run 1-Verify-OrdaXTrustToolkit.cmd first, then 2-Initialize-OrdaXTrust.cmd.'
+}
+
+if ([string]::IsNullOrWhiteSpace($PrivateKeyPath)) {
+    if ([string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
+        throw 'USERPROFILE is unavailable; specify -PrivateKeyPath explicitly.'
+    }
+    # Keep canonical private material in a direct child of the user profile.
+    # LOCALAPPDATA can be backed by Windows reparse/junction paths on some hosts,
+    # which the signing tool intentionally rejects for private-key custody.
+    $PrivateKeyPath = Join-Path $env:USERPROFILE 'OrdaX-Private\release-signing\ordax-release-private.pem'
+}
+if ([string]::IsNullOrWhiteSpace($ReviewDirectory)) {
+    $ReviewDirectory = Join-Path $ScriptRoot 'trust-review'
 }
 
 $PrivateKeyPath = [IO.Path]::GetFullPath($PrivateKeyPath)
