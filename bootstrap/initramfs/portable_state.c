@@ -16,7 +16,7 @@ enum {
 static void die_usage(void) {
     fputs(
         "usage:\n"
-        "  ordax-portable-state <state-root> <current|known-good|candidate>\n"
+        "  ordax-portable-state <state-root> <current|known-good|candidate|rejected>\n"
         "  ordax-portable-state resolve <state-root> <portable-root> <current|known-good>\n"
         "  ordax-portable-state select <state-root> <portable-root>\n"
         "  ordax-portable-state prepare <state-root> <portable-root> <candidate-commit>\n"
@@ -59,7 +59,8 @@ static int safe_root(const char *path) {
 static int valid_slot(const char *slot) {
     return strcmp(slot, "current") == 0 ||
            strcmp(slot, "known-good") == 0 ||
-           strcmp(slot, "candidate") == 0;
+           strcmp(slot, "candidate") == 0 ||
+           strcmp(slot, "rejected") == 0;
 }
 
 static int valid_commit_value(const char *value) {
@@ -628,6 +629,27 @@ static int prepare_command(
         return EXIT_INVALID;
     }
 
+    char rejected[41];
+    int rejected_rc = read_commit(release_state, "rejected", rejected);
+    if (rejected_rc == 0) {
+        if (strcmp(rejected, candidate) == 0) {
+            close(releases);
+            close(release_state);
+            fputs("ordax-portable-state: candidate was already rejected\n", stderr);
+            return EXIT_INVALID;
+        }
+        if (remove_file_at_sync(release_state, "rejected") != 0) {
+            close(releases);
+            close(release_state);
+            return EXIT_INVALID;
+        }
+    } else if (rejected_rc == EXIT_INVALID) {
+        close(releases);
+        close(release_state);
+        fputs("ordax-portable-state: rejected identity is invalid\n", stderr);
+        return EXIT_INVALID;
+    }
+
     struct activation_transaction transaction = {0};
     memcpy(transaction.previous, current, 41);
     memcpy(transaction.candidate, candidate, 41);
@@ -728,7 +750,8 @@ static int select_boot_command(
         return 0;
     }
 
-    if (cleanup_transaction(release_state) != 0) {
+    if (write_commit_at(release_state, "rejected", candidate) != 0 ||
+        cleanup_transaction(release_state) != 0) {
         close(releases);
         close(release_state);
         return EXIT_INVALID;
@@ -827,7 +850,8 @@ static int rollback_command(
         return EXIT_INVALID;
     }
 
-    if (cleanup_transaction(release_state) != 0) {
+    if (write_commit_at(release_state, "rejected", candidate) != 0 ||
+        cleanup_transaction(release_state) != 0) {
         close(releases);
         close(release_state);
         return EXIT_INVALID;
