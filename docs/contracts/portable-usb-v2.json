@@ -8,7 +8,7 @@
   "physical_device_paths_allowed": false,
   "host_loop_devices_allowed": true,
   "bootable_proven": false,
-  "mvp_boot_handoff_connected": false,
+  "mvp_boot_handoff_connected": true,
   "logical_sector_bytes": 512,
   "alignment_bytes": 1048576,
   "target_bytes": 3221225472,
@@ -145,6 +145,6 @@
     "creator_preseeded_signed_release": true,
     "current_equals_known_good": true,
     "network_required": false,
-    "pid1_integration_implemented": false
+    "pid1_integration_implemented": true
   }
 }
