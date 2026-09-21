@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.release-trust-policy/1",
-  "status": "prototype-recovery-verified-public-anchor-pending",
+  "status": "prototype-recovery-verified-external-backup-pending",
   "scope": "prototype-first-physical-proof",
   "algorithm": "ed25519",
   "canonical_key_id": "ordax-prototype-release-v1",
@@ -62,14 +62,16 @@
     "loss_before_distribution": "generate-new-key-and-repin-before-first-physical-write",
     "loss_after_prototype_provisioning": "reprovision-prototype-media-with-new-trust",
     "silent_key_replacement_allowed": false,
-    "offline_recovery_verified": true,
-    "ready_to_pin_public_anchor": true,
+    "ready_to_pin_public_anchor": false,
     "verification_evidence_repository_path": "docs/evidence/canonical-trust-local-progress-2026-09-21.json",
     "public_trust_sha256": "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
-    "public_handoff_zip_sha256": "85d4f8430f0a4066ebed84a410071409c112c65aa72a5818483a664a41b91e20"
+    "public_handoff_zip_sha256": "85d4f8430f0a4066ebed84a410071409c112c65aa72a5818483a664a41b91e20",
+    "cryptographic_recovery_verified": true,
+    "external_offline_backup_custody_confirmed": false,
+    "public_anchor_blocker": "external-offline-backup-custody-and-public-handoff-validation"
   },
   "rotation": {
-    "prototype_policy": "reprovision-required-until-signed-trust-transition-is-implemented",
+    "prototype_policy": "signed-transition-available-stateful-activation-not-implemented",
     "signed_trust_transition_required_for_production": true,
     "old_key_must_authorize_new_key": true,
     "production_rotation_implemented": false,
