@@ -10,6 +10,7 @@ on:
       - 'bootstrap/network/**'
       - 'bootstrap/release-acquisition/**'
       - 'bootstrap/recovery/**'
+      - 'bootstrap/trust/**'
       - 'bootstrap/config/**'
       - 'bootstrap/entrypoint'
       - 'tools/creator/core/**'
@@ -18,11 +19,6 @@ on:
       - 'tools/creator/proof/**'
       - 'tools/creator/go.mod'
       - 'tools/creator/go.sum'
-      - 'tools/release-signing/**'
-      - '!tools/release-signing/windows/**'
-      - '!tools/release-signing/promote_public_trust.py'
-      - '!tools/release-signing/cmd/ordax-physical-release-signing/**'
-      - '!tools/release-signing/README.md'
       - 'docs/contracts/minimal-bootstrap.json'
       - 'docs/contracts/physical-media.json'
       - '.github/workflows/full-bootstrap-media-proof.yml'
@@ -34,6 +30,7 @@ on:
       - 'bootstrap/network/**'
       - 'bootstrap/release-acquisition/**'
       - 'bootstrap/recovery/**'
+      - 'bootstrap/trust/**'
       - 'bootstrap/config/**'
       - 'bootstrap/entrypoint'
       - 'tools/creator/core/**'
@@ -42,11 +39,6 @@ on:
       - 'tools/creator/proof/**'
       - 'tools/creator/go.mod'
       - 'tools/creator/go.sum'
-      - 'tools/release-signing/**'
-      - '!tools/release-signing/windows/**'
-      - '!tools/release-signing/promote_public_trust.py'
-      - '!tools/release-signing/cmd/ordax-physical-release-signing/**'
-      - '!tools/release-signing/README.md'
       - 'docs/contracts/minimal-bootstrap.json'
       - 'docs/contracts/physical-media.json'
       - '.github/workflows/full-bootstrap-media-proof.yml'
@@ -150,59 +142,44 @@ jobs:
           print('EXT4_RUNTIME_GROWTH_PROOF=PASS')
           PY
 
-      - name: Build signer and create ephemeral proof trust
+      - name: Verify canonical public trust binding
         run: |
           set -euo pipefail
-          mkdir -p out/full-media-proof bootstrap/trust
-          (
-            cd tools/release-signing
-            go test -count=1 ./...
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-              go build -trimpath -buildvcs=false -ldflags='-s -w' \
-              -o ../../out/full-media-proof/ordax-release-signing .
-          )
-          signer="$PWD/out/full-media-proof/ordax-release-signing"
-          private="$RUNNER_TEMP/full-media-proof-private.pem"
-          "$signer" generate-key \
-            --private-key "$private" \
-            --trust bootstrap/trust/release-ed25519.json \
-            --key-id ci-full-media-proof
-          test -s "$private"
-          test -s bootstrap/trust/release-ed25519.json
-
-      - name: Derive fully resolved proof manifest without mutating canonical contract
-        run: |
-          python - "$RUNNER_TEMP/minimal-bootstrap-full-proof.json" <<'PY'
-          import hashlib, json, pathlib, sys
-          source = pathlib.Path('docs/contracts/minimal-bootstrap.json')
-          trust = pathlib.Path('bootstrap/trust/release-ed25519.json')
-          output = pathlib.Path(sys.argv[1])
-          manifest = json.loads(source.read_text(encoding='utf-8'))
-          payload = trust.read_bytes()
+          python - <<'PY'
+          import hashlib, json, pathlib
+          manifest_path = pathlib.Path('docs/contracts/minimal-bootstrap.json')
+          trust_path = pathlib.Path('bootstrap/trust/release-ed25519.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          if manifest['status'] != 'canonical-bytes-resolved':
+              raise SystemExit('minimal bootstrap is not canonical-bytes-resolved')
+          if manifest['all_artifacts_resolved'] is not True:
+              raise SystemExit('minimal bootstrap is not fully resolved')
+          if manifest['physical_write_allowed'] is not False:
+              raise SystemExit('minimal bootstrap unexpectedly authorizes physical write')
+          unresolved = [g['id'] for g in manifest['artifact_groups'] if not g['resolved']]
+          if unresolved:
+              raise SystemExit(f'canonical manifest has unresolved groups: {unresolved!r}')
+          group = next(g for g in manifest['artifact_groups'] if g['id'] == 'bootstrap-release-trust')
+          if len(group['artifacts']) != 1:
+              raise SystemExit('canonical trust group must contain exactly one artifact')
+          artifact = group['artifacts'][0]
+          payload = trust_path.read_bytes()
           digest = hashlib.sha256(payload).hexdigest()
-          groups = {group['id']: group for group in manifest['artifact_groups']}
-          group = groups['bootstrap-release-trust']
-          assert group['resolved'] is False and group['artifacts'] == []
-          group['resolved'] = True
-          group['artifacts'] = [{
-              'source_path': 'bootstrap/trust/release-ed25519.json',
-              'target_path': '/ordax/bootstrap/trust/release-ed25519.json',
-              'sha256': digest,
-              'mode': '0644',
-              'logical_owner': 'bootstrap-release-trust',
-              'reason': 'Ephemeral CI-only public trust anchor used solely to prove byte-complete media composition'
-          }]
-          manifest['status'] = 'ci-proof-byte-complete-ephemeral-trust'
-          manifest['all_artifacts_resolved'] = True
-          manifest['physical_write_allowed'] = False
-          output.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
-          print('EPHEMERAL_TRUST_SHA256=' + digest)
+          if artifact['source_path'] != 'bootstrap/trust/release-ed25519.json':
+              raise SystemExit('canonical trust source path mismatch')
+          if artifact['target_path'] != '/ordax/bootstrap/trust/release-ed25519.json':
+              raise SystemExit('canonical trust target path mismatch')
+          if artifact['sha256'] != digest:
+              raise SystemExit('canonical trust digest differs from minimal bootstrap binding')
+          print('CANONICAL_TRUST_SHA256=' + digest)
+          print('CANONICAL_TRUST_BINDING=PASS')
+          print('PHYSICAL_WRITE_AUTHORIZED=NO')
           PY
 
       - name: Assemble and verify byte-complete payload
         run: |
           set -euo pipefail
-          manifest="$RUNNER_TEMP/minimal-bootstrap-full-proof.json"
+          manifest="docs/contracts/minimal-bootstrap.json"
           payload="$RUNNER_TEMP/full-media-payload"
           python tools/creator/assemble.py build --manifest "$manifest" --out-dir "$payload"
           python tools/creator/assemble.py verify --manifest "$manifest" --payload-root "$payload"
@@ -218,7 +195,7 @@ jobs:
       - name: Stage payload through Creator Core
         run: |
           set -euo pipefail
-          manifest="$RUNNER_TEMP/minimal-bootstrap-full-proof.json"
+          manifest="docs/contracts/minimal-bootstrap.json"
           payload="$RUNNER_TEMP/full-media-payload"
           stage="$RUNNER_TEMP/full-media-stage"
           pushd tools/creator >/dev/null
@@ -240,11 +217,13 @@ jobs:
             --contract docs/contracts/physical-media.json \
             --stage-root "$stage" \
             --output-root "$output"
+          canonical_trust_sha="$(sha256sum bootstrap/trust/release-ed25519.json | awk '{print $1}')"
           bash tools/creator/proof/prove_prepared_ext4_growth.sh \
             "$output/ordax-disposable.raw" \
             out/initramfs-work/ordax-grow-ext4 \
             out/full-media-proof/creator-prepared-ext4-growth-proof.json \
-            805306368
+            805306368 \
+            "$canonical_trust_sha"
           python - \
             "$output/proof.json" \
             "$RUNNER_TEMP/full-media-payload/payload-provenance.json" \
@@ -272,15 +251,20 @@ jobs:
           assert prepared['gpt']['prepared_ordax_last_lba'] == prepared['gpt']['last_usable_lba']
           assert prepared['ext4']['ordax_final_blocks'] == prepared['ext4']['resize2fs_final_blocks']
           assert prepared['ext4']['tree_digest_before'] == prepared['ext4']['tree_digest_after']
-          assert prepared['canonical_trust'] is False
+          assert prepared['canonical_trust'] is True
+          canonical_trust_sha = __import__('hashlib').sha256(
+              pathlib.Path('bootstrap/trust/release-ed25519.json').read_bytes()
+          ).hexdigest()
+          assert prepared['canonical_trust_sha256'] == canonical_trust_sha
           assert prepared['physical_write_authorized'] is False
           assert prepared['physical_hardware_proven'] is False
           assert prepared['real_hardware_touched'] is False
           summary = {
               '$schema': 'prototype-ordax.full-bootstrap-media-proof/3',
               'status': 'pass',
-              'canonical_trust': False,
-              'ephemeral_ci_trust': True,
+              'canonical_trust': True,
+              'canonical_trust_sha256': canonical_trust_sha,
+              'ephemeral_ci_trust': False,
               'payload_artifact_count': payload['artifact_count'],
               'unresolved_groups': payload['unresolved_groups'],
               'disk_image_sha256': disk_proof['image_sha256'],
@@ -312,25 +296,22 @@ jobs:
           print('REAL_BOOTSTRAP_MEDIA_COMPOSITION=PASS')
           print('EXT4_RUNTIME_GROWTH_INTEGRATED=PASS')
           print('CREATOR_PREPARED_IMAGE_GROWTH=PASS')
-          print('CANONICAL_TRUST=NO')
+          print('CANONICAL_TRUST=YES')
           print('REAL_HARDWARE_TOUCHED=NO')
           print('PHYSICAL_HARDWARE_PROVEN=NO')
           print('PHYSICAL_WRITE_AUTHORIZED=NO')
           PY
 
-      - name: Destroy ephemeral private key and unpublished media bytes
+      - name: Destroy unpublished media bytes
         run: |
           set -euo pipefail
-          rm -f "$RUNNER_TEMP/full-media-proof-private.pem"
-          rm -f bootstrap/trust/release-ed25519.json
           rm -rf "$RUNNER_TEMP/full-media-payload" "$RUNNER_TEMP/full-media-stage"
           rm -f "$RUNNER_TEMP/full-media-disk-proof/ordax-disposable.raw"
-          rm -f out/full-media-proof/ordax-release-signing
-          test ! -e "$RUNNER_TEMP/full-media-proof-private.pem"
-          test ! -e bootstrap/trust/release-ed25519.json
           test ! -e "$RUNNER_TEMP/full-media-disk-proof/ordax-disposable.raw"
+          test -s bootstrap/trust/release-ed25519.json
           test -z "$(git status --porcelain)"
-          echo 'EPHEMERAL_PRIVATE_KEY_DESTROYED=YES'
+          echo 'EPHEMERAL_PRIVATE_KEY_CREATED=NO'
+          echo 'CANONICAL_PUBLIC_TRUST_PRESERVED=YES'
           echo 'RAW_IMAGE_PUBLISHED=NO'
 
       - name: Upload proof metadata only
