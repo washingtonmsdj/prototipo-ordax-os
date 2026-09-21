@@ -14,6 +14,8 @@ PRODUCT_VERSION = ROOT / "system" / "contracts" / "product-version.mjs"
 BUNDLED_APP_MANIFESTS = ROOT / "system" / "services" / "components" / "manifests" / "apps.mjs"
 PHYSICAL_SEED = ROOT / "docs" / "contracts" / "physical-media.json"
 PHYSICAL_PREPARED = ROOT / "docs" / "contracts" / "physical-prepared-media.json"
+MINIMAL_USB_BOOTSTRAP = ROOT / "docs" / "MINIMAL-USB-BOOTSTRAP.md"
+PORTABLE_BOOTSTRAP = ROOT / "docs" / "contracts" / "portable-bootstrap-v2.json"
 
 
 def assignment_map(text):
@@ -109,6 +111,29 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertEqual(state["BOOTSTRAP_SEED_PARTITION_NAMES"], seed_names)
         self.assertEqual(state["PREPARED_USB_PARTITIONS"], str(len(prepared["partitions"])))
         self.assertEqual(state["PREPARED_USB_PARTITION_NAMES"], prepared_names)
+
+    def test_minimal_usb_bootstrap_tracks_portable_pid1_source_state(self):
+        document = MINIMAL_USB_BOOTSTRAP.read_text(encoding="utf-8")
+        contract = json.loads(PORTABLE_BOOTSTRAP.read_text(encoding="utf-8"))
+        pid1 = contract["initramfs_helpers"]["portable_candidate_pid1"]
+
+        self.assertTrue(contract["migration"]["portable_v2_pid1_integration_implemented"])
+        self.assertFalse(pid1["default_init"])
+        self.assertFalse(pid1["physical_boot_entry_implemented"])
+        self.assertFalse(pid1["physical_boot_proven"] if "physical_boot_proven" in pid1 else contract["physical_boot_proven"])
+
+        self.assertIn("MVP_TARGET_BOOT_HANDOFF_IMPLEMENTED=YES_CANDIDATE", document)
+        self.assertIn("MVP_TARGET_PHYSICAL_BOOT_PROVEN=NO", document)
+        self.assertIn("MVP_TARGET_PUBLIC_PHYSICAL_APPLY=NO", document)
+
+        for stale in (
+            "That still does **not** mean the v2 boot handoff is implemented.",
+            "QEMU end-to-end proof is still pending",
+            "This is deliberately **not yet a UEFI proof**",
+            "its hash is not yet pinned inside the fixed initramfs",
+            "PID1 does not mount or execute it",
+        ):
+            self.assertNotIn(stale, document)
 
     def test_version_identity_is_not_confused_with_independent_delivery(self):
         contract = json.loads(UPDATE_CONTRACT.read_text(encoding="utf-8"))
