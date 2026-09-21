@@ -150,31 +150,39 @@ verify_selected_release() {
 }
 
 select_verified_release() {
-    attempt=0
-    while [ "$attempt" -lt 2 ]; do
-        selection="$(/sbin/ordax-portable-state select-boot "$STATE_MOUNT" "$PORTABLE_ROOT" 2>/dev/null || true)"
-        set -- $selection
-        slot=${1:-}
-        commit=${2:-}
-        extra=${3:-}
-        [ -z "$extra" ] || return 1
-        case "$slot" in
-            current|known-good|candidate) ;;
-            *) return 1 ;;
-        esac
-        is_sha "$commit" || return 1
+    selection="$(/sbin/ordax-portable-state select-boot "$STATE_MOUNT" "$PORTABLE_ROOT" 2>/dev/null || true)"
+    set -- $selection
+    slot=${1:-}
+    commit=${2:-}
+    extra=${3:-}
+    [ -z "$extra" ] || return 1
+    case "$slot" in
+        current|known-good|candidate) ;;
+        *) return 1 ;;
+    esac
+    is_sha "$commit" || return 1
 
-        if verify_selected_release "$slot" "$commit"; then
-            return 0
-        fi
+    if verify_selected_release "$slot" "$commit"; then
+        return 0
+    fi
 
-        [ "$slot" = "candidate" ] || return 1
-        /sbin/ordax-portable-state rollback \
-            "$STATE_MOUNT" "$PORTABLE_ROOT" "$commit" >/dev/null 2>&1 ||
-            return 1
-        attempt=$((attempt + 1))
-    done
-    return 1
+    [ "$slot" = "candidate" ] || return 1
+    /sbin/ordax-portable-state rollback \
+        "$STATE_MOUNT" "$PORTABLE_ROOT" "$commit" >/dev/null 2>&1 ||
+        return 1
+
+    selection="$(/sbin/ordax-portable-state select-boot "$STATE_MOUNT" "$PORTABLE_ROOT" 2>/dev/null || true)"
+    set -- $selection
+    slot=${1:-}
+    commit=${2:-}
+    extra=${3:-}
+    [ -z "$extra" ] || return 1
+    case "$slot" in
+        current|known-good) ;;
+        *) return 1 ;;
+    esac
+    is_sha "$commit" || return 1
+    verify_selected_release "$slot" "$commit"
 }
 select_verified_release ||
     rescue "no candidate/current/known-good release is safely selectable and exactly verified"

@@ -330,6 +330,7 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn('rollback \\', PORTABLE_INIT)
         self.assertIn('cp /sbin/ordax-portable-state "$RUNTIME_STATE_HELPER"', PORTABLE_INIT)
         self.assertIn('chmod 0555 "$RUNTIME_STATE_HELPER"', PORTABLE_INIT)
+        self.assertNotIn("$((", PORTABLE_INIT)
 
     def test_portable_mount_helper_is_isolated_and_non_authoritative(self):
         helper = CONTRACT["portable_v2_prerequisites"]["portable_mount_helper"]
