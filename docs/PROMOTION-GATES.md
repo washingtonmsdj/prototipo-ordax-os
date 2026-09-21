@@ -176,6 +176,8 @@ The source-controlled preflight distinguishes two states without weakening the b
 
 `pre_authorization_ready` is diagnostic only. It never implies `physical_write_allowed`, never creates a writer artifact, and never substitutes for target-specific confirmation or UAC at execution time.
 
+The source-controlled `tools/creator/authorize_physical_write.py` command removes manual JSON editing from the later consent step. Its `check` mode is read-only. Its `authorize` mode is permitted only after pre-authorization readiness and exact bindings are proven, requires the exact Stable/MVP scope + release sequence + explicit authorization phrase, and changes only the authorization contract. It never opens a physical device or invokes the writer.
+
 Before write:
 
 ```text
