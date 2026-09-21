@@ -39,7 +39,23 @@ The actual canonical key generation is a local user action and must not be perfo
 
 For the canonical ceremony, use the complete **Windows Prototype Toolkit** produced for one exact reviewed commit. Keep `provenance.json`, `ordax-release-signing.exe` and `Initialize-OrdaXReleaseTrust.ps1` together exactly as downloaded; do not mix files from different toolkit runs and do not replace one file with a locally rebuilt copy.
 
-Start the ceremony through:
+Before generating any key material, run the read-only toolkit preflight:
+
+```text
+1-Verify-OrdaXTrustToolkit.cmd
+```
+
+It invokes the same initializer with `-PreflightOnly`, validates canonical-main provenance plus the signer/initializer hashes, reports the exact source commit, and exits before creating private/review paths or mutating the filesystem. Require:
+
+```text
+TOOLKIT_TRUST_PREFLIGHT=PASS
+CANONICAL_TRUST_CEREMONY_ELIGIBLE=YES
+TOOLKIT_COMPONENT_HASHES_VERIFIED=YES
+PRIVATE_KEY_TOUCHED=NO
+FILESYSTEM_MUTATION=NO
+```
+
+Only after that succeeds, start the actual local ceremony through:
 
 ```text
 2-Initialize-OrdaXTrust.cmd
