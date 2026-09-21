@@ -1,6 +1,6 @@
 # Current State
 
-Status date: 2026-09-20
+Status date: 2026-09-21
 
 This is the canonical handoff snapshot. Architecture/contracts win if another document conflicts with it. Detailed historical evidence remains under `docs/evidence/`; this file records the current boundary without treating CI proof, development-hardware proof and product-release authorization as interchangeable. Values that mirror structured source — including product/app versions, component release modes and physical-media geometry — are regression-checked against their owners so this snapshot cannot silently drift from the implementation.
 
@@ -98,9 +98,16 @@ CANONICAL_TRUST_TOOLKIT_PROVENANCE_ELIGIBLE=YES
 CANONICAL_TRUST_TOOLKIT_SOURCE_COMMIT=2172eb6a18430910afd036199ec492ad63dc185d
 CANONICAL_TRUST_TOOLKIT_WORKFLOW_RUN_ID=35617567458
 CANONICAL_TRUST_TOOLKIT_ARTIFACT_SHA256=cb8232d20a9cdbaa81e73d55b52e2d6047b3b800a06a73a14869e6dc2245af31
-CANONICAL_TRUST_TOOLKIT_LOCAL_PREFLIGHT_EXECUTED=NO
-CANONICAL_KEY_MATERIAL_GENERATED=NO
+CANONICAL_TRUST_TOOLKIT_LOCAL_PREFLIGHT_EXECUTED=YES
+CANONICAL_KEY_MATERIAL_GENERATED=YES
+CANONICAL_PUBLIC_TRUST_SHA256=d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250
+CANONICAL_TRUST_RECOVERY_VERIFIED=NO
 PUBLIC_ANCHOR_PINNED=NO
+RELEASE_SIGNING_BACKEND_CURRENT=LOCAL_PEM_CONTROLLED_PROTOTYPE
+RELEASE_SIGNING_BACKEND_PRODUCTION_TARGET=MANAGED_NON_EXPORTABLE_KMS_HSM
+GITHUB_IS_KEY_CUSTODIAN=NO
+MANAGED_KMS_HSM_REQUIRED_FOR_FIRST_PHYSICAL_PROOF=NO
+SIGNED_TRUST_ROTATION_REQUIRED_BEFORE_BROAD_PUBLIC_DISTRIBUTION=YES
 PORTABLE_COLD_HEALTH_PROOF_SCOPE=PHYSICAL_STABLE_MVP_REQUIRED_NO_SYNTHETIC_CI
 CANONICAL_KERNEL_ACPI_BATTERY_SUPPORT=EXPLICIT
 CANONICAL_KERNEL_SYSRQ_RESTART_FALLBACK=EXPLICIT
@@ -109,6 +116,8 @@ GRAPHICAL_SURFACE_COMPLETE=NO
 CANONICAL_SYSTEM_RUNTIME_COMPLETE=NO
 ```
 
+
+The local ceremony steps 1 and 2 were operator-executed on 2026-09-21 against the eligible toolkit bound to `2172eb6a18430910afd036199ec492ad63dc185d`. Read-only preflight passed, canonical Ed25519 key material was generated locally, independent public derivation matched and the proof signature passed. Only non-secret evidence is recorded in Git. Offline recovery is not yet verified and the public anchor is not pinned, so physical authorization remains fail-closed. The local PEM is a controlled prototype signing backend, not the intended long-term production single point of custody; managed non-exportable KMS/HSM remains a provider-neutral future backend, while signed trust rotation is required before broad public distribution.
 
 The first formal human product version is **OrdaX Prototype v0.1.0**. Product version, Entrega, Git SHA and component/app versions are separate identities: v0.1.0 identifies the prototype product milestone, Entrega identifies the notebook-facing delivery sequence, the SHA remains the exact technical build identity, and each component may evolve its own SemVer. First-party apps on the `0.x` line are **Beta**; `1.0.0` remains reserved for the first stable release of each app. Internet is currently `0.3.0 Beta` and Notes is `0.4.0 Beta`, both using `git-app` in Owner/Development. Arquivos, Ajustes, Conta and Sistema are `0.1.0 Beta` and remain `bundled`. A component having its own version does not mean it already has a production-independent update channel: `git-app` is a development delivery mode, while production-independent activation remains gated behind the signed `component-slot` path with pending health, promotion and rollback. Product v1.0 remains reserved for the stable product rather than being inferred from prototype maturity, component versions or delivery count.
 
