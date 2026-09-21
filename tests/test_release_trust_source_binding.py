@@ -14,6 +14,9 @@ TOOLKIT = (
 PREFLIGHT_WRAPPER = (
     ROOT / "tools/release-signing/windows/1-Verify-OrdaXTrustToolkit.cmd"
 ).read_text(encoding="utf-8")
+INITIALIZER_WRAPPER = (
+    ROOT / "tools/release-signing/windows/2-Initialize-OrdaXTrust.cmd"
+).read_text(encoding="utf-8")
 
 
 def test_read_only_preflight_reuses_initializer_checks_before_key_generation():
@@ -27,6 +30,17 @@ def test_read_only_preflight_reuses_initializer_checks_before_key_generation():
     assert '-PreflightOnly' in PREFLIGHT_WRAPPER
     assert '1-Verify-OrdaXTrustToolkit.cmd' in TOOLKIT
     assert '1-Verify-OrdaXTrustToolkit.cmd \\' in TOOLKIT
+
+
+def test_key_generation_requires_explicit_switch_after_preflight():
+    assert "[switch]$GenerateKey" in INITIALIZER
+    assert "if ($PreflightOnly -and $GenerateKey)" in INITIALIZER
+    assert "if (-not $GenerateKey)" in INITIALIZER
+    assert "Canonical key generation requires the explicit -GenerateKey switch." in INITIALIZER
+    assert INITIALIZER.index("if (-not $GenerateKey)") < INITIALIZER.index("New-Item -ItemType Directory")
+    assert "-GenerateKey" in INITIALIZER_WRAPPER
+    assert "-PreflightOnly" not in INITIALIZER_WRAPPER
+    assert "-GenerateKey" not in PREFLIGHT_WRAPPER
 
 
 def test_trust_ceremony_binds_proof_to_toolkit_source_commit():
