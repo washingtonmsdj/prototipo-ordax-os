@@ -1,0 +1,18 @@
+{
+  "$schema": "prototype-ordax.trust-transition-ci-proof/1",
+  "recorded_date": "2026-09-21",
+  "pull_request": 403,
+  "tested_head_commit": "87ba1e43c4a064ef69cf0af663e9fb07cf2b9c6f",
+  "release_signing_tooling_run_id": 35640416446,
+  "release_acquisition_agent_run_id": 35640416481,
+  "signer_tests": "pass",
+  "release_agent_tests": "pass",
+  "signer_agent_cross_compatibility": "pass",
+  "transition_schema": "prototype-ordax.release-trust-transition/1",
+  "transition_envelope_schema": "prototype-ordax.release-trust-transition-envelope/1",
+  "ephemeral_ci_keys_only": true,
+  "canonical_private_key_touched": false,
+  "canonical_public_anchor_changed": false,
+  "physical_write_authorized": false,
+  "stateful_device_rotation_activation_proven": false
+}
