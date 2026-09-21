@@ -24,6 +24,7 @@ on:
       - '!tools/release-signing/README.md'
       - 'docs/contracts/portable-v2-qemu-boot-proof.json'
       - 'docs/contracts/portable-v2-uefi-boot-proof.json'
+      - 'docs/contracts/portable-v3-one-shot-qemu-proof-spec.json'
       - 'boot/portable-v2/**'
       - 'boot/esp/**'
       - 'docs/contracts/portable-bootstrap-v2.json'
@@ -31,6 +32,7 @@ on:
       - 'docs/MINIMAL-USB-BOOTSTRAP.md'
       - 'tests/test_portable_v2_qemu_boot_proof_contract.py'
       - 'tests/test_portable_v2_uefi_boot_proof_contract.py'
+      - 'tests/test_portable_v3_one_shot_qemu_proof.py'
       - '.github/workflows/portable-v2-qemu-boot-proof.yml'
   pull_request:
     paths:
@@ -54,6 +56,7 @@ on:
       - '!tools/release-signing/README.md'
       - 'docs/contracts/portable-v2-qemu-boot-proof.json'
       - 'docs/contracts/portable-v2-uefi-boot-proof.json'
+      - 'docs/contracts/portable-v3-one-shot-qemu-proof-spec.json'
       - 'boot/portable-v2/**'
       - 'boot/esp/**'
       - 'docs/contracts/portable-bootstrap-v2.json'
@@ -61,6 +64,7 @@ on:
       - 'docs/MINIMAL-USB-BOOTSTRAP.md'
       - 'tests/test_portable_v2_qemu_boot_proof_contract.py'
       - 'tests/test_portable_v2_uefi_boot_proof_contract.py'
+      - 'tests/test_portable_v3_one_shot_qemu_proof.py'
       - '.github/workflows/portable-v2-qemu-boot-proof.yml'
   workflow_dispatch:
 
