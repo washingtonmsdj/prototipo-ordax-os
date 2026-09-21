@@ -10,9 +10,10 @@ import {
 import { createWebIdentityActions } from "../system/adapters/web/identity-actions.mjs";
 
 test("identity action contract normalizes supported command families", () => {
-  const snapshot = validateIdentityActionsSnapshot({ supportedActions: ["sign-in", "sign-out"] });
-  assert.deepEqual(snapshot.supportedActions, ["sign-in", "sign-out"]);
+  const snapshot = validateIdentityActionsSnapshot({ supportedActions: ["sign-in", "register", "sign-out"] });
+  assert.deepEqual(snapshot.supportedActions, ["sign-in", "register", "sign-out"]);
   assert.equal(isIdentityActionSupported(snapshot, "sign-in"), true);
+  assert.equal(isIdentityActionSupported(snapshot, "register"), true);
   assert.equal(isIdentityActionSupported(snapshot, "sign-out"), true);
 });
 

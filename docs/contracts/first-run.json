@@ -1,0 +1,57 @@
+{
+  "$schema": "prototype-ordax.first-run/1",
+  "status": "native-foundation-implemented",
+  "scope": "mvp-usb-first-use",
+  "owners": {
+    "state_semantics": "system/services/state/first-run.mjs",
+    "state_port": "system/contracts/first-run-state-store.mjs",
+    "native_adapter": "system/adapters/native/first-run-state.mjs",
+    "native_host": "system/surface/runtime/native_host_server.py",
+    "surface_ui": "system/surface/ui/first-run.mjs"
+  },
+  "persistence": {
+    "native_path": "/var/lib/ordax/first-run.json",
+    "persistent_usb_state": true,
+    "completion_must_be_durable_before_dismiss": true,
+    "state_is_separate_from_user_preferences": true,
+    "state_is_separate_from_identity_session": true
+  },
+  "flow": [
+    "welcome",
+    "regional",
+    "network",
+    "account",
+    "privacy",
+    "ready"
+  ],
+  "regional": {
+    "complete_locales": [
+      "pt-BR"
+    ],
+    "default_locale": "pt-BR",
+    "default_time_zone": "America/Bahia",
+    "time_zone_preference": "regional.time-zone",
+    "missing_preference_recovery": "seed-from-completed-first-run",
+    "existing_preference_overwrite_allowed": false
+  },
+  "network": {
+    "skippable": true,
+    "uses_existing_network_management_port": true,
+    "password_is_transient_only": true,
+    "password_must_not_enter_first_run_state": true
+  },
+  "account": {
+    "optional": true,
+    "local_only_always_available": true,
+    "sign_in_capability_driven": true,
+    "register_capability_driven": true,
+    "provider_unavailable_must_not_block_completion": true,
+    "identity_subject_must_not_enter_first_run_state": true,
+    "cloud_sync_required_for_mvp": false
+  },
+  "mvp": {
+    "runs_from_usb": true,
+    "permanent_internal_disk_install_exposed": false,
+    "web_mode_uses_this_device_oobe": false
+  }
+}

@@ -1,3 +1,9 @@
+import { assertPreferenceRuntimePort } from "../../contracts/preference-runtime.mjs";
+import {
+  REGIONAL_LOCALE_PREFERENCE_ID,
+  REGIONAL_TIME_ZONE_PREFERENCE_ID,
+} from "../../services/preferences/regional.mjs";
+
 const SURFACE_LOCALE = "pt-BR";
 const SURFACE_TIME_ZONE = "America/Bahia";
 
@@ -177,7 +183,7 @@ export function createDesktopShellMarkup() {
           <p class="ordax-quick-date" data-ordax-quick-date>Carregando data…</p>
           <div class="ordax-quick-timezone">
             <span>Fuso horário</span>
-            <strong>America/Bahia</strong>
+            <strong data-ordax-timezone>${SURFACE_TIME_ZONE}</strong>
           </div>
         </section>
       </div>
@@ -185,9 +191,16 @@ export function createDesktopShellMarkup() {
   `;
 }
 
-function formatDate(date) {
-  const formatter = new Intl.DateTimeFormat(SURFACE_LOCALE, {
-    timeZone: SURFACE_TIME_ZONE,
+function regionalSettings(snapshot = {}) {
+  return {
+    locale: snapshot[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_LOCALE,
+    timeZone: snapshot[REGIONAL_TIME_ZONE_PREFERENCE_ID] ?? SURFACE_TIME_ZONE,
+  };
+}
+
+function formatDate(date, locale, timeZone) {
+  const formatter = new Intl.DateTimeFormat(locale, {
+    timeZone,
     weekday: "long",
     day: "2-digit",
     month: "long",
@@ -196,20 +209,25 @@ function formatDate(date) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-export function mountDesktopClock(root, clock = globalThis) {
+export function mountDesktopClock(root, preferenceRuntime = null, clock = globalThis) {
+  const preferencePort = preferenceRuntime === null
+    ? null
+    : assertPreferenceRuntimePort(preferenceRuntime);
   const timeNode = root.querySelector("[data-ordax-clock]");
   const trayTimeNode = root.querySelector("[data-ordax-tray-clock]");
   const quickTimeNode = root.querySelector("[data-ordax-quick-clock]");
   const dateNode = root.querySelector("[data-ordax-date]");
   const quickDateNode = root.querySelector("[data-ordax-quick-date]");
-  if (!timeNode || !trayTimeNode || !quickTimeNode || !dateNode || !quickDateNode) {
-    throw new Error("OrdaX desktop clock requires clock and date nodes");
+  const timeZoneNode = root.querySelector("[data-ordax-timezone]");
+  if (!timeNode || !trayTimeNode || !quickTimeNode || !dateNode || !quickDateNode || !timeZoneNode) {
+    throw new Error("OrdaX desktop clock requires clock, date and timezone nodes");
   }
 
   const render = () => {
+    const { locale, timeZone } = regionalSettings(preferencePort?.getSnapshot() ?? {});
     const now = new Date();
-    const formattedTime = new Intl.DateTimeFormat(SURFACE_LOCALE, {
-      timeZone: SURFACE_TIME_ZONE,
+    const formattedTime = new Intl.DateTimeFormat(locale, {
+      timeZone,
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
@@ -217,26 +235,29 @@ export function mountDesktopClock(root, clock = globalThis) {
     timeNode.textContent = formattedTime;
     trayTimeNode.textContent = formattedTime;
     quickTimeNode.textContent = formattedTime;
-    dateNode.textContent = formatDate(now);
-    quickDateNode.textContent = new Intl.DateTimeFormat(SURFACE_LOCALE, {
-      timeZone: SURFACE_TIME_ZONE,
+    dateNode.textContent = formatDate(now, locale, timeZone);
+    quickDateNode.textContent = new Intl.DateTimeFormat(locale, {
+      timeZone,
       weekday: "long",
       day: "2-digit",
       month: "long",
       year: "numeric",
     }).format(now);
+    timeZoneNode.textContent = timeZone;
     const isoNow = now.toISOString();
     timeNode.setAttribute("datetime", isoNow);
     trayTimeNode.setAttribute("datetime", isoNow);
     quickTimeNode.setAttribute("datetime", isoNow);
-    timeNode.title = "Horário de Salvador/Bahia";
-    trayTimeNode.title = "Horário de Salvador/Bahia";
+    timeNode.title = `Fuso horário: ${timeZone}`;
+    trayTimeNode.title = `Fuso horário: ${timeZone}`;
   };
 
-  render();
+  const unsubscribe = preferencePort?.subscribe(render) ?? null;
+  if (!preferencePort) render();
   const timer = clock.setInterval(render, 30_000);
   return Object.freeze({
     destroy() {
+      unsubscribe?.();
       clock.clearInterval(timer);
     },
   });

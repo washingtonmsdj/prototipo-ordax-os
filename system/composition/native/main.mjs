@@ -18,6 +18,7 @@ import { createNativeNetworkStatus } from "../../adapters/native/network-status.
 import { createNativePowerActions } from "../../adapters/native/power-actions.mjs";
 import { createNativePowerStatus } from "../../adapters/native/power-status.mjs";
 import { createNativePreferenceStore } from "../../adapters/native/preferences.mjs";
+import { createNativeFirstRunStateStore } from "../../adapters/native/first-run-state.mjs";
 import { createNativeSurfaceHost } from "../../adapters/native/runtime.mjs";
 import { createNativeSystemMetrics } from "../../adapters/native/system-metrics.mjs";
 import { createNativeUpdateHistory } from "../../adapters/native/update-history.mjs";
@@ -42,6 +43,7 @@ import { createDiagnosticJournalRuntime } from "../../services/diagnostics/runti
 import { createUpdateDiagnosticRecorder } from "../../services/diagnostics/update-recorder.mjs";
 import { createPreferenceSyncRuntime } from "../../services/sync/preference-runtime.mjs";
 import { createWorkspaceMetadataBridge } from "../../services/sync/workspace-metadata.mjs";
+import { seedMissingRegionalPreferencesFromFirstRun } from "../../services/state/first-run.mjs";
 import { mountAccountOverviewControls } from "../../surface/ui/account-overview-controls.mjs";
 import { mountFileSpaceControls } from "../../surface/ui/file-space-controls.mjs";
 import { mountNetworkQuickPanel } from "../../surface/ui/network-quick-panel.mjs";
@@ -54,6 +56,7 @@ import { mountHomePending } from "../../surface/ui/home-pending.mjs";
 import { mountPowerControls } from "../../surface/ui/power-controls.mjs";
 import { mountSurface } from "../../surface/ui/surface.mjs";
 import { createSurfaceBootScreen } from "../../surface/ui/boot-screen.mjs";
+import { mountFirstRunExperience } from "../../surface/ui/first-run.mjs";
 import { mountSettingsOverviewControls } from "../../surface/ui/settings-overview-controls.mjs";
 import { mountSystemOverviewControls } from "../../surface/ui/system-overview-controls.mjs";
 import { mountSystemTrayQuickPanels } from "../../surface/ui/system-tray-quick-panels.mjs";
@@ -79,6 +82,7 @@ async function start() {
 
   const browserSession = createNativeBrowserSession(window);
   const preferenceStorePromise = createNativePreferenceStore(window);
+  const firstRunStateStorePromise = createNativeFirstRunStateStore(window);
   const optionalPortsPromise = Promise.all([
     optionalNativeProbe(
       "OrdaX native client diagnostics unavailable",
@@ -130,7 +134,17 @@ async function start() {
     ),
   ]);
 
-  const preferenceStore = await preferenceStorePromise;
+  const [preferenceStore, firstRunStateStore] = await Promise.all([
+    preferenceStorePromise,
+    firstRunStateStorePromise,
+  ]);
+  const regionalRecovery = seedMissingRegionalPreferencesFromFirstRun(
+    preferenceStore.load(),
+    firstRunStateStore.load(),
+  );
+  if (regionalRecovery.changed) {
+    preferenceStore.save(regionalRecovery.snapshot);
+  }
   const [
     clientDiagnostics,
     diagnosticJournalStore,
@@ -379,6 +393,19 @@ async function start() {
     },
   });
 
+  bootScreen.setStage("Preparando primeiro uso…");
+  let firstRun = null;
+  try {
+    firstRun = mountFirstRunExperience(root, {
+      stateStore: firstRunStateStore,
+      preferences: surface.preferences,
+      networkManagement,
+      identitySession,
+      identityActions,
+    });
+  } catch (error) {
+    reportClientDiagnostic("first-run", error);
+  }
   bootScreen.ready();
 
   window.addEventListener(
@@ -386,6 +413,7 @@ async function start() {
     () => {
       window.removeEventListener("error", onWindowError);
       window.removeEventListener("unhandledrejection", onUnhandledRejection);
+      firstRun?.destroy();
       surfaceHeartbeat.dispose();
       homePending.dispose();
       homeContinuation.dispose();

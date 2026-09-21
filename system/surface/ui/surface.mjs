@@ -332,8 +332,27 @@ export function mountSurface(
   const preferenceListeners = new Set();
 
   root.innerHTML = createDesktopShellMarkup();
-  const desktopClock = mountDesktopClock(root);
   let state = createSurfaceState(host.getSnapshot(), preferenceSeed, workspaceSeed);
+  const preferences = Object.freeze({
+    schema: PREFERENCE_RUNTIME_SCHEMA,
+    getSnapshot() {
+      return state.preferences;
+    },
+    set(preferenceId, value) {
+      dispatch({ type: "preference.set", preferenceId, value });
+      return state.preferences;
+    },
+    subscribe(listener) {
+      if (typeof listener !== "function") {
+        throw new TypeError("Preference runtime listener must be a function");
+      }
+      preferenceListeners.add(listener);
+      listener(state.preferences);
+      return () => preferenceListeners.delete(listener);
+    },
+  });
+
+  const desktopClock = mountDesktopClock(root, preferences);
 
   const workspace = root.querySelector("[data-workspace]");
   const launcher = root.querySelector("[data-launcher]");
@@ -876,25 +895,6 @@ export function mountSurface(
   });
   const unsubscribeHost = host.subscribe((snapshot) => dispatch({ type: "host.snapshot", snapshot }));
   render();
-
-  const preferences = Object.freeze({
-    schema: PREFERENCE_RUNTIME_SCHEMA,
-    getSnapshot() {
-      return state.preferences;
-    },
-    set(preferenceId, value) {
-      dispatch({ type: "preference.set", preferenceId, value });
-      return state.preferences;
-    },
-    subscribe(listener) {
-      if (typeof listener !== "function") {
-        throw new TypeError("Preference runtime listener must be a function");
-      }
-      preferenceListeners.add(listener);
-      listener(state.preferences);
-      return () => preferenceListeners.delete(listener);
-    },
-  });
 
   return Object.freeze({
     schema: SURFACE_RENDER_LIFECYCLE_SCHEMA,
