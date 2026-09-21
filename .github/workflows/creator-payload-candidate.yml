@@ -39,6 +39,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: creator-payload-candidate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   creator-payload:
     runs-on: ubuntu-24.04
@@ -126,48 +130,65 @@ jobs:
             exit 1
           fi
 
-      - name: Assemble and verify resolved Creator payload subset
+      - name: Assemble and verify canonical complete Creator payload
         run: |
           set -euo pipefail
-          python tools/creator/assemble.py build --allow-unresolved
-          python tools/creator/assemble.py verify --allow-unresolved
+          python tools/creator/assemble.py build
+          python tools/creator/assemble.py verify
 
-      - name: Assert only release trust remains unresolved
+      - name: Assert canonical payload is complete and non-destructive
         run: |
           python - <<'PY'
           import json, pathlib
           manifest = json.loads(pathlib.Path('docs/contracts/minimal-bootstrap.json').read_text(encoding='utf-8'))
           unresolved = [g['id'] for g in manifest['artifact_groups'] if not g['resolved']]
-          expected = ['bootstrap-release-trust']
-          if unresolved != expected:
-              raise SystemExit(f'unexpected unresolved groups: {unresolved!r}')
-          if manifest['all_artifacts_resolved'] is not False:
-              raise SystemExit('partial payload must keep all_artifacts_resolved=false')
+          if unresolved:
+              raise SystemExit(f'canonical payload has unresolved groups: {unresolved!r}')
+          if manifest['all_artifacts_resolved'] is not True:
+              raise SystemExit('canonical payload must have all_artifacts_resolved=true')
           if manifest['physical_write_allowed'] is not False:
-              raise SystemExit('partial payload must keep physical_write_allowed=false')
+              raise SystemExit('canonical payload must keep physical_write_allowed=false')
           provenance = json.loads(pathlib.Path('out/creator-payload/payload-provenance.json').read_text(encoding='utf-8'))
-          if provenance['unresolved_groups'] != expected:
-              raise SystemExit('payload provenance lost unresolved promotion input')
+          if provenance['status'] != 'complete-candidate':
+              raise SystemExit('payload provenance is not complete-candidate')
+          if provenance['unresolved_groups'] != []:
+              raise SystemExit('payload provenance unexpectedly reports unresolved groups')
           if provenance['physical_write_authorized'] is not False:
               raise SystemExit('payload provenance unexpectedly authorized physical write')
           PY
 
-      - name: Prove incomplete payload cannot cross Creator full-payload gates
+      - name: Prove complete payload crosses only non-destructive Creator gates
         run: |
           set -euo pipefail
           manifest='../../docs/contracts/minimal-bootstrap.json'
           payload='../../out/creator-payload'
           output="$(mktemp -d)"
           cd tools/creator
-          if go run ./cmd/ordax-creator verify-payload --manifest "$manifest" --payload-root "$payload"; then
-            echo 'Creator unexpectedly accepted incomplete payload as complete' >&2
-            exit 1
-          fi
-          if go run ./cmd/ordax-creator stage-tree --manifest "$manifest" --payload-root "$payload" --output-root "$output"; then
-            echo 'Creator unexpectedly staged incomplete payload' >&2
-            exit 1
-          fi
-          test -z "$(find "$output" -mindepth 1 -print -quit)"
+          verify_output="$(go run ./cmd/ordax-creator verify-payload --manifest "$manifest" --payload-root "$payload")"
+          printf '%s\n' "$verify_output"
+          stage_output="$(go run ./cmd/ordax-creator stage-tree --manifest "$manifest" --payload-root "$payload" --output-root "$output")"
+          printf '%s\n' "$stage_output"
+          grep -q '^DISPOSABLE_TREE_STAGED=YES
+
+      - name: Upload unified Creator payload candidate
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ordax-creator-payload-${{ github.sha }}
+          path: out/creator-payload/
+          if-no-files-found: error
+          retention-days: 14
+ <<<"$stage_output"
+          grep -q '^PHYSICAL_WRITE_STATUS=blocked
+
+      - name: Upload unified Creator payload candidate
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ordax-creator-payload-${{ github.sha }}
+          path: out/creator-payload/
+          if-no-files-found: error
+          retention-days: 14
+ <<<"$stage_output"
+          test -n "$(find "$output" -mindepth 1 -print -quit)"
 
       - name: Upload unified Creator payload candidate
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
