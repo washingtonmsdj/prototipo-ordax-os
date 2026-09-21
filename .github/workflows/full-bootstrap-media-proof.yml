@@ -179,7 +179,7 @@ jobs:
       - name: Assemble and verify byte-complete payload
         run: |
           set -euo pipefail
-          manifest="docs/contracts/minimal-bootstrap.json"
+          manifest="$PWD/docs/contracts/minimal-bootstrap.json"
           payload="$RUNNER_TEMP/full-media-payload"
           python tools/creator/assemble.py build --manifest "$manifest" --out-dir "$payload"
           python tools/creator/assemble.py verify --manifest "$manifest" --payload-root "$payload"
@@ -195,7 +195,7 @@ jobs:
       - name: Stage payload through Creator Core
         run: |
           set -euo pipefail
-          manifest="docs/contracts/minimal-bootstrap.json"
+          manifest="$PWD/docs/contracts/minimal-bootstrap.json"
           payload="$RUNNER_TEMP/full-media-payload"
           stage="$RUNNER_TEMP/full-media-stage"
           pushd tools/creator >/dev/null
