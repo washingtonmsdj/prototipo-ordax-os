@@ -22,11 +22,11 @@ import (
 
 const (
 	envelopeSchema   = "prototype-ordax.creator-physical-envelope/1"
-	manifestSchema   = "prototype-ordax.creator-physical-manifest/1"
+	manifestSchema   = "prototype-ordax.creator-physical-manifest/2"
 	trustSchema      = "prototype-ordax.release-trust/1"
-	purpose          = "creator-physical-windows-amd64"
+	purpose          = "creator-portable-physical-windows-amd64"
 	repository       = "washingtonmsdj/prototipo-ordax-os"
-	recipe           = "creator/physical/windows/1"
+	recipe           = "creator/physical/portable-windows/2"
 	bundlePathPrefix = "/washingtonmsdj/prototipo-ordax-os/releases/download/creator-physical/"
 	maxDocument      = 512 << 10
 	maxPrivateKey    = 16 << 10
@@ -77,11 +77,14 @@ type manifest struct {
 
 func expectedFiles() map[string]struct{} {
 	return map[string]struct{}{
-		"ordax-creator-physical-test.exe": {},
-		"ordax-bootstrap-seed.raw":         {},
-		"release-ed25519.json":             {},
-		"provenance.json":                  {},
-		"SHA256SUMS":                       {},
+		"ordax-creator-physical-test.exe":      {},
+		"release-ed25519.json":                 {},
+		"minimal-bootstrap.json":               {},
+		"portable-usb-v2.json":                 {},
+		"creator-portable-media-plan.json":     {},
+		"physical-write-authorization.json":    {},
+		"provenance.json":                      {},
+		"SHA256SUMS":                           {},
 	}
 }
 
