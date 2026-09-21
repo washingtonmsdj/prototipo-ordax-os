@@ -1,11 +1,17 @@
 [CmdletBinding()]
 param(
     [string]$PrivateKeyPath,
-    [string]$ReviewDirectory
+    [string]$ReviewDirectory,
+    [switch]$PreflightOnly,
+    [switch]$GenerateKey
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+if ($PreflightOnly -and $GenerateKey) {
+    throw 'PreflightOnly and GenerateKey are mutually exclusive.'
+}
 
 $ScriptPath = $PSCommandPath
 if ([string]::IsNullOrWhiteSpace($ScriptPath)) {
@@ -18,19 +24,6 @@ $ScriptPath = [IO.Path]::GetFullPath($ScriptPath)
 $ScriptRoot = Split-Path -Parent $ScriptPath
 if ([string]::IsNullOrWhiteSpace($ScriptRoot)) {
     throw 'Unable to resolve the trust ceremony script directory.'
-}
-
-if ([string]::IsNullOrWhiteSpace($PrivateKeyPath)) {
-    if ([string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
-        throw 'USERPROFILE is unavailable; specify -PrivateKeyPath explicitly.'
-    }
-    # Keep canonical private material in a direct child of the user profile.
-    # LOCALAPPDATA can be backed by Windows reparse/junction paths on some hosts,
-    # which the signing tool intentionally rejects for private-key custody.
-    $PrivateKeyPath = Join-Path $env:USERPROFILE 'OrdaX-Private\release-signing\ordax-release-private.pem'
-}
-if ([string]::IsNullOrWhiteSpace($ReviewDirectory)) {
-    $ReviewDirectory = Join-Path $ScriptRoot 'trust-review'
 }
 
 $KeyId = 'ordax-prototype-release-v1'
@@ -55,7 +48,15 @@ if ($ToolkitProvenance.source_repository -ne 'washingtonmsdj/prototipo-ordax-os'
     $ToolkitProvenance.source_event -ne 'push' -or
     $ToolkitProvenance.source_ref -ne 'refs/heads/main' -or
     $ToolkitProvenance.canonical_trust_ceremony_eligible -ne $true) {
-    throw 'Canonical trust ceremony requires a toolkit produced by a push of the canonical main branch.'
+    throw 'Canonical trust ceremony requires a toolkit produced by an eligible push of the canonical main branch.'
+}
+$TrustPrerequisites = $ToolkitProvenance.canonical_trust_prerequisites
+if ($null -eq $TrustPrerequisites -or
+    $TrustPrerequisites.portable_runtime_v3_direct_kernel_proven -ne $true -or
+    $TrustPrerequisites.portable_runtime_v3_uefi_ovmf_proven -ne $true -or
+    $TrustPrerequisites.portable_writer_v2_implemented_fail_closed -ne $true -or
+    $TrustPrerequisites.physical_authorization_still_fail_closed -ne $true) {
+    throw 'Canonical trust ceremony toolkit does not contain the required Portable runtime-v3 and fail-closed writer prerequisites.'
 }
 $ToolkitSourceCommit = [string]$ToolkitProvenance.source_commit
 if ($ToolkitSourceCommit -notmatch '^[0-9a-f]{40}$') {
@@ -74,6 +75,35 @@ if ($ActualSignerSha256 -ne $ExpectedSignerSha256) {
 }
 if ($ActualInitializerSha256 -ne $ExpectedInitializerSha256) {
     throw 'Trust initializer bytes do not match toolkit provenance.'
+}
+
+if ($PreflightOnly) {
+    Write-Host ''
+    Write-Host 'TOOLKIT_TRUST_PREFLIGHT=PASS'
+    Write-Host "SOURCE_COMMIT=$ToolkitSourceCommit"
+    Write-Host 'CANONICAL_TRUST_CEREMONY_ELIGIBLE=YES'
+    Write-Host 'TOOLKIT_COMPONENT_HASHES_VERIFIED=YES'
+    Write-Host 'PRIVATE_KEY_TOUCHED=NO'
+    Write-Host 'FILESYSTEM_MUTATION=NO'
+    Write-Host ''
+    return
+}
+
+if (-not $GenerateKey) {
+    throw 'Canonical key generation requires the explicit -GenerateKey switch. Run 1-Verify-OrdaXTrustToolkit.cmd first, then 2-Initialize-OrdaXTrust.cmd.'
+}
+
+if ([string]::IsNullOrWhiteSpace($PrivateKeyPath)) {
+    if ([string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
+        throw 'USERPROFILE is unavailable; specify -PrivateKeyPath explicitly.'
+    }
+    # Keep canonical private material in a direct child of the user profile.
+    # LOCALAPPDATA can be backed by Windows reparse/junction paths on some hosts,
+    # which the signing tool intentionally rejects for private-key custody.
+    $PrivateKeyPath = Join-Path $env:USERPROFILE 'OrdaX-Private\release-signing\ordax-release-private.pem'
+}
+if ([string]::IsNullOrWhiteSpace($ReviewDirectory)) {
+    $ReviewDirectory = Join-Path $ScriptRoot 'trust-review'
 }
 
 $PrivateKeyPath = [IO.Path]::GetFullPath($PrivateKeyPath)
