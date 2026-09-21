@@ -490,6 +490,25 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             self.assertEqual(replace.call_count, 1)
             self.assertEqual(auth_path.read_bytes(), before)
 
+    def test_authorization_context_invalidates_consent_after_module_change(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            module = root / "tools/creator/go.mod"
+            module.write_text(
+                module.read_text(encoding="utf-8") + "\n// changed after owner consent\n",
+                encoding="utf-8",
+            )
+
+            status = promotion.evaluate(root)
+
+            self.assertFalse(status["ready"])
+            self.assertFalse(status["authorization_context_matches_current_source"])
+            self.assertIn(
+                "physical-authorization-context-mismatch",
+                status["authorization_blockers"],
+            )
+
     def test_authorization_context_invalidates_consent_after_writer_source_change(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
