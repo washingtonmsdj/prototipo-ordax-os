@@ -1,0 +1,15 @@
+{
+    "$schema":  "prototype-ordax.release-trust-ceremony-evidence/1",
+    "status":  "pass",
+    "key_id":  "ordax-prototype-release-v1",
+    "public_trust_sha256":  "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
+    "proof_manifest_sha256":  "a1eba2227f877cb24aff41d5d9fef820d23062e1fc4c78e44f9710a815cdfba6",
+    "recovery_envelope_sha256":  "0b70543a7b430787f78700f326fb87b01620a86350cde726d993c1d5bdcb4fd4",
+    "primary_public_derivation_match":  true,
+    "recovered_public_derivation_match":  true,
+    "recovered_private_path_distinct":  true,
+    "recovered_signing_proof":  true,
+    "offline_encrypted_backup_recovery_verified":  true,
+    "private_key_in_public_evidence":  false,
+    "ready_to_pin_public_anchor":  true
+}
