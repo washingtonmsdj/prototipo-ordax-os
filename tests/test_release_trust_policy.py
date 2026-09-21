@@ -14,7 +14,7 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
     def test_policy_resolves_custody_without_faking_key_material(self):
         policy = self.load_policy()
         self.assertEqual(policy["$schema"], "prototype-ordax.release-trust-policy/1")
-        self.assertEqual(policy["status"], "prototype-recovery-verified-public-anchor-pending")
+        self.assertEqual(policy["status"], "prototype-recovery-verified-external-backup-pending")
         self.assertEqual(policy["algorithm"], "ed25519")
         self.assertEqual(policy["canonical_key_id"], "ordax-prototype-release-v1")
         self.assertEqual(policy["private_key"]["custody_owner"], "repository-owner-developer")
@@ -36,8 +36,9 @@ class ReleaseTrustPolicyTests(unittest.TestCase):
             "prototype-ordax.release-trust-ceremony-evidence/1",
         )
         self.assertFalse(recovery["private_key_hash_in_public_evidence_allowed"])
-        self.assertTrue(recovery["offline_recovery_verified"])
-        self.assertTrue(recovery["ready_to_pin_public_anchor"])
+        self.assertTrue(recovery["cryptographic_recovery_verified"])
+        self.assertFalse(recovery["external_offline_backup_custody_confirmed"])
+        self.assertFalse(recovery["ready_to_pin_public_anchor"])
         self.assertEqual(
             recovery["verification_evidence_repository_path"],
             "docs/evidence/canonical-trust-local-progress-2026-09-21.json",
