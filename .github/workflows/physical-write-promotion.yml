@@ -17,6 +17,21 @@ on:
       - 'tools/creator/physicalchannel/**'
       - 'tools/release-signing/cmd/ordax-physical-release-signing/**'
       - '.github/workflows/physical-write-promotion.yml'
+  pull_request:
+    paths:
+      - 'bootstrap/trust/**'
+      - 'docs/contracts/minimal-bootstrap.json'
+      - 'docs/contracts/release-trust-policy.json'
+      - 'docs/contracts/portable-usb-v2.json'
+      - 'docs/contracts/creator-portable-media-plan.json'
+      - 'docs/contracts/physical-write-authorization.json'
+      - 'tools/creator/physical_promotion.py'
+      - 'tools/creator/core/**'
+      - 'tools/creator/host/windows/**'
+      - 'tools/creator/cmd/ordax-creator-physical-test/**'
+      - 'tools/creator/physicalchannel/**'
+      - 'tools/release-signing/cmd/ordax-physical-release-signing/**'
+      - '.github/workflows/physical-write-promotion.yml'
   workflow_dispatch:
 
 permissions:
