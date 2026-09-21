@@ -650,6 +650,11 @@ def _load_repository_contracts(
             "public trust promotion refuses an already-authorized "
             "physical write"
         )
+    if authorization.get("explicit_owner_authorization") is not False:
+        raise PromotionError(
+            "public trust promotion requires fresh Stable/MVP owner "
+            "authorization after trust is pinned"
+        )
     if policy.get("canonical_key_id") != KEY_ID:
         raise PromotionError(
             "release trust policy canonical key_id is invalid"
@@ -940,6 +945,11 @@ def validate_promoted_repository(
     if authorization.get("physical_write_allowed") is not False:
         raise PromotionError(
             "physical write authorization was unexpectedly enabled"
+        )
+    if authorization.get("explicit_owner_authorization") is not False:
+        raise PromotionError(
+            "physical owner authorization was unexpectedly carried "
+            "through public trust promotion"
         )
     if (
         authorization.get("status")
