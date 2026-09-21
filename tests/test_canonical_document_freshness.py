@@ -169,9 +169,12 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         )
         self.assertEqual(state["CANONICAL_KEY_MATERIAL_GENERATED"], "YES")
         self.assertEqual(state["CANONICAL_TRUST_RECOVERY_VERIFIED"], "YES")
-        self.assertEqual(state["PUBLIC_ANCHOR_PINNED"], "NO")
-        self.assertEqual(state["READY_TO_PIN_PUBLIC_ANCHOR"], "NO_PENDING_EXTERNAL_BACKUP")
+        self.assertEqual(state["PUBLIC_ANCHOR_PINNED"], "YES")
+        self.assertEqual(state["LOCAL_ENCRYPTED_BACKUP_COPY_VERIFIED"], "YES")
         self.assertEqual(state["EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED"], "NO")
+        self.assertEqual(state["EXTERNAL_OFFLINE_BACKUP_REQUIRED_BEFORE_BROAD_DISTRIBUTION"], "YES")
+        self.assertEqual(state["MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED"], "YES")
+        self.assertEqual(state["PHYSICAL_AUTHORIZATION_ELIGIBLE"], "YES")
         self.assertEqual(promotion["NATIVE_GRAPHICAL_MODE"], "PASS_PHYSICAL_DEVELOPMENT_USB")
         self.assertEqual(promotion["CANONICAL_STABLE_GRAPHICAL_MODE"], "PENDING")
 
@@ -208,7 +211,7 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
 
         self.assertEqual(promotion["MVP_SURFACE_SMOKE_HARNESS"], "PASS_SOURCE")
         self.assertEqual(promotion["MVP_SURFACE_SMOKE_PHYSICAL"], "PENDING")
-        self.assertEqual(promotion["CANONICAL_RELEASE_TRUST"], "PENDING_EXTERNAL_BACKUP_AND_PUBLIC_ANCHOR")
+        self.assertEqual(promotion["CANONICAL_RELEASE_TRUST"], "PASS_CANONICAL_PUBLIC_ANCHOR_PINNED")
         self.assertEqual(promotion["PHYSICAL_USB_WRITE"], "NO")
 
     def test_portable_update_docs_keep_source_ci_and_physical_evidence_separate(self):
