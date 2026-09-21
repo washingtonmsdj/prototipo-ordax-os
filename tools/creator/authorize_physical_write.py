@@ -202,6 +202,7 @@ def apply_authorization(
         raise AuthorizationError("authorization contract changed after preflight")
 
     original = current
+    replaced = False
     try:
         _atomic_replace(
             path,
@@ -209,6 +210,7 @@ def apply_authorization(
             mode,
             expected_sha256=plan["source_contract_sha256"],
         )
+        replaced = True
         status = promotion.evaluate(root)
         if (
             status.get("ready") is not True
@@ -219,17 +221,18 @@ def apply_authorization(
                 "authorized contract did not close the promotion gate"
             )
     except Exception:
-        try:
-            _atomic_replace(
-                path,
-                original,
-                mode,
-                expected_sha256=plan["authorized_contract_sha256"],
-            )
-        except AuthorizationError as rollback_exc:
-            raise AuthorizationError(
-                "authorization failed and rollback could not prove current bytes"
-            ) from rollback_exc
+        if replaced:
+            try:
+                _atomic_replace(
+                    path,
+                    original,
+                    mode,
+                    expected_sha256=plan["authorized_contract_sha256"],
+                )
+            except AuthorizationError as rollback_exc:
+                raise AuthorizationError(
+                    "authorization failed and rollback could not prove current bytes"
+                ) from rollback_exc
         raise
 
     return {
