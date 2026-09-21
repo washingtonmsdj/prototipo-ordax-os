@@ -1,0 +1,19 @@
+{
+  "$schema": "prototype-ordax.operator-trust-progress/1",
+  "recorded_date": "2026-09-21",
+  "source_commit": "2172eb6a18430910afd036199ec492ad63dc185d",
+  "toolkit_workflow_run_id": 35617567458,
+  "toolkit_artifact_sha256": "cb8232d20a9cdbaa81e73d55b52e2d6047b3b800a06a73a14869e6dc2245af31",
+  "toolkit_preflight": "pass",
+  "canonical_key_material_generated": true,
+  "public_trust_derivation_match": true,
+  "proof_signature_created": true,
+  "public_trust_sha256": "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
+  "offline_recovery_verified": false,
+  "public_anchor_pinned": false,
+  "physical_write_allowed": false,
+  "private_key_material_recorded": false,
+  "private_key_path_recorded": false,
+  "evidence_origin": "operator-reported-local-toolkit-output",
+  "note": "Only non-secret ceremony progress is recorded. No PEM bytes, private-key hash, recovery password or backup secret are committed."
+}
