@@ -1,6 +1,6 @@
 # Canonical Release Trust Ceremony
 
-Status: LOCAL KEY GENERATED — CRYPTOGRAPHIC RECOVERY VERIFIED — EXTERNAL OFFLINE BACKUP PENDING — PUBLIC ANCHOR NOT PINNED
+Status: LOCAL KEY GENERATED — CRYPTOGRAPHIC RECOVERY VERIFIED — PUBLIC ANCHOR PINNED — PHYSICAL WRITE BLOCKED
 
 This ceremony exists so the first physical OrdaX prototype can be created without Codex, without committing a private key, and without inventing a CI-only trust anchor.
 
@@ -18,11 +18,15 @@ CANONICAL_KEY_MATERIAL_GENERATED=YES
 PUBLIC_TRUST_DERIVATION_MATCH=PASS
 PROOF_SIGNATURE_CREATED=YES
 OFFLINE_RECOVERY_VERIFIED=YES
-PUBLIC_ANCHOR_PINNED=NO
+LOCAL_ENCRYPTED_BACKUP_COPY_VERIFIED=YES
+EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED=NO
+PUBLIC_ANCHOR_PINNED=YES
+MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=YES
+PHYSICAL_AUTHORIZATION_ELIGIBLE=YES
 PHYSICAL_WRITE_ALLOWED=NO
 ```
 
-No private PEM bytes, private-key hash, backup secret, recovery password or private-key path are recorded in source. The cryptographic recovery proof is verified. The encrypted archive used for this test was still on the same host, so independent external/offline custody remains pending before repository policy considers the public anchor ready to pin.
+No private PEM bytes, private-key hash, backup secret, recovery password or private-key path are recorded in source. The cryptographic recovery proof is verified and the exact public handoff has been promoted. The encrypted archive used for this controlled-prototype recovery test remains on the same host; a byte-identical redundant local copy is verified, but this is not treated as independent off-device custody. Off-device encrypted custody remains required before broad public distribution, not before the first controlled physical prototype.
 
 ## Boundary
 
@@ -339,17 +343,20 @@ Silent public-key replacement is forbidden.
 
 A signed trust-transition protocol v1 is now implemented and CI-proven between the signer and release agent. It requires the currently trusted key to authorize a distinct successor key, binds the exact current-trust SHA-256 and an exact monotonic sequence, and fails closed on rollback/tampering. Stateful device activation of the successor trust is still disabled, so production rotation is not yet complete. Until that activation owner is implemented and physically proven, the first controlled prototype remains bound to the pinned canonical anchor.
 
-Current fail-closed state after local generation and verified cryptographic recovery, but before independent external/offline backup custody and public-anchor promotion:
+Current fail-closed state after local generation, verified cryptographic recovery and canonical public-anchor promotion:
 
 ```text
 TRUST_POLICY_RESOLVED=YES
 CANONICAL_KEY_MATERIAL_GENERATED=YES
 OFFLINE_RECOVERY_VERIFIED=YES
 TOOL_REPORTED_READY_TO_PIN_PUBLIC_ANCHOR=YES
+LOCAL_ENCRYPTED_BACKUP_COPY_VERIFIED=YES
 EXTERNAL_OFFLINE_BACKUP_CUSTODY_CONFIRMED=NO
-REPOSITORY_POLICY_READY_TO_PIN_PUBLIC_ANCHOR=NO
-PUBLIC_ANCHOR_PINNED=NO
-BOOTSTRAP_RELEASE_TRUST_RESOLVED=NO
+EXTERNAL_OFFLINE_BACKUP_REQUIRED_BEFORE_BROAD_DISTRIBUTION=YES
+PUBLIC_ANCHOR_PINNED=YES
+BOOTSTRAP_RELEASE_TRUST_RESOLVED=YES
+PHYSICAL_AUTHORIZATION_ELIGIBLE=YES
+EXPLICIT_OWNER_AUTHORIZATION=NO
 PHYSICAL_WRITE_ALLOWED=NO
 ```
 
