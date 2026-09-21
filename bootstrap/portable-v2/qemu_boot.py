@@ -236,12 +236,13 @@ def validate_inputs(args: argparse.Namespace) -> dict[str, Any]:
         label="candidate",
     )
     previous = None
-    if args.previous_commit:
-        if args.previous_commit == args.source_commit:
+    previous_commit = getattr(args, "previous_commit", None)
+    if previous_commit:
+        if previous_commit == args.source_commit:
             raise ProofError("previous commit must differ from candidate source commit")
         previous = validate_portable_release(
             portable,
-            args.previous_commit,
+            previous_commit,
             label="previous",
         )
         if previous["runtime_sha256"] != candidate["runtime_sha256"]:
