@@ -19,6 +19,7 @@ assert spec.loader is not None
 spec.loader.exec_module(promotion)
 
 AUTHORIZATION_TOOL_PATH = ROOT / "tools" / "creator" / "authorize_physical_write.py"
+PHYSICAL_PROMOTION_WORKFLOW = ROOT / ".github" / "workflows" / "physical-write-promotion.yml"
 authorization_spec = importlib.util.spec_from_file_location(
     "ordax_owner_authorization_test", AUTHORIZATION_TOOL_PATH
 )
@@ -201,6 +202,17 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             },
         }
         write_json(root / "docs/contracts/physical-write-authorization.json", auth)
+
+    def test_authorized_candidate_materialization_is_canonical_main_push_only(self):
+        workflow = PHYSICAL_PROMOTION_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn(
+            "if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.preflight.outputs.ready == 'true' }}",
+            workflow,
+        )
+        self.assertNotIn(
+            "if: ${{ needs.preflight.outputs.ready == 'true' }}",
+            workflow,
+        )
 
     def test_repository_stable_mvp_authorization_is_explicitly_unset(self):
         auth = json.loads(
