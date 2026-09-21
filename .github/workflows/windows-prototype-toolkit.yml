@@ -197,7 +197,9 @@ jobs:
               ),
               'physical_authorization_still_fail_closed': (
                   physical_auth.get('$schema') == 'prototype-ordax.physical-write-authorization/2'
+                  and physical_auth.get('status') == 'blocked-canonical-trust-pending'
                   and physical_auth.get('physical_write_allowed') is False
+                  and physical_auth.get('explicit_owner_authorization') is False
               ),
           }
           canonical_main_push = (
