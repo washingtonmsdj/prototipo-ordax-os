@@ -194,7 +194,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn("owner-development)", source)
         self.assertIn("rev-parse HEAD", source)
 
-    def test_contract_marks_signed_polling_and_materialization_without_activation(self):
+    def test_contract_marks_signed_polling_materialization_and_portable_activation(self):
         stable = CONTRACT["profiles"]["stable-mvp"]
         self.assertEqual(stable["mvp_execution_mode"], "usb-only")
         self.assertFalse(stable["native_install_capability_enabled"])
@@ -208,7 +208,14 @@ class StableRuntimeProfileTests(unittest.TestCase):
             "verified-boot-handoff-source-sha",
         )
         self.assertFalse(stable["portable_v2_legacy_current_symlink_required"])
-        self.assertFalse(stable["portable_v2_update_activation_connected"])
+        self.assertTrue(stable["portable_v2_update_activation_connected"])
+        self.assertEqual(
+            stable["portable_v2_update_activation_mode"],
+            "signed-v3-one-shot-reboot-cold-health",
+        )
+        self.assertTrue(stable["portable_v2_update_requires_reboot"])
+        self.assertTrue(stable["portable_v2_candidate_rejected_sha_persisted"])
+        self.assertFalse(stable["portable_v2_candidate_rearm_same_sha_allowed"])
         self.assertFalse(stable["portable_v2_guardian_refresh_via_legacy_swap_allowed"])
         self.assertFalse(stable["git_update_polling_enabled"])
         self.assertFalse(stable["development_git_rescue_enabled"])
