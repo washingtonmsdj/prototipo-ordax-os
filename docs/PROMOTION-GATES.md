@@ -146,6 +146,14 @@ WINDOWS_PROCESS_ELEVATION_PROBE=PASS_TAGGED_UNBOUND
 WINDOWS_NATIVE_RAW_DISK_BACKEND=PASS_TAGGED_UNBOUND
 WINDOWS_NATIVE_HOST_TESTS=PASS
 WINDOWS_PROTOTYPE_TOOLKIT=PASS
+PORTABLE_PHYSICAL_WRITER=PASS_TAGGED_INTERNAL
+PORTABLE_PHYSICAL_WRITER_LAYOUT=ORDAX-ESP_FAT32_PLUS_ORDAX-DATA_EXFAT
+PORTABLE_PHYSICAL_WRITER_OPERATION_COUNT=35
+PORTABLE_PHYSICAL_WRITER_ARTIFACT_COUNT=15
+PORTABLE_PHYSICAL_WRITER_PER_ARTIFACT_READBACK=SHA256_PLUS_SIZE
+PORTABLE_PHYSICAL_WRITER_WHOLE_DISK_RAW=NO
+PORTABLE_PHYSICAL_WRITER_UAC_REQUIRED=YES
+PORTABLE_PHYSICAL_WRITER_LIVE_TARGET_REVALIDATION=YES
 CREATOR_PUBLIC_BINARY_LINKS_NATIVE_RAW_BACKEND=NO
 CREATOR_PUBLIC_PHYSICAL_APPLY=NO
 PHYSICAL_WRITE_AUTHORIZED=NO
@@ -153,9 +161,9 @@ PHYSICAL_WRITE_AUTHORIZED=NO
 
 The target helper may accept Win32 removable or fixed media only when the mapped PhysicalDrive reports USB transport. The physical disk hosting the running Windows installation is always excluded. Target confirmation recomputes the token from the current identity instead of trusting a stored token. The Windows adapter re-proves target identity on exact raw-device handles, maps every Windows volume through physical extents and rejects cross-disk/spanned ownership.
 
-The internal writer requires an exact managed target-volume lease before device open and holds it through write, flush, full read-back verification and device close. Native Win32 source implements volume lock/dismount, same-handle extent verification, a lease-bound writable `PhysicalDrive` open, same-handle disk identity verification and current-process token elevation detection. These destructive host pieces compile only with the explicit `ordax_raw_backend` build tag and are assembled only in the unexported `windowsRawDiskRuntimeUnbound`.
+The final Portable writer now reuses the hardened Windows destructive boundary but no longer depends on a target-sized whole-disk RAW image. Creator Core owns the exact 35-operation plan: write a two-partition GPT, format `ORDAX-ESP` as FAT32 and `ORDAX-DATA` as exFAT, materialize 15 exact artifacts, flush, re-read all 15 artifacts by SHA-256+size, and verify final geometry/labels/capacity. The tagged Windows runtime revalidates the USB identity during destructive phases, requires UAC elevation, holds source artifact handles during apply, syncs each destination, and fails closed on the first mismatch.
 
-CI proves both sides of this boundary: the normal Windows build excludes the tagged destructive files and the public `ordax-creator.exe` does not depend on `tools/creator/host/windows`; separately, native Windows CI runs the tagged backend guard tests. `ordax-creator` exposes only `check`, `verify-payload`, `stage-tree` and `plan`. Candidate/toolkit provenance records the source backend as implemented while keeping `native_windows_raw_disk_backend_in_public_build=false`, `native_windows_raw_disk_backend_publicly_reachable=false`, `public_physical_apply_implemented=false` and `physical_write_authorized=false`.
+CI proves both sides of this boundary: the normal Windows build excludes the tagged destructive files and the public `ordax-creator.exe` does not depend on `tools/creator/host/windows`; separately, native Windows CI compiles/tests the tagged Portable writer and proves its unbound `prepare-portable`/`apply-portable` commands remain unauthorized. The implementation is therefore present without becoming a public capability: `public_physical_apply_implemented=false` and `physical_write_authorized=false` remain mandatory until canonical trust and the separate physical-promotion contract are resolved.
 
 ## Gate 6 - Physical USB reprovisioning
 
