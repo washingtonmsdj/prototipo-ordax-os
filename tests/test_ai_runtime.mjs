@@ -40,7 +40,7 @@ test("AI runtime accepts a replaceable local provider and returns bounded text",
 test("llama.cpp provider delegates only through host-owned loopback invocation", async () => {
   let request = null;
   const provider = createLlamaCppProvider({
-    modelId: "qwen3-0.6b-q4-k-m",
+    modelId: "qwen3.5-0.8b-q4_0",
     async invoke(value) {
       request = value;
       return { choices: [{ message: { content: "offline answer" } }] };
@@ -50,7 +50,7 @@ test("llama.cpp provider delegates only through host-owned loopback invocation",
   assert.equal(result, "offline answer");
   assert.equal(request.origin, "http://127.0.0.1");
   assert.equal(request.path, "/v1/chat/completions");
-  assert.equal(request.body.model, "qwen3-0.6b-q4-k-m");
+  assert.equal(request.body.model, "qwen3.5-0.8b-q4_0");
   assert.equal(request.body.messages.length, 2);
 });
 
