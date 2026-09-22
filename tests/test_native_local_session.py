@@ -13,6 +13,7 @@ CONTRACT = ROOT / "system/contracts/local-session.mjs"
 COMPOSITION = ROOT / "system/composition/native/main.mjs"
 FIRST_RUN = ROOT / "system/surface/ui/first-run.mjs"
 SETTINGS = ROOT / "system/surface/ui/settings-overview-controls.mjs"
+SETTINGS_I18N = ROOT / "system/services/i18n/catalog/settings.mjs"
 
 spec = importlib.util.spec_from_file_location("ordax_native_local_session_test", HOST)
 host = importlib.util.module_from_spec(spec)
