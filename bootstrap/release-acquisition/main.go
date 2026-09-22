@@ -1821,7 +1821,7 @@ func materialize(client *http.Client, envelopeURL, root string, trust TrustAncho
 		return MaterializeReceipt{}, err
 	}
 	if manifest.Schema != manifestSchema {
-		return MaterializeReceipt{}, errors.New("materialize supports release-manifest/1 only; use the dedicated portable materializer for manifest v2, v3 or v4")
+		return MaterializeReceipt{}, errors.New("materialize supports release-manifest/1 only; use materialize-portable for v2, materialize-portable-v3 for v3 or materialize-portable-v4 for v4")
 	}
 	if expectedCommit != "" {
 		if !commitPattern.MatchString(expectedCommit) {
