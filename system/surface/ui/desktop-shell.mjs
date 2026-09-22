@@ -81,7 +81,7 @@ export function createDesktopShellMarkup(localization) {
 
         <section class="ordax-desktop" aria-labelledby="surface-home-title">
           <div class="ordax-home-panel">
-            <p class="ordax-area-kicker" data-area-kicker>Área 01</p>
+            <p class="ordax-area-kicker" data-area-kicker>${t("surface.area.label", { ordinal: "01" })}</p>
             <h1 id="surface-home-title" class="ordax-clock"><time data-ordax-clock>--:--</time></h1>
             <p class="ordax-date" data-ordax-date>${t("shell.home.loadingDate")}</p>
 
