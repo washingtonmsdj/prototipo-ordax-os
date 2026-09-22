@@ -44,8 +44,8 @@ assert.equal(apps.get("notes").versionStage, "beta");
 assert.equal(apps.get("notes").updateChannel.id, "development-git");
 assert.equal(apps.get("assistant").version, "0.1.0");
 assert.equal(apps.get("assistant").versionStage, "beta");
-assert.equal(apps.get("assistant").updateChannel.id, "signed-component");
-assert.equal(apps.get("assistant").independentUpdate, true);
+assert.equal(apps.get("assistant").updateChannel.id, "system-bundle");
+assert.equal(apps.get("assistant").independentUpdate, false);
 
 assert.equal(system.get("system").version, "0.1.0");
 assert.equal(system.get("system").versionStage, "beta");
