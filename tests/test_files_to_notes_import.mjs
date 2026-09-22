@@ -22,6 +22,9 @@ function fileSpace(readTextFile, calls = []) {
     async renameEntry() { calls.push("renameEntry"); throw new Error("unused"); },
     async copyFile() { calls.push("copyFile"); throw new Error("unused"); },
     async moveEntry() { calls.push("moveEntry"); throw new Error("unused"); },
+    async trashEntry() { calls.push("trashEntry"); throw new Error("unused"); },
+    async listTrash() { calls.push("listTrash"); return { entries: [] }; },
+    async restoreTrashEntry() { calls.push("restoreTrashEntry"); return { entries: [] }; },
     async exportFile() { calls.push("exportFile"); throw new Error("unused"); },
     async importFile() { calls.push("importFile"); throw new Error("unused"); },
   });
