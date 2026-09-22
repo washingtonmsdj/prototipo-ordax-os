@@ -172,8 +172,13 @@ async function start() {
     manifests: listSystemComponents(),
     store: componentStateStore,
   });
+  const localAiFetch = typeof window.fetch === "function"
+    ? window.fetch.bind(window)
+    : async () => {
+        throw new Error("Native loopback fetch is unavailable");
+      };
   const localAi = createLocalAiRuntime({
-    fetchImpl: window.fetch.bind(window),
+    fetchImpl: localAiFetch,
   });
   const intelligence = createIntelligenceRuntime({ inferencePort: localAi });
   const updateLocalAiHealth = (snapshot) => {
