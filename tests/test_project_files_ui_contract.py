@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTROLS = ROOT / "system" / "surface" / "ui" / "file-space-controls.mjs"
 COMPOSITION = ROOT / "system" / "composition" / "native" / "main.mjs"
 WORKFLOW = ROOT / ".github" / "workflows" / "surface-web-candidate.yml"
+FILES_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "files.mjs"
 
 
 class ProjectFilesUiContractTests(unittest.TestCase):
@@ -40,7 +41,16 @@ class ProjectFilesUiContractTests(unittest.TestCase):
         self.assertNotIn("port.renameEntry(", rename_block)
         self.assertIn("project.path !== listing.path", rename_block)
         self.assertIn("A pasta continua em", rename_block)
-        self.assertIn("Isso altera apenas o nome do projeto. A pasta continua em", controls)
+        self.assertIn('t("files.form.projectRenameHint", { path: project.path })', controls)
+        files_i18n = FILES_I18N.read_text(encoding="utf-8")
+        self.assertIn(
+            '"files.form.projectRenameHint": "Isso altera apenas o nome do projeto. A pasta continua em {path}."',
+            files_i18n,
+        )
+        self.assertIn(
+            '"files.form.projectRenameHint": "This changes only the project name. The folder remains at {path}."',
+            files_i18n,
+        )
 
     def test_project_rename_is_keyboard_accessible_and_navigation_invalidates_draft(self):
         controls = CONTROLS.read_text(encoding="utf-8")
