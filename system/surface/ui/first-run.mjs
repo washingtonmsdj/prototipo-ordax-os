@@ -4,6 +4,10 @@ import {
   isIdentityActionSupported,
 } from "../../contracts/identity-actions.mjs";
 import { assertIdentitySessionPort } from "../../contracts/identity-session.mjs";
+import {
+  assertLocalSessionPort,
+  validateLocalSessionSnapshot,
+} from "../../contracts/local-session.mjs";
 import { assertNetworkManagementPort } from "../../contracts/network-management.mjs";
 import { assertPreferenceRuntimePort } from "../../contracts/preference-runtime.mjs";
 import {
@@ -21,8 +25,8 @@ import {
   runNetworkManagementAction,
 } from "../../services/network/management-runtime.mjs";
 
-const STEPS = Object.freeze(["welcome", "regional", "network", "account", "privacy", "ready"]);
-const STEP_LABELS = Object.freeze(["Início", "Região", "Rede", "Conta", "Privacidade", "Pronto"]);
+const STEPS = Object.freeze(["welcome", "regional", "network", "security", "account", "privacy", "ready"]);
+const STEP_LABELS = Object.freeze(["Início", "Região", "Rede", "Segurança", "Conta", "Privacidade", "Pronto"]);
 
 function el(documentObject, tag, className = "", text = undefined) {
   const node = documentObject.createElement(tag);
@@ -61,6 +65,7 @@ export function mountFirstRunExperience(
     networkManagement = null,
     identitySession,
     identityActions,
+    localSession = null,
   },
 ) {
   if (!(root instanceof Element)) {
@@ -71,6 +76,7 @@ export function mountFirstRunExperience(
   const networkPort = networkManagement === null ? null : assertNetworkManagementPort(networkManagement);
   const sessionPort = assertIdentitySessionPort(identitySession);
   const actionsPort = assertIdentityActionsPort(identityActions);
+  const localSessionPort = localSession === null ? null : assertLocalSessionPort(localSession);
   const initial = validateFirstRunState(store.load());
 
   if (initial.completed) {
@@ -122,9 +128,17 @@ export function mountFirstRunExperience(
   let actionsSnapshot = actionsPort.getSnapshot();
   let identityPending = null;
   let identityMessage = "";
+  let localSessionSnapshot = localSessionPort === null
+    ? null
+    : validateLocalSessionSnapshot(localSessionPort.getSnapshot());
+  let localSessionPending = false;
+  let localSessionMessage = "";
+  let localSessionSecretDraft = "";
+  let localSessionConfirmDraft = "";
   let completionError = "";
   let unsubscribeSession = null;
   let unsubscribeActions = null;
+  let unsubscribeLocalSession = null;
 
   const restoreRoot = () => {
     root.inert = previousInert;
@@ -137,6 +151,9 @@ export function mountFirstRunExperience(
     destroyed = true;
     networkOrdinal += 1;
     passwordDraft = "";
+    localSessionSecretDraft = "";
+    localSessionConfirmDraft = "";
+    unsubscribeLocalSession?.();
     unsubscribeSession?.();
     unsubscribeActions?.();
     overlay.removeEventListener("click", onClick);
@@ -304,6 +321,77 @@ export function mountFirstRunExperience(
     }
   };
 
+  const renderSecurity = (body) => {
+    body.append(heading(
+      "Segurança local",
+      "Proteja esta sessão sem depender da Conta.",
+      "Você pode configurar um PIN ou senha local agora. A credencial fica neste dispositivo. "
+        + "Este bloqueio protege a Surface em execução e não criptografa os arquivos do pendrive.",
+    ));
+
+    if (!localSessionPort || !localSessionSnapshot) {
+      body.append(el(
+        documentObject,
+        "p",
+        "ordax-first-run-note",
+        "O owner de sessão local não está disponível nesta execução. Você pode continuar e configurar depois em Ajustes quando ele estiver disponível.",
+      ));
+      return;
+    }
+
+    if (localSessionSnapshot.credentialConfigured) {
+      const configured = el(documentObject, "article", "ordax-first-run-account");
+      configured.append(
+        el(documentObject, "strong", "", "Bloqueio local configurado"),
+        el(documentObject, "p", "", "A próxima inicialização da Surface começará bloqueada e exigirá esta credencial local."),
+      );
+      body.append(configured);
+      return;
+    }
+
+    const form = el(documentObject, "div", "ordax-first-run-form");
+    const secretField = el(documentObject, "label", "ordax-first-run-field");
+    secretField.append(el(documentObject, "span", "", "PIN ou senha local"));
+    const secret = documentObject.createElement("input");
+    secret.type = "password";
+    secret.autocomplete = "new-password";
+    secret.minLength = 6;
+    secret.maxLength = 128;
+    secret.value = localSessionSecretDraft;
+    secret.placeholder = translateFirstRunText(draft.locale, "PIN ou senha local");
+    secret.dataset.firstRunLocalSessionSecret = "";
+    secret.disabled = localSessionPending;
+    secretField.append(secret);
+
+    const confirmField = el(documentObject, "label", "ordax-first-run-field");
+    confirmField.append(el(documentObject, "span", "", "Confirmar PIN ou senha"));
+    const confirm = documentObject.createElement("input");
+    confirm.type = "password";
+    confirm.autocomplete = "new-password";
+    confirm.minLength = 6;
+    confirm.maxLength = 128;
+    confirm.value = localSessionConfirmDraft;
+    confirm.placeholder = translateFirstRunText(draft.locale, "Confirmar PIN ou senha");
+    confirm.dataset.firstRunLocalSessionConfirm = "";
+    confirm.disabled = localSessionPending;
+    confirmField.append(confirm);
+    form.append(secretField, confirmField);
+    body.append(form);
+
+    body.append(el(
+      documentObject,
+      "p",
+      "ordax-first-run-note",
+      "Deixe os dois campos vazios para continuar sem bloqueio autenticado. Você poderá configurar depois em Ajustes.",
+    ));
+    if (localSessionMessage) {
+      const status = el(documentObject, "p", "ordax-first-run-status", localSessionMessage);
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
+      body.append(status);
+    }
+  };
+
   const renderAccount = (body) => {
     body.append(heading(
       "Conta OrdaX",
@@ -387,6 +475,7 @@ export function mountFirstRunExperience(
     [
       ["Idioma", localeLabel],
       ["Fuso", draft.timeZone],
+      ["Bloqueio", localSessionSnapshot?.credentialConfigured ? "PIN/senha local" : "Não configurado"],
       ["Conta", draft.accountMode === "identity" ? "Conta OrdaX" : "Somente local"],
       ["Execução", "Pendrive USB"],
     ].forEach(([key, value]) => {
@@ -409,6 +498,7 @@ export function mountFirstRunExperience(
     if (step === "welcome") renderWelcome(body);
     else if (step === "regional") renderRegional(body);
     else if (step === "network") renderNetwork(body);
+    else if (step === "security") renderSecurity(body);
     else if (step === "account") renderAccount(body);
     else if (step === "privacy") renderPrivacy(body);
     else renderReady(body);
@@ -420,7 +510,7 @@ export function mountFirstRunExperience(
         ? finishing ? "Salvando…" : "Entrar no OrdaX"
         : step === "network" ? "Continuar offline ou conectado" : "Continuar";
       const next = action(documentObject, label, step === "ready" ? "finish" : "next", true);
-      next.disabled = finishing;
+      next.disabled = finishing || (step === "security" && localSessionPending);
       footer.append(next);
     }
     card.append(body, footer);
@@ -428,6 +518,11 @@ export function mountFirstRunExperience(
 
   const go = (nextIndex) => {
     if (STEPS[stepIndex] === "network") passwordDraft = "";
+    if (STEPS[stepIndex] === "security") {
+      localSessionSecretDraft = "";
+      localSessionConfirmDraft = "";
+      localSessionMessage = "";
+    }
     stepIndex = Math.max(0, Math.min(STEPS.length - 1, nextIndex));
     completionError = "";
     render();
@@ -486,6 +581,51 @@ export function mountFirstRunExperience(
     }
   };
 
+  const continueSecurity = async () => {
+    if (destroyed || localSessionPending) return;
+    if (!localSessionPort || !localSessionSnapshot || localSessionSnapshot.credentialConfigured) {
+      go(stepIndex + 1);
+      return;
+    }
+    if (!localSessionSecretDraft && !localSessionConfirmDraft) {
+      go(stepIndex + 1);
+      return;
+    }
+    if (
+      localSessionSecretDraft.length < 6
+      || localSessionSecretDraft !== localSessionConfirmDraft
+    ) {
+      localSessionMessage = "Use pelo menos 6 caracteres e repita exatamente a mesma credencial.";
+      render();
+      return;
+    }
+    let secret = localSessionSecretDraft;
+    localSessionSecretDraft = "";
+    localSessionConfirmDraft = "";
+    localSessionPending = true;
+    localSessionMessage = "Criando credencial local…";
+    render();
+    const operationSecret = secret;
+    secret = "";
+    try {
+      localSessionSnapshot = validateLocalSessionSnapshot(
+        await localSessionPort.configureCredential(operationSecret),
+      );
+      if (destroyed) return;
+      localSessionMessage = "";
+      go(stepIndex + 1);
+    } catch {
+      if (destroyed) return;
+      localSessionMessage = "Não foi possível criar a credencial local. Nenhuma senha foi salva no First Run.";
+      render();
+    } finally {
+      if (!destroyed) {
+        localSessionPending = false;
+        if (STEPS[stepIndex] === "security") render();
+      }
+    }
+  };
+
   const runIdentity = async (kind) => {
     if (destroyed || identityPending || !isIdentityActionSupported(actionsSnapshot, kind)) return;
     identityPending = kind;
@@ -532,6 +672,7 @@ export function mountFirstRunExperience(
     if (!button || !overlay.contains(button) || button.disabled) return;
     const kind = button.dataset.firstRunAction;
     if (kind === "back") go(stepIndex - 1);
+    else if (kind === "next" && STEPS[stepIndex] === "security") void continueSecurity();
     else if (kind === "next") go(stepIndex + 1);
     else if (kind === "finish") void finish();
     else if (kind === "network-scan") void refreshNetwork(true);
@@ -567,8 +708,15 @@ export function mountFirstRunExperience(
   };
 
   const onInput = (event) => {
-    const input = event.target.closest("[data-first-run-wifi-password]");
-    if (input instanceof HTMLInputElement && overlay.contains(input)) passwordDraft = input.value;
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !overlay.contains(input)) return;
+    if (input.matches("[data-first-run-wifi-password]")) {
+      passwordDraft = input.value;
+    } else if (input.matches("[data-first-run-local-session-secret]")) {
+      localSessionSecretDraft = input.value;
+    } else if (input.matches("[data-first-run-local-session-confirm]")) {
+      localSessionConfirmDraft = input.value;
+    }
   };
 
   const onChange = (event) => {
@@ -581,10 +729,16 @@ export function mountFirstRunExperience(
 
   const onKeyDown = (event) => {
     if (event.key !== "Enter") return;
-    const input = event.target.closest("[data-first-run-wifi-password]");
-    if (input && overlay.contains(input)) {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !overlay.contains(input)) return;
+    if (input.matches("[data-first-run-wifi-password]")) {
       event.preventDefault();
       overlay.querySelector('[data-first-run-action="network-connect"]')?.click();
+    } else if (
+      input.matches("[data-first-run-local-session-secret], [data-first-run-local-session-confirm]")
+    ) {
+      event.preventDefault();
+      overlay.querySelector('[data-first-run-action="next"]')?.click();
     }
   };
 
@@ -600,6 +754,10 @@ export function mountFirstRunExperience(
   unsubscribeActions = actionsPort.subscribe((snapshot) => {
     actionsSnapshot = snapshot;
     if (!destroyed && STEPS[stepIndex] === "account") render();
+  });
+  unsubscribeLocalSession = localSessionPort?.subscribe((snapshot) => {
+    localSessionSnapshot = validateLocalSessionSnapshot(snapshot);
+    if (!destroyed && STEPS[stepIndex] === "security") render();
   });
 
   render();

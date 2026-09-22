@@ -37,6 +37,30 @@ Isso fecha `INTELLIGENCE_REAL_SYSTEM_CONSUMER` em **source**, mas não fecha o i
 inteiro de entrega Stable: montar `local-ai-runtime.erofs` e iniciar o backend no
 handoff v4 continua pendente antes do USB.
 
+### 0.2 Sessão local/lock Native — fechamento em source
+
+O segundo fundamento P0 também foi implementado no recorte pré-USB:
+
+- contrato independente `ordax.local-session/1`;
+- capability `session.local-lock` exclusiva do Native;
+- conta online/identity continua separada;
+- credencial local é opcional no MVP;
+- sem credencial, o sistema funciona local/offline e não finge oferecer bloqueio autenticado;
+- com credencial, um novo start da Surface inicia bloqueado;
+- segredo não entra em `first-run.json`, telemetria ou persistência JS;
+- host persiste somente salt + verificador scrypt em arquivo `0600`, com troca atômica;
+- tentativas incorretas recebem backoff limitado;
+- arquivo de credencial presente ou inválido falha fechado;
+- lock preserva Workspace/estado montado e torna a Surface inerte até unlock;
+- o escopo é explicitamente sessão, **não criptografia dos arquivos do USB**;
+- First Run possui etapa Segurança separada de Conta e Ajustes permite configurar/remover/bloquear depois.
+
+```text
+LOCAL_SESSION_LOCK_POLICY=PASS_SOURCE
+LOCAL_SESSION_LOCK_IMPLEMENTATION=PASS_SOURCE
+LOCAL_SESSION_LOCK_PHYSICAL_PROOF=PENDING
+```
+
 ## 1. Decisão principal
 
 **Não gerar ainda o primeiro USB Stable/MVP físico.**

@@ -20,6 +20,7 @@ class NativeCapabilityAdapterTests(unittest.TestCase):
         self.assertIn('"network.status"', text)
         self.assertIn('"input.keyboard-layout"', text)
         self.assertIn('"intelligence.system"', text)
+        self.assertIn('"session.local-lock"', text)
         self.assertIn("bootControlAvailable", text)
         self.assertIn("userFileSpaceAvailable", text)
         self.assertIn("systemMetricsAvailable", text)
@@ -27,6 +28,7 @@ class NativeCapabilityAdapterTests(unittest.TestCase):
         self.assertIn("networkStatusAvailable", text)
         self.assertIn("keyboardLayoutAvailable", text)
         self.assertIn("intelligenceSystemAvailable", text)
+        self.assertIn("localSessionAvailable", text)
         self.assertIn("validateSurfaceSnapshot", text)
         self.assertIn("navigator.onLine", text)
 
@@ -46,6 +48,7 @@ class NativeCapabilityAdapterTests(unittest.TestCase):
         self.assertIn("networkStatusAvailable = networkStatus !== null", text)
         self.assertIn("keyboardLayoutAvailable = keyboardLayout !== null", text)
         self.assertIn("intelligenceSystemAvailable = true", text)
+        self.assertIn("localSessionAvailable = localSession !== null", text)
         self.assertIn("bootControlAvailable,", text)
         self.assertIn("userFileSpaceAvailable,", text)
         self.assertIn("systemMetricsAvailable,", text)
@@ -53,6 +56,7 @@ class NativeCapabilityAdapterTests(unittest.TestCase):
         self.assertIn("networkStatusAvailable,", text)
         self.assertIn("keyboardLayoutAvailable,", text)
         self.assertIn("intelligenceSystemAvailable,", text)
+        self.assertIn("localSessionAvailable,", text)
         self.assertIn("createNativeSurfaceHost(window, {", text)
 
     def test_native_composes_intelligence_above_local_ai_without_provider_leakage(self):

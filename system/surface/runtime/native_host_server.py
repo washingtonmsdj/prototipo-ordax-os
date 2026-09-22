@@ -38,6 +38,7 @@ CLIENT_DIAGNOSTIC_PATH = "/__ordax/native/client-diagnostic"
 PREFERENCES_PATH = "/__ordax/native/preferences"
 KEYBOARD_LAYOUT_PATH = "/__ordax/native/keyboard-layout"
 FIRST_RUN_PATH = "/__ordax/native/first-run"
+LOCAL_SESSION_PATH = "/__ordax/native/local-session"
 NOTES_PATH = "/__ordax/native/notes"
 COMPONENT_STATE_PATH = "/__ordax/native/component-state"
 SYNC_STATE_PATH = "/__ordax/native/sync-state"
@@ -58,6 +59,7 @@ HEALTH_STATE_FILE = "/run/ordax-update/healthy-sha"
 PREFERENCES_FILE = "/var/lib/ordax/preferences.json"
 KEYBOARD_LAYOUT_FILE = "/var/lib/ordax/keyboard-layout"
 FIRST_RUN_FILE = "/var/lib/ordax/first-run.json"
+LOCAL_SESSION_CREDENTIAL_FILE = "/var/lib/ordax/local-session-credential.json"
 NOTES_FILE = "/var/lib/ordax/notes.json"
 COMPONENT_STATE_FILE = "/var/lib/ordax/component-state.json"
 SYNC_STATE_FILE = "/var/lib/ordax/sync-state.json"
@@ -85,6 +87,14 @@ MAX_CLIENT_DIAGNOSTIC_BODY = 512
 MAX_PREFERENCE_BODY = 8192
 MAX_KEYBOARD_LAYOUT_BODY = 128
 MAX_FIRST_RUN_BODY = 2048
+MAX_LOCAL_SESSION_BODY = 1024
+LOCAL_SESSION_SECRET_MIN_CHARS = 6
+LOCAL_SESSION_SECRET_MAX_CHARS = 128
+LOCAL_SESSION_SCRYPT_N = 1 << 15
+LOCAL_SESSION_SCRYPT_R = 8
+LOCAL_SESSION_SCRYPT_P = 1
+LOCAL_SESSION_SCRYPT_DKLEN = 32
+LOCAL_SESSION_SCRYPT_MAXMEM = 64 * 1024 * 1024
 MAX_NOTES_PAYLOAD = 2 * 1024 * 1024
 MAX_NOTES_BODY = 8 * MAX_NOTES_PAYLOAD + 1024
 MAX_COMPONENT_STATE_PAYLOAD = 256 * 1024
@@ -613,6 +623,156 @@ def write_first_run_state(state_value: dict) -> None:
         os.fsync(directory_fd)
     finally:
         os.close(directory_fd)
+
+
+def valid_local_session_secret(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and LOCAL_SESSION_SECRET_MIN_CHARS <= len(value) <= LOCAL_SESSION_SECRET_MAX_CHARS
+        and "\x00" not in value
+        and bool(value.strip())
+    )
+
+
+def derive_local_session_verifier(secret: str, salt: bytes) -> bytes:
+    if not valid_local_session_secret(secret):
+        raise ValueError("invalid local session secret")
+    if not isinstance(salt, bytes) or len(salt) != 32:
+        raise ValueError("invalid local session salt")
+    return hashlib.scrypt(
+        secret.encode("utf-8"),
+        salt=salt,
+        n=LOCAL_SESSION_SCRYPT_N,
+        r=LOCAL_SESSION_SCRYPT_R,
+        p=LOCAL_SESSION_SCRYPT_P,
+        maxmem=LOCAL_SESSION_SCRYPT_MAXMEM,
+        dklen=LOCAL_SESSION_SCRYPT_DKLEN,
+    )
+
+
+def valid_local_session_credential(value: object) -> bool:
+    if not isinstance(value, dict) or set(value) != {
+        "schema", "kdf", "n", "r", "p", "saltHex", "verifierHex"
+    }:
+        return False
+    if value.get("schema") != "ordax.local-session-credential/1" or value.get("kdf") != "scrypt":
+        return False
+    if (
+        value.get("n") != LOCAL_SESSION_SCRYPT_N
+        or value.get("r") != LOCAL_SESSION_SCRYPT_R
+        or value.get("p") != LOCAL_SESSION_SCRYPT_P
+    ):
+        return False
+    salt_hex = value.get("saltHex")
+    verifier_hex = value.get("verifierHex")
+    return (
+        isinstance(salt_hex, str)
+        and re.fullmatch(r"[0-9a-f]{64}", salt_hex) is not None
+        and isinstance(verifier_hex, str)
+        and re.fullmatch(r"[0-9a-f]{64}", verifier_hex) is not None
+    )
+
+
+def read_local_session_credential() -> dict | None:
+    try:
+        with open(LOCAL_SESSION_CREDENTIAL_FILE, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except FileNotFoundError:
+        return None
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("local session credential is unreadable") from exc
+    if not valid_local_session_credential(payload):
+        raise ValueError("local session credential is invalid")
+    return payload
+
+
+def write_local_session_credential(secret: str) -> None:
+    if not valid_local_session_secret(secret):
+        raise ValueError("invalid local session secret")
+    salt = secrets.token_bytes(32)
+    verifier = derive_local_session_verifier(secret, salt)
+    payload = {
+        "schema": "ordax.local-session-credential/1",
+        "kdf": "scrypt",
+        "n": LOCAL_SESSION_SCRYPT_N,
+        "r": LOCAL_SESSION_SCRYPT_R,
+        "p": LOCAL_SESSION_SCRYPT_P,
+        "saltHex": salt.hex(),
+        "verifierHex": verifier.hex(),
+    }
+    directory = os.path.dirname(LOCAL_SESSION_CREDENTIAL_FILE)
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    temporary = (
+        f"{LOCAL_SESSION_CREDENTIAL_FILE}.tmp."
+        f"{os.getpid()}.{threading.get_ident()}"
+    )
+    descriptor = os.open(
+        temporary,
+        os.O_WRONLY
+        | os.O_CREAT
+        | os.O_EXCL
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_CLOEXEC", 0),
+        0o600,
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", closefd=True) as handle:
+            json.dump(payload, handle, separators=(",", ":"), sort_keys=True, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, LOCAL_SESSION_CREDENTIAL_FILE)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+    try:
+        directory_fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    except OSError:
+        return
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
+def verify_local_session_secret(secret: str) -> bool:
+    credential = read_local_session_credential()
+    if credential is None or not valid_local_session_secret(secret):
+        return False
+    salt = bytes.fromhex(credential["saltHex"])
+    expected = bytes.fromhex(credential["verifierHex"])
+    actual = derive_local_session_verifier(secret, salt)
+    return hmac.compare_digest(actual, expected)
+
+
+def remove_local_session_credential() -> None:
+    try:
+        os.unlink(LOCAL_SESSION_CREDENTIAL_FILE)
+    except FileNotFoundError:
+        return
+    directory = os.path.dirname(LOCAL_SESSION_CREDENTIAL_FILE)
+    try:
+        directory_fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    except OSError:
+        return
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
+def local_session_snapshot(server) -> dict:
+    credential_configured = os.path.isfile(LOCAL_SESSION_CREDENTIAL_FILE)
+    locked = bool(server.local_session_locked and credential_configured)
+    return {
+        "schema": "ordax.local-session/1",
+        "state": "locked" if locked else "unlocked",
+        "credentialConfigured": credential_configured,
+        "canLock": credential_configured,
+        "protectionScope": "surface-session-not-storage-encryption",
+    }
 
 
 def valid_notes_payload(value: object) -> bool:
@@ -2408,6 +2568,10 @@ class NativeHostServer(ThreadingHTTPServer):
         self.network_lock = threading.Lock()
         self.native_install_paths = native_install_broker_paths(network_session_dir)
         self.native_install_lock = threading.Lock()
+        self.local_session_lock = threading.Lock()
+        self.local_session_locked = os.path.isfile(LOCAL_SESSION_CREDENTIAL_FILE)
+        self.local_session_failures = 0
+        self.local_session_retry_after = 0.0
         self.user_root = user_root
         self.product_mode = product_mode if product_mode in {"usb", "native-disk"} else None
         self.distribution_profile = (
@@ -2515,7 +2679,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if parsed_path in {SESSION_PATH, FILES_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
-        if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH} and self.client_address[0] != "127.0.0.1":
+        if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH, LOCAL_SESSION_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
         if parsed_path == METRICS_PATH:
@@ -2735,6 +2899,13 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if parsed_path == FIRST_RUN_PATH:
             self._write_json(200, read_first_run_state())
             return
+        if parsed_path == LOCAL_SESSION_PATH:
+            with self.server.local_session_lock:
+                if not os.path.isfile(LOCAL_SESSION_CREDENTIAL_FILE):
+                    self.server.local_session_locked = False
+                snapshot = local_session_snapshot(self.server)
+            self._write_json(200, snapshot)
+            return
         if self.path == NOTES_PATH:
             try:
                 payload = read_notes_payload()
@@ -2783,6 +2954,87 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             return
 
         parsed_path = urlsplit(self.path).path
+        if parsed_path == LOCAL_SESSION_PATH:
+            payload = self._read_json_body(MAX_LOCAL_SESSION_BODY)
+            if payload is None:
+                self._empty(400)
+                return
+            action = payload.get("action")
+            allowed_keys = {"action"} if action == "lock" else {"action", "secret"}
+            if set(payload) != allowed_keys:
+                self._empty(400)
+                return
+            secret = payload.get("secret")
+            if action != "lock" and not valid_local_session_secret(secret):
+                self._empty(400)
+                return
+            try:
+                with self.server.local_session_lock:
+                    credential = read_local_session_credential()
+                    now = time.monotonic()
+                    if action == "configure-credential":
+                        if credential is not None or self.server.local_session_locked:
+                            self._empty(409)
+                            return
+                        write_local_session_credential(secret)
+                        self.server.local_session_locked = False
+                        self.server.local_session_failures = 0
+                        self.server.local_session_retry_after = 0.0
+                    elif action == "remove-credential":
+                        if credential is None:
+                            self._empty(409)
+                            return
+                        if self.server.local_session_locked:
+                            self._empty(423)
+                            return
+                        if not verify_local_session_secret(secret):
+                            self._empty(401)
+                            return
+                        remove_local_session_credential()
+                        self.server.local_session_locked = False
+                        self.server.local_session_failures = 0
+                        self.server.local_session_retry_after = 0.0
+                    elif action == "lock":
+                        if credential is None:
+                            self._empty(409)
+                            return
+                        self.server.local_session_locked = True
+                    elif action == "unlock":
+                        if credential is None:
+                            self._empty(409)
+                            return
+                        if now < self.server.local_session_retry_after:
+                            self._empty(429)
+                            return
+                        if not verify_local_session_secret(secret):
+                            self.server.local_session_failures = min(
+                                8, self.server.local_session_failures + 1
+                            )
+                            delay = min(
+                                30.0,
+                                float((1 << min(5, self.server.local_session_failures)) - 1),
+                            )
+                            self.server.local_session_retry_after = now + delay
+                            self._empty(401)
+                            return
+                        self.server.local_session_locked = False
+                        self.server.local_session_failures = 0
+                        self.server.local_session_retry_after = 0.0
+                    else:
+                        self._empty(400)
+                        return
+                    snapshot = local_session_snapshot(self.server)
+            except (OSError, ValueError) as exc:
+                print(
+                    f"ordax-native-host: local session action failed safely: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._empty(503)
+                return
+            self._write_json(200, snapshot)
+            return
+
         if parsed_path == FILE_IMPORT_PATH:
             try:
                 logical_path, name = requested_file_import_target(self.path)

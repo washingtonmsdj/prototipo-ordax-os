@@ -134,6 +134,9 @@ adds a product/source prerequisite before target-specific physical execution.
 PRE_USB_NOVA_ORDAX_AUDIT=IN_PROGRESS
 INTELLIGENCE_REAL_SYSTEM_CONSUMER=PASS_SOURCE
 INTELLIGENCE_STABLE_V4_BACKEND_LIFECYCLE=PENDING
+LOCAL_SESSION_LOCK_POLICY=PASS_SOURCE
+LOCAL_SESSION_LOCK_IMPLEMENTATION=PASS_SOURCE
+LOCAL_SESSION_LOCK_PHYSICAL_PROOF=PENDING
 FIRST_STABLE_MVP_USB_WRITE=HOLD_FUNCTIONAL_CLOSURE
 PHYSICAL_WRITE_AUTHORITY=UNCHANGED
 ```
@@ -162,7 +165,7 @@ LOCAL_AI_PHYSICAL_STABLE_MVP_PROOF=PENDING
 
 ### First run, regional preferences and physical keyboard
 
-The Native/USB first-use flow is now implemented as a persistent device-owned OOBE rather than a presentation-only screen. It follows `welcome -> regional -> network -> account -> privacy -> ready`, stores completion separately from preferences and identity, and does not dismiss until durable state has been written. The MVP always offers a local-only route: account creation/sign-in is optional and capability-driven, provider unavailability does not block first use, and cloud sync is not an MVP requirement. Network setup is skippable and reuses the existing Native network-management port; Wi-Fi credentials remain transient and do not enter first-run state.
+The Native/USB first-use flow is now implemented as a persistent device-owned OOBE rather than a presentation-only screen. It follows `welcome -> regional -> network -> security -> account -> privacy -> ready`, stores completion separately from preferences, local-session credentials and online identity, and does not dismiss until durable state has been written. The Security step can configure an optional offline PIN/passphrase through `ordax.local-session/1`; the secret stays transient in Surface memory and never enters `first-run.json`. When configured, the Native host stores only a salted scrypt verifier in private device state and a new Surface session starts locked. The lock keeps the existing Workspace mounted but makes the Surface inert until local authentication succeeds. This is explicitly a session gate, not USB file encryption. The MVP always offers a local-only route: account creation/sign-in is optional and capability-driven, provider unavailability does not block first use, and cloud sync is not an MVP requirement. Network setup is skippable and reuses the existing Native network-management port; Wi-Fi credentials remain transient and do not enter first-run state.
 
 Regional choices are real persisted preferences. The first-use OOBE is translated for `pt-BR`, `en-US`, `es-ES`, `de-DE` and `fr-FR`; this does not claim that the whole Surface is already translated into all five languages. PT-BR remains the source/default locale while broader Surface/app migration prioritizes English, then Spanish, German and French. The default time zone is `America/Bahia`, and locale/time zone remain editable later under **Ajustes -> Idioma e região**. Physical keyboard layout is a separate Native device capability, not a Web preference: `br-abnt2` is the Stable/MVP default and `us` is the alternative. The selected layout is stored privately on the USB and mapped to fixed `XKB_DEFAULT_*` values before Cage starts. Arbitrary XKB values and shell input from HTTP are rejected. When the configured layout differs from the layout already applied to the running compositor, Ajustes reports that a new Surface start is required; no fake live-switch behavior is claimed. The OOBE keyboard selector intentionally remains hidden until a safe current-session application or pre-Surface handoff exists.
 

@@ -27,6 +27,11 @@
       "security_boundary": "shared-product"
     },
     {
+      "id": "session.local-lock",
+      "owner": "system/adapters/native",
+      "security_boundary": "device-local-session-gate-not-storage-encryption"
+    },
+    {
       "id": "account.identity",
       "owner": "system/services",
       "security_boundary": "authenticated-service"
@@ -159,7 +164,8 @@
         "system.release-activation",
         "system.recovery",
         "system.boot-control",
-        "creator.native-install"
+        "creator.native-install",
+        "session.local-lock"
       ]
     },
     {
@@ -179,7 +185,8 @@
         "system.release-activation",
         "system.recovery",
         "system.boot-control",
-        "creator.native-install"
+        "creator.native-install",
+        "session.local-lock"
       ]
     },
     {
@@ -201,7 +208,8 @@
         "system.release-activation",
         "system.recovery",
         "system.boot-control",
-        "creator.native-install"
+        "creator.native-install",
+        "session.local-lock"
       ]
     },
     {
@@ -209,6 +217,7 @@
       "adapter": "system/adapters/native",
       "baseline_capabilities": [
         "surface.render",
+        "session.local-lock",
         "intelligence.system",
         "account.identity",
         "sync.safe-state",
@@ -236,6 +245,7 @@
       "adapter": "system/adapters/native",
       "baseline_capabilities": [
         "surface.render",
+        "session.local-lock",
         "intelligence.system",
         "account.identity",
         "sync.safe-state",

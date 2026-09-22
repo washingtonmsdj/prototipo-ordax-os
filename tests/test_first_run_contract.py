@@ -33,7 +33,7 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertEqual(contract["$schema"], "prototype-ordax.first-run/1")
         self.assertEqual(
             contract["flow"],
-            ["welcome", "regional", "network", "account", "privacy", "ready"],
+            ["welcome", "regional", "network", "security", "account", "privacy", "ready"],
         )
         self.assertEqual(contract["regional"]["complete_locales"], ["pt-BR", "en-US", "es-ES", "de-DE", "fr-FR"])
         self.assertEqual(contract["regional"]["completeness_scope"], "first-run-oobe-only")
@@ -45,6 +45,15 @@ class FirstRunContractTests(unittest.TestCase):
             )
         self.assertTrue(contract["network"]["skippable"])
         self.assertTrue(contract["network"]["password_is_transient_only"])
+        self.assertTrue(contract["security"]["local_session_optional"])
+        self.assertTrue(contract["security"]["secret_is_transient_in_surface"])
+        self.assertTrue(contract["security"]["secret_must_not_enter_first_run_state"])
+        self.assertTrue(contract["security"]["bad_or_unreadable_credential_fails_closed"])
+        self.assertTrue(contract["security"]["account_identity_independent"])
+        self.assertEqual(
+            contract["security"]["protection_scope"],
+            "surface-session-not-storage-encryption",
+        )
         self.assertTrue(contract["account"]["optional"])
         self.assertTrue(contract["account"]["local_only_always_available"])
         self.assertFalse(contract["account"]["cloud_sync_required_for_mvp"])

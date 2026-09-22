@@ -20,6 +20,7 @@ export function createNativeSurfaceHost(
     keyboardLayoutAvailable = false,
     browserWebContentAvailable = false,
     intelligenceSystemAvailable = false,
+    localSessionAvailable = false,
   } = {},
 ) {
   if (!windowRef?.navigator) {
@@ -52,6 +53,9 @@ export function createNativeSurfaceHost(
     }
     if (intelligenceSystemAvailable) {
       capabilityIds.push("intelligence.system");
+    }
+    if (localSessionAvailable) {
+      capabilityIds.push("session.local-lock");
     }
     if (bootControlAvailable) {
       capabilityIds.push("system.boot-control");

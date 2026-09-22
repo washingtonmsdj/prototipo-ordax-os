@@ -651,3 +651,35 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.ordax-settings-security-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.ordax-settings-security-form input {
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--ordax-border);
+  border-radius: var(--ordax-radius-sm);
+  background: var(--ordax-surface-strong);
+  color: var(--ordax-text);
+  font: inherit;
+  font-size: 0.76rem;
+}
+
+.ordax-settings-security-form input:focus-visible {
+  outline: 2px solid var(--ordax-focus);
+  outline-offset: 1px;
+}
+
+@media (max-width: 760px) {
+  .ordax-settings-security-form {
+    grid-template-columns: 1fr;
+  }
+}
