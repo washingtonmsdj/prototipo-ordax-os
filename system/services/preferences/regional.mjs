@@ -9,7 +9,8 @@ export const REGIONAL_TIME_ZONE_PREFERENCE_ID = "regional.time-zone";
 const LOCALE_LABELS = Object.freeze({
   "pt-BR": "Português (Brasil)",
   "en-US": "English (United States)",
-  "es-ES": "Español (España / Latinoamérica)",
+  "es-419": "Español (Latinoamérica)",
+  "fr-FR": "Français (France)",
 });
 
 const TIME_ZONE_LABELS = Object.freeze({
@@ -55,7 +56,7 @@ export const regionalLocalePreference = choicePreference({
   id: REGIONAL_LOCALE_PREFERENCE_ID,
   title: "Idioma",
   description:
-    "Português (Brasil), English (United States) e Español são os idiomas de lançamento do MVP. A preferência é persistente e pode ser alterada depois.",
+    "Português (Brasil), English, Español (Latinoamérica) e Français compõem a primeira leva de localização. A cobertura é publicada por superfície e usa inglês como fallback técnico quando uma chave ainda não foi traduzida.",
   defaultValue: "pt-BR",
   options: REGIONAL_LOCALE_OPTIONS,
   values: LOCALES,
