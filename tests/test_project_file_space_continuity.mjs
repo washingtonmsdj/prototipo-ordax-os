@@ -40,6 +40,18 @@ function createFileSpace({ failRename = false, failMove = false } = {}) {
       if (failMove) throw new Error("move failed");
       return emptyListing(destinationPath);
     },
+    async trashEntry(path, name) {
+      calls.push(["trashEntry", path, name]);
+      return emptyListing(path);
+    },
+    async listTrash() {
+      calls.push(["listTrash"]);
+      return Object.freeze({ entries: Object.freeze([]) });
+    },
+    async restoreTrashEntry(id) {
+      calls.push(["restoreTrashEntry", id]);
+      return Object.freeze({ entries: Object.freeze([]) });
+    },
     async exportFile(path) {
       calls.push(["exportFile", path]);
       return true;
