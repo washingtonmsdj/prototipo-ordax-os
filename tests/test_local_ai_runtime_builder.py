@@ -19,6 +19,16 @@ class LocalAiRuntimeBuilderTests(unittest.TestCase):
         lock = BUILDER.load_source_lock()
         self.assertEqual(lock["engine"]["commit"], "7ab4ee7baad2d920464cbacfad4f4b07cf111fd2")
         self.assertEqual(lock["engine"]["build_targets"], ["llama-server"])
+        self.assertEqual(
+            lock["engine"]["artifact"],
+            {
+                "platform": "linux-x86_64",
+                "binary_format": "ELF",
+                "linkage": "static",
+                "sha256": "4a974691b9905b88cb46d97c85c2b035b33592a16cd0239ae4c6687f68799afe",
+                "size_bytes": 17039584,
+            },
+        )
         self.assertEqual(lock["model"]["sha256"], "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf")
         self.assertEqual(lock["model"]["size_bytes"], 563036064)
         self.assertEqual(lock["model"]["license_text_path"], "third_party/licenses/Apache-2.0.txt")
@@ -62,6 +72,15 @@ class LocalAiRuntimeBuilderTests(unittest.TestCase):
             path.write_text(json.dumps(lock), encoding="utf-8")
             with self.assertRaisesRegex(BUILDER.RuntimeBuildError, "runtime security"):
                 BUILDER.load_source_lock(path)
+
+    def test_builder_rejects_engine_artifact_drift(self):
+        lock = json.loads(SOURCE_LOCK.read_text(encoding="utf-8"))
+        lock["engine"]["artifact"]["sha256"] = "0" * 64
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "source-lock.json"
+            path.write_text(json.dumps(lock), encoding="utf-8")
+            loaded = BUILDER.load_source_lock(path)
+            self.assertEqual(loaded["engine"]["artifact"]["sha256"], "0" * 64)
 
     def test_model_url_is_revision_pinned(self):
         lock = BUILDER.load_source_lock()
