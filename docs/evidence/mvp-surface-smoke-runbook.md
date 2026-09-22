@@ -12,12 +12,12 @@ O harness é deliberadamente somente leitura. Ele complementa — não substitui
 
 - confirma a presença e registra somente tamanho + SHA-256 das fontes compartilhadas de Arquivos, Notas, Internet, Ajustes, Sistema, composição Native e Surface;
 - confirma que o documento Native da Surface responde pelo loopback esperado;
-- lê e valida os contratos observacionais de métricas, rede, energia e raiz de Arquivos;
+- lê e valida os contratos observacionais de métricas, rede, energia, layout de teclado físico e raiz de Arquivos;
 - lê e valida por `GET` o estado vivo do atualizador e o histórico de atualização, sem confirmar health nem disparar qualquer ação;
 - registra apenas resumos limitados dos dados observados;
 - verifica o tail do log do host por marcadores `traceback`, `segmentation fault` e `fatal`, armazenando apenas hash e contagem;
 - grava um relatório JSON com `PASS/WARN/FAIL` sem executar `POST`, `PUT`, `PATCH` ou `DELETE`;
-- compara baseline e pós-tour de forma fail-closed para confirmar que pertencem ao mesmo boot, às mesmas fontes e à mesma identidade técnica sanitizada do updater.
+- compara baseline e pós-tour de forma fail-closed para confirmar que pertencem ao mesmo boot, às mesmas fontes, à mesma identidade técnica sanitizada do updater e ao mesmo layout físico já aplicado.
 
 ### Privacidade da evidência
 
@@ -39,21 +39,23 @@ O relatório de comparação não copia `boot_id`, hashes de fontes ou a impress
 
 ## Pré-condições
 
-1. notebook inicializado pelo **Owner / Development USB**;
+1. para evidência canônica, notebook inicializado pelo **USB Stable/MVP verificado**; Owner/Development pode executar o mesmo harness apenas como diagnóstico de desenvolvimento;
 2. Surface gráfica saudável e em execução;
-3. checkout sincronizado para a entrega contendo este harness;
-4. runtime Native/WebKit já materializado;
+3. no Stable/MVP, o release montado em `/system` contém este harness; no Owner/Development, o checkout correspondente está sincronizado;
+4. runtime Native/WebKit ativo — o wrapper resolve automaticamente o runtime verificado em `/run/ordax/runtime/native-surface/rootfs` no Stable/MVP e o runtime dinâmico em Owner/Development;
 5. nenhum reflash, rebuild de kernel ou escrita física é necessário para executar o smoke test.
 
 ## Coleta automática inicial
 
-No shell de manutenção Owner/Development, execute:
+No **Stable/MVP canônico**, execute pelo release montado:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-mvp-smoke collect \
+/system/surface/bin/ordax-mvp-smoke collect \
   --label mvp-surface-baseline \
   --output /var/lib/ordax/mvp-smoke/baseline.json
 ```
+
+Em Owner/Development, o comando equivalente continua disponível em `/system/surface/bin/ordax-mvp-smoke`, mas essa execução não substitui a evidência Stable/MVP canônica.
 
 `collect` continua sendo o comando padrão, portanto a forma antiga sem a palavra `collect` também permanece válida.
 
@@ -70,7 +72,7 @@ Qualquer `FAIL` precisa ser tratado como evidência de que o recorte integrado a
 Antes do tour, gere o checklist machine-readable da mesma sessão:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-mvp-smoke tour-template \
+/system/surface/bin/ordax-mvp-smoke tour-template \
   --label mvp-surface-tour \
   --output /var/lib/ordax/mvp-smoke/tour.json
 ```
@@ -86,16 +88,17 @@ Depois da coleta inicial, registrar PASS/FAIL separadamente para cada item:
 5. **Ajustes:** tema e ao menos uma preferência de acessibilidade suportada mudam a Surface e permanecem coerentes após reabrir a janela.
 6. **Sistema:** Visão geral, Atualizações, Armazenamento, Diagnóstico e Sobre abrem sem dados fictícios; métricas/armazenamento e estado de atualização exibidos devem ser compatíveis com a coleta automática.
 7. **Rede e energia:** estados aparecem somente quando a capacidade correspondente existe. Não executar desligamento/reinício como parte deste smoke test; ações de energia possuem prova própria.
-8. **Isolamento de falha:** alternar entre os cinco apps principais não deve encerrar a Surface nem corromper o estado dos demais apps.
-9. **Continuidade:** fechar/reabrir janelas e trocar áreas não deve criar duplicação inesperada de estado nem perder o target interno já persistido pelo workspace.
-10. **Pós-tour:** nenhum erro fatal visível ou loop de reinício da Surface ocorreu durante o uso.
+8. **Teclado físico:** em Ajustes → Idioma e região, o layout configurado deve aparecer como aplicado, sem estado “Próximo início”. Digitar `ç Ç á é ã ? / @` em um campo local de teste deve corresponder ao layout selecionado; não registrar o texto digitado na evidência.
+9. **Isolamento de falha:** alternar entre os cinco apps principais não deve encerrar a Surface nem corromper o estado dos demais apps.
+10. **Continuidade:** fechar/reabrir janelas e trocar áreas não deve criar duplicação inesperada de estado nem perder o target interno já persistido pelo workspace.
+11. **Pós-tour:** nenhum erro fatal visível ou loop de reinício da Surface ocorreu durante o uso.
 
 ## Coleta automática após o tour
 
 Sem reiniciar o notebook, execute novamente:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-mvp-smoke collect \
+/system/surface/bin/ordax-mvp-smoke collect \
   --label mvp-surface-after-tour \
   --output /var/lib/ordax/mvp-smoke/after-tour.json
 ```
@@ -109,7 +112,7 @@ A existência de dois relatórios sem falha mostra que os endpoints essenciais, 
 Depois das duas coletas, ainda sem reiniciar ou atualizar deliberadamente o notebook, execute:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-mvp-smoke compare \
+/system/surface/bin/ordax-mvp-smoke compare \
   --label mvp-surface-same-session \
   --baseline /var/lib/ordax/mvp-smoke/baseline.json \
   --after /var/lib/ordax/mvp-smoke/after-tour.json \
@@ -128,10 +131,10 @@ Uma atualização automática que ocorra entre baseline e pós-tour também inva
 
 ## Finalização fail-closed da sessão
 
-Depois que `comparison.json` estiver em PASS e os 10 itens de `tour.json` tiverem sido revisados, finalize a sessão:
+Depois que `comparison.json` estiver em PASS e os 11 itens de `tour.json` tiverem sido revisados, finalize a sessão:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-mvp-smoke finalize \
+/system/surface/bin/ordax-mvp-smoke finalize \
   --label mvp-surface-final \
   --baseline /var/lib/ordax/mvp-smoke/baseline.json \
   --after /var/lib/ordax/mvp-smoke/after-tour.json \
@@ -152,7 +155,7 @@ Antes de atualizar qualquer snapshot canônico para PASS, devem existir juntos:
 - checklist manual com resultado explícito por item;
 - `after-tour.json` revisado com `FAIL=0`;
 - `comparison.json` revisado com `FAIL=0`;
-- `tour.json` com exatamente os 10 itens em `pass`;
+- `tour.json` com exatamente os 11 itens em `pass`;
 - `final.json` revisado com `FAIL=0`;
 - referência ao SHA exato do checkout testado;
 - confirmação `PHYSICAL_WRITE=NO` e `REBOOT_REQUIRED=NO` para esta operação;
