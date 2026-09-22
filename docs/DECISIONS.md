@@ -348,3 +348,26 @@ Rules:
 - End users never receive, back up or manage publisher private keys.
 
 Reason: preserve zero/low-cost prototype velocity now while ensuring the long-term trust architecture can move to non-exportable managed custody and recover from operational key loss without reprovisioning the entire installed population.
+
+## ADR-024 - Ordax Intelligence is a system layer with replaceable inference
+
+Decision:
+
+```text
+Surface / applications
+ -> shared Runtime and authorized context
+ -> Ordax Intelligence
+ -> AI Runtime / Inference Broker
+ -> local model by default in Stable/MVP
+```
+
+Ordax Intelligence is a first-class system service, not an application. A conversational Assistant may exist as one client, while Files, Notes, Search, Settings, diagnostics and future automation may consume the same stable intelligence contract.
+
+For Stable/MVP, local inference is part of the target distribution and is not exposed as a Creator option to omit system Intelligence. This product requirement is deliberately separate from boot criticality: a failed or unavailable model degrades Intelligence but must not block boot, recovery, files or updates.
+
+The stable product boundary is `ordax.intelligence/1`. Engine/model execution remains behind `ordax.local-ai/1`, allowing llama.cpp/Qwen or future local backends/models to change without redefining product semantics.
+
+The MVP Intelligence authority is consultative only. Prompt text never grants privileges. File writes, commands, package installation, external network transmission, system changes, disk operations, tools, agents and persistent memory require explicit future contracts/policies; none is implied by installing a local model.
+
+This decision selectively reimplements the useful architecture invariants documented in `washingtonmsdj/novo-ordax-os` rather than copying its runtime.
+
