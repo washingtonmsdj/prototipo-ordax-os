@@ -2,7 +2,7 @@
 
 Status: **HARNESS IMPLEMENTADO; PROVA FÍSICA AINDA NÃO DECLARADA**
 
-Este runbook fecha a diferença entre os testes de source/CI do app **Internet** e a validação no notebook real. Ele não altera o navegador, não arma update, não grava mídia e não transforma CI em prova física.
+Este runbook fecha a diferença entre os testes de source/CI do app **Internet** e a validação no notebook real. Ele não altera o navegador, não arma update, não grava mídia e não transforma CI em prova física. O coletor registra o perfil/runtime ativo; evidência Owner/Development e Stable/MVP não pode ser combinada na mesma comparação.
 
 ## O que o harness prova automaticamente
 
@@ -19,33 +19,33 @@ A coleta não testa por automação comportamento visual, foco, scroll, touchpad
 
 ## Pré-condições
 
-1. notebook inicializado pelo **Owner / Development USB**;
+1. para a prova canônica, notebook inicializado pelo **USB Stable/MVP** com runtime `verified-erofs-overlay`; Owner/Development permanece somente para diagnóstico;
 2. Surface gráfica saudável e em execução;
-3. checkout do `system/` já sincronizado para a entrega que contém este harness;
-4. nenhuma alteração de kernel ou reflash é necessária para o harness.
+3. release Stable/MVP contém este harness em `/system` e a Surface publicou `/run/ordax-surface/runtime-proof-context`;
+4. nenhuma alteração de kernel, reflash ou escrita física é realizada pelo harness.
 
 ## Coleta inicial
 
-Abra o **Internet**, carregue pelo menos duas páginas HTTPS públicas, altere a aba ativa e então, no shell de manutenção do Owner/Development, execute:
+Abra o **Internet**, carregue pelo menos duas páginas HTTPS públicas, altere a aba ativa e então, no shell local do Stable/MVP, execute:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-internet-proof collect \
+/system/surface/bin/ordax-internet-proof collect \
   --label before-surface-restart \
   --output /var/lib/ordax/internet-proof/before.json
 ```
 
-A saída deve terminar com `FAIL=0`. Um `WARN` sobre `data/cache` só é aceitável antes de o WebKit ter materializado ambos os diretórios; para a prova final, use o Internet primeiro e repita até o perfil existir.
+A saída deve terminar com `FAIL=0`. Um `WARN` sobre `data/cache` só é aceitável antes de o WebKit ter materializado ambos os diretórios; para a prova final, use o Internet primeiro e repita até o perfil existir. Para evidência canônica, o JSON precisa registrar `stable-mvp + verified-erofs-overlay + canonical-stable-mvp`. No USB Owner/Development, use o caminho `/workspace/ordax/system/surface/bin/ordax-internet-proof`; o relatório será marcado como `development` e não fecha o gate Stable.
 
 ## Prova de persistência após restart da Surface
 
 Reinicie **somente a Surface**, sem reiniciar o notebook. Não altere as abas antes da segunda coleta. Depois execute:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-internet-proof collect \
+/system/surface/bin/ordax-internet-proof collect \
   --label after-surface-restart \
   --output /var/lib/ordax/internet-proof/after.json
 
-/workspace/ordax/system/surface/bin/ordax-internet-proof compare \
+/system/surface/bin/ordax-internet-proof compare \
   /var/lib/ordax/internet-proof/before.json \
   /var/lib/ordax/internet-proof/after.json \
   --output /var/lib/ordax/internet-proof/compare.json
@@ -53,6 +53,7 @@ Reinicie **somente a Surface**, sem reiniciar o notebook. Não altere as abas an
 
 A comparação só passa quando:
 
+- as duas coletas têm o mesmo perfil/runtime/escopo de evidência;
 - as duas coletas têm o mesmo `boot_id`;
 - o PID/start-time do browser host mudou;
 - o hash semântico de `session.json` é idêntico;
@@ -86,6 +87,7 @@ Não alterar `docs/CURRENT-STATE.md` para `PASS` até existirem, juntos:
 - `collect` antes com `FAIL=0`;
 - `collect` depois com `FAIL=0`;
 - `compare` com `FAIL=0`;
+- para afirmação canônica, `evidence_context` igual a `stable-mvp + verified-erofs-overlay + canonical-stable-mvp`;
 - checklist manual registrado;
 - evidência explícita para a tentativa de subresource/redirect local;
 - verificação de que os demais apps e o rollback/health continuam saudáveis.
