@@ -1509,7 +1509,7 @@ export function mountFileSpaceControls(
 
     const view = node(documentObject, "div", "ordax-files-view");
     const locations = node(documentObject, "nav", "ordax-files-locations");
-    locations.setAttribute("aria-label", "Locais de arquivos");
+    locations.setAttribute("aria-label", t("files.location.aria"));
     renderLocations(locations);
 
     const content = node(documentObject, "section", "ordax-files-content");
@@ -1533,28 +1533,28 @@ export function mountFileSpaceControls(
     const back = node(documentObject, "button", "ordax-files-nav-action", "←");
     back.type = "button";
     back.dataset.fileHistoryBack = "";
-    back.setAttribute("aria-label", "Voltar");
-    back.title = "Voltar";
+    back.setAttribute("aria-label", t("files.nav.back"));
+    back.title = t("files.nav.back");
     back.disabled = pending || !canGoBack();
 
     const forward = node(documentObject, "button", "ordax-files-nav-action", "→");
     forward.type = "button";
     forward.dataset.fileHistoryForward = "";
-    forward.setAttribute("aria-label", "Avançar");
-    forward.title = "Avançar";
+    forward.setAttribute("aria-label", t("files.nav.forward"));
+    forward.title = t("files.nav.forward");
     forward.disabled = pending || !canGoForward();
 
     const up = node(documentObject, "button", "ordax-files-nav-action", "↑");
     up.type = "button";
     up.dataset.fileHistoryUp = "";
-    up.setAttribute("aria-label", "Subir um nível");
-    up.title = "Subir um nível";
+    up.setAttribute("aria-label", t("files.nav.up"));
+    up.title = t("files.nav.up");
     up.disabled = pending || !listing || listing.path === "/";
 
     navigation.append(back, forward, up);
 
     const breadcrumb = node(documentObject, "nav", "ordax-files-breadcrumb");
-    breadcrumb.setAttribute("aria-label", "Caminho atual");
+    breadcrumb.setAttribute("aria-label", t("files.nav.currentPath"));
     renderBreadcrumb(breadcrumb);
 
     const search = node(documentObject, "div", "ordax-files-search");
@@ -1563,14 +1563,14 @@ export function mountFileSpaceControls(
     searchInput.maxLength = 120;
     searchInput.autocomplete = "off";
     searchInput.spellcheck = false;
-    searchInput.placeholder = "Buscar nesta pasta";
+    searchInput.placeholder = t("files.search.folder.placeholder");
     searchInput.value = searchQuery;
     searchInput.dataset.fileSearch = "";
     searchInput.disabled = pending || !listing;
-    searchInput.setAttribute("aria-label", "Buscar pelo nome nesta pasta");
+    searchInput.setAttribute("aria-label", t("files.search.folder.aria"));
     search.append(searchInput);
     if (searchQuery) {
-      const clearSearch = node(documentObject, "button", "ordax-files-search-clear", "Limpar");
+      const clearSearch = node(documentObject, "button", "ordax-files-search-clear", t("files.action.clear"));
       clearSearch.type = "button";
       clearSearch.dataset.fileSearchClear = "";
       clearSearch.disabled = pending;
@@ -1578,12 +1578,17 @@ export function mountFileSpaceControls(
     }
 
     const actions = node(documentObject, "div", "ordax-files-actions");
-    const refresh = node(documentObject, "button", "ordax-files-action", pending ? "Atualizando…" : "Atualizar");
+    const refresh = node(
+      documentObject,
+      "button",
+      "ordax-files-action",
+      pending ? t("files.action.refreshing") : t("files.action.refresh"),
+    );
     refresh.type = "button";
     refresh.dataset.fileRefresh = "";
     refresh.disabled = pending;
 
-    const importFile = node(documentObject, "button", "ordax-files-action", "Importar");
+    const importFile = node(documentObject, "button", "ordax-files-action", t("files.action.import"));
     importFile.type = "button";
     importFile.dataset.fileImportToggle = "";
     importFile.disabled = pending || !listing;
@@ -1593,9 +1598,9 @@ export function mountFileSpaceControls(
     importPicker.multiple = false;
     importPicker.hidden = true;
     importPicker.dataset.fileImportPicker = "";
-    importPicker.setAttribute("aria-label", "Escolher arquivo para importar");
+    importPicker.setAttribute("aria-label", t("files.action.importPicker"));
 
-    const addProject = node(documentObject, "button", "ordax-files-action", "Adicionar projeto");
+    const addProject = node(documentObject, "button", "ordax-files-action", t("files.action.addProject"));
     addProject.type = "button";
     addProject.dataset.fileProjectCreateStart = "";
     addProject.disabled = Boolean(
@@ -1605,7 +1610,12 @@ export function mountFileSpaceControls(
       || listing.path === "/"
       || projectSnapshot?.projects.some((project) => project.path === listing.path)
     );
-    const create = node(documentObject, "button", "ordax-files-action ordax-files-action-primary", "Nova pasta");
+    const create = node(
+      documentObject,
+      "button",
+      "ordax-files-action ordax-files-action-primary",
+      t("files.action.newFolder"),
+    );
     create.type = "button";
     create.dataset.fileCreateToggle = "";
     create.disabled = pending || !listing;
@@ -1617,7 +1627,7 @@ export function mountFileSpaceControls(
           documentObject,
           "button",
           "ordax-files-action ordax-files-action-primary",
-          "Continuar último arquivo",
+          t("files.action.resumeProject"),
         );
         resumeProjectButton.type = "button";
         resumeProjectButton.dataset.fileProjectResume = currentProject.id;
@@ -1632,20 +1642,30 @@ export function mountFileSpaceControls(
             documentObject,
             "button",
             "ordax-files-action",
-            "Esquecer último arquivo",
+            t("files.action.forgetProject"),
           );
           forgetProjectButton.type = "button";
           forgetProjectButton.dataset.fileProjectForgetStale = currentProject.id;
           forgetProjectButton.disabled = pending || previewPending;
-          forgetProjectButton.title = "Remove somente a referência de continuidade; o arquivo não é apagado";
+          forgetProjectButton.title = t("files.action.forgetProjectTitle");
           actions.append(forgetProjectButton);
         }
       }
-      const renameProjectButton = node(documentObject, "button", "ordax-files-action", "Renomear projeto");
+      const renameProjectButton = node(
+        documentObject,
+        "button",
+        "ordax-files-action",
+        t("files.action.renameProject"),
+      );
       renameProjectButton.type = "button";
       renameProjectButton.dataset.fileProjectRenameStart = currentProject.id;
       renameProjectButton.disabled = pending;
-      const removeProjectButton = node(documentObject, "button", "ordax-files-action", "Remover projeto");
+      const removeProjectButton = node(
+        documentObject,
+        "button",
+        "ordax-files-action",
+        t("files.action.removeProject"),
+      );
       removeProjectButton.type = "button";
       removeProjectButton.dataset.fileProjectRemove = currentProject.id;
       removeProjectButton.disabled = pending;
@@ -1660,12 +1680,20 @@ export function mountFileSpaceControls(
       "div",
       "ordax-files-status",
       pending
-        ? "Atualizando conteúdo…"
+        ? t("files.status.updating")
         : listing
           ? normalizedSearchQuery()
-            ? `${visibleEntries().length} de ${listing.entries.length} itens · busca nesta pasta`
-            : `${listing.entries.length} ${listing.entries.length === 1 ? "item" : "itens"}`
-          : "Preparando espaço do usuário…",
+            ? t("files.status.countSearch", {
+                visible: visibleEntries().length,
+                total: listing.entries.length,
+              })
+            : t("files.status.count", {
+                count: listing.entries.length,
+                unit: listing.entries.length === 1
+                  ? t("files.status.item")
+                  : t("files.status.items"),
+              })
+          : t("files.status.preparing"),
     );
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
@@ -1684,7 +1712,7 @@ export function mountFileSpaceControls(
         documentObject,
         "p",
         "ordax-files-boundary",
-        "Conteúdo persistente do usuário. O sistema e links simbólicos permanecem fora desta fronteira.",
+        t("files.boundary.userSpace"),
       ),
     );
 
