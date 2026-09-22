@@ -55,7 +55,7 @@ No **Stable/MVP canônico**, execute pelo release montado:
   --output /var/lib/ordax/mvp-smoke/baseline.json
 ```
 
-Em Owner/Development, o comando equivalente continua disponível em `/system/surface/bin/ordax-mvp-smoke`, mas essa execução não substitui a evidência Stable/MVP canônica.
+Em Owner/Development, o comando equivalente continua disponível em `/workspace/ordax/system/surface/bin/ordax-mvp-smoke`, mas essa execução não substitui a evidência Stable/MVP canônica.
 
 `collect` continua sendo o comando padrão, portanto a forma antiga sem a palavra `collect` também permanece válida.
 
