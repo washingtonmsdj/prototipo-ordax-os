@@ -28,10 +28,10 @@ class FilesSortingTests(unittest.TestCase):
         self.assertIn("data.fileSortKey", controls.replace("dataset", "data"))
         self.assertIn('aria-pressed', controls)
         self.assertIn('sortDirection === "asc" ? "desc" : "asc"', controls)
-        self.assertIn('sortButton("Nome", "name")', controls)
-        self.assertIn('sortButton("Tipo", "type")', controls)
-        self.assertIn('sortButton("Tamanho", "size")', controls)
-        self.assertIn('sortButton("Modificado", "modified")', controls)
+        self.assertIn('sortButton(t("files.column.name"), "name")', controls)
+        self.assertIn('sortButton(t("files.column.type"), "type")', controls)
+        self.assertIn('sortButton(t("files.column.size"), "size")', controls)
+        self.assertIn('sortButton(t("files.column.modified"), "modified")', controls)
 
     def test_sort_controls_have_focus_and_direction_styles(self):
         css = CSS.read_text(encoding="utf-8")
