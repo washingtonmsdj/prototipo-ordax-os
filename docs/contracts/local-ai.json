@@ -1,0 +1,38 @@
+{
+  "$schema": "prototype-ordax.local-ai/1",
+  "status": "native-integration-implemented-model-pack-pending",
+  "product_scope": "optional-mvp-usb-component",
+  "app_id": "assistant",
+  "capability_id": "ai.local",
+  "default_backend": "llama.cpp",
+  "backend_protocol": "openai-compatible-loopback-v1",
+  "cloud_fallback_allowed": false,
+  "network_required_for_inference": false,
+  "model_pack_required": true,
+  "creator": {
+    "selection": "optional",
+    "default_selected": false,
+    "label_pt_BR": "Incluir IA local",
+    "without_ai_system_remains_supported": true,
+    "engine_and_model_are_separate_from_app": true
+  },
+  "migration": {
+    "app_must_not_depend_on_engine_vendor": true,
+    "backend_selected_by_device_config": true,
+    "supported_backend_contract": "openai-compatible-loopback-v1",
+    "future_backend_migration_without_ui_rewrite": true,
+    "memory_owned_by_ordax_not_backend": true
+  },
+  "privacy": {
+    "loopback_only": true,
+    "remote_endpoint_forbidden": true,
+    "user_prompt_telemetry_default": false,
+    "model_may_operate_offline": true
+  },
+  "current_gap": {
+    "signed_llama_cpp_binary_in_release": false,
+    "signed_default_model_pack_in_release": false,
+    "creator_model_pack_materialization": false,
+    "physical_ai_proof": false
+  }
+}
