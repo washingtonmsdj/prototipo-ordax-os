@@ -54,6 +54,7 @@ export const componentRuntime = Object.freeze({
     surfaceLifecycle,
     fileSpace = null,
     appActivation = null,
+    intelligence = null,
   } = {}) {
     if (createStore !== null && typeof createStore !== "function") {
       throw new TypeError("Notes createStore must be a function or null");
@@ -75,7 +76,7 @@ export const componentRuntime = Object.freeze({
         root,
         notesRuntime,
         surfaceLifecycle,
-        { fileSpace, appActivation },
+        { fileSpace, appActivation, intelligence },
       );
 
       let destroyed = false;
