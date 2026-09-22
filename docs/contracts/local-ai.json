@@ -1,18 +1,20 @@
 {
   "$schema": "prototype-ordax.local-ai/1",
-  "status": "mvp-optional-component-foundation",
+  "status": "mvp-required-local-inference-foundation",
   "product_scope": "stable-mvp-usb",
   "required_for_boot": false,
   "required_for_offline_use": false,
-  "default_creator_selection": "include-when-bundle-available",
+  "required_for_stable_mvp_distribution": true,
+  "default_creator_selection": "included-by-product-policy",
   "creator_toggle": {
     "label_pt_BR": "Incluir IA local",
     "label_en_US": "Include local AI",
     "label_es_ES": "Incluir IA local",
-    "user_may_disable": true,
+    "user_may_disable": false,
+    "exposed_as_install_omission_toggle": false,
+    "model_or_engine_may_change_after_install": true,
     "must_not_change_core_os_layout": true,
-    "activation_after_first_physical_proof": true,
-    "reason": "the first Stable/MVP physical authorization is bound to the frozen Creator source context"
+    "reason": "local inference is part of the Stable/MVP product; model and engine evolution are separate from omitting system Intelligence"
   },
   "runtime": {
     "engine_boundary": "OpenAI-compatible loopback HTTP",
@@ -40,6 +42,7 @@
   },
   "migration": {
     "stable_service_contract": "ordax.local-ai/1",
+    "system_intelligence_contract": "ordax.intelligence/1",
     "provider_specific_ui_allowed": false,
     "model_id_persisted_separately_from_engine_id": true,
     "engine_swap_requires_surface_changes": false,
@@ -59,7 +62,8 @@
   },
   "mvp_policy": {
     "recommended": true,
-    "mandatory": false,
+    "mandatory": true,
+    "mandatory_scope": "stable-mvp-distribution-not-boot",
     "small_model_first": true,
     "hardware_probe_before_start": true,
     "failure_must_not_block_surface": true
