@@ -35,6 +35,7 @@ class FirstRunContractTests(unittest.TestCase):
             contract["flow"],
             ["welcome", "regional", "network", "account", "privacy", "ready"],
         )
+        self.assertEqual(contract["regional"]["complete_locales"], ["pt-BR", "en-US", "es-ES"])
         self.assertTrue(contract["network"]["skippable"])
         self.assertTrue(contract["network"]["password_is_transient_only"])
         self.assertTrue(contract["account"]["optional"])
@@ -68,6 +69,9 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertFalse(
             host.valid_first_run_state({**initial, "timeZone": "Europe/London"})
         )
+        self.assertTrue(host.valid_first_run_state({**initial, "locale": "en-US"}))
+        self.assertTrue(host.valid_first_run_state({**initial, "locale": "es-ES"}))
+        self.assertFalse(host.valid_first_run_state({**initial, "locale": "fr-FR"}))
 
         with tempfile.TemporaryDirectory() as directory:
             host.FIRST_RUN_FILE = str(Path(directory) / "first-run.json")
@@ -115,6 +119,8 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertNotIn("first-run.css", web_html)
 
         self.assertIn("Continuar sem conta", ui)
+        self.assertIn("translateFirstRunText", ui)
+        self.assertIn('documentObject.documentElement.lang = draft.locale', ui)
         self.assertIn('isIdentityActionSupported(actionsSnapshot, "sign-in")', ui)
         self.assertIn('isIdentityActionSupported(actionsSnapshot, "register")', ui)
         self.assertIn("passwordDraft", ui)
