@@ -174,6 +174,27 @@ CI proves both sides of this boundary: the normal Windows build excludes the tag
 
 This gate is destructive and requires explicit user authorization at execution time.
 
+Before evaluating destructive readiness, the Stable/MVP product must also pass the
+functional closure audit in `PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md`. Physical
+write readiness is therefore intentionally stricter than boot/media readiness.
+
+```text
+PRE_USB_NOVA_ORDAX_AUDIT=REQUIRED
+INTELLIGENCE_REAL_SYSTEM_CONSUMER=REQUIRED
+LOCAL_SESSION_LOCK_POLICY=REQUIRED
+LOCAL_SESSION_LOCK_IMPLEMENTATION=REQUIRED
+OOBE_PERSISTENCE=REQUIRED
+OOBE_LOCALE_COVERAGE=REQUIRED_OR_EXPLICITLY_REDUCED
+FILES_DAILY_OPERATIONS=REQUIRED
+DIAGNOSTICS_RECOVERY_PRESENTATION=REQUIRED
+SUPPORTED_HARDWARE_MATRIX=REQUIRED
+SIGNED_RELEASE_V4_WITH_LOCAL_AI=REQUIRED
+```
+
+These are product/source gates. They never imply target selection, UAC, destructive
+consent or physical-write authority.
+
+
 The source-controlled preflight distinguishes two states without weakening the boundary:
 
 - `pre_authorization_ready=true`: canonical trust, bootstrap, Portable layout and writer policy are internally consistent, but **no destructive candidate may be materialized yet**;
