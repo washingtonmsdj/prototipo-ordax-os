@@ -59,6 +59,8 @@ jobs:
               'https://github.com/washingtonmsdj/prototipo-ordax-os/releases/download/'
               f'ordax-release-agent-{digest}/ordax-release-agent'
           )
+          print('RELEASE_AGENT_REFRESH_SHA256=' + digest)
+          print('RELEASE_AGENT_REFRESH_SIZE=' + str(size))
           assert descriptor['$schema'] == 'prototype-ordax.release-agent-refresh/1'
           assert descriptor['status'] == 'development-git-migration'
           assert descriptor['target_sha256'] == digest, (descriptor['target_sha256'], digest)
@@ -68,8 +70,6 @@ jobs:
           assert descriptor['raw_device_write_allowed'] is False
           assert descriptor['physical_media_rewrite_required'] is False
           assert descriptor['unknown_installed_hash_policy'] == 'block'
-          print('RELEASE_AGENT_REFRESH_SHA256=' + digest)
-          print('RELEASE_AGENT_REFRESH_SIZE=' + str(size))
           PY
 
   publish:
