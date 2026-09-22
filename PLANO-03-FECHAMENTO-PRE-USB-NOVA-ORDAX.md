@@ -61,6 +61,29 @@ LOCAL_SESSION_LOCK_IMPLEMENTATION=PASS_SOURCE
 LOCAL_SESSION_LOCK_PHYSICAL_PROOF=PENDING
 ```
 
+### 0.3 Arquivos — remoção segura fechada em source
+
+A jornada cotidiana de Arquivos agora possui remoção recuperável no mesmo owner de
+`ordax.file-space/11`:
+
+- `trashEntry()`, `listTrash()` e `restoreTrashEntry()`;
+- namespace interno reservado e não navegável pela API pública;
+- metadata bounded com caminho lógico original e ID interno aleatório;
+- arquivo/pasta no mesmo filesystem vai para a Lixeira por rename no-clobber;
+- restauração também é no-clobber e nunca substitui um item criado depois no caminho original;
+- symlinks e payloads inválidos falham fechados;
+- tentativa cross-device para a Lixeira é rejeitada e preserva a origem;
+- Recentes deixa de apontar para o item movido;
+- continuidade de Projeto afetada é limpa somente depois de trash confirmado;
+- não há exclusão permanente nem “esvaziar Lixeira” no fluxo cotidiano do MVP.
+
+```text
+FILES_DAILY_OPERATIONS=PASS_SOURCE
+FILES_SAFE_REMOVAL=PASS_SOURCE
+FILES_PERMANENT_DELETE_MVP=NO
+FILES_TRASH_PHYSICAL_PROOF=PENDING
+```
+
 ## 1. Decisão principal
 
 **Não gerar ainda o primeiro USB Stable/MVP físico.**
@@ -70,15 +93,14 @@ canônica explícita retirando o item do MVP. O objetivo não é transportar o
 `novo-ordax-os` inteiro; é preservar os invariantes de produto que ainda fazem
 sentido na arquitetura clean-room atual.
 
-A auditoria encontrou um exemplo importante além do runtime local de IA:
+A auditoria já fechou em source três omissões estruturais que estavam abertas quando
+este plano foi criado: consumidores reais de Ordax Intelligence, sessão/lock local Native
+e remoção recuperável em Arquivos. O HOLD do primeiro USB Stable/MVP continua porque
+ainda restam itens A independentes: cobertura de idioma coerente, diagnóstico/recovery
+de produto, inventário/matriz mínima de hardware e lifecycle Stable v4 assinado com a
+IA local materializável.
 
-> O `local-ai-runtime.erofs` real já existe e foi provado em CI, e
-> `ordax.intelligence/1` também existe. Porém o runtime de Intelligence ainda não
-> possui consumidor de produção: `createIntelligenceRuntime()` aparece no serviço e
-> nos testes, enquanto Files/Notes/System ainda não o compõem nem chamam
-> `respond()` em runtime.
-
-Portanto **“modelo instalado” não equivale a “IA nativa do sistema entregue”**.
+Portanto **“boot/release avançado” continua não equivalendo a “produto pré-USB fechado”**.
 
 ---
 
@@ -115,11 +137,13 @@ Precisa estar implementado e provado em source/CI antes da escrita física.
    - ou se completa a cobertura essencial dos cinco idiomas, ou se reduz
      explicitamente a lista oferecida. Não anunciar cobertura falsa.
 
-4. **Arquivos: fechar jornada cotidiana mínima.**
-   - já existem list/create/read/rename/copy/move/import/export e preview;
-   - falta decidir/implementar remoção segura do usuário;
-   - preferir lixeira/recuperação ou política explícita a delete irreversível imediato;
-   - manter confinamento à raiz do usuário, limites, colisões e erros tipados.
+4. **Arquivos: fechar jornada cotidiana mínima. — PASS_SOURCE**
+   - `ordax.file-space/11` mantém list/create/read/rename/copy/move/import/export e preview;
+   - remoção segura foi implementada por Lixeira recuperável;
+   - restore é no-clobber e não substitui arquivos existentes;
+   - namespace interno da Lixeira não é navegável pelo file-space público;
+   - delete irreversível/esvaziar não faz parte do fluxo cotidiano do MVP;
+   - confinamento à raiz do usuário, limites, colisões e erros tipados permanecem.
 
 5. **OOBE/primeiro uso como fluxo real do produto.**
    - persistência Native/USB do estado;
@@ -202,11 +226,11 @@ nem criar owners duplicados no MVP.
 
 ## 3. Reclassificação atual das capacidades C01–C27 do PLANO-02
 
-| ID | Capacidade | Estado em `main@8405feed` | Classe pré-USB |
+| ID | Capacidade | Estado no fechamento corrente | Classe pré-USB |
 |---|---|---|---|
-| C01 | Arquivos | **Parcial avançado.** `ordax.file-space/10` possui list/create/read/rename/copy/move/import/export e preview. Remoção segura ainda não faz parte do contrato. | **A** |
+| C01 | Arquivos | **Fechado para a jornada cotidiana pré-USB em source.** `ordax.file-space/11` acrescenta Lixeira recuperável e restore no-clobber ao fluxo existente. Delete permanente continua deliberadamente fora do MVP. | **PASS_SOURCE; prova física=B** |
 | C02 | Wi-Fi cotidiano | **Implementado em source.** scan/connect/disconnect/forget/reconnect e quick panel existem. Cobertura física por tipo de rede continua limitada. | **B** |
-| C03 | Sessão local, login, lock/unlock | **Lacuna real.** Há contratos neutros de identity/account, mas o adapter Native atual não anuncia `account.identity` e não existe owner Native de sessão/bloqueio local equivalente à visão. | **A** |
+| C03 | Sessão local, login, lock/unlock | **Sessão/lock local fechado em source.** `session.local-lock` é Native/offline, independente de conta cloud, usa verificador scrypt e falha fechado. Conta online continua opcional e separada. | **PASS_SOURCE; prova física=B** |
 | C04 | Workspace/projeto | **Parcial avançado.** workspace-store v2, áreas/janelas/targets, projetos e recent files existem. | A somente no que sustenta continuidade local |
 | C05 | Checkpoint de sessão | **Parcial.** janelas/targets persistem, mas não existe checkpoint genérico de estado interno por app/documento/posição/rascunho. | A mínimo; riqueza pós-MVP |
 | C06 | Home contextual/continuar trabalho | **Implementado em recorte útil.** Projetos, Recentes e Pendências existem. | Fechado para MVP |
@@ -219,7 +243,7 @@ nem criar owners duplicados no MVP.
 | C13 | Store | **Não implementado e não requerido.** | C |
 | C14 | Perfis profissionais | **Visão futura.** | C |
 | C15 | Objetos com provenance | **Não existe Object System universal.** Usar metadata/provenance pequenos onde necessários, inclusive IA. | C; provenance mínimo=A |
-| C16 | IA nativa/contexto/tools | **Dividido.** Backend e contrato Intelligence existem; composição/consumidores reais faltam. Tools mutáveis permanecem corretamente deferidas. | **A para IA consultiva; C para tools/agents** |
+| C16 | IA nativa/contexto/tools | **IA consultiva fechada em source.** Native compõe `local-ai -> intelligence`; Notas e Sistema possuem consumidores first-party bounded/read-only com provenance. Lifecycle Stable v4 do backend ainda é gate de release. Tools mutáveis permanecem deferidas. | **PASS_SOURCE para consumidores; A/P2 para lifecycle v4; C para tools/agents** |
 | C17 | Conhecimento/integrações/automações | **Deferido.** | C |
 | C18 | Diagnóstico/receipts/captura | **Diagnóstico local avançado**, com store e relatório sanitizado. Fechar apresentação/export/recovery coerentes. | **A/B** |
 | C19 | Controle remoto/Companion | Não é requisito do bootstrap/MVP. | C |
@@ -295,7 +319,8 @@ LOCAL_SESSION_LOCK_POLICY=PASS
 LOCAL_SESSION_LOCK_IMPLEMENTATION=PASS
 OOBE_PERSISTENCE=PASS_SOURCE
 OOBE_LOCALE_COVERAGE=PASS_OR_EXPLICITLY_REDUCED
-FILES_DAILY_OPERATIONS=PASS
+FILES_DAILY_OPERATIONS=PASS_SOURCE
+FILES_SAFE_REMOVAL=PASS_SOURCE
 DIAGNOSTICS_RECOVERY_PRESENTATION=PASS_SOURCE
 SUPPORTED_HARDWARE_MATRIX=PASS
 SIGNED_RELEASE_V4_WITH_LOCAL_AI=PASS
@@ -315,18 +340,18 @@ O gate é de produto/source. Ele **não** substitui:
 
 ## 6. Ordem de implementação antes do USB
 
-### P0 — fechar arquitetura esquecida
+### P0 — arquitetura esquecida — concluído em source
 
-1. **Intelligence composition + consumidores read-only reais.**
-2. **Sessão local/lock Native.**
-3. **Atualizar PLANO-02 e docs canônicos com o novo estado.**
+1. **Intelligence composition + consumidores read-only reais. — PASS_SOURCE**
+2. **Sessão local/lock Native. — PASS_SOURCE**
+3. **Docs/contratos canônicos reconciliados. — PASS_SOURCE**
 
-### P1 — fechar experiência cotidiana
+### P1 — experiência cotidiana
 
-4. Arquivos: remoção segura/lixeira.
-5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE.
-6. Diagnóstico/recovery em Sistema.
-7. Inventário mínimo/suporte de hardware.
+4. Arquivos: remoção segura/lixeira. — **PASS_SOURCE**
+5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE. — **PENDING**
+6. Diagnóstico/recovery em Sistema. — **PENDING**
+7. Inventário mínimo/suporte de hardware. — **PENDING**
 
 ### P2 — fechar release
 

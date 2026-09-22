@@ -37,6 +37,22 @@ export function createProjectContinuityFileSpace(
     }
   };
 
+  const clearContinuity = (removedPath) => {
+    try {
+      for (const project of projectPort.getSnapshot().projects) {
+        const current = project.lastFilePath;
+        if (
+          current !== null
+          && (current === removedPath || current.startsWith(`${removedPath}/`))
+        ) {
+          projectPort.clearLastFile(project.id);
+        }
+      }
+    } catch (error) {
+      reportContinuityError(onContinuityError, error);
+    }
+  };
+
   const port = {
     schema: FILE_SPACE_SCHEMA,
     list(...args) {
@@ -60,6 +76,17 @@ export function createProjectContinuityFileSpace(
       const result = await filePort.moveEntry(sourcePath, name, destinationPath);
       relocate(joinPath(sourcePath, name), joinPath(destinationPath, name));
       return result;
+    },
+    async trashEntry(path, name) {
+      const result = await filePort.trashEntry(path, name);
+      clearContinuity(joinPath(path, name));
+      return result;
+    },
+    listTrash(...args) {
+      return filePort.listTrash(...args);
+    },
+    restoreTrashEntry(...args) {
+      return filePort.restoreTrashEntry(...args);
     },
     exportFile(...args) {
       return filePort.exportFile(...args);

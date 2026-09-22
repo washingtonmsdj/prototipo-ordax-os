@@ -6,6 +6,7 @@ import {
   assertFileSpacePort,
   validateFileListing,
   validateTextFile,
+  validateTrashListing,
 } from "../../contracts/file-space.mjs";
 import { assertNotesFileImporter } from "../../contracts/notes-file-importer.mjs";
 import {
@@ -127,6 +128,9 @@ export function mountFileSpaceControls(
   let recentSnapshot = recentPort?.getSnapshot() ?? null;
   let recentMode = false;
   let selectedRecentPath = null;
+  let trashListing = null;
+  let trashMode = false;
+  let selectedTrashId = null;
   let recentSearchQuery = "";
   let projectSnapshot = projectPort?.getSnapshot() ?? null;
   let creatingProject = false;
@@ -140,7 +144,7 @@ export function mountFileSpaceControls(
     root.querySelector(`${FILE_WINDOW_SELECTOR} ${FILE_EXTENSION_SELECTOR}`);
 
   const interactionContext = () =>
-    recentMode ? "recent" : `path:${listing?.path ?? ""}`;
+    trashMode ? "trash" : recentMode ? "recent" : `path:${listing?.path ?? ""}`;
 
   const focusIdentity = (element) => {
     if (!element || !element.dataset) return null;
@@ -149,6 +153,9 @@ export function mountFileSpaceControls(
     }
     if (element.dataset.fileRecentPath) {
       return Object.freeze({ kind: "recent-row", value: element.dataset.fileRecentPath });
+    }
+    if (element.dataset.fileTrashId) {
+      return Object.freeze({ kind: "trash-row", value: element.dataset.fileTrashId });
     }
     if (element.dataset.fileSearch !== undefined) {
       return Object.freeze({ kind: "search", value: "" });
@@ -287,19 +294,27 @@ export function mountFileSpaceControls(
       button.type = "button";
       button.dataset.fileOpenPath = location.path;
       const active = Boolean(
-        !recentMode && listing && locationIsActive(listing.path, location.path),
+        !recentMode && !trashMode && listing && locationIsActive(listing.path, location.path),
       );
       button.dataset.active = String(active);
       button.setAttribute("aria-current", active ? "page" : "false");
       container.append(button);
 
-      if (index === 0 && recentPort) {
-        const recent = node(documentObject, "button", "ordax-files-location", "Recentes");
-        recent.type = "button";
-        recent.dataset.fileOpenRecent = "";
-        recent.dataset.active = String(recentMode);
-        recent.setAttribute("aria-current", recentMode ? "page" : "false");
-        container.append(recent);
+      if (index === 0) {
+        if (recentPort) {
+          const recent = node(documentObject, "button", "ordax-files-location", "Recentes");
+          recent.type = "button";
+          recent.dataset.fileOpenRecent = "";
+          recent.dataset.active = String(recentMode);
+          recent.setAttribute("aria-current", recentMode ? "page" : "false");
+          container.append(recent);
+        }
+        const trash = node(documentObject, "button", "ordax-files-location", "Lixeira");
+        trash.type = "button";
+        trash.dataset.fileOpenTrash = "";
+        trash.dataset.active = String(trashMode);
+        trash.setAttribute("aria-current", trashMode ? "page" : "false");
+        container.append(trash);
       }
     });
 
@@ -310,7 +325,7 @@ export function mountFileSpaceControls(
         button.type = "button";
         button.dataset.fileOpenProject = project.id;
         button.title = project.path;
-        const active = Boolean(!recentMode && listing?.path === project.path);
+        const active = Boolean(!recentMode && !trashMode && listing?.path === project.path);
         button.dataset.active = String(active);
         button.setAttribute("aria-current", active ? "page" : "false");
         container.append(button);
@@ -809,6 +824,10 @@ export function mountFileSpaceControls(
     rename.type = "button";
     rename.dataset.fileRenameToggle = "";
     rename.disabled = itemBusy;
+    const trash = node(documentObject, "button", "ordax-files-action", "Mover para Lixeira");
+    trash.type = "button";
+    trash.dataset.fileTrashSelected = "";
+    trash.disabled = itemBusy;
     const open = node(
       documentObject,
       "button",
@@ -822,7 +841,7 @@ export function mountFileSpaceControls(
     if (copyTo) actions.append(copyTo);
     if (exportFile) actions.append(exportFile);
     if (createNote) actions.append(createNote);
-    actions.append(move, rename, open);
+    actions.append(move, rename, trash, open);
 
     details.append(summary, actions);
     container.append(details);
@@ -1102,6 +1121,151 @@ export function mountFileSpaceControls(
     );
   };
 
+  const selectedTrashEntry = () =>
+    trashListing?.entries.find((entry) => entry.id === selectedTrashId) ?? null;
+
+  const renderTrashEntries = (container) => {
+    const list = node(documentObject, "div", "ordax-files-list");
+    list.setAttribute("aria-label", "Itens recuperáveis da Lixeira");
+    const header = node(documentObject, "div", "ordax-files-list-header");
+    header.append(
+      node(documentObject, "span", "", "Nome"),
+      node(documentObject, "span", "", "Tipo"),
+      node(documentObject, "span", "", "Origem"),
+      node(documentObject, "span", "", "Removido"),
+    );
+    list.append(header);
+
+    const entries = trashListing?.entries ?? [];
+    if (entries.length === 0) {
+      list.append(
+        node(
+          documentObject,
+          "div",
+          "ordax-files-empty",
+          pending ? "Lendo a Lixeira…" : "A Lixeira está vazia.",
+        ),
+      );
+      container.append(list);
+      return;
+    }
+
+    for (const entry of entries) {
+      const selected = selectedTrashId === entry.id;
+      const row = node(documentObject, "button", "ordax-file-row");
+      row.type = "button";
+      row.dataset.fileTrashId = entry.id;
+      row.dataset.kind = entry.kind;
+      row.dataset.selected = String(selected);
+      row.setAttribute("aria-pressed", String(selected));
+      row.setAttribute(
+        "aria-label",
+        selected
+          ? `${entry.name}, ${entry.kind === "directory" ? "pasta" : "arquivo"} na Lixeira, selecionado`
+          : `${entry.name}, ${entry.kind === "directory" ? "pasta" : "arquivo"} na Lixeira`,
+      );
+
+      const nameCell = node(documentObject, "span", "ordax-file-name");
+      const icon = node(documentObject, "span", "ordax-file-icon");
+      icon.dataset.kind = entry.kind;
+      icon.setAttribute("aria-hidden", "true");
+      nameCell.append(icon, node(documentObject, "span", "", entry.name));
+      row.append(
+        nameCell,
+        node(
+          documentObject,
+          "span",
+          "ordax-file-meta",
+          entry.kind === "directory" ? "Pasta" : formatSize(entry.size),
+        ),
+        node(documentObject, "span", "ordax-file-meta", parentPath(entry.originalPath)),
+        node(documentObject, "span", "ordax-file-meta", formatModifiedAt(entry.trashedAt)),
+      );
+      list.append(row);
+    }
+    container.append(list);
+  };
+
+  const renderTrashDetails = (container) => {
+    const selected = selectedTrashEntry();
+    if (!selected) return;
+    const details = node(documentObject, "section", "ordax-files-details");
+    details.setAttribute("aria-label", "Detalhes do item selecionado na Lixeira");
+    const summary = node(documentObject, "div", "ordax-files-details-summary");
+    summary.append(
+      node(documentObject, "strong", "ordax-files-details-title", selected.name),
+      node(
+        documentObject,
+        "span",
+        "ordax-files-details-meta",
+        selected.kind === "directory" ? "Pasta recuperável" : `Arquivo recuperável · ${formatSize(selected.size)}`,
+      ),
+      node(documentObject, "span", "ordax-files-details-path", `Origem: ${selected.originalPath}`),
+      node(
+        documentObject,
+        "span",
+        "ordax-files-details-path",
+        `Movido para a Lixeira: ${formatModifiedAt(selected.trashedAt)}`,
+      ),
+    );
+    const actions = node(documentObject, "div", "ordax-files-details-actions");
+    const restore = node(
+      documentObject,
+      "button",
+      "ordax-files-action ordax-files-action-primary",
+      pending ? "Restaurando…" : "Restaurar",
+    );
+    restore.type = "button";
+    restore.dataset.fileTrashRestore = "";
+    restore.disabled = pending;
+    actions.append(restore);
+    details.append(summary, actions);
+    container.append(details);
+  };
+
+  const renderTrashContent = (content) => {
+    const toolbar = node(documentObject, "header", "ordax-files-toolbar");
+    const title = node(documentObject, "div", "ordax-files-breadcrumb");
+    title.append(node(documentObject, "strong", "", "Lixeira"));
+    const actions = node(documentObject, "div", "ordax-files-actions");
+    const refresh = node(
+      documentObject,
+      "button",
+      "ordax-files-action",
+      pending ? "Atualizando…" : "Atualizar",
+    );
+    refresh.type = "button";
+    refresh.dataset.fileTrashRefresh = "";
+    refresh.disabled = pending;
+    actions.append(refresh);
+    toolbar.append(title, actions);
+    content.append(toolbar);
+
+    const count = trashListing?.entries.length ?? 0;
+    const status = node(
+      documentObject,
+      "div",
+      "ordax-files-status",
+      pending
+        ? "Atualizando Lixeira…"
+        : `${count} ${count === 1 ? "item recuperável" : "itens recuperáveis"}`,
+    );
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    content.append(status);
+    if (message) content.append(node(documentObject, "p", "ordax-files-message", message));
+    renderTrashEntries(content);
+    renderTrashDetails(content);
+    content.append(
+      node(
+        documentObject,
+        "p",
+        "ordax-files-boundary",
+        "Mover para a Lixeira é recuperável. Restaurar nunca substitui um item existente no caminho original. Exclusão permanente não faz parte deste fluxo.",
+      ),
+    );
+  };
+
   const createProject = () => {
     if (!projectPort || !listing || listing.path === "/" || pending) return;
     try {
@@ -1197,6 +1361,8 @@ export function mountFileSpaceControls(
     if (!recentPort) return;
     requestOrdinal += 1;
     pending = false;
+    trashMode = false;
+    selectedTrashId = null;
     recentMode = true;
     selectedRecentPath = null;
     message = null;
@@ -1213,6 +1379,47 @@ export function mountFileSpaceControls(
     previewPending = false;
     textPreview = null;
     replaceView();
+  };
+
+  const enterTrashMode = async () => {
+    const ordinal = ++requestOrdinal;
+    recentMode = false;
+    selectedRecentPath = null;
+    trashMode = true;
+    selectedTrashId = null;
+    pending = true;
+    message = null;
+    transferEntry = null;
+    creatingDirectory = false;
+    creatingProject = false;
+    projectDraft = "";
+    renamingProjectId = null;
+    projectRenameDraft = "";
+    failedProjectResume = null;
+    renamingPath = null;
+    renameDraft = "";
+    copyingPath = null;
+    copyDraft = "";
+    previewRequestOrdinal += 1;
+    previewPending = false;
+    textPreview = null;
+    replaceView();
+    try {
+      const next = validateTrashListing(await port.listTrash());
+      if (destroyed || ordinal !== requestOrdinal) return false;
+      trashListing = next;
+      return true;
+    } catch {
+      if (destroyed || ordinal !== requestOrdinal) return false;
+      trashListing = null;
+      message = "Não foi possível abrir a Lixeira.";
+      return false;
+    } finally {
+      if (!destroyed && ordinal === requestOrdinal) {
+        pending = false;
+        replaceView();
+      }
+    }
   };
 
   const revealRecent = async () => {
@@ -1241,7 +1448,7 @@ export function mountFileSpaceControls(
   const paint = (slot, interaction = null) => {
     slot.replaceChildren();
     slot.dataset.ordaxFileSpaceView = "";
-    slot.dataset.fileSpacePath = recentMode ? "" : (listing?.path ?? "");
+    slot.dataset.fileSpacePath = recentMode || trashMode ? "" : (listing?.path ?? "");
     slot.dataset.fileSpaceContext = interactionContext();
 
     const view = node(documentObject, "div", "ordax-files-view");
@@ -1250,6 +1457,13 @@ export function mountFileSpaceControls(
     renderLocations(locations);
 
     const content = node(documentObject, "section", "ordax-files-content");
+    if (trashMode) {
+      renderTrashContent(content);
+      view.append(locations, content);
+      slot.append(view);
+      restoreInteractionState(slot, interaction);
+      return;
+    }
     if (recentMode) {
       renderRecentContent(content);
       view.append(locations, content);
@@ -1442,6 +1656,8 @@ export function mountFileSpaceControls(
   const load = async (path, { recordHistory = true } = {}) => {
     recentMode = false;
     selectedRecentPath = null;
+    trashMode = false;
+    selectedTrashId = null;
     const ordinal = ++requestOrdinal;
     pending = true;
     message = null;
@@ -1759,6 +1975,107 @@ export function mountFileSpaceControls(
     }
   };
 
+  const trashSelected = async () => {
+    const selected = selectedEntry();
+    if (!selected || !listing || pending) return;
+    const ordinal = ++requestOrdinal;
+    const previousPath = selected.path;
+    pending = true;
+    message = null;
+    replaceView();
+    try {
+      const next = validateFileListing(
+        await port.trashEntry(listing.path, selected.name),
+      );
+      if (destroyed || ordinal !== requestOrdinal) return;
+      listing = next;
+      if (recentPort) {
+        for (const recent of recentSnapshot?.entries ?? []) {
+          if (
+            recent.path === previousPath
+            || recent.path.startsWith(`${previousPath}/`)
+          ) {
+            recentPort.remove(recent.path);
+          }
+        }
+      }
+      trashListing = null;
+      selectedPath = null;
+      renamingPath = null;
+      renameDraft = "";
+      copyingPath = null;
+      copyDraft = "";
+      transferEntry = null;
+      previewRequestOrdinal += 1;
+      previewPending = false;
+      textPreview = null;
+      message = `“${selected.name}” foi movido para a Lixeira e pode ser restaurado.`;
+    } catch (error) {
+      if (destroyed || ordinal !== requestOrdinal) return;
+      const status = operationStatus(error);
+      if (status === 422) {
+        message =
+          "Este item está em outro volume e não pôde ser movido para a Lixeira com segurança. O original foi preservado.";
+      } else if (status === 404) {
+        message = "Este item não existe mais. Atualize a pasta.";
+      } else if (status === 403) {
+        message = "O OrdaX não tem permissão para mover este item para a Lixeira.";
+      } else if (status === 409) {
+        message = "A Lixeira não pôde reservar uma entrada segura. O original foi preservado.";
+      } else if (status === 400) {
+        message = "Este item não pode ser movido para a Lixeira.";
+      } else {
+        message = "Não foi possível mover este item para a Lixeira. O original foi preservado.";
+      }
+    } finally {
+      if (!destroyed && ordinal === requestOrdinal) {
+        pending = false;
+        replaceView();
+      }
+    }
+  };
+
+  const restoreSelectedTrash = async () => {
+    const selected = selectedTrashEntry();
+    if (!selected || pending) return;
+    const ordinal = ++requestOrdinal;
+    pending = true;
+    message = null;
+    replaceView();
+    try {
+      const next = validateTrashListing(await port.restoreTrashEntry(selected.id));
+      if (destroyed || ordinal !== requestOrdinal) return;
+      trashListing = next;
+      selectedTrashId = null;
+      message = `“${selected.name}” foi restaurado para ${selected.originalPath}.`;
+    } catch (error) {
+      if (destroyed || ordinal !== requestOrdinal) return;
+      const status = operationStatus(error);
+      if (status === 409) {
+        message =
+          "Já existe um item no caminho original. Nada foi substituído e o item continua na Lixeira.";
+      } else if (status === 404) {
+        message =
+          "O local original ou a entrada da Lixeira não está mais disponível. O item não foi sobrescrito.";
+      } else if (status === 422) {
+        message =
+          "A restauração cruzaria um limite de volume não suportado. O item continua na Lixeira.";
+      } else if (status === 403) {
+        message =
+          "O OrdaX não tem permissão para restaurar no local original. O item continua na Lixeira.";
+      } else if (status === 400) {
+        message = "A entrada da Lixeira não é válida para restauração.";
+      } else {
+        message = "Não foi possível restaurar este item. Ele continua na Lixeira.";
+      }
+    } finally {
+      if (!destroyed && ordinal === requestOrdinal) {
+        pending = false;
+        replaceView();
+      }
+    }
+  };
+
   const exportSelected = async () => {
     const selected = selectedEntry();
     if (!selected || selected.kind !== "file") return;
@@ -2054,6 +2371,28 @@ export function mountFileSpaceControls(
       enterRecentMode();
       return;
     }
+    const trashLocation = event.target.closest("[data-file-open-trash]");
+    if (trashLocation && root.contains(trashLocation)) {
+      void enterTrashMode();
+      return;
+    }
+    const trashRefresh = event.target.closest("[data-file-trash-refresh]");
+    if (trashRefresh && root.contains(trashRefresh) && trashMode && !pending) {
+      void enterTrashMode();
+      return;
+    }
+    const trashRow = event.target.closest("[data-file-trash-id]");
+    if (trashRow && root.contains(trashRow) && trashMode) {
+      selectedTrashId = trashRow.dataset.fileTrashId ?? null;
+      message = null;
+      replaceView();
+      return;
+    }
+    const trashRestore = event.target.closest("[data-file-trash-restore]");
+    if (trashRestore && root.contains(trashRestore) && trashMode) {
+      void restoreSelectedTrash();
+      return;
+    }
     const recentRow = event.target.closest("[data-file-recent-path]");
     if (recentRow && root.contains(recentRow) && recentMode) {
       const path = recentRow.dataset.fileRecentPath;
@@ -2127,6 +2466,11 @@ export function mountFileSpaceControls(
       } else {
         selectPath(selected.dataset.fileSelectPath, { focus: true });
       }
+      return;
+    }
+    const trashSelectedButton = event.target.closest("[data-file-trash-selected]");
+    if (trashSelectedButton && root.contains(trashSelectedButton) && !trashMode && !recentMode) {
+      void trashSelected();
       return;
     }
     const createNote = event.target.closest("[data-file-create-note]");

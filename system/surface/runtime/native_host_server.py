@@ -44,6 +44,7 @@ COMPONENT_STATE_PATH = "/__ordax/native/component-state"
 SYNC_STATE_PATH = "/__ordax/native/sync-state"
 DIAGNOSTIC_JOURNAL_PATH = "/__ordax/native/diagnostic-journal"
 FILES_PATH = "/__ordax/native/files"
+TRASH_PATH = "/__ordax/native/trash"
 FILE_CONTENT_PATH = "/__ordax/native/file-content"
 FILE_EXPORT_PATH = "/__ordax/native/file-export"
 IMAGE_PREVIEW_PATH = "/__ordax/native/image-preview"
@@ -105,6 +106,11 @@ MAX_DIAGNOSTIC_JOURNAL_PAYLOAD = 4 * 1024 * 1024
 MAX_DIAGNOSTIC_JOURNAL_BODY = 6 * MAX_DIAGNOSTIC_JOURNAL_PAYLOAD + 1024
 MAX_FILE_ACTION_BODY = 2048
 MAX_FILE_ENTRIES = 1000
+MAX_TRASH_INFO_BYTES = 4096
+TRASH_ROOT_NAME = ".ordax-trash"
+TRASH_FILES_NAME = "files"
+TRASH_INFO_NAME = "info"
+TRASH_ID_RE = re.compile(r"^[0-9a-f]{32}$")
 MAX_TEXT_FILE_BYTES = 256 * 1024
 MAX_FILE_COPY_BYTES = 64 * 1024 * 1024
 MAX_FILE_EXPORT_BYTES = 64 * 1024 * 1024
@@ -1803,7 +1809,7 @@ def valid_file_name(value: object) -> bool:
     return (
         isinstance(value, str)
         and 0 < len(value) <= 255
-        and value not in {".", ".."}
+        and value not in {".", "..", TRASH_ROOT_NAME}
         and "/" not in value
         and "\0" not in value
         and not any(ord(character) < 32 for character in value)
@@ -1910,6 +1916,313 @@ class FileSpaceImportTooLargeError(Exception):
 
 class FileSpaceImportIncompleteError(Exception):
     pass
+
+
+class FileSpaceTrashCrossDeviceError(Exception):
+    pass
+
+
+def _trash_directories(user_root: str) -> tuple[int, int]:
+    os.makedirs(user_root, mode=0o700, exist_ok=True)
+    root_fd = os.open(user_root, _directory_open_flags())
+    trash_fd = None
+    files_fd = None
+    info_fd = None
+    try:
+        try:
+            os.mkdir(TRASH_ROOT_NAME, mode=0o700, dir_fd=root_fd)
+        except FileExistsError:
+            pass
+        trash_fd = os.open(
+            TRASH_ROOT_NAME,
+            _directory_open_flags(),
+            dir_fd=root_fd,
+        )
+        for name in (TRASH_FILES_NAME, TRASH_INFO_NAME):
+            try:
+                os.mkdir(name, mode=0o700, dir_fd=trash_fd)
+            except FileExistsError:
+                pass
+        files_fd = os.open(
+            TRASH_FILES_NAME,
+            _directory_open_flags(),
+            dir_fd=trash_fd,
+        )
+        info_fd = os.open(
+            TRASH_INFO_NAME,
+            _directory_open_flags(),
+            dir_fd=trash_fd,
+        )
+        return files_fd, info_fd
+    except Exception:
+        if files_fd is not None:
+            os.close(files_fd)
+        if info_fd is not None:
+            os.close(info_fd)
+        raise
+    finally:
+        if trash_fd is not None:
+            os.close(trash_fd)
+        os.close(root_fd)
+
+
+def _trash_info_name(trash_id: str) -> str:
+    if not isinstance(trash_id, str) or TRASH_ID_RE.fullmatch(trash_id) is None:
+        raise ValueError("invalid trash id")
+    return f"{trash_id}.json"
+
+
+def _valid_trash_metadata(value: object, expected_id: str | None = None) -> bool:
+    if not isinstance(value, dict) or set(value) != {
+        "schema",
+        "id",
+        "name",
+        "kind",
+        "size",
+        "modifiedAt",
+        "originalPath",
+        "trashedAt",
+    }:
+        return False
+    trash_id = value.get("id")
+    if not isinstance(trash_id, str) or TRASH_ID_RE.fullmatch(trash_id) is None:
+        return False
+    if expected_id is not None and trash_id != expected_id:
+        return False
+    name = value.get("name")
+    original_path = value.get("originalPath")
+    if not valid_file_name(name) or not valid_logical_file_path(original_path):
+        return False
+    if original_path == "/" or original_path.rsplit("/", 1)[-1] != name:
+        return False
+    if value.get("kind") not in {"file", "directory"}:
+        return False
+    size = value.get("size")
+    modified_at = value.get("modifiedAt")
+    trashed_at = value.get("trashedAt")
+    if not isinstance(size, int) or isinstance(size, bool) or size < 0:
+        return False
+    if not isinstance(modified_at, int) or isinstance(modified_at, bool) or modified_at < 0:
+        return False
+    if not isinstance(trashed_at, int) or isinstance(trashed_at, bool) or trashed_at < 0:
+        return False
+    return value.get("schema") == "ordax.trash-entry/1"
+
+
+def _write_trash_metadata(info_fd: int, payload: dict) -> None:
+    if not _valid_trash_metadata(payload):
+        raise ValueError("invalid trash metadata")
+    name = _trash_info_name(payload["id"])
+    descriptor = os.open(
+        name,
+        os.O_WRONLY
+        | os.O_CREAT
+        | os.O_EXCL
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_CLOEXEC", 0),
+        0o600,
+        dir_fd=info_fd,
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", closefd=True) as handle:
+            json.dump(payload, handle, separators=(",", ":"), sort_keys=True, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.fsync(info_fd)
+    except Exception:
+        try:
+            os.unlink(name, dir_fd=info_fd)
+        except OSError:
+            pass
+        raise
+
+
+def _read_trash_metadata(info_fd: int, trash_id: str) -> dict:
+    name = _trash_info_name(trash_id)
+    descriptor = os.open(
+        name,
+        os.O_RDONLY
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_CLOEXEC", 0),
+        dir_fd=info_fd,
+    )
+    try:
+        raw = os.read(descriptor, MAX_TRASH_INFO_BYTES + 1)
+        if len(raw) > MAX_TRASH_INFO_BYTES:
+            raise ValueError("trash metadata exceeds maximum size")
+        payload = json.loads(raw.decode("utf-8", errors="strict"))
+    finally:
+        os.close(descriptor)
+    if not _valid_trash_metadata(payload, trash_id):
+        raise ValueError("invalid trash metadata")
+    return payload
+
+
+def _trash_payload_snapshot(files_fd: int, trash_id: str) -> tuple[str, int, int]:
+    metadata = os.stat(trash_id, dir_fd=files_fd, follow_symlinks=False)
+    if stat.S_ISLNK(metadata.st_mode):
+        raise ValueError("trash payload cannot be a symbolic link")
+    if stat.S_ISDIR(metadata.st_mode):
+        kind = "directory"
+        size = 0
+    elif stat.S_ISREG(metadata.st_mode):
+        kind = "file"
+        size = max(0, int(metadata.st_size))
+    else:
+        raise ValueError("unsupported trash payload kind")
+    modified_at = max(0, int(metadata.st_mtime_ns // 1_000_000))
+    return kind, size, modified_at
+
+
+def list_user_trash(user_root: str) -> dict:
+    files_fd, info_fd = _trash_directories(user_root)
+    entries = []
+    try:
+        with os.scandir(info_fd) as iterator:
+            for item in iterator:
+                if item.is_symlink() or not item.is_file(follow_symlinks=False):
+                    continue
+                if not item.name.endswith(".json"):
+                    continue
+                trash_id = item.name[:-5]
+                if TRASH_ID_RE.fullmatch(trash_id) is None:
+                    continue
+                try:
+                    payload = _read_trash_metadata(info_fd, trash_id)
+                    kind, size, modified_at = _trash_payload_snapshot(files_fd, trash_id)
+                except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
+                    continue
+                if payload["kind"] != kind:
+                    continue
+                entries.append(
+                    {
+                        "id": trash_id,
+                        "name": payload["name"],
+                        "kind": kind,
+                        "size": size,
+                        "modifiedAt": modified_at,
+                        "originalPath": payload["originalPath"],
+                        "trashedAt": payload["trashedAt"],
+                    }
+                )
+        entries.sort(key=lambda value: (-value["trashedAt"], value["name"].casefold(), value["id"]))
+        return {"entries": entries[:MAX_FILE_ENTRIES]}
+    finally:
+        os.close(info_fd)
+        os.close(files_fd)
+
+
+def trash_user_entry(user_root: str, logical_path: str, name: str) -> dict:
+    if not valid_logical_file_path(logical_path) or not valid_file_name(name):
+        raise ValueError("invalid trash source")
+    source_fd = open_user_directory(user_root, logical_path)
+    files_fd = None
+    info_fd = None
+    metadata_name = None
+    try:
+        source_meta = os.stat(name, dir_fd=source_fd, follow_symlinks=False)
+        if stat.S_ISLNK(source_meta.st_mode):
+            raise ValueError("symbolic links cannot be trashed")
+        if stat.S_ISDIR(source_meta.st_mode):
+            kind = "directory"
+            size = 0
+        elif stat.S_ISREG(source_meta.st_mode):
+            kind = "file"
+            size = max(0, int(source_meta.st_size))
+        else:
+            raise ValueError("unsupported trash source kind")
+        modified_at = max(0, int(source_meta.st_mtime_ns // 1_000_000))
+        original_path = f"/{name}" if logical_path == "/" else f"{logical_path}/{name}"
+
+        files_fd, info_fd = _trash_directories(user_root)
+        trash_id = ""
+        for _ in range(16):
+            candidate = secrets.token_hex(16)
+            try:
+                os.stat(candidate, dir_fd=files_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                try:
+                    os.stat(_trash_info_name(candidate), dir_fd=info_fd, follow_symlinks=False)
+                except FileNotFoundError:
+                    trash_id = candidate
+                    break
+        if not trash_id:
+            raise RuntimeError("could not allocate trash id")
+
+        payload = {
+            "schema": "ordax.trash-entry/1",
+            "id": trash_id,
+            "name": name,
+            "kind": kind,
+            "size": size,
+            "modifiedAt": modified_at,
+            "originalPath": original_path,
+            "trashedAt": max(0, int(time.time() * 1000)),
+        }
+        _write_trash_metadata(info_fd, payload)
+        metadata_name = _trash_info_name(trash_id)
+        try:
+            _renameat2_noreplace_between(source_fd, name, files_fd, trash_id)
+        except OSError as exc:
+            try:
+                os.unlink(metadata_name, dir_fd=info_fd)
+                os.fsync(info_fd)
+            except OSError:
+                pass
+            if exc.errno == errno.EXDEV:
+                raise FileSpaceTrashCrossDeviceError(
+                    "trash move crossed a filesystem boundary"
+                ) from exc
+            raise
+        os.fsync(files_fd)
+        os.fsync(source_fd)
+        return list_user_directory(user_root, logical_path)
+    finally:
+        if info_fd is not None:
+            os.close(info_fd)
+        if files_fd is not None:
+            os.close(files_fd)
+        os.close(source_fd)
+
+
+def restore_user_trash_entry(user_root: str, trash_id: str) -> dict:
+    if not isinstance(trash_id, str) or TRASH_ID_RE.fullmatch(trash_id) is None:
+        raise ValueError("invalid trash id")
+    files_fd, info_fd = _trash_directories(user_root)
+    destination_fd = None
+    try:
+        payload = _read_trash_metadata(info_fd, trash_id)
+        payload_kind, _size, _modified_at = _trash_payload_snapshot(files_fd, trash_id)
+        if payload_kind != payload["kind"]:
+            raise ValueError("trash payload kind mismatch")
+        original_path = payload["originalPath"]
+        parent_path, name = original_path.rsplit("/", 1)
+        parent_path = parent_path or "/"
+        destination_fd = open_user_directory(user_root, parent_path)
+        try:
+            _renameat2_noreplace_between(files_fd, trash_id, destination_fd, name)
+        except OSError as exc:
+            if exc.errno == errno.EXDEV:
+                raise FileSpaceTrashCrossDeviceError(
+                    "trash restore crossed a filesystem boundary"
+                ) from exc
+            raise
+        os.fsync(destination_fd)
+        os.fsync(files_fd)
+        try:
+            os.unlink(_trash_info_name(trash_id), dir_fd=info_fd)
+            os.fsync(info_fd)
+        except OSError:
+            # The user data is already restored. A stale metadata record is
+            # harmless because list_user_trash() requires the payload too.
+            pass
+        return list_user_trash(user_root)
+    finally:
+        if destination_fd is not None:
+            os.close(destination_fd)
+        os.close(info_fd)
+        os.close(files_fd)
 
 
 def read_user_text_file(
@@ -2568,6 +2881,7 @@ class NativeHostServer(ThreadingHTTPServer):
         self.network_lock = threading.Lock()
         self.native_install_paths = native_install_broker_paths(network_session_dir)
         self.native_install_lock = threading.Lock()
+        self.file_trash_lock = threading.Lock()
         self.local_session_lock = threading.Lock()
         self.local_session_locked = os.path.isfile(LOCAL_SESSION_CREDENTIAL_FILE)
         self.local_session_failures = 0
@@ -2676,7 +2990,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if not self._request_is_trusted():
             return
         parsed_path = urlsplit(self.path).path
-        if parsed_path in {SESSION_PATH, FILES_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
+        if parsed_path in {SESSION_PATH, FILES_PATH, TRASH_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
         if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH, LOCAL_SESSION_PATH} and self.client_address[0] != "127.0.0.1":
@@ -2749,6 +3063,20 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             return
         if parsed_path == UPDATE_HISTORY_PATH:
             self._write_json(200, read_update_history())
+            return
+        if parsed_path == TRASH_PATH:
+            try:
+                with self.server.file_trash_lock:
+                    trash = list_user_trash(self.server.user_root)
+            except (OSError, UnicodeError, ValueError) as exc:
+                print(
+                    f"ordax-native-host: could not read user trash safely: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._empty(503)
+                return
+            self._write_json(200, trash)
             return
         if parsed_path == IMAGE_PREVIEW_PATH:
             try:
@@ -3352,6 +3680,27 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                         payload.get("destinationPath"),
                     )
                     status = 200
+                elif action == "trash-entry":
+                    if set(payload) != {"action", "path", "name"}:
+                        self._empty(400)
+                        return
+                    with self.server.file_trash_lock:
+                        listing = trash_user_entry(
+                            self.server.user_root,
+                            payload.get("path"),
+                            payload.get("name"),
+                        )
+                    status = 200
+                elif action == "restore-trash-entry":
+                    if set(payload) != {"action", "id"}:
+                        self._empty(400)
+                        return
+                    with self.server.file_trash_lock:
+                        listing = restore_user_trash_entry(
+                            self.server.user_root,
+                            payload.get("id"),
+                        )
+                    status = 200
                 else:
                     self._empty(400)
                     return
@@ -3361,7 +3710,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             except FileSpaceCopyChangedError:
                 self._empty(412)
                 return
-            except FileSpaceCrossDeviceMoveError:
+            except (FileSpaceCrossDeviceMoveError, FileSpaceTrashCrossDeviceError):
                 self._empty(422)
                 return
             except ValueError:

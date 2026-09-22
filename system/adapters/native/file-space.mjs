@@ -5,9 +5,11 @@ import {
   validateFileListing,
   validateImagePreview,
   validateTextFile,
+  validateTrashListing,
 } from "../../contracts/file-space.mjs";
 
 const FILES_ENDPOINT = "/__ordax/native/files";
+const TRASH_ENDPOINT = "/__ordax/native/trash";
 const FILE_CONTENT_ENDPOINT = "/__ordax/native/file-content";
 const FILE_EXPORT_ENDPOINT = "/__ordax/native/file-export";
 const IMAGE_PREVIEW_ENDPOINT = "/__ordax/native/image-preview";
@@ -148,6 +150,37 @@ export async function createNativeFileSpace(windowRef = globalThis.window) {
       });
       requireSuccess(response, "move");
       return validateFileListing(await response.json());
+    },
+    async trashEntry(path, name) {
+      const response = await windowRef.fetch(FILES_ENDPOINT, {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "trash-entry", path, name }),
+      });
+      requireSuccess(response, "trash");
+      return validateFileListing(await response.json());
+    },
+    async listTrash() {
+      const response = await windowRef.fetch(TRASH_ENDPOINT, {
+        method: "GET",
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      requireSuccess(response, "trash-listing");
+      return validateTrashListing(await response.json());
+    },
+    async restoreTrashEntry(id) {
+      const response = await windowRef.fetch(FILES_ENDPOINT, {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restore-trash-entry", id }),
+      });
+      requireSuccess(response, "trash-restore");
+      return validateTrashListing(await response.json());
     },
     async exportFile(path) {
       const response = await windowRef.fetch(exportEndpointFor(path), {
