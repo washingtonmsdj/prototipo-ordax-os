@@ -221,6 +221,9 @@ jobs:
           mkdir -p "$alpine_root/opt/ordax-local-ai"
           sudo mount --bind "$mountpoint" "$alpine_root/opt/ordax-local-ai"
           sudo mount -o remount,bind,ro,nodev,nosuid "$alpine_root/opt/ordax-local-ai"
+          mkdir -p "$alpine_root/proc"
+          sudo mount --bind /proc "$alpine_root/proc"
+          sudo mount -o remount,bind,ro,nodev,nosuid,noexec "$alpine_root/proc"
 
           alpine_chroot_job=
           alpine_server_pid=
@@ -233,11 +236,12 @@ jobs:
               wait "$alpine_chroot_job" 2>/dev/null || true
             fi
             sudo umount "$alpine_root/opt/ordax-local-ai" 2>/dev/null || true
+            sudo umount "$alpine_root/proc" 2>/dev/null || true
           }
           trap 'cleanup_alpine; cleanup' EXIT
 
           sudo chroot "$alpine_root" /bin/sh -c \
-            'printf "%s\n" "$" >/tmp/ordax-local-ai.pid; ORDAX_LOCAL_AI_RUNTIME_ROOT=/opt/ordax-local-ai exec /opt/ordax-local-ai/bin/ordax-local-ai' \
+            'IFS=" " read -r pid _ </proc/self/stat; printf "%s\n" "$pid" >/tmp/ordax-local-ai.pid; ORDAX_LOCAL_AI_RUNTIME_ROOT=/opt/ordax-local-ai exec /opt/ordax-local-ai/bin/ordax-local-ai' \
             >"$work/llama-server-alpine.log" 2>&1 &
           alpine_chroot_job=$!
 
