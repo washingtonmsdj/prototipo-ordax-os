@@ -536,7 +536,7 @@ export function mountFileSpaceControls(
     searchQuery.trim().toLocaleLowerCase(locale());
 
   const compareEntryNames = (left, right) =>
-    left.name.localeCompare(right.name, FILE_SEARCH_LOCALE, {
+    left.name.localeCompare(right.name, locale(), {
       numeric: true,
       sensitivity: "base",
     });
