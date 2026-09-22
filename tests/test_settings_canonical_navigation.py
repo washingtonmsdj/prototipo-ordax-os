@@ -15,11 +15,12 @@ class SettingsCanonicalNavigationTests(unittest.TestCase):
         controls = SETTINGS.read_text(encoding="utf-8")
         self.assertIn('id: "appearance"', controls)
         self.assertIn('id: "accessibility"', controls)
+        self.assertIn('id: "regional"', controls)
         self.assertIn('id: "network"', controls)
         self.assertIn('id: "notifications"', controls)
         self.assertIn("validSettingsSection", controls)
         self.assertIn(
-            'activeSection === "appearance" || activeSection === "accessibility"',
+            '["appearance", "accessibility", "regional"].includes(activeSection)',
             controls,
         )
         self.assertIn('activeSection === "network"', controls)

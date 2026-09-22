@@ -8,6 +8,22 @@ import {
 } from "../system/services/preferences/catalog.mjs";
 import { createWebPreferenceStore } from "../system/adapters/web/preferences.mjs";
 
+const REGIONAL_DEFAULTS = Object.freeze({
+  "regional.locale": "pt-BR",
+  "regional.time-zone": "America/Bahia",
+});
+
+function expectedPreferences(values = {}) {
+  return {
+    "appearance.theme": "light",
+    "accessibility.contrast": "standard",
+    "accessibility.motion": "standard",
+    "accessibility.text-scale": "standard",
+    ...REGIONAL_DEFAULTS,
+    ...values,
+  };
+}
+
 class FakeStorage {
   constructor() {
     this.values = new Map();
@@ -30,12 +46,7 @@ test("Web preference store survives a new adapter instance", () => {
   assert.equal(first.save(createPreferenceSnapshot({ "appearance.theme": "dark" })), true);
 
   const second = createWebPreferenceStore(windowRef);
-  assert.deepEqual(second.load(), {
-    "appearance.theme": "dark",
-    "accessibility.contrast": "standard",
-    "accessibility.motion": "standard",
-    "accessibility.text-scale": "standard",
-  });
+  assert.deepEqual(second.load(), expectedPreferences({ "appearance.theme": "dark" }));
 });
 
 test("corrupt browser storage falls back without inventing preferences", () => {
@@ -55,23 +66,13 @@ test("denied browser storage degrades to session memory", () => {
   const store = createWebPreferenceStore(windowRef);
   const snapshot = createPreferenceSnapshot({ "appearance.theme": "dark" });
   assert.equal(store.save(snapshot), false);
-  assert.deepEqual(store.load(), {
-    "appearance.theme": "dark",
-    "accessibility.contrast": "standard",
-    "accessibility.motion": "standard",
-    "accessibility.text-scale": "standard",
-  });
+  assert.deepEqual(store.load(), expectedPreferences({ "appearance.theme": "dark" }));
 });
 
 test("persisted invalid known values recover to safe defaults", () => {
   assert.deepEqual(
     recoverPreferenceSnapshot({ "appearance.theme": "sepia" }),
-    {
-      "appearance.theme": "light",
-      "accessibility.contrast": "standard",
-      "accessibility.motion": "standard",
-      "accessibility.text-scale": "standard",
-    },
+    expectedPreferences(),
   );
 });
 
@@ -82,7 +83,6 @@ test("runtime preference mutation still rejects unsupported values", () => {
   );
 });
 
-
 test("accessibility preferences are first-class persisted definitions", () => {
   const definitions = new Map(
     listPreferenceDefinitions().map((definition) => [definition.id, definition]),
@@ -91,6 +91,8 @@ test("accessibility preferences are first-class persisted definitions", () => {
   assert.equal(definitions.get("accessibility.contrast")?.sectionId, "accessibility");
   assert.equal(definitions.get("accessibility.motion")?.sectionId, "accessibility");
   assert.equal(definitions.get("accessibility.text-scale")?.sectionId, "accessibility");
+  assert.equal(definitions.get("regional.locale")?.sectionId, "regional");
+  assert.equal(definitions.get("regional.time-zone")?.sectionId, "regional");
 
   assert.deepEqual(
     createPreferenceSnapshot({
@@ -98,12 +100,11 @@ test("accessibility preferences are first-class persisted definitions", () => {
       "accessibility.motion": "reduced",
       "accessibility.text-scale": "extra-large",
     }),
-    {
-      "appearance.theme": "light",
+    expectedPreferences({
       "accessibility.contrast": "high",
       "accessibility.motion": "reduced",
       "accessibility.text-scale": "extra-large",
-    },
+    }),
   );
 });
 
@@ -114,12 +115,7 @@ test("invalid accessibility values recover or reject through the shared catalog"
       "accessibility.motion": "unknown",
       "accessibility.text-scale": "huge",
     }),
-    {
-      "appearance.theme": "light",
-      "accessibility.contrast": "standard",
-      "accessibility.motion": "standard",
-      "accessibility.text-scale": "standard",
-    },
+    expectedPreferences(),
   );
   assert.throws(
     () => createPreferenceSnapshot({ "accessibility.motion": "unknown" }),
@@ -128,5 +124,23 @@ test("invalid accessibility values recover or reject through the shared catalog"
   assert.throws(
     () => createPreferenceSnapshot({ "accessibility.text-scale": "huge" }),
     /Unsupported accessibility\.text-scale/,
+  );
+});
+
+test("regional preferences share the first-run supported values", () => {
+  assert.deepEqual(
+    createPreferenceSnapshot({
+      "regional.locale": "pt-BR",
+      "regional.time-zone": "America/Sao_Paulo",
+    }),
+    expectedPreferences({ "regional.time-zone": "America/Sao_Paulo" }),
+  );
+  assert.throws(
+    () => createPreferenceSnapshot({ "regional.locale": "en-US" }),
+    /Unsupported regional\.locale/,
+  );
+  assert.throws(
+    () => createPreferenceSnapshot({ "regional.time-zone": "Europe\/London" }),
+    /Unsupported regional\.time-zone/,
   );
 });

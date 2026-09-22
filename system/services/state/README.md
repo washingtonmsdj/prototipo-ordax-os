@@ -19,4 +19,6 @@ Core rules:
 - `/ordax/home` user data has a separate, stricter migration/backup boundary and must never be treated as disposable device state;
 - synchronized account state and local device state are separate concerns.
 
+Current product-level state in this boundary includes the first-run completion semantics owned by `first-run.mjs`. In Native composition it is projected to `/var/lib/ordax/first-run.json`, which lives inside the persistent USB-backed state mount rather than the replaceable release runtime. Locale/time-zone choices remain normal preferences; identity sessions remain owned by the identity boundary.
+
 The implementation may later use directories, databases, journals, copy-on-write snapshots or another storage engine. Those choices do not own the state schema contract.

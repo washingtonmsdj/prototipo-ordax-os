@@ -4,12 +4,18 @@ import {
   accessibilityTextScalePreference,
 } from "./accessibility.mjs";
 import { appearancePreference } from "./appearance.mjs";
+import {
+  regionalLocalePreference,
+  regionalTimeZonePreference,
+} from "./regional.mjs";
 
 const DEFINITIONS = Object.freeze([
   appearancePreference,
   accessibilityContrastPreference,
   accessibilityMotionPreference,
   accessibilityTextScalePreference,
+  regionalLocalePreference,
+  regionalTimeZonePreference,
 ]);
 const BY_ID = new Map(DEFINITIONS.map((definition) => [definition.id, definition]));
 

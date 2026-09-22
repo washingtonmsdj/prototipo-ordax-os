@@ -1,6 +1,6 @@
 export const IDENTITY_ACTIONS_SCHEMA = "ordax.identity-actions/1";
 
-const KNOWN_ACTIONS = new Set(["sign-in", "sign-out"]);
+const KNOWN_ACTIONS = new Set(["sign-in", "register", "sign-out"]);
 
 export function validateIdentityActionsSnapshot(value) {
   if (!value || typeof value !== "object") {

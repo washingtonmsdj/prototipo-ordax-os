@@ -36,6 +36,7 @@ HEALTH_PATH = "/__ordax/native/health"
 SURFACE_HEARTBEAT_PATH = "/__ordax/native/surface-heartbeat"
 CLIENT_DIAGNOSTIC_PATH = "/__ordax/native/client-diagnostic"
 PREFERENCES_PATH = "/__ordax/native/preferences"
+FIRST_RUN_PATH = "/__ordax/native/first-run"
 NOTES_PATH = "/__ordax/native/notes"
 COMPONENT_STATE_PATH = "/__ordax/native/component-state"
 SYNC_STATE_PATH = "/__ordax/native/sync-state"
@@ -54,6 +55,7 @@ NATIVE_INSTALL_TARGETS_PATH = "/__ordax/native/native-install-targets"
 UPDATE_STATE_FILE = "/run/ordax-update/state.json"
 HEALTH_STATE_FILE = "/run/ordax-update/healthy-sha"
 PREFERENCES_FILE = "/var/lib/ordax/preferences.json"
+FIRST_RUN_FILE = "/var/lib/ordax/first-run.json"
 NOTES_FILE = "/var/lib/ordax/notes.json"
 COMPONENT_STATE_FILE = "/var/lib/ordax/component-state.json"
 SYNC_STATE_FILE = "/var/lib/ordax/sync-state.json"
@@ -79,6 +81,7 @@ MAX_NATIVE_INSTALL_TARGETS = 64
 MAX_SURFACE_HEARTBEAT_BODY = 512
 MAX_CLIENT_DIAGNOSTIC_BODY = 512
 MAX_PREFERENCE_BODY = 8192
+MAX_FIRST_RUN_BODY = 2048
 MAX_NOTES_PAYLOAD = 2 * 1024 * 1024
 MAX_NOTES_BODY = 8 * MAX_NOTES_PAYLOAD + 1024
 MAX_COMPONENT_STATE_PAYLOAD = 256 * 1024
@@ -108,6 +111,14 @@ MAX_RELEASE_HISTORY_ENTRIES = 80
 MAX_APPLICATION_HISTORY_ENTRIES = 200
 STANDARD_USER_DIRECTORIES = ("Documentos", "Imagens", "Downloads")
 PREFERENCE_ID_RE = re.compile(r"^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$")
+FIRST_RUN_TIME_ZONES = frozenset((
+    "America/Bahia",
+    "America/Sao_Paulo",
+    "America/Manaus",
+    "America/Rio_Branco",
+    "America/Noronha",
+))
+FIRST_RUN_ACCOUNT_MODES = frozenset(("local-only", "identity"))
 NETWORK_INTERFACE_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,32}$")
 CLIENT_DIAGNOSTIC_STAGE_RE = re.compile(r"^[a-z][a-z0-9.-]{0,63}$")
 CLIENT_DIAGNOSTIC_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9]{0,63}$")
@@ -461,6 +472,75 @@ def write_preferences(preferences: dict) -> None:
         handle.flush()
         os.fsync(handle.fileno())
     os.replace(temporary, PREFERENCES_FILE)
+    try:
+        directory_fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    except OSError:
+        return
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
+def initial_first_run_state() -> dict:
+    return {
+        "schema": "ordax.first-run-state/1",
+        "completed": False,
+        "locale": "pt-BR",
+        "timeZone": "America/Bahia",
+        "accountMode": None,
+    }
+
+
+def valid_first_run_state(value: object) -> bool:
+    if not isinstance(value, dict) or set(value) != {
+        "schema", "completed", "locale", "timeZone", "accountMode"
+    }:
+        return False
+    if value.get("schema") != "ordax.first-run-state/1":
+        return False
+    if not isinstance(value.get("completed"), bool):
+        return False
+    if value.get("locale") != "pt-BR":
+        return False
+    if value.get("timeZone") not in FIRST_RUN_TIME_ZONES:
+        return False
+    account_mode = value.get("accountMode")
+    if value["completed"]:
+        return account_mode in FIRST_RUN_ACCOUNT_MODES
+    return account_mode is None
+
+
+def read_first_run_state() -> dict:
+    try:
+        with open(FIRST_RUN_FILE, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except FileNotFoundError:
+        return initial_first_run_state()
+    except (OSError, json.JSONDecodeError):
+        return initial_first_run_state()
+    return payload if valid_first_run_state(payload) else initial_first_run_state()
+
+
+def write_first_run_state(state_value: dict) -> None:
+    if not valid_first_run_state(state_value):
+        raise ValueError("invalid first-run state")
+    directory = os.path.dirname(FIRST_RUN_FILE)
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    temporary = f"{FIRST_RUN_FILE}.tmp.{os.getpid()}.{threading.get_ident()}"
+    try:
+        with open(temporary, "w", encoding="utf-8") as handle:
+            os.fchmod(handle.fileno(), 0o600)
+            json.dump(state_value, handle, separators=(",", ":"), sort_keys=True, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, FIRST_RUN_FILE)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
     try:
         directory_fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
     except OSError:
@@ -2371,7 +2451,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if parsed_path in {SESSION_PATH, FILES_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
-        if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH} and self.client_address[0] != "127.0.0.1":
+        if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
         if parsed_path == METRICS_PATH:
@@ -2585,6 +2665,9 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if self.path == PREFERENCES_PATH:
             self._write_json(200, read_preferences())
             return
+        if parsed_path == FIRST_RUN_PATH:
+            self._write_json(200, read_first_run_state())
+            return
         if self.path == NOTES_PATH:
             try:
                 payload = read_notes_payload()
@@ -2773,6 +2856,20 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                 self._empty(503)
                 return
             self._write_json(200, snapshot)
+            return
+
+        if parsed_path == FIRST_RUN_PATH:
+            payload = self._read_json_body(MAX_FIRST_RUN_BODY)
+            if payload is None or not valid_first_run_state(payload):
+                self._empty(400)
+                return
+            try:
+                write_first_run_state(payload)
+            except (OSError, ValueError) as exc:
+                print(f"ordax-native-host: could not persist first-run state: {exc}", file=sys.stderr, flush=True)
+                self._empty(500)
+                return
+            self._empty(204)
             return
 
         if self.path == PREFERENCES_PATH:

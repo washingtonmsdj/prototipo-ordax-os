@@ -10,6 +10,14 @@
     "usb_rewrite_required": false,
     "default_status": "Preparando OrdaX…"
   },
+  "first_run": {
+    "implemented": true,
+    "owner": "system/surface/ui/first-run.*",
+    "native_usb_only": true,
+    "account_optional": true,
+    "identity_actions_capability_driven": true,
+    "completion_is_persistent": true
+  },
   "early_boot": {
     "graphical_splash_implemented": false,
     "current_mode": "console-text",
@@ -21,6 +29,7 @@
   },
   "failure_policy": {
     "surface_loading_error_stays_visible": true,
+    "first_run_persistence_failure_stays_visible": true,
     "early_boot_graphics_must_have_text_fallback": true,
     "branding_must_not_block_boot": true
   }

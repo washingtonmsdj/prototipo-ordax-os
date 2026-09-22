@@ -120,13 +120,14 @@ Um usuário deve conseguir:
 2. obter o Creator/release pública autorizada;
 3. preparar o USB sem terminal, ISO manual, Git ou particionamento;
 4. inicializar hardware oficialmente suportado pelo pendrive;
-5. chegar à Surface e **usar o sistema diretamente pelo USB**;
-6. conectar à rede;
-7. usar Arquivos, Notas, Internet, Ajustes e Sistema;
-8. atualizar por canal oficial;
-9. recuperar automaticamente de atualização defeituosa;
-10. acessar login/cadastro quando identidade real estiver habilitada;
-11. usar `/conta/` como área autenticada separada da landing.
+5. concluir o primeiro uso Native no próprio USB, escolhendo idioma/fuso, com rede opcional e **conta opcional**;
+6. chegar à Surface e **usar o sistema diretamente pelo USB**, inclusive sem conta online;
+7. conectar à rede durante o primeiro uso ou posteriormente;
+8. usar Arquivos, Notas, Internet, Ajustes e Sistema;
+9. atualizar por canal oficial;
+10. recuperar automaticamente de atualização defeituosa;
+11. acessar login/cadastro somente quando identidade real estiver habilitada;
+12. usar `/conta/` como área autenticada separada da landing quando uma sessão real existir.
 
 ## 6. Gates do MVP público
 
@@ -137,7 +138,8 @@ Bloqueiam lançamento:
 - payload final verificável;
 - known-good/fallback suficientemente provados;
 - primeiro USB canônico Stable/MVP;
-- boot USB -> Surface -> rede -> apps;
+- boot USB -> OOBE/primeiro uso -> Surface -> apps;
+- primeiro uso persistente com rota oficial **Continuar sem conta** e rede opcional;
 - uso real sem instalação no disco interno;
 - update oficial sem Git;
 - recovery/rollback;
@@ -286,11 +288,13 @@ Nenhuma política de preço, nome de plano, quota comercial ou limite de disposi
 
 ## 11. Conta OrdaX
 
-O mínimo futuro da conta pública é criar conta, entrar, sair, recuperar acesso, sessão real, perfil básico e `/conta/`.
+A conta OrdaX é **opcional para usar o sistema operacional**. O primeiro uso deve oferecer uma rota explícita **Continuar sem conta**, preservando Arquivos, Notas, Internet, Ajustes, atualizações e preferências locais no USB.
+
+O mínimo futuro da conta pública é criar conta, entrar, sair, recuperar acesso, sessão real, perfil básico e `/conta/`. Entrar/Criar conta no OOBE são capability-driven: ficam inativos enquanto nenhum provedor real estiver conectado e nunca bloqueiam a conclusão local do primeiro uso.
 
 `/conta/` permanece fail-closed enquanto identidade/sessão reais não estiverem conectadas. Não simular dados, dispositivos, sync ou assinatura.
 
-Web, Mobile e sincronização aparecem somente como **Em breve** até existirem de verdade.
+Conta online e PIN/senha local do dispositivo são responsabilidades diferentes. Web, Mobile, backup e sincronização aparecem somente como **Em breve** até existirem de verdade; sincronização cloud não é requisito para o MVP USB.
 
 ## 12. Ordem recomendada de lançamento
 
@@ -300,11 +304,12 @@ Web, Mobile e sincronização aparecem somente como **Em breve** até existirem 
 3. promover Creator físico para USB
 4. gerar primeira mídia Stable/MVP
 5. validar boot/recovery USB em hardware suportado
-6. validar apps principais
-7. fechar canal oficial de update sem Git
-8. conectar Conta OrdaX
-9. fechar legal/publicação
-10. publicar MVP USB-only
+6. validar OOBE/primeiro uso, inclusive rede opcional e modo sem conta
+7. validar apps principais
+8. fechar canal oficial de update sem Git
+9. conectar Conta OrdaX real sem torná-la requisito de boot
+10. fechar legal/publicação
+11. publicar MVP USB-only
 ```
 
 Native permanece em trilha técnica pós-MVP, sem bloquear a sequência.
@@ -340,6 +345,7 @@ Native permanece em trilha técnica pós-MVP, sem bloquear a sequência.
 - `docs/contracts/native-installation.json`;
 - `docs/contracts/public-site.json`;
 - `docs/contracts/foundation.json`;
-- `docs/contracts/sync-model.json`.
+- `docs/contracts/sync-model.json`;
+- `docs/contracts/first-run.json`.
 
 Este documento define o **escopo público do MVP**. Os contratos machine-readable continuam autoridade dos invariantes técnicos.
