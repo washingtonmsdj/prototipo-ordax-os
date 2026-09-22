@@ -1405,3 +1405,268 @@ func TestVerifyPortableV3ExactRejectsTamperedContentAddressedRuntime(t *testing.
 		t.Fatalf("tampered content-addressed runtime was accepted: %v", err)
 	}
 }
+
+
+func validLocalAIBindingFixture() *LocalAIBinding {
+	return &LocalAIBinding{
+		Contract:              "ordax.local-ai/1",
+		SourceLockSchema:      "prototype-ordax.local-ai-source-lock/1",
+		SourceLockSHA256:      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		EngineID:              "llama.cpp",
+		EngineRepository:      "https://github.com/ggml-org/llama.cpp",
+		EngineSourceCommit:    "7ab4ee7baad2d920464cbacfad4f4b07cf111fd2",
+		EngineLicense:         "MIT",
+		ModelID:               "qwen3.5-0.8b-q4_0",
+		ModelRepository:       "ggml-org/Qwen3.5-0.8B-GGUF",
+		ModelFilename:         "Qwen3.5-0.8B-Q4_0.gguf",
+		ModelUpstreamRevision: "9447f74",
+		ModelSHA256:           "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf",
+		ModelSize:             563036064,
+		ModelLicense:          "Apache-2.0",
+	}
+}
+
+func manifestForPortableV4(systemURL, runtimeURL, aiURL string, systemData, runtimeData, aiData []byte) Manifest {
+	systemDigest := sha256.Sum256(systemData)
+	runtimeDigest := sha256.Sum256(runtimeData)
+	aiDigest := sha256.Sum256(aiData)
+	return Manifest{
+		Schema:              manifestSchemaV4,
+		SourceRepository:    defaultRepo,
+		SourceCommit:        testCommit,
+		ReleaseID:           testCommit,
+		CreatedFromCIRecipe: "release/portable-usb-v2-local-ai/1",
+		ProductMode:         "usb",
+		StorageProfile:      "portable-usb-v2",
+		RuntimeFormat:       "erofs",
+		Artifacts: []Artifact{
+			{
+				Name:   "system.erofs",
+				Role:   "system-image",
+				URL:    systemURL,
+				SHA256: hex.EncodeToString(systemDigest[:]),
+				Size:   int64(len(systemData)),
+			},
+			{
+				Name:   "native-surface-runtime.erofs",
+				Role:   "surface-runtime",
+				URL:    runtimeURL,
+				SHA256: hex.EncodeToString(runtimeDigest[:]),
+				Size:   int64(len(runtimeData)),
+			},
+			{
+				Name:   "local-ai-runtime.erofs",
+				Role:   "local-ai-runtime",
+				URL:    aiURL,
+				SHA256: hex.EncodeToString(aiDigest[:]),
+				Size:   int64(len(aiData)),
+			},
+		},
+		LocalAI: validLocalAIBindingFixture(),
+	}
+}
+
+func TestManifestV4RequiresCanonicalAIArtifactAndBinding(t *testing.T) {
+	systemData := validPortableEROFS()
+	runtimeData := append([]byte(nil), systemData...)
+	runtimeData[len(runtimeData)-1] = 0x71
+	aiData := append([]byte(nil), systemData...)
+	aiData[len(aiData)-1] = 0x72
+	m := manifestForPortableV4(
+		"https://example.invalid/system.erofs",
+		"https://example.invalid/native-surface-runtime.erofs",
+		"https://example.invalid/local-ai-runtime.erofs",
+		systemData,
+		runtimeData,
+		aiData,
+	)
+	if err := validateManifest(m, defaultRepo); err != nil {
+		t.Fatal(err)
+	}
+	m.Artifacts[1], m.Artifacts[2] = m.Artifacts[2], m.Artifacts[1]
+	if err := validateManifest(m, defaultRepo); err == nil {
+		t.Fatal("release-manifest/4 accepted reordered runtimes")
+	}
+	m = manifestForPortableV4(
+		"https://example.invalid/system.erofs",
+		"https://example.invalid/native-surface-runtime.erofs",
+		"https://example.invalid/local-ai-runtime.erofs",
+		systemData,
+		runtimeData,
+		aiData,
+	)
+	m.LocalAI = nil
+	if err := validateManifest(m, defaultRepo); err == nil {
+		t.Fatal("release-manifest/4 accepted missing local_ai binding")
+	}
+	m = manifestForPortableV4(
+		"https://example.invalid/system.erofs",
+		"https://example.invalid/native-surface-runtime.erofs",
+		"https://example.invalid/local-ai-runtime.erofs",
+		systemData,
+		runtimeData,
+		aiData,
+	)
+	m.LocalAI.ModelSHA256 = "bad"
+	if err := validateManifest(m, defaultRepo); err == nil {
+		t.Fatal("release-manifest/4 accepted invalid model binding")
+	}
+}
+
+func TestInspectReleaseV4ExposesAllArtifactsAndBindingWithoutDownloadingThem(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	systemData := validPortableEROFS()
+	runtimeData := append([]byte(nil), systemData...)
+	runtimeData[len(runtimeData)-1] = 0x73
+	aiData := append([]byte(nil), systemData...)
+	aiData[len(aiData)-1] = 0x74
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestForPortableV4(
+		server.URL+"/system.erofs",
+		server.URL+"/native-surface-runtime.erofs",
+		server.URL+"/local-ai-runtime.erofs",
+		systemData,
+		runtimeData,
+		aiData,
+	)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(envelope)
+	})
+	for _, path := range []string{"/system.erofs", "/native-surface-runtime.erofs", "/local-ai-runtime.erofs"} {
+		p := path
+		mux.HandleFunc(p, func(w http.ResponseWriter, r *http.Request) {
+			t.Fatalf("inspect must not download v4 artifact %s", p)
+		})
+	}
+
+	receipt, err := inspectRelease(server.Client(), server.URL+"/release.json", trust, pub, defaultRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.ManifestSchema != manifestSchemaV4 || len(receipt.Artifacts) != 3 || receipt.LocalAI == nil {
+		t.Fatalf("v4 inspect lost signed identity: %#v", receipt)
+	}
+	if receipt.LocalAI.ModelID != "qwen3.5-0.8b-q4_0" ||
+		receipt.Artifacts[2].Role != "local-ai-runtime" {
+		t.Fatalf("v4 inspect lost local AI binding: %#v", receipt)
+	}
+}
+
+func TestMaterializePortableV4StoresAIByDigestWithoutActivation(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	systemData := validPortableEROFS()
+	runtimeData := append([]byte(nil), systemData...)
+	runtimeData[len(runtimeData)-1] = 0x75
+	aiData := append([]byte(nil), systemData...)
+	aiData[len(aiData)-1] = 0x76
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestForPortableV4(
+		server.URL+"/system.erofs",
+		server.URL+"/native-surface-runtime.erofs",
+		server.URL+"/local-ai-runtime.erofs",
+		systemData,
+		runtimeData,
+		aiData,
+	)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(envelope) })
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(systemData) })
+	mux.HandleFunc("/native-surface-runtime.erofs", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(runtimeData) })
+	mux.HandleFunc("/local-ai-runtime.erofs", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(aiData) })
+
+	root := filepath.Join(t.TempDir(), ".ordax")
+	receipt, err := materializePortableV4(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.Status != "materialized-portable-v4" ||
+		receipt.Idempotent ||
+		receipt.ActivationAllowed ||
+		receipt.RuntimeReused ||
+		receipt.AIRuntimeReused {
+		t.Fatalf("unexpected v4 materialize receipt: %#v", receipt)
+	}
+	expectedRuntime := filepath.Join(root, "runtimes", "sha256", m.Artifacts[1].SHA256, "native-surface-runtime.erofs")
+	expectedAI := filepath.Join(root, "ai-runtimes", "sha256", m.Artifacts[2].SHA256, "local-ai-runtime.erofs")
+	if receipt.RuntimePath != expectedRuntime || receipt.AIRuntimePath != expectedAI {
+		t.Fatalf("v4 runtime paths mismatch: %#v", receipt)
+	}
+	releaseRoot := filepath.Join(root, "releases", testCommit)
+	aiRef, err := os.ReadFile(filepath.Join(releaseRoot, "local-ai-runtime.sha256"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(aiRef) != m.Artifacts[2].SHA256+"\n" {
+		t.Fatalf("stored local AI reference = %q", aiRef)
+	}
+	if _, err := os.Lstat(filepath.Join(root, "current")); !os.IsNotExist(err) {
+		t.Fatal("v4 materialization created an activation pointer")
+	}
+	verified, err := verifyPortableV4Exact(root, trust, pub, defaultRepo, testCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verified.RuntimePath != expectedRuntime ||
+		verified.AIRuntimePath != expectedAI ||
+		verified.ActivationAllowed {
+		t.Fatalf("unexpected v4 exact verification receipt: %#v", verified)
+	}
+}
+
+func TestVerifyPortableV4ExactRejectsTamperedAIRuntime(t *testing.T) {
+	trust, pub, priv := testKeys(t)
+	systemData := validPortableEROFS()
+	runtimeData := append([]byte(nil), systemData...)
+	runtimeData[len(runtimeData)-1] = 0x77
+	aiData := append([]byte(nil), systemData...)
+	aiData[len(aiData)-1] = 0x78
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+	m := manifestForPortableV4(
+		server.URL+"/system.erofs",
+		server.URL+"/native-surface-runtime.erofs",
+		server.URL+"/local-ai-runtime.erofs",
+		systemData,
+		runtimeData,
+		aiData,
+	)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(envelope) })
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(systemData) })
+	mux.HandleFunc("/native-surface-runtime.erofs", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(runtimeData) })
+	mux.HandleFunc("/local-ai-runtime.erofs", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(aiData) })
+
+	root := filepath.Join(t.TempDir(), ".ordax")
+	receipt, err := materializePortableV4(server.Client(), server.URL+"/release.json", root, trust, pub, defaultRepo, testCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(receipt.AIRuntimePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data[len(data)-1] ^= 0x01
+	if err := os.WriteFile(receipt.AIRuntimePath, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := verifyPortableV4Exact(root, trust, pub, defaultRepo, testCommit); err == nil ||
+		!strings.Contains(err.Error(), "digest") {
+		t.Fatalf("tampered local AI runtime was accepted: %v", err)
+	}
+}
