@@ -8,7 +8,14 @@
     "build_targets": [
       "llama-server"
     ],
-    "runtime_api": "OpenAI-compatible-loopback"
+    "runtime_api": "OpenAI-compatible-loopback",
+    "artifact": {
+      "platform": "linux-x86_64",
+      "binary_format": "ELF",
+      "linkage": "static",
+      "sha256": "4a974691b9905b88cb46d97c85c2b035b33592a16cd0239ae4c6687f68799afe",
+      "size_bytes": 17039584
+    }
   },
   "model": {
     "id": "qwen3.5-0.8b-q4_0",
