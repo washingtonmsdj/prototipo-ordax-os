@@ -10,11 +10,12 @@ SOURCE_LOCK = ROOT / "system" / "services" / "local-ai" / "source-lock.json"
 
 
 class LocalAiContractTests(unittest.TestCase):
-    def test_local_ai_is_optional_offline_and_migratable(self):
+    def test_local_ai_is_required_in_mvp_distribution_but_not_boot_critical(self):
         contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(contract["$schema"], "prototype-ordax.local-ai/1")
         self.assertFalse(contract["required_for_boot"])
         self.assertFalse(contract["required_for_offline_use"])
+        self.assertTrue(contract["required_for_stable_mvp_distribution"])
         self.assertTrue(contract["runtime"]["internet_required_for_inference"] is False)
         self.assertTrue(contract["runtime"]["engine_migratable"])
         self.assertTrue(contract["runtime"]["model_migratable"])
@@ -22,7 +23,10 @@ class LocalAiContractTests(unittest.TestCase):
         self.assertTrue(contract["runtime"]["exact_model_artifact_pinned"])
         self.assertEqual(contract["runtime"]["source_lock"], "system/services/local-ai/source-lock.json")
         self.assertFalse(contract["runtime"]["exact_engine_artifact_pinned"])
-        self.assertTrue(contract["creator_toggle"]["user_may_disable"])
+        self.assertFalse(contract["creator_toggle"]["user_may_disable"])
+        self.assertFalse(contract["creator_toggle"]["exposed_as_install_omission_toggle"])
+        self.assertTrue(contract["mvp_policy"]["mandatory"])
+        self.assertEqual(contract["migration"]["system_intelligence_contract"], "ordax.intelligence/1")
         self.assertTrue(contract["mvp_policy"]["failure_must_not_block_surface"])
 
     def test_source_lock_pins_model_bytes_without_committing_large_binary(self):
@@ -32,7 +36,11 @@ class LocalAiContractTests(unittest.TestCase):
         self.assertEqual(lock["model"]["sha256"], "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf")
         self.assertEqual(lock["model"]["size_bytes"], 563036064)
         self.assertFalse(lock["distribution"]["model_committed_to_git"])
-        self.assertTrue(lock["distribution"]["signed_component_required"])
+        self.assertTrue(lock["distribution"]["signed_release_artifact_required"])
+        self.assertEqual(
+            lock["distribution"]["initial_release_schema_target"],
+            "prototype-ordax.release-manifest/4",
+        )
 
     def test_surface_boundary_is_provider_neutral(self):
         port = PORT.read_text(encoding="utf-8")

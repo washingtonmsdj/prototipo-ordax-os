@@ -41,8 +41,17 @@ class CurrentStateFirstRunInputTests(unittest.TestCase):
         self.assertIn("FIRST_RUN_LOCAL_ONLY_ALWAYS_AVAILABLE=YES", self.current)
         self.assertIn("FIRST_RUN_NETWORK_SKIPPABLE=YES", self.current)
         self.assertIn(
-            f'FIRST_RUN_COMPLETE_LOCALE={self.first_run["regional"]["default_locale"]}',
+            f'FIRST_RUN_SOURCE_LOCALE={self.first_run["regional"]["default_locale"]}',
             self.current,
+        )
+        self.assertIn(
+            "FIRST_RUN_OOBE_COMPLETE_LOCALES="
+            + ",".join(self.first_run["regional"]["complete_locales"]),
+            self.current,
+        )
+        self.assertEqual(
+            self.first_run["regional"]["completeness_scope"],
+            "first-run-oobe-only",
         )
         self.assertIn(
             f'FIRST_RUN_DEFAULT_TIME_ZONE={self.first_run["regional"]["default_time_zone"]}',

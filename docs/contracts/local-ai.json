@@ -1,18 +1,20 @@
 {
   "$schema": "prototype-ordax.local-ai/1",
-  "status": "mvp-optional-component-foundation",
+  "status": "mvp-required-local-inference-foundation",
   "product_scope": "stable-mvp-usb",
   "required_for_boot": false,
   "required_for_offline_use": false,
-  "default_creator_selection": "include-when-bundle-available",
+  "required_for_stable_mvp_distribution": true,
+  "default_creator_selection": "included-by-product-policy",
   "creator_toggle": {
     "label_pt_BR": "Incluir IA local",
     "label_en_US": "Include local AI",
     "label_es_ES": "Incluir IA local",
-    "user_may_disable": true,
+    "user_may_disable": false,
+    "exposed_as_install_omission_toggle": false,
+    "model_or_engine_may_change_after_install": true,
     "must_not_change_core_os_layout": true,
-    "activation_after_first_physical_proof": true,
-    "reason": "the first Stable/MVP physical authorization is bound to the frozen Creator source context"
+    "reason": "local inference is part of the Stable/MVP product; model and engine evolution are separate from omitting system Intelligence"
   },
   "runtime": {
     "engine_boundary": "OpenAI-compatible loopback HTTP",
@@ -28,18 +30,20 @@
     "exact_model_artifact_pinned": true,
     "exact_engine_artifact_pinned": false,
     "source_lock": "system/services/local-ai/source-lock.json",
-    "artifact_activation_gate": "signed-component-manifest-with-sha256-size-license-and-source"
+    "artifact_activation_gate": "signed-release-manifest-v4-with-sha256-size-license-source-and-model-binding"
   },
   "storage": {
-    "component_root": "/.ordax/components/local-ai",
-    "engine_root": "/.ordax/components/local-ai/runtime",
-    "model_root": "/.ordax/components/local-ai/models",
+    "release_artifact_name": "local-ai-runtime.erofs",
+    "content_addressed_media_root": "/.ordax/ai-runtimes/sha256",
+    "verified_mount_root": "/run/ordax/runtime/local-ai",
     "user_data_root": "/var/lib/ordax/local-ai",
     "model_must_not_live_in_system_erofs": true,
+    "mutable_user_state_must_not_live_in_ai_erofs": true,
     "removal_preserves_user_files": true
   },
   "migration": {
     "stable_service_contract": "ordax.local-ai/1",
+    "system_intelligence_contract": "ordax.intelligence/1",
     "provider_specific_ui_allowed": false,
     "model_id_persisted_separately_from_engine_id": true,
     "engine_swap_requires_surface_changes": false,
@@ -48,7 +52,9 @@
       "llama.cpp",
       "OpenVINO",
       "other-local-provider"
-    ]
+    ],
+    "mvp_delivery": "whole-os-signed-release-artifact",
+    "future_independent_delivery": "component-slot-after-canonical-component-trust-and-health-rollback-are-proven"
   },
   "privacy": {
     "prompts_local_by_default": true,
@@ -59,7 +65,8 @@
   },
   "mvp_policy": {
     "recommended": true,
-    "mandatory": false,
+    "mandatory": true,
+    "mandatory_scope": "stable-mvp-distribution-not-boot",
     "small_model_first": true,
     "hardware_probe_before_start": true,
     "failure_must_not_block_surface": true

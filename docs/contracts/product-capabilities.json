@@ -42,6 +42,11 @@
       "security_boundary": "standard-secure-transport"
     },
     {
+      "id": "intelligence.system",
+      "owner": "system/services/intelligence",
+      "security_boundary": "consultative-provider-neutral-no-implicit-authority"
+    },
+    {
       "id": "browser.web-content",
       "owner": "system/adapters",
       "security_boundary": "isolated-unprivileged-web-content"
@@ -204,6 +209,7 @@
       "adapter": "system/adapters/native",
       "baseline_capabilities": [
         "surface.render",
+        "intelligence.system",
         "account.identity",
         "sync.safe-state",
         "network.https",
@@ -230,6 +236,7 @@
       "adapter": "system/adapters/native",
       "baseline_capabilities": [
         "surface.render",
+        "intelligence.system",
         "account.identity",
         "sync.safe-state",
         "network.https",
