@@ -28,7 +28,7 @@
     "model_default_candidate": "Qwen3.5-0.8B-Q4_0",
     "model_license_candidate": "Apache-2.0",
     "exact_model_artifact_pinned": true,
-    "exact_engine_artifact_pinned": false,
+    "exact_engine_artifact_pinned": true,
     "source_lock": "system/services/local-ai/source-lock.json",
     "artifact_activation_gate": "signed-release-manifest-v4-with-sha256-size-license-source-and-model-binding"
   },
