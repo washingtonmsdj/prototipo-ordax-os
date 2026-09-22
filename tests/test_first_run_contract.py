@@ -11,6 +11,7 @@ CONTRACT = ROOT / "docs" / "contracts" / "first-run.json"
 BRANDING = ROOT / "docs" / "contracts" / "branding.json"
 ADAPTER = ROOT / "system" / "adapters" / "native" / "first-run-state.mjs"
 UI = ROOT / "system" / "surface" / "ui" / "first-run.mjs"
+I18N = ROOT / "system" / "i18n" / "first-run.mjs"
 CSS = ROOT / "system" / "surface" / "ui" / "first-run.css"
 SETTINGS = ROOT / "system" / "surface" / "ui" / "settings-overview-controls.mjs"
 NATIVE_MAIN = ROOT / "system" / "composition" / "native" / "main.mjs"
@@ -35,7 +36,6 @@ class FirstRunContractTests(unittest.TestCase):
             contract["flow"],
             ["welcome", "regional", "network", "account", "privacy", "ready"],
         )
-        self.assertEqual(contract["regional"]["complete_locales"], ["pt-BR", "en-US", "es-ES"])
         self.assertTrue(contract["network"]["skippable"])
         self.assertTrue(contract["network"]["password_is_transient_only"])
         self.assertTrue(contract["account"]["optional"])
@@ -45,6 +45,12 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertFalse(contract["mvp"]["permanent_internal_disk_install_exposed"])
         self.assertFalse(contract["mvp"]["web_mode_uses_this_device_oobe"])
         self.assertTrue(contract["regional"]["editable_after_first_run_in_settings"])
+        self.assertEqual(
+            contract["regional"]["complete_locales"],
+            ["pt-BR", "en-US", "es-419", "fr-FR"],
+        )
+        self.assertEqual(contract["regional"]["fallback_locale"], "en-US")
+        self.assertEqual(contract["regional"]["localization_scope"], "first-run-oobe")
         self.assertEqual(
             contract["regional"]["keyboard_layout_contract"],
             "docs/contracts/keyboard-layout.json",
@@ -69,9 +75,9 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertFalse(
             host.valid_first_run_state({**initial, "timeZone": "Europe/London"})
         )
-        self.assertTrue(host.valid_first_run_state({**initial, "locale": "en-US"}))
-        self.assertTrue(host.valid_first_run_state({**initial, "locale": "es-ES"}))
-        self.assertFalse(host.valid_first_run_state({**initial, "locale": "fr-FR"}))
+        for locale in ("pt-BR", "en-US", "es-419", "fr-FR"):
+            self.assertTrue(host.valid_first_run_state({**initial, "locale": locale}))
+        self.assertFalse(host.valid_first_run_state({**initial, "locale": "de-DE"}))
 
         with tempfile.TemporaryDirectory() as directory:
             host.FIRST_RUN_FILE = str(Path(directory) / "first-run.json")
@@ -118,9 +124,12 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertNotIn("mountFirstRunExperience", web_main)
         self.assertNotIn("first-run.css", web_html)
 
-        self.assertIn("Continuar sem conta", ui)
-        self.assertIn("translateFirstRunText", ui)
-        self.assertIn('documentObject.documentElement.lang = draft.locale', ui)
+        i18n = I18N.read_text(encoding="utf-8")
+        self.assertIn('t("continueWithoutAccount")', ui)
+        self.assertIn('continueWithoutAccount: "Continuar sem conta"', i18n)
+        self.assertIn('continueWithoutAccount: "Continue without an account"', i18n)
+        self.assertIn('continueWithoutAccount: "Continuar sin cuenta"', i18n)
+        self.assertIn('continueWithoutAccount: "Continuer sans compte"', i18n)
         self.assertIn('isIdentityActionSupported(actionsSnapshot, "sign-in")', ui)
         self.assertIn('isIdentityActionSupported(actionsSnapshot, "register")', ui)
         self.assertIn("passwordDraft", ui)
