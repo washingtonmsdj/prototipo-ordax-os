@@ -537,7 +537,9 @@ export function mountNetworkQuickPanel(
   };
 
   const unsubscribeLocalization = localizationPort.subscribe(() => {
-    if (!destroyed) render();
+    if (destroyed) return;
+    message = "";
+    render();
   });
 
   panel.addEventListener("ordax:quick-panel-open", onOpen);
