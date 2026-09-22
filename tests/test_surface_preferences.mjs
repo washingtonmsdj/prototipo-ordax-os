@@ -143,8 +143,16 @@ test("regional preferences share the first-run supported values", () => {
     createPreferenceSnapshot({ "regional.locale": "es-ES" })["regional.locale"],
     "es-ES",
   );
+  assert.equal(
+    createPreferenceSnapshot({ "regional.locale": "de-DE" })["regional.locale"],
+    "de-DE",
+  );
+  assert.equal(
+    createPreferenceSnapshot({ "regional.locale": "fr-FR" })["regional.locale"],
+    "fr-FR",
+  );
   assert.throws(
-    () => createPreferenceSnapshot({ "regional.locale": "fr-FR" }),
+    () => createPreferenceSnapshot({ "regional.locale": "it-IT" }),
     /Unsupported regional\.locale/,
   );
   assert.throws(
