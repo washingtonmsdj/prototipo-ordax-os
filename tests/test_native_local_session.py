@@ -62,6 +62,16 @@ class NativeLocalSessionTests(unittest.TestCase):
             "surface-session-not-storage-encryption",
         )
 
+    def test_malformed_credential_presence_still_keeps_new_session_locked(self):
+        path = Path(host.LOCAL_SESSION_CREDENTIAL_FILE)
+        path.write_text('{"schema":"corrupt"}\n', encoding="utf-8")
+        server = SimpleNamespace(local_session_locked=True)
+        snapshot = host.local_session_snapshot(server)
+        self.assertEqual(snapshot["state"], "locked")
+        self.assertTrue(snapshot["credentialConfigured"])
+        with self.assertRaises(ValueError):
+            host.read_local_session_credential()
+
     def test_removing_credential_returns_session_to_unlocked_non_lockable_state(self):
         host.write_local_session_credential("local-passphrase-42")
         host.remove_local_session_credential()
