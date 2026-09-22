@@ -1,0 +1,48 @@
+{
+  "$schema": "prototype-ordax.ai-native/1",
+  "status": "mvp-platform-foundation-implemented-local-package-pending",
+  "product_role": "platform-foundation",
+  "not_an_app": true,
+  "runtime_contract": "ordax.ai-runtime/1",
+  "runtime_owner": "system/services/ai",
+  "first_ui_client": "assistant",
+  "local_provider": {
+    "contract": "ordax.local-ai/1",
+    "owner": "system/services/local-ai",
+    "required_for_boot": false,
+    "required_for_os_use": false,
+    "default_profile": "llama.cpp/qwen3.5-0.8b-q4_0",
+    "replaceable": true
+  },
+  "authority": {
+    "model_is_authority": false,
+    "implicit_shell": false,
+    "implicit_raw_disk": false,
+    "implicit_admin": false,
+    "release_trust_bypass": false,
+    "silent_cloud_fallback": false,
+    "typed_capability_required_for_effects": true,
+    "existing_destructive_authorization_must_be_preserved": true
+  },
+  "mvp": {
+    "text_assistance_foundation": true,
+    "selected_context_contract_next": true,
+    "sanitized_diagnostics_contract_next": true,
+    "autonomous_admin_agent": false,
+    "arbitrary_background_file_indexing": false,
+    "advanced_memory_and_tools_required_for_first_usb_proof": false
+  },
+  "roadmap": {
+    "context_manager": "incremental",
+    "knowledge_with_provenance": "post-foundation",
+    "typed_tools_and_receipts": "post-foundation",
+    "model_router": "post-foundation",
+    "multi_agent_coordination": "future"
+  },
+  "migration": {
+    "assistant_identity_independent_from_provider": true,
+    "provider_identity_is_configuration": true,
+    "model_identity_is_configuration": true,
+    "local_provider_may_be_omitted": true
+  }
+}
