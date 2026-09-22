@@ -283,8 +283,12 @@ def checkout_engine(lock, mirror, destination):
     archive.unlink()
     if (destination / ".git").exists():
         raise RuntimeBuildError("llama.cpp source export unexpectedly contains Git metadata")
-    if (destination / ".gitmodules").exists():
-        raise RuntimeBuildError("unreviewed llama.cpp submodules are forbidden")
+    gitmodules = destination / ".gitmodules"
+    if gitmodules.exists():
+        if gitmodules.is_symlink() or not gitmodules.is_file():
+            raise RuntimeBuildError("llama.cpp .gitmodules path is unsafe")
+        if gitmodules.read_text(encoding="utf-8").strip():
+            raise RuntimeBuildError("unreviewed llama.cpp submodules are forbidden")
     if not (destination / "CMakeLists.txt").is_file() or not (destination / "tools/server/CMakeLists.txt").is_file():
         raise RuntimeBuildError("llama.cpp source export is incomplete")
     actual = run(
