@@ -121,11 +121,11 @@ The shared graphical source remains under `system/surface/ui/` with platform-neu
 The legacy/product-vision audit has been revalidated before the first Stable/MVP
 physical USB. `PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md` is now the active
 pre-USB closure plan. Physical media work is intentionally held while the remaining
-class-A product gaps are closed: real production consumers for Ordax Intelligence,
-Native local session/lock policy and implementation, coherent launch-language
-coverage, a safe Files removal decision, product diagnostics/recovery presentation,
-minimum hardware support inventory, and the signed/materializable v4 release that
-carries the proven local-AI runtime.
+class-A product gaps are closed. Ordax Intelligence consumers, Native local
+session/lock, and a safe Files removal path are now source-complete. The remaining
+pre-USB gaps are coherent launch-language coverage, product diagnostics/recovery
+presentation, minimum hardware support inventory, and the signed/materializable v4
+release that carries the proven local-AI runtime.
 
 This hold does not revoke or widen any existing destructive authorization. It simply
 adds a product/source prerequisite before target-specific physical execution.
@@ -137,8 +137,32 @@ INTELLIGENCE_STABLE_V4_BACKEND_LIFECYCLE=PENDING
 LOCAL_SESSION_LOCK_POLICY=PASS_SOURCE
 LOCAL_SESSION_LOCK_IMPLEMENTATION=PASS_SOURCE
 LOCAL_SESSION_LOCK_PHYSICAL_PROOF=PENDING
+FILES_DAILY_OPERATIONS=PASS_SOURCE
+FILES_SAFE_REMOVAL=PASS_SOURCE
+FILES_TRASH_PHYSICAL_PROOF=PENDING
 FIRST_STABLE_MVP_USB_WRITE=HOLD_FUNCTIONAL_CLOSURE
 PHYSICAL_WRITE_AUTHORITY=UNCHANGED
+```
+
+### Files safe removal
+
+The Native Files owner now exposes `ordax.file-space/11` with recoverable
+`trashEntry()`, `listTrash()` and `restoreTrashEntry()`. The trash payload and
+metadata live in a private reserved namespace under the user root that is not valid
+as a public logical file-space path. Same-filesystem removal uses no-clobber rename;
+restore also uses no-clobber and refuses to overwrite a new item at the original
+path. Cross-device trash is rejected rather than converted into an unsafe delete,
+and symlinks remain outside the supported boundary. Recent-file references are
+cleared when their item is trashed, while Project continuity is invalidated only
+after the file operation succeeds. Permanent delete and empty-trash actions are not
+part of this MVP flow.
+
+```text
+FILE_SPACE_SCHEMA=ordax.file-space/11
+FILES_SAFE_REMOVAL=PASS_SOURCE
+FILES_TRASH_RESTORE_NO_CLOBBER=YES
+FILES_PERMANENT_DELETE_MVP=NO
+FILES_TRASH_PHYSICAL_PROOF=PENDING
 ```
 
 ### Ordax Intelligence and local inference
