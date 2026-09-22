@@ -3,7 +3,7 @@ import { validateAiRequest } from "../../../contracts/ai-runtime.mjs";
 const LOOPBACK_ORIGIN = "http://127.0.0.1";
 
 export function createLlamaCppProvider({
-  modelId = "qwen3-0.6b-q4-k-m",
+  modelId = "qwen3.5-0.8b-q4_0",
   invoke,
 } = {}) {
   if (typeof invoke !== "function") {
