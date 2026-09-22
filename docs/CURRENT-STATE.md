@@ -116,6 +116,26 @@ The first formal human product version is **OrdaX Prototype v0.1.0**. Product ve
 
 The shared graphical source remains under `system/surface/ui/` with platform-neutral contracts, workspace/window lifecycle and capability-driven app availability. Notes is a first-party **application** with stable app id `notes`, version `0.4.0 Beta` and `git-app` delivery in Owner/Development. Native/USB may enrich it through the optional `filesystem.user-space` capability, and a future signed `component-slot`/app-package flow can target that same app identity instead of creating a Native-only fork. A general Store/package manager and production-independent app updater are not implemented yet. Notes provides local projects, a visual structured-text editor, editable checklists, real local-file/web references, autosave and device-local Native persistence through a bounded loopback state endpoint; Web uses local browser persistence with an explicit session fallback. Notes stores rich formatting as bounded blocks/marks rather than raw HTML or visible Markdown, keeps a plain-text body for search/import continuity, and migrates existing local snapshot schema v1 state to schema v2 on validation/save. Project organization now has a complete local lifecycle: projects can be renamed, non-base projects can be removed without deleting their notes, selected notes can move between projects, and checklist items can be removed. The stable `Meu espaço` project remains the non-destructive fallback for notes from removed projects. Internet is the first-party browser app with stable id `internet`, version `0.3.0 Beta` and `git-app` delivery in Owner/Development; this version identity does not claim a production Store/updater. Its shared Surface owns the approved concept structure (navigation toolbar, workspace/tab rail, central web viewport and project-context panel), while Native/USB provide `browser.web-content` through a separate unprivileged WebKit context and one external WebView per tab. The native slice supports up to 16 tabs, back/forward/reload, tab search, keyboard accelerators, persisted public tab URLs/order/active tab, project-context selection, explicit saved web references with bounded per-reference notes, automatic reference cleanup after project removal, public-network filtering and an exact loopback Host/browser-provenance boundary. Saved project references are owned by a neutral project-domain runtime and persist in the Native privileged profile with honest session fallback; the external page never receives project storage capability. Web intentionally exposes an unavailable browser-session port rather than pretending arbitrary sites can be safely embedded. Notes web references activate this same `internet` app. Internet also owns bounded device-local favorites through a neutral `ordax.browser-favorites/1` port; the Native privileged profile persists them while external website WebViews receive no access to that store. Native hardware proof for the new WebKit host remains pending, so the browser slice is implemented in source but not yet marked physically proven. Ajustes now owns persisted Surface-level contrast, motion and text-scale preferences; text scale changes the shared typographic base without claiming host-level accessibility control. Platform-specific behavior belongs in adapters/compositions, not in forks of the shared Surface. The normal Home now keeps technical delivery/recovery markers out of the area label; real delivery identity and update details live in Sistema. The visible settings identity is standardized as **Ajustes** while preserving the stable internal app id `settings`.
 
+### Nova OrdaX pre-USB functional closure
+
+The legacy/product-vision audit has been revalidated before the first Stable/MVP
+physical USB. `PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md` is now the active
+pre-USB closure plan. Physical media work is intentionally held while the remaining
+class-A product gaps are closed: real production consumers for Ordax Intelligence,
+Native local session/lock policy and implementation, coherent launch-language
+coverage, a safe Files removal decision, product diagnostics/recovery presentation,
+minimum hardware support inventory, and the signed/materializable v4 release that
+carries the proven local-AI runtime.
+
+This hold does not revoke or widen any existing destructive authorization. It simply
+adds a product/source prerequisite before target-specific physical execution.
+
+```text
+PRE_USB_NOVA_ORDAX_AUDIT=IN_PROGRESS
+FIRST_STABLE_MVP_USB_WRITE=HOLD_FUNCTIONAL_CLOSURE
+PHYSICAL_WRITE_AUTHORITY=UNCHANGED
+```
+
 ### Ordax Intelligence and local inference
 
 Ordax Intelligence is now a first-class system service with stable contract `ordax.intelligence/1`; an Assistant UI is only a possible client. The service sits above the provider-neutral `ordax.local-ai/1` inference boundary, so model and engine can evolve without redefining Files, Notes, Search or future system clients. The Stable/MVP product policy requires a verified local inference payload in the distribution, but neither Intelligence nor its model is boot-critical: inference failure degrades the capability instead of blocking boot, Surface, recovery, files or updates.

@@ -130,6 +130,30 @@ Um usuário deve conseguir:
 12. acessar login/cadastro somente quando identidade real estiver habilitada;
 13. usar `/conta/` como área autenticada separada da landing quando uma sessão real existir.
 
+## 5.1 Fechamento funcional antes do primeiro USB Stable
+
+Antes de materializar/gravar o primeiro USB Stable/MVP físico, executar a auditoria de
+`PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md`.
+
+O boot/release estar pronto não é suficiente para iniciar a missão física. O gate
+pré-USB exige, no mínimo:
+
+- Ordax Intelligence realmente composta no runtime Native e consumida por fluxos
+  first-party consultivos, em vez de existir apenas como backend/modelo e teste;
+- política e implementação de sessão/bloqueio local/offline separadas da conta cloud;
+- OOBE persistente e coerente com idiomas/fuso/rede/modo sem conta;
+- jornada cotidiana de Arquivos fechada, incluindo uma decisão segura para remoção;
+- diagnóstico/recovery de produto e inventário mínimo de hardware/suporte;
+- release-manifest/4 real com `local-ai-runtime.erofs` assinada/materializável.
+
+Store, Mobile completo, Native em disco, sync cloud, federação, perfis profissionais e
+tools/agentes mutáveis de IA permanecem pós-MVP salvo decisão arquitetural posterior.
+
+```text
+PRE_USB_NOVA_ORDAX_AUDIT=REQUIRED
+FIRST_STABLE_MVP_USB_WRITE=HOLD_UNTIL_FUNCTIONAL_CLOSURE
+```
+
 ## 6. Gates do MVP público
 
 Bloqueiam lançamento:

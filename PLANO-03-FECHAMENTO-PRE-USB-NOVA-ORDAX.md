@@ -1,0 +1,334 @@
+# OrdaX — parte 3: fechamento funcional pré-USB da visão Nova OrdaX
+
+**Status:** plano canônico de auditoria pré-USB.  
+**Data:** 22/09/2026.  
+**Protótipo auditado:** `main@8405feedb05421ea321cc277c0b7b912b6da7117`.  
+**Referência Nova OrdaX:** `washingtonmsdj/novo-ordax-os@49fe41fa67d9032f2e349e86592304e64d6c2d88`.
+
+**Continua, sem substituir:**
+
+- `MVP.md`;
+- `PLANO-FUNCIONAL-SURFACE-E-APPS.md`;
+- `PLANO-02-EVOLUCAO-E-REAPROVEITAMENTO-DO-LEGADO.md`;
+- contratos e estado canônicos em `docs/`.
+
+Este documento existe para evitar que uma capacidade estrutural da Nova OrdaX seja
+descoberta somente depois da primeira mídia Stable/MVP. A existência de uma
+especificação no legado não a torna requisito do MVP; da mesma forma, a existência
+de um backend no protótipo não prova que a experiência de sistema correspondente
+está integrada.
+
+Nenhuma seção deste plano autoriza escrita física.
+
+---
+
+## 1. Decisão principal
+
+**Não gerar ainda o primeiro USB Stable/MVP físico.**
+
+Antes, fechar o conjunto **A — obrigatório pré-USB** abaixo ou registrar uma decisão
+canônica explícita retirando o item do MVP. O objetivo não é transportar o
+`novo-ordax-os` inteiro; é preservar os invariantes de produto que ainda fazem
+sentido na arquitetura clean-room atual.
+
+A auditoria encontrou um exemplo importante além do runtime local de IA:
+
+> O `local-ai-runtime.erofs` real já existe e foi provado em CI, e
+> `ordax.intelligence/1` também existe. Porém o runtime de Intelligence ainda não
+> possui consumidor de produção: `createIntelligenceRuntime()` aparece no serviço e
+> nos testes, enquanto Files/Notes/System ainda não o compõem nem chamam
+> `respond()` em runtime.
+
+Portanto **“modelo instalado” não equivale a “IA nativa do sistema entregue”**.
+
+---
+
+## 2. Três classes de fechamento
+
+### A — obrigatório antes de gerar o primeiro Stable USB
+
+Precisa estar implementado e provado em source/CI antes da escrita física.
+
+1. **Ordax Intelligence realmente composta no produto.**
+   - inicializar `ordax.local-ai/1` + `ordax.intelligence/1` na composição Native;
+   - expor estado degraded/ready sem bloquear boot;
+   - pelo menos dois consumidores first-party reais e somente-leitura, por exemplo:
+     - Notas: resumir/explicar conteúdo selecionado com provenance;
+     - Sistema/Diagnóstico: explicar um relatório sanitizado;
+   - nenhum acesso implícito a arquivo, shell, rede externa, pacote ou disco;
+   - contexto sempre bounded e com provenance;
+   - engine/modelo continuam substituíveis.
+
+2. **Sessão local/offline e bloqueio do dispositivo.**
+   - separar conta online de usuário/sessão local;
+   - definir e implementar política Native de lock/unlock;
+   - preservar Workspace/janelas/estado suportado ao bloquear;
+   - não depender de Supabase, Web ou internet;
+   - segredo local não pode entrar em telemetria, first-run state ou Git;
+   - decidir e documentar se o MVP permite sessão sem PIN/senha e qual é o comportamento
+     de bloqueio nesse caso.
+
+3. **Idiomas oferecidos pelo OOBE coerentes com a Surface.**
+   - PT-BR permanece fonte;
+   - en-US, es-ES, de-DE e fr-FR já são oferecidos no primeiro uso;
+   - antes do USB público, a seleção não pode levar a uma Surface principal
+     significativamente misturada com português;
+   - ou se completa a cobertura essencial dos cinco idiomas, ou se reduz
+     explicitamente a lista oferecida. Não anunciar cobertura falsa.
+
+4. **Arquivos: fechar jornada cotidiana mínima.**
+   - já existem list/create/read/rename/copy/move/import/export e preview;
+   - falta decidir/implementar remoção segura do usuário;
+   - preferir lixeira/recuperação ou política explícita a delete irreversível imediato;
+   - manter confinamento à raiz do usuário, limites, colisões e erros tipados.
+
+5. **OOBE/primeiro uso como fluxo real do produto.**
+   - persistência Native/USB do estado;
+   - idioma/fuso;
+   - rede opcional;
+   - continuar sem conta;
+   - privacidade;
+   - chegada à Surface;
+   - teclado com comportamento honesto: o seletor não promete troca imediata se Cage
+     exige reinício da Surface;
+   - reentrada/reboot não pode refazer indevidamente etapas concluídas.
+
+6. **Diagnóstico e recuperação visíveis e coerentes.**
+   - Sistema deve mostrar saúde/update/recovery usando owners existentes;
+   - exportação diagnóstica deve permanecer sanitizada;
+   - recovery não pode depender da IA;
+   - não criar segundo owner de update/recovery.
+
+7. **Inventário mínimo de hardware e matriz de suporte.**
+   - declarar hardware oficialmente suportado no MVP;
+   - mostrar no Sistema o que o host realmente conhece, sem simular sensores;
+   - separar “detectado”, “suportado” e “fisicamente provado”;
+   - usar isso como entrada do tour físico do Stable USB.
+
+8. **Release Stable v4 completa.**
+   - `system.erofs`;
+   - `native-surface-runtime.erofs`;
+   - `local-ai-runtime.erofs`;
+   - manifest v4 assinado;
+   - aquisição/materialização offline exata;
+   - handoff de boot preservando o v3 conhecido-bom;
+   - IA continua não crítica para o boot.
+
+### B — source deve estar pronto antes; prova final acontece no USB
+
+Esses itens não podem ser “provados fisicamente antes do pendrive”, mas a
+implementação e os testes descartáveis devem estar fechados antes da escrita.
+
+- boot UEFI Stable/MVP;
+- Wi-Fi real no hardware-alvo, incluindo os tipos de rede que forem oficialmente
+  declarados como suportados;
+- teclado/mouse;
+- relógio/fuso após reboot;
+- browser WebKit real;
+- áudio, suspend/resume e aceleração gráfica se forem declarados como suportados
+  no lançamento;
+- Surface smoke completa;
+- cold-health e commit do known-good;
+- rollback após candidato defeituoso;
+- boot offline;
+- local AI carregando no hardware real sem impedir o OS se falhar.
+
+### C — pós-MVP consciente
+
+Ficam fora do primeiro USB **por decisão**, não por esquecimento:
+
+- instalação Native em SSD/NVMe/HD;
+- dual boot e resize;
+- OrdaX Mobile completo;
+- OrdaX Desktop como produto instalado (o Creator desktop é outra responsabilidade);
+- sync cloud e continuidade entre dispositivos;
+- backup cloud;
+- Store;
+- package manager geral para terceiros;
+- SDK público completo;
+- perfis profissionais;
+- Object System universal/grafo de objetos;
+- ferramentas mutáveis de IA;
+- Agent Manager;
+- memória persistente de IA;
+- automações gerais;
+- multi-agent coordination;
+- Federation / Research Lab / Mission Control;
+- controle remoto geral.
+
+Esses itens podem conservar contratos de extensão, mas não devem aumentar o bootstrap
+nem criar owners duplicados no MVP.
+
+---
+
+## 3. Reclassificação atual das capacidades C01–C27 do PLANO-02
+
+| ID | Capacidade | Estado em `main@8405feed` | Classe pré-USB |
+|---|---|---|---|
+| C01 | Arquivos | **Parcial avançado.** `ordax.file-space/10` possui list/create/read/rename/copy/move/import/export e preview. Remoção segura ainda não faz parte do contrato. | **A** |
+| C02 | Wi-Fi cotidiano | **Implementado em source.** scan/connect/disconnect/forget/reconnect e quick panel existem. Cobertura física por tipo de rede continua limitada. | **B** |
+| C03 | Sessão local, login, lock/unlock | **Lacuna real.** Há contratos neutros de identity/account, mas o adapter Native atual não anuncia `account.identity` e não existe owner Native de sessão/bloqueio local equivalente à visão. | **A** |
+| C04 | Workspace/projeto | **Parcial avançado.** workspace-store v2, áreas/janelas/targets, projetos e recent files existem. | A somente no que sustenta continuidade local |
+| C05 | Checkpoint de sessão | **Parcial.** janelas/targets persistem, mas não existe checkpoint genérico de estado interno por app/documento/posição/rascunho. | A mínimo; riqueza pós-MVP |
+| C06 | Home contextual/continuar trabalho | **Implementado em recorte útil.** Projetos, Recentes e Pendências existem. | Fechado para MVP |
+| C07 | Inventário/suporte de hardware | **Parcial.** métricas/power/network existem; inventário/compatibilidade de produto ainda não forma uma visão mínima completa. | **A/B** |
+| C08 | Conta/identidade entre modos | **Arquitetura pronta, backend real ainda não ativo.** Conta online é opcional no MVP. | C |
+| C09 | Sync/continuidade cloud | **Core offline existe; identity/transport remoto não.** | C |
+| C10 | Mobile Companion | **Futuro.** | C |
+| C11 | Desktop instalado e Creator | Creator é trilha MVP; Desktop como produto é futuro. | Creator=A/B; Desktop=C |
+| C12 | Apps instaláveis/SDK | **Não é requisito do primeiro USB.** | C |
+| C13 | Store | **Não implementado e não requerido.** | C |
+| C14 | Perfis profissionais | **Visão futura.** | C |
+| C15 | Objetos com provenance | **Não existe Object System universal.** Usar metadata/provenance pequenos onde necessários, inclusive IA. | C; provenance mínimo=A |
+| C16 | IA nativa/contexto/tools | **Dividido.** Backend e contrato Intelligence existem; composição/consumidores reais faltam. Tools mutáveis permanecem corretamente deferidas. | **A para IA consultiva; C para tools/agents** |
+| C17 | Conhecimento/integrações/automações | **Deferido.** | C |
+| C18 | Diagnóstico/receipts/captura | **Diagnóstico local avançado**, com store e relatório sanitizado. Fechar apresentação/export/recovery coerentes. | **A/B** |
+| C19 | Controle remoto/Companion | Não é requisito do bootstrap/MVP. | C |
+| C20 | Update transacional/rollback | **Muito avançado em CI/source.** Falta Stable físico/cold-health. | **B** |
+| C21 | Native/durable storage | Native pós-MVP. USB durável é a trilha atual. | USB=A/B; Native=C |
+| C22 | Build Intelligence/cache | Build/reprodutibilidade já resolvidos por mecanismos atuais; não portar framework antigo. | Fechado/continuar medindo |
+| C23 | Project Intelligence/Mission Control | Visão futura. | C |
+| C24 | Federation/Research Lab/agentes de engenharia | Visão futura. | C |
+| C25 | Navegador/produtividade | Internet e Notas existem; WebKit Native ainda exige prova física Stable. | **B** |
+| C26 | Notificações/acessibilidade/onboarding | Notification Center e OOBE existem; idiomas completos da Surface e alguns gates físicos seguem abertos. | **A/B** |
+| C27 | Backup/histórico de dados pessoais | Serviço completo de backup do usuário não existe; não é requisito atual do MVP. Exportação local e recuperação do sistema não equivalem a backup. | C, com export local segura no MVP |
+
+---
+
+## 4. O que a visão Nova OrdaX exige preservar na arquitetura atual
+
+### 4.1 Runtime único e APIs públicas
+
+Não criar um “runtime da IA”, “runtime do app” ou “runtime do sync” com autoridade
+paralela. A camada de Intelligence chama serviços através de contratos do produto.
+
+### 4.2 Workspace e Session são diferentes
+
+- Workspace = contexto de trabalho.
+- Session = continuidade/autenticação/bloqueio.
+- Conta online = identidade de ecossistema.
+
+A Surface atual já possui Workspace; isso não deve ser usado como substituto de
+sessão local.
+
+### 4.3 Intelligence é uma camada, inference é um backend
+
+Continuar preservando:
+
+```text
+Files / Notes / System / future Assistant
+ -> ordax.intelligence/1
+ -> ordax.local-ai/1
+ -> llama.cpp + model
+```
+
+Não permitir:
+
+```text
+Notes -> llama.cpp diretamente
+Files -> modelo diretamente
+Assistant -> owner da Intelligence
+```
+
+### 4.4 Contexto não concede autoridade
+
+O MVP pode enviar contexto local sanitizado e proveniente para explicar/resumir.
+Isso não concede permissão para executar ações.
+
+O mínimo pré-USB é **contexto consultivo real**; Tool Manager e Capability Bridge
+mutáveis continuam pós-MVP.
+
+### 4.5 Observabilidade e degradação
+
+Cada serviço estrutural deve ser capaz de expor pelo menos estado/health útil.
+Falha da IA, conta ou rede não pode derrubar a Surface ou bloquear arquivos locais.
+
+---
+
+## 5. Anti-omission gate
+
+Adicionar esta regra à preparação do primeiro Stable USB:
+
+```text
+PRE_USB_NOVA_ORDAX_AUDIT=PASS
+INTELLIGENCE_REAL_SYSTEM_CONSUMER=PASS
+LOCAL_SESSION_LOCK_POLICY=PASS
+LOCAL_SESSION_LOCK_IMPLEMENTATION=PASS
+OOBE_PERSISTENCE=PASS_SOURCE
+OOBE_LOCALE_COVERAGE=PASS_OR_EXPLICITLY_REDUCED
+FILES_DAILY_OPERATIONS=PASS
+DIAGNOSTICS_RECOVERY_PRESENTATION=PASS_SOURCE
+SUPPORTED_HARDWARE_MATRIX=PASS
+SIGNED_RELEASE_V4_WITH_LOCAL_AI=PASS
+PHYSICAL_WRITE=STILL_SEPARATE
+```
+
+O gate é de produto/source. Ele **não** substitui:
+
+- trust;
+- confirmação destrutiva;
+- seleção do USB;
+- UAC;
+- readback;
+- prova física.
+
+---
+
+## 6. Ordem de implementação antes do USB
+
+### P0 — fechar arquitetura esquecida
+
+1. **Intelligence composition + consumidores read-only reais.**
+2. **Sessão local/lock Native.**
+3. **Atualizar PLANO-02 e docs canônicos com o novo estado.**
+
+### P1 — fechar experiência cotidiana
+
+4. Arquivos: remoção segura/lixeira.
+5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE.
+6. Diagnóstico/recovery em Sistema.
+7. Inventário mínimo/suporte de hardware.
+
+### P2 — fechar release
+
+8. Gerar/materializar/signar v4 com AI real.
+9. Regressões QEMU/UEFI.
+10. Somente então voltar ao primeiro USB Stable/MVP físico.
+
+---
+
+## 7. Itens deliberadamente não puxados para o MVP
+
+A análise da Nova OrdaX **não** muda as decisões já tomadas:
+
+- conta online continua opcional;
+- cloud/sync não bloqueiam o USB MVP;
+- Native em disco continua pós-MVP;
+- Store não bloqueia;
+- Mobile não bloqueia;
+- agentes/tools mutáveis não bloqueiam;
+- federação não bloqueia;
+- Remote Core/Control Plane não entram por antecipação.
+
+Essa separação é importante: a auditoria serve para encontrar **fundamentos esquecidos**,
+não para transformar toda a visão futura em escopo de lançamento.
+
+---
+
+## 8. Critério para voltar ao pendrive
+
+Voltar à missão física somente quando:
+
+1. todos os itens A estiverem PASS em source/CI ou tiverem uma decisão canônica explícita
+   retirando-os do MVP;
+2. o manifest v4 real estiver assinado/materializável;
+3. os testes descartáveis/UEFI relevantes estiverem verdes;
+4. documentação canônica e contratos estiverem coerentes;
+5. então aplicar novamente os gates físicos já existentes.
+
+Até lá:
+
+```text
+FIRST_STABLE_MVP_USB_WRITE=HOLD_FUNCTIONAL_CLOSURE
+PHYSICAL_WRITE_AUTHORITY=UNCHANGED
+```
