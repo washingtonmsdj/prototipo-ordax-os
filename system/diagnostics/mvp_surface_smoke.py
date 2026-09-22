@@ -249,6 +249,7 @@ def validate_keyboard_layout(value: object) -> dict:
         raise ValueError("unsupported configured/applied keyboard layout")
     if (
         not isinstance(supported, list)
+        or not all(isinstance(layout_id, str) for layout_id in supported)
         or len(supported) != len(set(supported))
         or set(supported) != set(KEYBOARD_LAYOUT_IDS)
     ):
@@ -764,7 +765,7 @@ def finalize_evidence(
         "after_label": after.get("label") if isinstance(after.get("label"), str) else "",
         "comparison_label": comparison.get("label") if isinstance(comparison.get("label"), str) else "",
         "tour_label": checklist.get("label") if isinstance(checklist.get("label"), str) else "",
-        "evidence_context": baseline.get("evidence_context") if comparison_exact else None,
+        "evidence_context": comparison.get("evidence_context") if comparison_exact else None,
         "physical_write": False,
         "reboot_required": False,
         "checks": checks,
