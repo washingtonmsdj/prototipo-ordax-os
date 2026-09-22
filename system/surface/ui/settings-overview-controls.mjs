@@ -35,40 +35,13 @@ const SETTINGS_WINDOW_SELECTOR = '[data-window-id="settings"]';
 const SETTINGS_EXTENSION_SELECTOR = '[data-app-extension="settings-overview"]';
 
 const SETTINGS_SECTIONS = Object.freeze([
-  Object.freeze({ id: "appearance", label: "Aparência" }),
-  Object.freeze({ id: "accessibility", label: "Acessibilidade" }),
-  Object.freeze({ id: "regional", label: "Idioma e região" }),
-  Object.freeze({ id: "network", label: "Rede" }),
-  Object.freeze({ id: "security", label: "Segurança" }),
-  Object.freeze({ id: "notifications", label: "Notificações" }),
+  Object.freeze({ id: "appearance", messageId: "settings.section.appearance" }),
+  Object.freeze({ id: "accessibility", messageId: "settings.section.accessibility" }),
+  Object.freeze({ id: "regional", messageId: "settings.section.regional" }),
+  Object.freeze({ id: "network", messageId: "settings.section.network" }),
+  Object.freeze({ id: "security", messageId: "settings.section.security" }),
+  Object.freeze({ id: "notifications", messageId: "settings.section.notifications" }),
 ]);
-
-const SECTION_COPY = Object.freeze({
-  appearance: Object.freeze({
-    title: "Aparência",
-    subtitle: "Preferências visuais da Surface, persistidas pelo owner de preferências do host.",
-  }),
-  accessibility: Object.freeze({
-    title: "Acessibilidade",
-    subtitle: "Contraste, tamanho do texto e movimento da Surface, aplicados imediatamente e persistidos por perfil local.",
-  }),
-  regional: Object.freeze({
-    title: "Idioma e região",
-    subtitle: "Idioma e fuso horário usados pela Surface. As mesmas preferências escolhidas no primeiro uso continuam editáveis aqui.",
-  }),
-  network: Object.freeze({
-    title: "Rede",
-    subtitle: "Conectividade observada e gerenciamento Wi-Fi somente quando o host expõe essa capacidade.",
-  }),
-  security: Object.freeze({
-    title: "Segurança",
-    subtitle: "Bloqueio local da sessão, independente de Conta e de internet.",
-  }),
-  notifications: Object.freeze({
-    title: "Notificações",
-    subtitle: "Apresentação e fontes reais de notificações, sem criar permissões para apps que ainda não publicam eventos.",
-  }),
-});
 
 function validSettingsSection(value) {
   return SETTINGS_SECTIONS.some((section) => section.id === value);
@@ -142,6 +115,8 @@ export function mountSettingsOverviewControls(
   const hostPort = assertSurfaceHost(host);
   const preferences = assertPreferenceRuntimePort(preferenceRuntime);
   const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
   const networkPort = networkStatus === null ? null : assertNetworkStatusPort(networkStatus);
   const networkManagementPort =
     networkManagement === null ? null : assertNetworkManagementPort(networkManagement);
@@ -302,20 +277,29 @@ export function mountSettingsOverviewControls(
 
   const renderHeader = (view) => {
     const header = node(documentObject, "header", "ordax-settings-header");
-    const copy = SECTION_COPY[activeSection];
     header.append(
-      node(documentObject, "span", "ordax-settings-eyebrow", "Ajustes"),
-      node(documentObject, "h3", "ordax-settings-title", copy.title),
-      node(documentObject, "p", "ordax-settings-subtitle", copy.subtitle),
+      node(documentObject, "span", "ordax-settings-eyebrow", t("settings.eyebrow")),
+      node(documentObject, "h3", "ordax-settings-title", t(`settings.section.${activeSection}`)),
+      node(
+        documentObject,
+        "p",
+        "ordax-settings-subtitle",
+        t(`settings.section.${activeSection}.subtitle`),
+      ),
     );
     view.append(header);
   };
 
   const renderSectionNavigation = (view) => {
     const navigation = node(documentObject, "nav", "ordax-settings-navigation");
-    navigation.setAttribute("aria-label", "Seções de Ajustes");
+    navigation.setAttribute("aria-label", t("settings.navigation.aria"));
     for (const section of SETTINGS_SECTIONS) {
-      const button = node(documentObject, "button", "ordax-settings-navigation-item", section.label);
+      const button = node(
+        documentObject,
+        "button",
+        "ordax-settings-navigation-item",
+        t(section.messageId),
+      );
       button.type = "button";
       button.dataset.settingsSection = section.id;
       const active = activeSection === section.id;
@@ -331,7 +315,12 @@ export function mountSettingsOverviewControls(
       if (definition.sectionId !== sectionId) continue;
       const section = node(documentObject, "section", "ordax-settings-section");
       section.append(
-        node(documentObject, "span", "ordax-settings-section-kicker", definition.label ?? "Preferência"),
+        node(
+          documentObject,
+          "span",
+          "ordax-settings-section-kicker",
+          definition.label ?? t("settings.preference.fallbackLabel"),
+        ),
         node(documentObject, "h4", "ordax-settings-section-title", definition.title ?? definition.id),
         node(documentObject, "p", "ordax-settings-section-copy", definition.description ?? definition.id),
       );
