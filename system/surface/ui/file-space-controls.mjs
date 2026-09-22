@@ -1954,8 +1954,8 @@ export function mountFileSpaceControls(
       textPreview = null;
       message =
         source.mode === "copy"
-          ? `“${source.name}” foi copiado para ${destinationPath}.`
-          : `“${source.name}” foi movido para ${destinationPath}.`;
+          ? t("files.transfer.copied", { name: source.name, path: destinationPath })
+          : t("files.transfer.moved", { name: source.name, path: destinationPath });
     } catch (error) {
       if (destroyed || ordinal !== requestOrdinal) return;
       const status = operationStatus(error);
@@ -2213,7 +2213,7 @@ export function mountFileSpaceControls(
     if (!selected || !listing || selected.kind !== "file") return;
 
     if (selected.size > MAX_FILE_COPY_BYTES) {
-      message = "Este arquivo ultrapassa o limite de cópia de 64 MiB.";
+      message = t("files.copy.tooLarge");
       copyingPath = null;
       copyDraft = "";
       replaceView();
@@ -2252,13 +2252,13 @@ export function mountFileSpaceControls(
       if (status === 409) {
         message = t("files.item.collision");
       } else if (status === 412) {
-        message = "O arquivo mudou durante a cópia. Nenhuma cópia parcial foi mantida.";
+        message = t("files.copy.changed");
       } else if (status === 413) {
-        message = "Este arquivo ultrapassa o limite de cópia de 64 MiB.";
+        message = t("files.copy.tooLarge");
       } else if (status === 507) {
         message = t("files.copy.noSpace");
       } else if (status === 403) {
-        message = "O OrdaX não tem permissão para copiar este arquivo.";
+        message = t("files.copy.permission");
       } else if (status === 404) {
         message = t("files.copy.sourceMissing");
       } else if (status === 400) {
@@ -2578,7 +2578,7 @@ export function mountFileSpaceControls(
       const selected = selectedEntry();
       if (selected?.kind === "file" && listing) {
         if (selected.size > MAX_FILE_COPY_BYTES) {
-          message = "Este arquivo ultrapassa o limite de cópia de 64 MiB.";
+          message = t("files.copy.tooLarge");
         } else {
           transferEntry = Object.freeze({
             mode: "copy",
@@ -2643,7 +2643,7 @@ export function mountFileSpaceControls(
       const selected = selectedEntry();
       if (selected?.kind === "file") {
         if (selected.size > MAX_FILE_COPY_BYTES) {
-          message = "Este arquivo ultrapassa o limite de cópia de 64 MiB.";
+          message = t("files.copy.tooLarge");
           replaceView();
         } else {
           copyingPath = selected.path;
