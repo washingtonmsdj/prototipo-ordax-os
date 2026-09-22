@@ -17,6 +17,7 @@ export function createNativeSurfaceHost(
     powerStatusAvailable = false,
     networkStatusAvailable = false,
     networkManagementAvailable = false,
+    keyboardLayoutAvailable = false,
     browserWebContentAvailable = false,
   } = {},
 ) {
@@ -41,6 +42,9 @@ export function createNativeSurfaceHost(
     }
     if (networkManagementAvailable) {
       capabilityIds.push("network.management");
+    }
+    if (keyboardLayoutAvailable) {
+      capabilityIds.push("input.keyboard-layout");
     }
     if (browserWebContentAvailable) {
       capabilityIds.push("browser.web-content");
