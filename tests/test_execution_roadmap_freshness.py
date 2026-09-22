@@ -54,6 +54,9 @@ class ExecutionRoadmapFreshnessTests(unittest.TestCase):
         roadmap = ROADMAP.read_text(encoding="utf-8")
         self.assertIn("`tour-template`", roadmap)
         self.assertIn("`finalize` fail-closed", roadmap)
+        self.assertIn("11 itens do tour em PASS", roadmap)
+        self.assertIn("runtime WebKit verificado Stable/MVP", roadmap)
+        self.assertIn("layout físico de teclado configurado/aplicado", roadmap)
         self.assertIn("`final.json` tiver `FAIL=0`", roadmap)
         self.assertIn("comparação stale/editada", roadmap)
 
