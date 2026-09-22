@@ -1,26 +1,15 @@
 #!/bin/sh
 set -eu
 
-STATE_ROOT=${ORDAX_STATE_DIR:-/state/ordax}
-RUNTIME_ID=alpine-v3.22-cage-webkitgtk-v1
-RUNTIME_ROOT=$STATE_ROOT/runtime/native-surface/$RUNTIME_ID/rootfs
-SCRIPT=/srv/ordax-system/diagnostics/mvp_surface_smoke.py
+BIN_DIR=${0%/*}
+PROOF_RUNTIME_LIB=$BIN_DIR/../lib/physical-proof-runtime.sh
+COLLECTOR=/srv/ordax-system/diagnostics/mvp_surface_smoke.py
 
-[ -x /bin/busybox ] || {
-    echo "ordax-mvp-smoke: /bin/busybox unavailable" >&2
+[ -r "$PROOF_RUNTIME_LIB" ] || {
+    echo "ordax-mvp-smoke: physical proof runtime helper unavailable" >&2
     exit 2
 }
-[ -x "$RUNTIME_ROOT/usr/bin/python3" ] || {
-    echo "ordax-mvp-smoke: active WebKit runtime Python unavailable: $RUNTIME_ROOT/usr/bin/python3" >&2
-    exit 2
-}
-[ -r "$RUNTIME_ROOT$SCRIPT" ] || {
-    echo "ordax-mvp-smoke: smoke collector is not mounted in the active runtime; keep the Surface running and retry" >&2
-    exit 2
-}
-[ -d "$RUNTIME_ROOT/proc" ] && [ -d "$RUNTIME_ROOT/run" ] && [ -d "$RUNTIME_ROOT/srv/ordax-system" ] || {
-    echo "ordax-mvp-smoke: active Surface runtime bindings are unavailable" >&2
-    exit 2
-}
+. "$PROOF_RUNTIME_LIB"
 
-exec /bin/busybox chroot "$RUNTIME_ROOT" /usr/bin/python3 "$SCRIPT" "$@"
+select_ordax_physical_proof_runtime "ordax-mvp-smoke"
+exec_ordax_physical_proof "ordax-mvp-smoke" "$COLLECTOR" "$@"
