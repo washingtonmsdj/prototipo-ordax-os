@@ -109,6 +109,9 @@ def load_source_lock(path=SOURCE_LOCK):
         raise RuntimeBuildError("model revision is not pinned")
     if model.get("download_at_build_time_only") is not True:
         raise RuntimeBuildError("model must be a build-time-only network input")
+    license_path = model.get("license_text_path")
+    if license_path != "third_party/licenses/Apache-2.0.txt":
+        raise RuntimeBuildError("model license text must be vendored at the canonical path")
 
     if distribution.get("network_download_required_at_runtime") is not False:
         raise RuntimeBuildError("runtime network download must remain forbidden")
@@ -155,14 +158,6 @@ def model_url(lock):
     return (
         f"https://huggingface.co/{model['repository']}/resolve/"
         f"{model['upstream_revision']}/{model['filename']}?download=true"
-    )
-
-
-def model_license_url(lock):
-    model = lock["model"]
-    return (
-        f"https://huggingface.co/{model['repository']}/resolve/"
-        f"{model['upstream_revision']}/LICENSE?download=true"
     )
 
 
@@ -462,7 +457,9 @@ def build(out_dir, cache_dir):
         model["sha256"],
         model["size_bytes"],
     )
-    model_license = download_bounded(model_license_url(lock), cache_dir / "model-LICENSE")
+    model_license = ROOT / model["license_text_path"]
+    if model_license.is_symlink() or not model_license.is_file() or not 0 < model_license.stat().st_size <= MAX_LICENSE_BYTES:
+        raise RuntimeBuildError("vendored model license is missing or unsafe")
     mirror = prepare_engine_mirror(lock, cache_dir)
 
     work = Path(tempfile.mkdtemp(prefix="ordax-local-ai-runtime-"))
