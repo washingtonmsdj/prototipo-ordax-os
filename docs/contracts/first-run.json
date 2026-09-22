@@ -33,7 +33,10 @@
     "time_zone_preference": "regional.time-zone",
     "missing_preference_recovery": "seed-from-completed-first-run",
     "existing_preference_overwrite_allowed": false,
-    "editable_after_first_run_in_settings": true
+    "editable_after_first_run_in_settings": true,
+    "keyboard_layout_contract": "docs/contracts/keyboard-layout.json",
+    "keyboard_layout_selector_exposed": false,
+    "keyboard_layout_selector_gate": "safe-current-session-apply-or-pre-surface-handoff"
   },
   "network": {
     "skippable": true,
