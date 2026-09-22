@@ -47,6 +47,11 @@
       "security_boundary": "isolated-unprivileged-web-content"
     },
     {
+      "id": "ai.local",
+      "owner": "system/adapters/native",
+      "security_boundary": "loopback-only-local-inference"
+    },
+    {
       "id": "network.status",
       "owner": "system/adapters/native",
       "security_boundary": "read-only-local-network-observability"
