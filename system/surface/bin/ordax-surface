@@ -44,6 +44,8 @@ NETWORK_BROKER_SOURCE=$SYSTEM_ROOT/surface/runtime/network_broker.sh
 NATIVE_INSTALL_BROKER_SOURCE=$SYSTEM_ROOT/surface/runtime/native_install_broker.sh
 NATIVE_INSTALL_HELPER=$SYSTEM_ROOT/bin/ordax-native-install-targets
 NATIVE_INSTALL_LOG=$SESSION_DIR/native-install-broker.log
+LOCAL_AI_LOG=$SESSION_DIR/local-ai.log
+LOCAL_AI_AGENT_SOURCE=$SYSTEM_ROOT/services/local-ai/agent.sh
 NATIVE_INSTALL_CONTROL=$SESSION_DIR/native-install-control
 NATIVE_INSTALL_REQUEST=$SESSION_DIR/native-install-request
 NATIVE_INSTALL_RESPONSE=$SESSION_DIR/native-install-response
@@ -72,6 +74,7 @@ GRAPHICS_PID=""
 POWER_BROKER_PID=""
 NETWORK_BROKER_PID=""
 NATIVE_INSTALL_BROKER_PID=""
+LOCAL_AI_PID=""
 TIME_SYNC_PID=""
 STAGING_DIR=""
 DEV_BOUND=0
@@ -92,6 +95,7 @@ chmod 700 "$SESSION_DIR" "$PERSISTENT_NATIVE_STATE" "$PERSISTENT_USER_HOME" "$RE
 : > "$TIME_SYNC_LOG"
 : > "$NETWORK_LOG"
 : > "$NATIVE_INSTALL_LOG"
+: > "$LOCAL_AI_LOG"
 rm -f "$RUNTIME_PROOF_CONTEXT" >/dev/null 2>&1 || true
 
 case "$PRODUCT_MODE" in
@@ -481,6 +485,10 @@ remove_stale_seatd_socket() {
 
 cleanup() {
     rm -f "$RUNTIME_PROOF_CONTEXT" >/dev/null 2>&1 || true
+    if [ -n "$LOCAL_AI_PID" ]; then
+        terminate_child "$LOCAL_AI_PID" "local AI"
+        LOCAL_AI_PID=""
+    fi
     if [ -n "$NATIVE_INSTALL_BROKER_PID" ]; then
         terminate_child "$NATIVE_INSTALL_BROKER_PID" "Native install broker"
         NATIVE_INSTALL_BROKER_PID=""
@@ -1208,6 +1216,22 @@ wait_for_native_server() {
     return 1
 }
 
+start_local_ai() {
+    [ -f "$LOCAL_AI_AGENT_SOURCE" ] || return 0
+    [ -d "$RUNTIME_ROOT/ordax" ] || return 0
+    /bin/busybox chroot "$RUNTIME_ROOT"         /bin/sh /srv/ordax-system/services/local-ai/agent.sh         >"$LOCAL_AI_LOG" 2>&1 &
+    LOCAL_AI_PID=$!
+    /bin/busybox sleep 1
+    if ! kill -0 "$LOCAL_AI_PID" >/dev/null 2>&1; then
+        # Missing optional pack exits cleanly and must not block Surface boot.
+        wait "$LOCAL_AI_PID" >/dev/null 2>&1 || true
+        LOCAL_AI_PID=""
+        return 0
+    fi
+    echo "ordax-surface: local AI backend started on loopback" >>"$HOST_LOG"
+    return 0
+}
+
 prepare_input_stack() {
     set -- /dev/input/event*
     if [ ! -e "$1" ]; then
@@ -1250,6 +1274,7 @@ ensure_shared_memory || fallback_with_reason "failed to prepare /dev/shm for wlr
 configure_graphics_host || fallback_with_reason "failed to configure OrdaX WebKit graphics host"
 bind_runtime_mounts || fallback_with_reason "failed to bind host resources into graphical runtime"
 prepare_input_stack || fallback_with_reason "failed to prepare physical keyboard/touchpad input devices"
+start_local_ai || echo "ordax-surface: optional local AI failed to start; continuing without AI" >>"$HOST_LOG"
 configure_keyboard_layout
 publish_runtime_proof_context || fallback_with_reason "failed to publish active Surface runtime proof context"
 remove_stale_seatd_socket || fallback_with_reason "failed to clear stale seatd socket before native host startup"
