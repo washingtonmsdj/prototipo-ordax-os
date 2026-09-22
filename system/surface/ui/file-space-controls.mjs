@@ -45,12 +45,13 @@ function joinPath(path, name) {
   return path === "/" ? `/${name}` : `${path}/${name}`;
 }
 
-function suggestedCopyName(name) {
+function suggestedCopyName(name, translate) {
   const dot = name.lastIndexOf(".");
-  if (dot > 0 && dot < name.length - 1) {
-    return `${name.slice(0, dot)} - cópia${name.slice(dot)}`;
-  }
-  return `${name} - cópia`;
+  const hasExtension = dot > 0 && dot < name.length - 1;
+  return translate("files.copy.suggested", {
+    base: hasExtension ? name.slice(0, dot) : name,
+    extension: hasExtension ? name.slice(dot) : "",
+  });
 }
 
 function formatSize(bytes) {
@@ -442,7 +443,7 @@ export function mountFileSpaceControls(
     const confirm = node(documentObject, "button", "ordax-files-action ordax-files-action-primary", t("files.form.add"));
     confirm.type = "button";
     confirm.dataset.fileProjectCreate = "";
-    const cancel = node(documentObject, "button", "ordax-files-action", "Cancelar");
+    const cancel = node(documentObject, "button", "ordax-files-action", t("files.form.cancel"));
     cancel.type = "button";
     cancel.dataset.fileProjectCreateCancel = "";
     form.append(input, confirm, cancel);
@@ -473,7 +474,7 @@ export function mountFileSpaceControls(
     confirm.type = "button";
     confirm.dataset.fileProjectRenameConfirm = "";
 
-    const cancel = node(documentObject, "button", "ordax-files-action", "Cancelar");
+    const cancel = node(documentObject, "button", "ordax-files-action", t("files.form.cancel"));
     cancel.type = "button";
     cancel.dataset.fileProjectRenameCancel = "";
 
@@ -629,15 +630,15 @@ export function mountFileSpaceControls(
 
   const transferDestinationState = () => {
     if (!transferEntry || !listing) {
-      return Object.freeze({ allowed: false, reason: "Escolha uma pasta de destino." });
+      return Object.freeze({ allowed: false, reason: t("files.transfer.chooseDestination") });
     }
     if (listing.path === transferEntry.sourcePath) {
       return Object.freeze({
         allowed: false,
         reason:
           transferEntry.mode === "copy"
-            ? "Escolha outra pasta para copiar este arquivo."
-            : "O item já está nesta pasta. Escolha outra pasta.",
+            ? t("files.transfer.chooseOtherFolderCopy")
+            : t("files.transfer.sameFolder"),
       });
     }
     if (
@@ -648,7 +649,7 @@ export function mountFileSpaceControls(
     ) {
       return Object.freeze({
         allowed: false,
-        reason: "Uma pasta não pode ser movida para dentro dela mesma.",
+        reason: t("files.transfer.directoryIntoSelf"),
       });
     }
     return Object.freeze({ allowed: true, reason: "" });
@@ -658,9 +659,12 @@ export function mountFileSpaceControls(
     if (!transferEntry) return;
     const destination = transferDestinationState();
     const isCopy = transferEntry.mode === "copy";
-    const verb = isCopy ? "Copiando" : "Movendo";
+    const verb = isCopy ? t("files.transfer.copying") : t("files.transfer.moving");
     const panel = node(documentObject, "section", "ordax-files-transfer");
-    panel.setAttribute("aria-label", isCopy ? "Copiar arquivo" : "Mover item");
+    panel.setAttribute(
+      "aria-label",
+      isCopy ? t("files.transfer.copyAria") : t("files.transfer.moveAria"),
+    );
 
     const summary = node(documentObject, "div", "ordax-files-transfer-copy");
     summary.append(
@@ -669,7 +673,9 @@ export function mountFileSpaceControls(
         documentObject,
         "span",
         "ordax-files-transfer-meta",
-        listing ? `Destino atual: ${listing.path}` : "Abrindo destino…",
+        listing
+          ? t("files.transfer.currentDestination", { path: listing.path })
+          : t("files.transfer.openingDestination"),
       ),
       node(
         documentObject,
@@ -677,8 +683,8 @@ export function mountFileSpaceControls(
         "ordax-files-transfer-guidance",
         destination.allowed
           ? isCopy
-            ? "Confirme para copiar sem substituir itens existentes."
-            : "Confirme para mover sem substituir itens existentes."
+            ? t("files.transfer.confirmCopy")
+            : t("files.transfer.confirmMove")
           : destination.reason,
       ),
     );
@@ -688,13 +694,13 @@ export function mountFileSpaceControls(
       documentObject,
       "button",
       "ordax-files-action ordax-files-action-primary",
-      isCopy ? "Copiar para esta pasta" : "Mover para esta pasta",
+      isCopy ? t("files.transfer.copyHere") : t("files.transfer.moveHere"),
     );
     confirm.type = "button";
     confirm.dataset.fileTransferConfirm = "";
     confirm.disabled = pending || !destination.allowed;
 
-    const cancel = node(documentObject, "button", "ordax-files-action", "Cancelar");
+    const cancel = node(documentObject, "button", "ordax-files-action", t("files.form.cancel"));
     cancel.type = "button";
     cancel.dataset.fileTransferCancel = "";
     cancel.disabled = pending;
@@ -906,7 +912,7 @@ export function mountFileSpaceControls(
       confirm.dataset.fileCopyConfirm = "";
       confirm.disabled = pending;
 
-      const cancel = node(documentObject, "button", "ordax-files-action", "Cancelar");
+      const cancel = node(documentObject, "button", "ordax-files-action", t("files.form.cancel"));
       cancel.type = "button";
       cancel.dataset.fileCopyCancel = "";
       cancel.disabled = pending;
@@ -935,7 +941,7 @@ export function mountFileSpaceControls(
       confirm.dataset.fileRenameConfirm = "";
       confirm.disabled = pending;
 
-      const cancel = node(documentObject, "button", "ordax-files-action", "Cancelar");
+      const cancel = node(documentObject, "button", "ordax-files-action", t("files.form.cancel"));
       cancel.type = "button";
       cancel.dataset.fileRenameCancel = "";
       cancel.disabled = pending;
@@ -1333,9 +1339,9 @@ export function mountFileSpaceControls(
       projectSnapshot = projectPort.create({ name: projectDraft, path: listing.path });
       creatingProject = false;
       projectDraft = "";
-      message = "Projeto adicionado. A pasta e os arquivos permanecem no Meu espaço.";
+      message = t("files.project.added");
     } catch {
-      message = "Não foi possível adicionar esta pasta como projeto.";
+      message = t("files.project.addFailed");
     }
     replaceView();
   };
@@ -1346,7 +1352,7 @@ export function mountFileSpaceControls(
     if (!project || project.path !== listing.path) {
       renamingProjectId = null;
       projectRenameDraft = "";
-      message = "Este projeto não está mais disponível nesta pasta.";
+      message = t("files.project.missing");
       replaceView();
       return;
     }
@@ -1355,9 +1361,9 @@ export function mountFileSpaceControls(
       const renamed = projectSnapshot.projects.find((candidate) => candidate.id === project.id);
       renamingProjectId = null;
       projectRenameDraft = "";
-      message = `Projeto renomeado para “${renamed?.name ?? project.name}”. A pasta continua em ${project.path}.`;
+      message = t("files.project.renamed", { name: renamed?.name ?? project.name, path: project.path });
     } catch {
-      message = "Não foi possível renomear este projeto.";
+      message = t("files.project.renameFailed");
     }
     replaceView();
   };
@@ -1369,14 +1375,14 @@ export function mountFileSpaceControls(
     const loaded = await load(project.path);
     if (destroyed) return;
     if (!loaded) {
-      message = "A pasta vinculada a este projeto não está disponível. A referência foi preservada.";
+      message = t("files.project.folderMissing");
       replaceView();
       return;
     }
     try {
       projectSnapshot = projectPort.recordOpened(projectId);
     } catch {
-      message = "A pasta foi aberta, mas a atividade do projeto não pôde ser atualizada.";
+      message = t("files.project.activityUpdateFailed");
       replaceView();
     }
   };
@@ -1392,9 +1398,9 @@ export function mountFileSpaceControls(
       if (failedProjectResume?.projectId === projectId) {
         failedProjectResume = null;
       }
-      message = "Projeto removido do catálogo. Nenhum arquivo foi apagado.";
+      message = t("files.project.removed");
     } catch {
-      message = "Não foi possível remover este projeto do catálogo.";
+      message = t("files.project.removeFailed");
     }
     replaceView();
   };
@@ -1404,16 +1410,16 @@ export function mountFileSpaceControls(
     const project = projectSnapshot?.projects.find((candidate) => candidate.id === projectId);
     if (!project || project.lastFilePath !== failedProjectResume.path) {
       failedProjectResume = null;
-      message = "A referência do último arquivo mudou. Nada foi alterado.";
+      message = t("files.project.lastFileChanged");
       replaceView();
       return;
     }
     try {
       projectSnapshot = projectPort.clearLastFile(projectId);
       failedProjectResume = null;
-      message = "Referência do último arquivo esquecida. Nenhum arquivo foi apagado.";
+      message = t("files.project.lastFileForgotten");
     } catch {
-      message = "Não foi possível esquecer a referência do último arquivo.";
+      message = t("files.project.forgetLastFailed");
     }
     replaceView();
   };
@@ -1473,7 +1479,7 @@ export function mountFileSpaceControls(
     } catch {
       if (destroyed || ordinal !== requestOrdinal) return false;
       trashListing = null;
-      message = "Não foi possível abrir a Lixeira.";
+      message = t("files.trash.openFailed");
       return false;
     } finally {
       if (!destroyed && ordinal === requestOrdinal) {
@@ -1502,7 +1508,7 @@ export function mountFileSpaceControls(
       return;
     }
     selectedPath = null;
-    message = "Arquivo não encontrado. A referência pode ser removida de Recentes.";
+    message = t("files.recents.notFound");
     replaceView();
   };
 
@@ -1785,7 +1791,7 @@ export function mountFileSpaceControls(
       return true;
     } catch {
       if (destroyed || ordinal !== requestOrdinal) return false;
-      message = "Não foi possível abrir este local.";
+      message = t("files.location.openFailed");
       return false;
     } finally {
       if (!destroyed && ordinal === requestOrdinal) {
@@ -1833,7 +1839,7 @@ export function mountFileSpaceControls(
         try {
           projectSnapshot = projectPort.recordFileOpened(project.id, next.path);
         } catch {
-          message = "Arquivo aberto, mas a continuidade do projeto não pôde ser atualizada.";
+          message = t("files.project.fileContinuityUpdateFailed");
         }
       }
     } catch (error) {
@@ -1845,20 +1851,20 @@ export function mountFileSpaceControls(
           failedProjectResume = Object.freeze({ projectId: project.id, path });
         }
         if (status === 404) {
-          message = "O último arquivo deste projeto não está mais disponível. O projeto foi preservado.";
+          message = t("files.project.resumeMissing");
         } else if (status === 413) {
-          message = "O último arquivo deste projeto ficou grande demais para a visualização rápida. O projeto foi preservado.";
+          message = t("files.project.resumeTooLarge");
         } else if (status === 415) {
-          message = "O último arquivo deste projeto não é mais texto UTF-8 válido. O projeto foi preservado.";
+          message = t("files.project.resumeInvalidUtf8");
         } else {
-          message = "Não foi possível retomar o último arquivo deste projeto. O projeto foi preservado.";
+          message = t("files.project.resumeFailed");
         }
       } else if (status === 413) {
-        message = "Este arquivo é grande demais para a visualização rápida (máximo 256 KB).";
+        message = t("files.preview.tooLarge");
       } else if (status === 415) {
-        message = "A visualização rápida aceita apenas texto UTF-8 válido.";
+        message = t("files.preview.invalidUtf8");
       } else {
-        message = "Não foi possível visualizar este arquivo.";
+        message = t("files.preview.failed");
       }
     } finally {
       if (!destroyed && ordinal === previewRequestOrdinal) {
@@ -1894,7 +1900,7 @@ export function mountFileSpaceControls(
       }
     } catch {
       if (destroyed) return;
-      message = "Não foi possível criar a nota. O arquivo original não foi alterado.";
+      message = t("files.notes.createFailed");
     } finally {
       if (!destroyed) {
         notesImportPending = false;
@@ -2387,7 +2393,7 @@ export function mountFileSpaceControls(
     const projectStart = event.target.closest("[data-file-project-create-start]");
     if (projectStart && root.contains(projectStart) && projectPort && listing && listing.path !== "/") {
       creatingProject = true;
-      projectDraft = breadcrumbParts(listing.path).at(-1) ?? "Projeto";
+      projectDraft = breadcrumbParts(listing.path).at(-1) ?? t("files.project.label");
       renamingProjectId = null;
       projectRenameDraft = "";
       message = null;
@@ -2514,7 +2520,7 @@ export function mountFileSpaceControls(
     if (recentRemove && root.contains(recentRemove) && recentPort) {
       const selected = selectedRecentEntry();
       if (selected) {
-        message = `“${selected.name}” foi removido de Recentes. O arquivo não foi apagado.`;
+        message = t("files.recents.removed", { name: selected.name });
         selectedRecentPath = null;
         previewRequestOrdinal += 1;
         previewPending = false;
@@ -2526,7 +2532,7 @@ export function mountFileSpaceControls(
     }
     const recentClear = event.target.closest("[data-file-recent-clear]");
     if (recentClear && root.contains(recentClear) && recentPort) {
-      message = "Histórico limpo. Nenhum arquivo foi apagado.";
+      message = t("files.recents.cleared");
       selectedRecentPath = null;
       previewRequestOrdinal += 1;
       previewPending = false;
@@ -2593,7 +2599,7 @@ export function mountFileSpaceControls(
           previewRequestOrdinal += 1;
           previewPending = false;
           textPreview = null;
-          message = "Navegue até a pasta de destino e escolha “Copiar para esta pasta”.";
+          message = t("files.transfer.navigateCopy");
         }
         replaceView();
       }
@@ -2617,7 +2623,7 @@ export function mountFileSpaceControls(
         previewRequestOrdinal += 1;
         previewPending = false;
         textPreview = null;
-        message = "Navegue até a pasta de destino e escolha “Mover para esta pasta”.";
+        message = t("files.transfer.navigateMove");
         replaceView();
       }
       return;
@@ -2627,8 +2633,8 @@ export function mountFileSpaceControls(
       const wasCopy = transferEntry?.mode === "copy";
       transferEntry = null;
       message = wasCopy
-        ? "Cópia cancelada. Nenhum item foi alterado."
-        : "Movimento cancelado. Nenhum item foi alterado.";
+        ? t("files.transfer.copyCancelled")
+        : t("files.transfer.moveCancelled");
       replaceView();
       return;
     }
@@ -2646,7 +2652,7 @@ export function mountFileSpaceControls(
           replaceView();
         } else {
           copyingPath = selected.path;
-          copyDraft = suggestedCopyName(selected.name);
+          copyDraft = suggestedCopyName(selected.name, t);
           renamingPath = null;
           renameDraft = "";
           message = null;
