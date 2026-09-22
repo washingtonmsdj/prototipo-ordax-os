@@ -47,7 +47,7 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertTrue(contract["regional"]["editable_after_first_run_in_settings"])
         self.assertEqual(
             contract["regional"]["complete_locales"],
-            ["pt-BR", "en-US", "es-419", "fr-FR"],
+            ["pt-BR", "en-US", "es-419", "fr-FR", "de-DE"],
         )
         self.assertEqual(contract["regional"]["fallback_locale"], "en-US")
         self.assertEqual(contract["regional"]["localization_scope"], "first-run-oobe")
@@ -75,9 +75,9 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertFalse(
             host.valid_first_run_state({**initial, "timeZone": "Europe/London"})
         )
-        for locale in ("pt-BR", "en-US", "es-419", "fr-FR"):
+        for locale in ("pt-BR", "en-US", "es-419", "fr-FR", "de-DE"):
             self.assertTrue(host.valid_first_run_state({**initial, "locale": locale}))
-        self.assertFalse(host.valid_first_run_state({**initial, "locale": "de-DE"}))
+        self.assertFalse(host.valid_first_run_state({**initial, "locale": "ja-JP"}))
 
         with tempfile.TemporaryDirectory() as directory:
             host.FIRST_RUN_FILE = str(Path(directory) / "first-run.json")
@@ -130,6 +130,7 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertIn('continueWithoutAccount: "Continue without an account"', i18n)
         self.assertIn('continueWithoutAccount: "Continuar sin cuenta"', i18n)
         self.assertIn('continueWithoutAccount: "Continuer sans compte"', i18n)
+        self.assertIn('continueWithoutAccount: "Ohne Konto fortfahren"', i18n)
         self.assertIn('isIdentityActionSupported(actionsSnapshot, "sign-in")', ui)
         self.assertIn('isIdentityActionSupported(actionsSnapshot, "register")', ui)
         self.assertIn("passwordDraft", ui)
