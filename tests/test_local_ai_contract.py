@@ -10,20 +10,37 @@ SOURCE_LOCK = ROOT / "system" / "services" / "local-ai" / "source-lock.json"
 
 
 class LocalAiContractTests(unittest.TestCase):
-    def test_local_ai_is_optional_offline_and_migratable(self):
+    def test_local_ai_is_default_mvp_backend_but_not_boot_critical(self):
         contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
-        self.assertEqual(contract["$schema"], "prototype-ordax.local-ai/1")
+        self.assertEqual(contract["$schema"], "prototype-ordax.local-ai/2")
+        self.assertTrue(contract["required_for_public_mvp_distribution"])
         self.assertFalse(contract["required_for_boot"])
-        self.assertFalse(contract["required_for_offline_use"])
-        self.assertTrue(contract["runtime"]["internet_required_for_inference"] is False)
+        self.assertFalse(contract["required_for_surface"])
+        self.assertTrue(contract["creator_policy"]["included_by_default"])
+        self.assertFalse(contract["creator_policy"]["user_may_omit"])
+        self.assertTrue(contract["creator_policy"]["next_media_context_must_bind_signed_ai_bundle"])
+        self.assertTrue(contract["mvp_policy"]["installed_by_default"])
+        self.assertTrue(contract["mvp_policy"]["mandatory_in_public_mvp_media"])
+        self.assertTrue(contract["mvp_policy"]["failure_must_not_block_boot"])
+        self.assertTrue(contract["mvp_policy"]["failure_must_not_block_surface"])
+
+    def test_backend_is_offline_and_migratable(self):
+        contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+        self.assertFalse(contract["runtime"]["internet_required_for_inference"])
         self.assertTrue(contract["runtime"]["engine_migratable"])
         self.assertTrue(contract["runtime"]["model_migratable"])
         self.assertEqual(contract["runtime"]["model_format"], "GGUF")
         self.assertTrue(contract["runtime"]["exact_model_artifact_pinned"])
-        self.assertEqual(contract["runtime"]["source_lock"], "system/services/local-ai/source-lock.json")
-        self.assertFalse(contract["runtime"]["exact_engine_artifact_pinned"])
-        self.assertTrue(contract["creator_toggle"]["user_may_disable"])
-        self.assertTrue(contract["mvp_policy"]["failure_must_not_block_surface"])
+        self.assertTrue(contract["runtime"]["exact_engine_source_pinned"])
+        self.assertFalse(contract["runtime"]["exact_engine_binary_pinned"])
+        self.assertEqual(
+            contract["runtime"]["source_lock"],
+            "system/services/local-ai/source-lock.json",
+        )
+        self.assertEqual(
+            contract["migration"]["stable_intelligence_contract"],
+            "ordax.intelligence/1",
+        )
 
     def test_source_lock_pins_model_bytes_without_committing_large_binary(self):
         lock = json.loads(SOURCE_LOCK.read_text(encoding="utf-8"))
@@ -34,7 +51,7 @@ class LocalAiContractTests(unittest.TestCase):
         self.assertFalse(lock["distribution"]["model_committed_to_git"])
         self.assertTrue(lock["distribution"]["signed_component_required"])
 
-    def test_surface_boundary_is_provider_neutral(self):
+    def test_inference_boundary_is_provider_neutral(self):
         port = PORT.read_text(encoding="utf-8")
         readme = README.read_text(encoding="utf-8")
         self.assertIn('LOCAL_AI_PORT_SCHEMA = "ordax.local-ai/1"', port)
