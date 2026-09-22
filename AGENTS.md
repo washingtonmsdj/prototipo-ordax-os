@@ -54,6 +54,8 @@ O plano detalha telas, subsecoes, responsabilidades, lacunas, prioridades e crit
 
 Leia tambem a continuacao [PLANO-02-EVOLUCAO-E-REAPROVEITAMENTO-DO-LEGADO.md](PLANO-02-EVOLUCAO-E-REAPROVEITAMENTO-DO-LEGADO.md) antes de ampliar essas interfaces, planejar novas capacidades ou reaproveitar funcionalidades/ideias de `novo-ordax-os`. Ela compara os dois repositorios com SHAs registrados, distingue codigo de visao futura e detalha lacunas, dependencias, destinos de interface e criterios de aceite. Nenhuma recomendacao desse documento constitui migracao concluida: qualquer portabilidade continua exigindo registro em `docs/SOURCE-MIGRATION.md`.
 
+Antes de preparar ou autorizar o primeiro USB Stable/MVP, leia tambem [PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md](PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md). Ele revalida a visao da Nova OrdaX contra a `main` atual e separa requisitos funcionais obrigatorios pre-USB, provas que dependem do hardware fisico e capacidades conscientemente pos-MVP. O gate pre-USB desse documento deve falhar fechado: uma capacidade estrutural nao pode ser omitida apenas porque boot/release ja estao tecnicamente prontos.
+
 ### Site publico
 
 Antes de alterar landing page, download, login/cadastro ou futura area publica da conta, leia `MVP.md`, `docs/PUBLIC-SITE.md` e `docs/contracts/public-site.json`.
