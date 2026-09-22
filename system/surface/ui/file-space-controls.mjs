@@ -1968,6 +1968,107 @@ export function mountFileSpaceControls(
     }
   };
 
+  const trashSelected = async () => {
+    const selected = selectedEntry();
+    if (!selected || !listing || pending) return;
+    const ordinal = ++requestOrdinal;
+    const previousPath = selected.path;
+    pending = true;
+    message = null;
+    replaceView();
+    try {
+      const next = validateFileListing(
+        await port.trashEntry(listing.path, selected.name),
+      );
+      if (destroyed || ordinal !== requestOrdinal) return;
+      listing = next;
+      if (recentPort) {
+        for (const recent of recentSnapshot?.entries ?? []) {
+          if (
+            recent.path === previousPath
+            || recent.path.startsWith(`${previousPath}/`)
+          ) {
+            recentPort.remove(recent.path);
+          }
+        }
+      }
+      trashListing = null;
+      selectedPath = null;
+      renamingPath = null;
+      renameDraft = "";
+      copyingPath = null;
+      copyDraft = "";
+      transferEntry = null;
+      previewRequestOrdinal += 1;
+      previewPending = false;
+      textPreview = null;
+      message = `“${selected.name}” foi movido para a Lixeira e pode ser restaurado.`;
+    } catch (error) {
+      if (destroyed || ordinal !== requestOrdinal) return;
+      const status = operationStatus(error);
+      if (status === 422) {
+        message =
+          "Este item está em outro volume e não pôde ser movido para a Lixeira com segurança. O original foi preservado.";
+      } else if (status === 404) {
+        message = "Este item não existe mais. Atualize a pasta.";
+      } else if (status === 403) {
+        message = "O OrdaX não tem permissão para mover este item para a Lixeira.";
+      } else if (status === 409) {
+        message = "A Lixeira não pôde reservar uma entrada segura. O original foi preservado.";
+      } else if (status === 400) {
+        message = "Este item não pode ser movido para a Lixeira.";
+      } else {
+        message = "Não foi possível mover este item para a Lixeira. O original foi preservado.";
+      }
+    } finally {
+      if (!destroyed && ordinal === requestOrdinal) {
+        pending = false;
+        replaceView();
+      }
+    }
+  };
+
+  const restoreSelectedTrash = async () => {
+    const selected = selectedTrashEntry();
+    if (!selected || pending) return;
+    const ordinal = ++requestOrdinal;
+    pending = true;
+    message = null;
+    replaceView();
+    try {
+      const next = validateTrashListing(await port.restoreTrashEntry(selected.id));
+      if (destroyed || ordinal !== requestOrdinal) return;
+      trashListing = next;
+      selectedTrashId = null;
+      message = `“${selected.name}” foi restaurado para ${selected.originalPath}.`;
+    } catch (error) {
+      if (destroyed || ordinal !== requestOrdinal) return;
+      const status = operationStatus(error);
+      if (status === 409) {
+        message =
+          "Já existe um item no caminho original. Nada foi substituído e o item continua na Lixeira.";
+      } else if (status === 404) {
+        message =
+          "O local original ou a entrada da Lixeira não está mais disponível. O item não foi sobrescrito.";
+      } else if (status === 422) {
+        message =
+          "A restauração cruzaria um limite de volume não suportado. O item continua na Lixeira.";
+      } else if (status === 403) {
+        message =
+          "O OrdaX não tem permissão para restaurar no local original. O item continua na Lixeira.";
+      } else if (status === 400) {
+        message = "A entrada da Lixeira não é válida para restauração.";
+      } else {
+        message = "Não foi possível restaurar este item. Ele continua na Lixeira.";
+      }
+    } finally {
+      if (!destroyed && ordinal === requestOrdinal) {
+        pending = false;
+        replaceView();
+      }
+    }
+  };
+
   const exportSelected = async () => {
     const selected = selectedEntry();
     if (!selected || selected.kind !== "file") return;
