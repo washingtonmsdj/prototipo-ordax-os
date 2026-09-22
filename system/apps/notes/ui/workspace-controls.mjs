@@ -1,4 +1,5 @@
 import { assertAppActivationPort } from "../../../contracts/app-activation.mjs";
+import { assertIntelligencePort } from "../../../contracts/intelligence.mjs";
 import { assertFileSpacePort } from "../../../contracts/file-space.mjs";
 import {
   MAX_NOTES,
@@ -50,6 +51,7 @@ import {
   undoNotesRichEditor,
 } from "./rich-editor.mjs";
 import { assertSurfaceRenderLifecycle } from "../../../contracts/surface-render-lifecycle.mjs";
+import { summarizeDocumentWithIntelligence } from "../../../services/intelligence/client-actions.mjs";
 
 const NOTES_WINDOW_SELECTOR = '[data-window-id="notes"]';
 const NOTES_EXTENSION_SELECTOR = '[data-app-extension="notes-workspace"]';
@@ -210,6 +212,14 @@ function buildShell(documentObject) {
     button(documentObject, "ordax-notes-tool", "Relacionar imagem local", "insert-image", "▧"),
     node(documentObject, "span", "ordax-notes-tool-separator"),
     button(documentObject, "ordax-notes-tool", "Desfazer (Ctrl/Cmd+Z)", "undo", "↶"),
+    node(documentObject, "span", "ordax-notes-tool-separator"),
+    button(
+      documentObject,
+      "ordax-notes-tool ordax-notes-intelligence-action",
+      "Resumir esta nota com Ordax Intelligence",
+      "intelligence-summary",
+      "✦  Resumir",
+    ),
   );
   editor.append(toolbar);
 
@@ -237,6 +247,18 @@ function buildShell(documentObject) {
   form.append(node(documentObject, "div", "ordax-notes-meta"));
   const body = createNotesRichEditor(documentObject);
   form.append(body);
+  const intelligencePanel = node(documentObject, "section", "ordax-notes-intelligence");
+  intelligencePanel.dataset.notesIntelligence = "";
+  intelligencePanel.hidden = true;
+  const intelligenceHeading = node(documentObject, "strong", "ordax-notes-intelligence-title", "Ordax Intelligence");
+  const intelligenceStatus = node(documentObject, "p", "ordax-notes-intelligence-status");
+  intelligenceStatus.dataset.notesIntelligenceStatus = "";
+  intelligenceStatus.setAttribute("role", "status");
+  intelligenceStatus.setAttribute("aria-live", "polite");
+  const intelligenceAnswer = node(documentObject, "p", "ordax-notes-intelligence-answer");
+  intelligenceAnswer.dataset.notesIntelligenceAnswer = "";
+  intelligencePanel.append(intelligenceHeading, intelligenceStatus, intelligenceAnswer);
+  form.append(intelligencePanel);
   const inlineMedia = node(documentObject, "section", "ordax-notes-inline-media");
   inlineMedia.dataset.notesInlineMedia = "";
   inlineMedia.hidden = true;
@@ -288,7 +310,7 @@ export function mountNotesWorkspaceControls(
   root,
   notesRuntime,
   surfaceLifecycle = null,
-  { fileSpace = null, appActivation = null } = {},
+  { fileSpace = null, appActivation = null, intelligence = null } = {},
 ) {
   if (!(root instanceof Element)) {
     throw new TypeError("Notes workspace controls require a Surface root Element");
@@ -297,6 +319,7 @@ export function mountNotesWorkspaceControls(
   const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
   const filePort = fileSpace === null ? null : assertFileSpacePort(fileSpace);
   const activationPort = appActivation === null ? null : assertAppActivationPort(appActivation);
+  const intelligencePort = intelligence === null ? null : assertIntelligencePort(intelligence);
   const documentObject = root.ownerDocument;
   const windowObject = documentObject.defaultView ?? globalThis.window;
 
@@ -311,6 +334,11 @@ export function mountNotesWorkspaceControls(
   let lastEditorRange = null;
   let mountedSlot = null;
   let destroyed = false;
+  let intelligenceSnapshot = intelligencePort?.getSnapshot() ?? null;
+  let intelligencePending = false;
+  let intelligenceNoteId = null;
+  let intelligenceResult = "";
+  let intelligenceError = "";
 
   const currentNote = () => {
     const id = state.document.selectedNoteId;
@@ -949,6 +977,17 @@ export function mountNotesWorkspaceControls(
     const documentView = view.querySelector("[data-notes-document]");
     const editControls = view.querySelectorAll(".ordax-notes-toolbar button, .ordax-notes-format, .ordax-notes-star");
     for (const control of editControls) control.disabled = !note || note.deletedAt !== null;
+    const intelligenceAction = view.querySelector('[data-notes-action="intelligence-summary"]');
+    if (intelligenceAction) {
+      const ready = intelligenceSnapshot?.state === "ready";
+      intelligenceAction.disabled = !note || note.deletedAt !== null || !ready || intelligencePending;
+      intelligenceAction.textContent = intelligencePending && intelligenceNoteId === note?.id
+        ? "✦  Resumindo…"
+        : "✦  Resumir";
+      intelligenceAction.title = ready
+        ? "Resumir esta nota localmente com Ordax Intelligence"
+        : "Ordax Intelligence não está pronta nesta execução";
+    }
     const more = view.querySelector(".ordax-notes-more");
     if (more) more.disabled = !note;
     renderCapacityControls(view, note);
@@ -960,6 +999,8 @@ export function mountNotesWorkspaceControls(
       view.querySelector(".ordax-notes-breadcrumb").textContent = `${modeLabel()}  /  Notas`;
       view.querySelector(".ordax-notes-save-status").textContent = state.persistence.scope === "device" ? "Salvo neste dispositivo" : "Somente nesta sessão";
       view.querySelector(".ordax-notes-references").hidden = true;
+      const intelligencePanel = view.querySelector("[data-notes-intelligence]");
+      if (intelligencePanel) intelligencePanel.hidden = true;
       syncEditorStatistics(view, null);
       return;
     }
@@ -1010,6 +1051,23 @@ export function mountNotesWorkspaceControls(
     renderInlineMedia(view, note);
     renderTasks(view, note);
     renderReferences(view, note);
+
+    const intelligencePanel = view.querySelector("[data-notes-intelligence]");
+    const intelligenceStatus = view.querySelector("[data-notes-intelligence-status]");
+    const intelligenceAnswer = view.querySelector("[data-notes-intelligence-answer]");
+    if (intelligencePanel && intelligenceStatus && intelligenceAnswer) {
+      const belongsToCurrent = intelligenceNoteId === note.id;
+      intelligencePanel.hidden = !belongsToCurrent;
+      if (belongsToCurrent) {
+        intelligenceStatus.textContent = intelligencePending
+          ? "Analisando esta nota localmente…"
+          : intelligenceError
+            ? intelligenceError
+            : "Resumo local concluído. A resposta abaixo não altera a nota.";
+        intelligenceAnswer.textContent = intelligenceResult;
+        intelligenceAnswer.hidden = !intelligenceResult;
+      }
+    }
 
     const saved = view.querySelector(".ordax-notes-save-status");
     saved.textContent = readOnly
@@ -1112,6 +1170,37 @@ export function mountNotesWorkspaceControls(
     if (!actionNode || !mountedSlot?.contains(actionNode)) return;
     const action = actionNode.dataset.notesAction;
     const note = currentNote();
+
+    if (action === "intelligence-summary") {
+      if (!note || note.deletedAt !== null || !intelligencePort || intelligenceSnapshot?.state !== "ready" || intelligencePending) {
+        return;
+      }
+      flushEditor(note.id);
+      const latest = currentNote();
+      if (!latest) return;
+      intelligencePending = true;
+      intelligenceNoteId = latest.id;
+      intelligenceResult = "";
+      intelligenceError = "";
+      render();
+      void summarizeDocumentWithIntelligence(intelligencePort, {
+        id: latest.id,
+        title: latest.title || "Sem título",
+        text: latest.body || "(nota vazia)",
+        provenance: `notes:${latest.id}:device-local`,
+      }).then((response) => {
+        if (destroyed || intelligenceNoteId !== latest.id) return;
+        intelligenceResult = response.text;
+      }).catch(() => {
+        if (destroyed || intelligenceNoteId !== latest.id) return;
+        intelligenceError = "Não foi possível resumir esta nota localmente.";
+      }).finally(() => {
+        if (destroyed || intelligenceNoteId !== latest.id) return;
+        intelligencePending = false;
+        render();
+      });
+      return;
+    }
 
     if (action === "new-note") {
       createNewNote();
@@ -1602,6 +1691,10 @@ export function mountNotesWorkspaceControls(
     render();
   });
   const unsubscribeRender = lifecycle.subscribeRender(render);
+  const unsubscribeIntelligence = intelligencePort?.subscribe((next) => {
+    intelligenceSnapshot = next;
+    if (!destroyed) render();
+  });
   const unsubscribeFilePicker = filePicker.subscribe(() => {
     if (!destroyed) render();
   });
@@ -1615,6 +1708,7 @@ export function mountNotesWorkspaceControls(
       imagePreviewCache.destroy();
       unsubscribeRuntime?.();
       unsubscribeRender?.();
+      unsubscribeIntelligence?.();
       unsubscribeFilePicker?.();
       root.removeEventListener("click", onClick);
       root.removeEventListener("pointerdown", onPointerDown);
