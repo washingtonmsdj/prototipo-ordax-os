@@ -30,14 +30,15 @@
     "exact_model_artifact_pinned": true,
     "exact_engine_artifact_pinned": false,
     "source_lock": "system/services/local-ai/source-lock.json",
-    "artifact_activation_gate": "signed-component-manifest-with-sha256-size-license-and-source"
+    "artifact_activation_gate": "signed-release-manifest-v4-with-sha256-size-license-source-and-model-binding"
   },
   "storage": {
-    "component_root": "/.ordax/components/local-ai",
-    "engine_root": "/.ordax/components/local-ai/runtime",
-    "model_root": "/.ordax/components/local-ai/models",
+    "release_artifact_name": "local-ai-runtime.erofs",
+    "content_addressed_media_root": "/.ordax/ai-runtimes/sha256",
+    "verified_mount_root": "/run/ordax/runtime/local-ai",
     "user_data_root": "/var/lib/ordax/local-ai",
     "model_must_not_live_in_system_erofs": true,
+    "mutable_user_state_must_not_live_in_ai_erofs": true,
     "removal_preserves_user_files": true
   },
   "migration": {
@@ -51,7 +52,9 @@
       "llama.cpp",
       "OpenVINO",
       "other-local-provider"
-    ]
+    ],
+    "mvp_delivery": "whole-os-signed-release-artifact",
+    "future_independent_delivery": "component-slot-after-canonical-component-trust-and-health-rollback-are-proven"
   },
   "privacy": {
     "prompts_local_by_default": true,
