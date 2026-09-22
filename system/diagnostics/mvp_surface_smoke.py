@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import http.client
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -34,6 +35,12 @@ UPDATE_PHASES = frozenset({
     "blocked",
     "error",
 })
+EVIDENCE_CONTEXTS = {
+    ("owner-development", "dynamic-native-runtime"): "development",
+    ("stable-mvp", "verified-erofs-overlay"): "canonical-stable-mvp",
+}
+KEYBOARD_LAYOUT_IDS = frozenset({"br-abnt2", "us"})
+
 BASE_UPDATE_PHASES = frozenset({
     "none",
     "waiting-candidate",
@@ -93,6 +100,29 @@ def _boot_id(proc_root: Path = PROC_ROOT) -> str | None:
         return (proc_root / "sys/kernel/random/boot_id").read_text(encoding="ascii").strip() or None
     except OSError:
         return None
+
+
+def evidence_context_from_environment() -> dict:
+    distribution_profile = os.environ.get(
+        "ORDAX_PROOF_DISTRIBUTION_PROFILE",
+        "owner-development",
+    )
+    runtime_mode = os.environ.get(
+        "ORDAX_PROOF_RUNTIME_MODE",
+        "dynamic-native-runtime",
+    )
+    evidence_scope = os.environ.get(
+        "ORDAX_PROOF_EVIDENCE_SCOPE",
+        EVIDENCE_CONTEXTS.get((distribution_profile, runtime_mode), ""),
+    )
+    expected_scope = EVIDENCE_CONTEXTS.get((distribution_profile, runtime_mode))
+    if expected_scope is None or evidence_scope != expected_scope:
+        raise ValueError("physical proof evidence context is invalid")
+    return {
+        "distribution_profile": distribution_profile,
+        "runtime_mode": runtime_mode,
+        "evidence_scope": evidence_scope,
+    }
 
 
 def _bounded_json(body: bytes) -> object:
@@ -206,6 +236,33 @@ def validate_power(value: object) -> dict:
     if state not in {"charging", "discharging", "full", "not-charging", "unknown"}:
         raise ValueError("invalid battery state")
     return {"battery_present": True, "battery_percent": percent, "battery_state": state, "external_power": external}
+
+
+def validate_keyboard_layout(value: object) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError("keyboard layout payload must be an object")
+    configured = value.get("configuredLayoutId")
+    applied = value.get("appliedLayoutId")
+    supported = value.get("supportedLayoutIds")
+    restart_required = value.get("restartRequired")
+    if configured not in KEYBOARD_LAYOUT_IDS or applied not in KEYBOARD_LAYOUT_IDS:
+        raise ValueError("unsupported configured/applied keyboard layout")
+    if (
+        not isinstance(supported, list)
+        or len(supported) != len(set(supported))
+        or set(supported) != set(KEYBOARD_LAYOUT_IDS)
+    ):
+        raise ValueError("keyboard layout supportedLayoutIds is invalid")
+    expected_restart = configured != applied
+    if not isinstance(restart_required, bool) or restart_required != expected_restart:
+        raise ValueError("keyboard layout restartRequired is inconsistent")
+    if restart_required:
+        raise ValueError("keyboard layout is configured but not yet applied")
+    return {
+        "configured_layout_id": configured,
+        "applied_layout_id": applied,
+        "restart_required": restart_required,
+    }
 
 
 def _valid_logical_path(path: object) -> bool:
@@ -368,6 +425,7 @@ def live_surface_checks(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, time
         ("system_metrics", "/__ordax/native/metrics", validate_metrics),
         ("network_status", "/__ordax/native/network-status", validate_network),
         ("power_status", "/__ordax/native/power-status", validate_power),
+        ("keyboard_layout", "/__ordax/native/keyboard-layout", validate_keyboard_layout),
         ("file_space_root", f"/__ordax/native/files?path={quote('/', safe='')}", validate_files),
         ("update_status", "/__ordax/native/update", validate_update_status),
         ("update_history", "/__ordax/native/update-history", validate_update_history),
@@ -415,6 +473,7 @@ def collect(
     run_root: Path = RUN_ROOT,
     proc_root: Path = PROC_ROOT,
 ) -> dict:
+    evidence_context = evidence_context_from_environment()
     source, source_checks = source_snapshot(source_root)
     observed, live_checks = live_surface_checks(host, port, timeout)
     host_log, log_checks = host_log_snapshot(run_root)
@@ -425,6 +484,7 @@ def collect(
         "label": label,
         "boot_id": _boot_id(proc_root),
         "loopback": {"host": host, "port": port},
+        "evidence_context": evidence_context,
         "source": source,
         "observed": observed,
         "host_log": host_log,
@@ -468,6 +528,37 @@ def _updater_identity(report: dict) -> tuple[str, bool] | None:
     return digest, runtime_matches
 
 
+def _evidence_context(report: dict) -> tuple[str, str, str] | None:
+    context = report.get("evidence_context")
+    if not isinstance(context, dict):
+        return None
+    distribution_profile = context.get("distribution_profile")
+    runtime_mode = context.get("runtime_mode")
+    evidence_scope = context.get("evidence_scope")
+    expected_scope = EVIDENCE_CONTEXTS.get((distribution_profile, runtime_mode))
+    if expected_scope is None or evidence_scope != expected_scope:
+        return None
+    return distribution_profile, runtime_mode, evidence_scope
+
+
+def _keyboard_identity(report: dict) -> tuple[str, str] | None:
+    observed = report.get("observed")
+    keyboard = observed.get("keyboard_layout") if isinstance(observed, dict) else None
+    if not isinstance(keyboard, dict):
+        return None
+    configured = keyboard.get("configured_layout_id")
+    applied = keyboard.get("applied_layout_id")
+    restart_required = keyboard.get("restart_required")
+    if (
+        configured not in KEYBOARD_LAYOUT_IDS
+        or applied not in KEYBOARD_LAYOUT_IDS
+        or configured != applied
+        or restart_required is not False
+    ):
+        return None
+    return configured, applied
+
+
 def _report_has_no_failures(report: dict) -> bool:
     summary = report.get("summary")
     if not isinstance(summary, dict):
@@ -480,6 +571,15 @@ def compare_reports(baseline: dict, after: dict, label: str = "mvp-surface-compa
     checks = []
     schemas_ok = baseline.get("schema") == SCHEMA and after.get("schema") == SCHEMA
     checks.append(_check("report_schema", schemas_ok, "relatórios usam o schema esperado" if schemas_ok else "schema de relatório incompatível"))
+
+    baseline_context = _evidence_context(baseline)
+    after_context = _evidence_context(after)
+    same_context = baseline_context is not None and baseline_context == after_context
+    checks.append(_check(
+        "same_evidence_context",
+        same_context,
+        "mesmo perfil/runtime de evidência" if same_context else "perfil/runtime de evidência ausente, inválido ou diferente",
+    ))
 
     baseline_clean = _report_has_no_failures(baseline)
     after_clean = _report_has_no_failures(after)
@@ -505,12 +605,29 @@ def compare_reports(baseline: dict, after: dict, label: str = "mvp-surface-compa
     runtime_aligned = updater_valid and baseline_updater[1] and after_updater[1]
     checks.append(_check("runtime_surface_aligned", runtime_aligned, "Surface alinhada ao source nas duas coletas" if runtime_aligned else "Surface não está alinhada ao source em uma das coletas"))
 
+    baseline_keyboard = _keyboard_identity(baseline)
+    after_keyboard = _keyboard_identity(after)
+    same_keyboard = baseline_keyboard is not None and baseline_keyboard == after_keyboard
+    checks.append(_check(
+        "same_applied_keyboard_layout",
+        same_keyboard,
+        "mesmo layout físico aplicado nas duas coletas" if same_keyboard else "layout físico ausente, pendente de restart ou diferente",
+    ))
+
     report = {
         "schema": COMPARE_SCHEMA,
         "captured_at": _timestamp(),
         "label": label,
         "baseline_label": baseline.get("label") if isinstance(baseline.get("label"), str) else "",
         "after_label": after.get("label") if isinstance(after.get("label"), str) else "",
+        "evidence_context": (
+            {
+                "distribution_profile": baseline_context[0],
+                "runtime_mode": baseline_context[1],
+                "evidence_scope": baseline_context[2],
+            }
+            if same_context else None
+        ),
         "checks": checks,
     }
     report["summary"] = _summary(checks)
@@ -583,7 +700,7 @@ def load_comparison(path: Path) -> dict:
 def _comparison_semantics(report: dict) -> dict:
     return {
         key: report.get(key)
-        for key in ("schema", "label", "baseline_label", "after_label", "checks", "summary")
+        for key in ("schema", "label", "baseline_label", "after_label", "evidence_context", "checks", "summary")
     }
 
 
@@ -647,6 +764,7 @@ def finalize_evidence(
         "after_label": after.get("label") if isinstance(after.get("label"), str) else "",
         "comparison_label": comparison.get("label") if isinstance(comparison.get("label"), str) else "",
         "tour_label": checklist.get("label") if isinstance(checklist.get("label"), str) else "",
+        "evidence_context": baseline.get("evidence_context") if comparison_exact else None,
         "physical_write": False,
         "reboot_required": False,
         "checks": checks,
