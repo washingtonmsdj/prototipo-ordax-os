@@ -1354,6 +1354,8 @@ export function mountFileSpaceControls(
     if (!recentPort) return;
     requestOrdinal += 1;
     pending = false;
+    trashMode = false;
+    selectedTrashId = null;
     recentMode = true;
     selectedRecentPath = null;
     message = null;
@@ -1370,6 +1372,47 @@ export function mountFileSpaceControls(
     previewPending = false;
     textPreview = null;
     replaceView();
+  };
+
+  const enterTrashMode = async () => {
+    const ordinal = ++requestOrdinal;
+    recentMode = false;
+    selectedRecentPath = null;
+    trashMode = true;
+    selectedTrashId = null;
+    pending = true;
+    message = null;
+    transferEntry = null;
+    creatingDirectory = false;
+    creatingProject = false;
+    projectDraft = "";
+    renamingProjectId = null;
+    projectRenameDraft = "";
+    failedProjectResume = null;
+    renamingPath = null;
+    renameDraft = "";
+    copyingPath = null;
+    copyDraft = "";
+    previewRequestOrdinal += 1;
+    previewPending = false;
+    textPreview = null;
+    replaceView();
+    try {
+      const next = validateTrashListing(await port.listTrash());
+      if (destroyed || ordinal !== requestOrdinal) return false;
+      trashListing = next;
+      return true;
+    } catch {
+      if (destroyed || ordinal !== requestOrdinal) return false;
+      trashListing = null;
+      message = "Não foi possível abrir a Lixeira.";
+      return false;
+    } finally {
+      if (!destroyed && ordinal === requestOrdinal) {
+        pending = false;
+        replaceView();
+      }
+    }
   };
 
   const revealRecent = async () => {
@@ -1398,7 +1441,7 @@ export function mountFileSpaceControls(
   const paint = (slot, interaction = null) => {
     slot.replaceChildren();
     slot.dataset.ordaxFileSpaceView = "";
-    slot.dataset.fileSpacePath = recentMode ? "" : (listing?.path ?? "");
+    slot.dataset.fileSpacePath = recentMode || trashMode ? "" : (listing?.path ?? "");
     slot.dataset.fileSpaceContext = interactionContext();
 
     const view = node(documentObject, "div", "ordax-files-view");
@@ -1407,6 +1450,13 @@ export function mountFileSpaceControls(
     renderLocations(locations);
 
     const content = node(documentObject, "section", "ordax-files-content");
+    if (trashMode) {
+      renderTrashContent(content);
+      view.append(locations, content);
+      slot.append(view);
+      restoreInteractionState(slot, interaction);
+      return;
+    }
     if (recentMode) {
       renderRecentContent(content);
       view.append(locations, content);
@@ -1599,6 +1649,8 @@ export function mountFileSpaceControls(
   const load = async (path, { recordHistory = true } = {}) => {
     recentMode = false;
     selectedRecentPath = null;
+    trashMode = false;
+    selectedTrashId = null;
     const ordinal = ++requestOrdinal;
     pending = true;
     message = null;
