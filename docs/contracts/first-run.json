@@ -32,7 +32,8 @@
     "default_time_zone": "America/Bahia",
     "time_zone_preference": "regional.time-zone",
     "missing_preference_recovery": "seed-from-completed-first-run",
-    "existing_preference_overwrite_allowed": false
+    "existing_preference_overwrite_allowed": false,
+    "editable_after_first_run_in_settings": true
   },
   "network": {
     "skippable": true,
