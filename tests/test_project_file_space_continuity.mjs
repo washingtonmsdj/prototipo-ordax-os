@@ -10,7 +10,7 @@ function emptyListing(path) {
   return Object.freeze({ path, entries: Object.freeze([]) });
 }
 
-function createFileSpace({ failRename = false, failMove = false } = {}) {
+function createFileSpace({ failRename = false, failMove = false, failTrash = false } = {}) {
   const calls = [];
   const port = {
     schema: FILE_SPACE_SCHEMA,
@@ -42,6 +42,7 @@ function createFileSpace({ failRename = false, failMove = false } = {}) {
     },
     async trashEntry(path, name) {
       calls.push(["trashEntry", path, name]);
+      if (failTrash) throw new Error("trash failed");
       return emptyListing(path);
     },
     async listTrash() {
@@ -87,6 +88,44 @@ test("rename and move relocate project continuity only after file-space success"
   const projectB = projects.getSnapshot().projects.find((project) => project.id === "project-2");
   assert.equal(projectA.lastFilePath, null);
   assert.equal(projectB.lastFilePath, null);
+});
+
+test("trash clears affected project continuity only after file-space success", async () => {
+  const projects = createProjectWithLastFile();
+  const { port } = createFileSpace();
+  const files = createProjectContinuityFileSpace(port, projects);
+
+  await files.trashEntry("/Documentos/A", "pasta");
+  const projectA = projects.getSnapshot().projects.find((project) => project.id === "project-1");
+  assert.equal(projectA.lastFilePath, null);
+
+  const failedProjects = createProjectWithLastFile();
+  const failedFiles = createProjectContinuityFileSpace(
+    createFileSpace({ failTrash: true }).port,
+    failedProjects,
+  );
+  const before = failedProjects.getSnapshot();
+  await assert.rejects(
+    failedFiles.trashEntry("/Documentos/A", "pasta"),
+    /trash failed/,
+  );
+  assert.deepEqual(failedProjects.getSnapshot(), before);
+});
+
+test("trash listing and restore are proxied without inventing project continuity", async () => {
+  const projects = createProjectWithLastFile();
+  const { port, calls } = createFileSpace();
+  const files = createProjectContinuityFileSpace(port, projects);
+  const before = projects.getSnapshot();
+
+  await files.listTrash();
+  await files.restoreTrashEntry("0123456789abcdef0123456789abcdef");
+
+  assert.deepEqual(projects.getSnapshot(), before);
+  assert.deepEqual(calls.slice(-2), [
+    ["listTrash"],
+    ["restoreTrashEntry", "0123456789abcdef0123456789abcdef"],
+  ]);
 });
 
 test("copy never changes project continuity", async () => {
