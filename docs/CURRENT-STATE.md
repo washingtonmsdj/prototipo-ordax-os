@@ -120,7 +120,7 @@ The shared graphical source remains under `system/surface/ui/` with platform-neu
 
 Ordax Intelligence is now a first-class system service with stable contract `ordax.intelligence/1`; an Assistant UI is only a possible client. The service sits above the provider-neutral `ordax.local-ai/1` inference boundary, so model and engine can evolve without redefining Files, Notes, Search or future system clients. The Stable/MVP product policy requires a verified local inference payload in the distribution, but neither Intelligence nor its model is boot-critical: inference failure degrades the capability instead of blocking boot, Surface, recovery, files or updates.
 
-The initial source lock pins a small Qwen3.5 GGUF model and a llama.cpp source commit. The exact model bytes are pinned, while the exact engine artifact and signed Stable/MVP engine/model materialization are still pending. Therefore the repository has the architecture/runtime contract but does **not** yet claim that local inference is physically installed on the first Stable USB.
+The initial source lock pins a small Qwen3.5 GGUF model and a llama.cpp source commit. The exact model bytes are pinned, while the exact engine artifact and signed Stable/MVP engine/model materialization are still pending. The source release protocol now supports `prototype-ordax.release-manifest/4`: it binds `local-ai-runtime.erofs` to the canonical local-AI source lock, stores that runtime content-addressed by SHA-256, and can revalidate the signed release offline. This is **protocol/source support**, not a claim that the real llama.cpp + model EROFS has already been built, published or written to a Stable USB.
 
 ```text
 ORDAX_INTELLIGENCE_CONTRACT=ordax.intelligence/1
@@ -131,6 +131,9 @@ LOCAL_AI_STABLE_MVP_DISTRIBUTION_REQUIRED=YES
 LOCAL_AI_BOOT_CRITICAL=NO
 LOCAL_AI_MODEL_ARTIFACT_PINNED=YES
 LOCAL_AI_ENGINE_ARTIFACT_PINNED=NO
+LOCAL_AI_RELEASE_MANIFEST_V4=PASS_SOURCE
+LOCAL_AI_CONTENT_ADDRESSED_ACQUISITION=PASS_SOURCE
+LOCAL_AI_REAL_RUNTIME_EROFS=PENDING
 LOCAL_AI_SIGNED_STABLE_MATERIALIZATION=PENDING
 LOCAL_AI_PHYSICAL_STABLE_MVP_PROOF=PENDING
 ```
