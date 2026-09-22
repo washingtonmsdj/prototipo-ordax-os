@@ -142,7 +142,7 @@ pré-USB exige, no mínimo:
   first-party consultivos, em vez de existir apenas como backend/modelo e teste;
 - política e implementação de sessão/bloqueio local/offline separadas da conta cloud;
 - OOBE persistente e coerente com idiomas/fuso/rede/modo sem conta;
-- jornada cotidiana de Arquivos fechada, incluindo uma decisão segura para remoção;
+- jornada cotidiana de Arquivos fechada, com Lixeira recuperável e restauração no-clobber; exclusão permanente não faz parte do fluxo cotidiano do MVP;
 - diagnóstico/recovery de produto e inventário mínimo de hardware/suporte;
 - release-manifest/4 real com `local-ai-runtime.erofs` assinada/materializável.
 
