@@ -54,6 +54,7 @@ Updating OrdaX does not require every app version to change. Updating an app ver
 Current release modes are intentionally mixed while the MVP hardens:
 
 - `bundled`: Arquivos, Ajustes, Conta and Sistema currently update with the OrdaX system delivery;
+- `bundled`: Assistente `0.1.0 Beta` also uses the system delivery in the MVP; its local inference provider/model remain replaceable behind `ordax.ai-runtime/1` and do not grant independent-update authority.
 - `git-app`: Notas and Internet own explicit app versions while the Owner/Development profile still delivers their code through the ordinary Git checkout/reconcile path;
 - `component-slot`: reserved for an app that has completed the signed independent-package path with verification, pending health, promotion and rollback;
 - `git-app` does not claim a production app updater, Store or app-local rollback.
