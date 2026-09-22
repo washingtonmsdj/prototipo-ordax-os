@@ -469,7 +469,7 @@ export function mountFileSpaceControls(
       documentObject,
       "button",
       "ordax-files-action ordax-files-action-primary",
-      "Salvar nome",
+      t("files.form.saveName"),
     );
     confirm.type = "button";
     confirm.dataset.fileProjectRenameConfirm = "";
@@ -935,7 +935,7 @@ export function mountFileSpaceControls(
         documentObject,
         "button",
         "ordax-files-action ordax-files-action-primary",
-        "Salvar nome",
+        t("files.form.saveName"),
       );
       confirm.type = "button";
       confirm.dataset.fileRenameConfirm = "";
@@ -957,7 +957,7 @@ export function mountFileSpaceControls(
     preview.setAttribute("aria-label", t("files.preview.aria"));
 
     if (previewPending) {
-      const loading = node(documentObject, "div", "ordax-files-preview-loading", "Abrindo arquivo…");
+      const loading = node(documentObject, "div", "ordax-files-preview-loading", t("files.preview.opening"));
       loading.setAttribute("role", "status");
       loading.setAttribute("aria-live", "polite");
       preview.append(loading);
@@ -971,9 +971,14 @@ export function mountFileSpaceControls(
     const name = parts[parts.length - 1] || textPreview.path;
     identity.append(
       node(documentObject, "strong", "ordax-files-preview-title", name),
-      node(documentObject, "span", "ordax-files-preview-meta", `${formatSize(textPreview.size)} · somente leitura`),
+      node(
+        documentObject,
+        "span",
+        "ordax-files-preview-meta",
+        t("files.preview.readOnlyMeta", { size: formatSize(textPreview.size) }),
+      ),
     );
-    const close = node(documentObject, "button", "ordax-files-action", "Fechar");
+    const close = node(documentObject, "button", "ordax-files-action", t("files.preview.close"));
     close.type = "button";
     close.dataset.filePreviewClose = "";
     header.append(identity, close);
