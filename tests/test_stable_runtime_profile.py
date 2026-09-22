@@ -165,6 +165,29 @@ class StableRuntimeProfileTests(unittest.TestCase):
         )
         self.assertIn('ORDAX_BASE_SOURCE_SHA="$SOURCE_SHA"', owner)
 
+        bindings = text.split("bind_runtime_mounts() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("owner-development)", bindings)
+        self.assertIn("stable-mvp)", bindings)
+        self.assertIn("Stable/MVP owns a verified system tree, not a Git checkout", bindings)
+        self.assertIn(
+            'if [ "$DISTRIBUTION_PROFILE" = "owner-development" ]; then',
+            bindings,
+        )
+        owner_bind = bindings.split(
+            'if [ "$DISTRIBUTION_PROFILE" = "owner-development" ]; then',
+            1,
+        )[1].split("\n    fi", 1)[0]
+        self.assertIn(
+            'mount -o bind "$repo_root" "$RUNTIME_ROOT/srv/ordax-repo"',
+            owner_bind,
+        )
+        stable_case = bindings.split("stable-mvp)", 1)[1].split(";;", 1)[0]
+        self.assertNotIn("/srv/ordax-repo", stable_case)
+        self.assertIn(
+            'mount -o bind "$SYSTEM_ROOT" "$RUNTIME_ROOT/srv/ordax-system"',
+            bindings,
+        )
+
     def test_stable_base_owner_does_not_run_development_candidate_pipeline(self):
         text = BASE_OWNER.read_text(encoding="utf-8")
         loop = text.rsplit("while :; do", 1)[1]
