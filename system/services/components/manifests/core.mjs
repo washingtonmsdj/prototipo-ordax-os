@@ -71,7 +71,7 @@ export const coreComponentManifests = Object.freeze([
     title: "AI Runtime / Inference Broker",
     kind: "service",
     version: "0.1.0",
-    releaseMode: "component-slot",
+    releaseMode: "bundled",
     criticality: "system",
     failureDomain: "service",
     restartScope: "component",
