@@ -81,7 +81,7 @@ class ProjectFilesUiContractTests(unittest.TestCase):
 
     def test_project_resume_is_root_scoped_and_preserves_stale_reference(self):
         controls = CONTROLS.read_text(encoding="utf-8")
-        self.assertIn('"Continuar último arquivo"', controls)
+        self.assertIn('t("files.action.resumeProject")', controls)
         self.assertIn("resumeProjectButton.dataset.fileProjectResume = currentProject.id", controls)
         self.assertIn("resumeProjectButton.title = currentProject.lastFilePath", controls)
         click_block = controls.split(
@@ -102,7 +102,7 @@ class ProjectFilesUiContractTests(unittest.TestCase):
 
     def test_stale_project_resume_recovery_is_exact_reference_guarded_and_non_destructive(self):
         controls = CONTROLS.read_text(encoding="utf-8")
-        self.assertIn('"Esquecer último arquivo"', controls)
+        self.assertIn('t("files.action.forgetProject")', controls)
         self.assertIn(
             "failedProjectResume = Object.freeze({ projectId: project.id, path });",
             controls,

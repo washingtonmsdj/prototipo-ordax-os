@@ -58,8 +58,8 @@ class FilesCopyDestinationTests(unittest.TestCase):
 
     def test_surface_distinguishes_duplicate_from_copy_to_destination(self):
         controls = CONTROLS.read_text(encoding="utf-8")
-        self.assertIn('"Duplicar"', controls)
-        self.assertIn('"Copiar para…"', controls)
+        self.assertIn('t("files.action.duplicate")', controls)
+        self.assertIn('t("files.action.copyTo")', controls)
         self.assertIn("data.fileCopyToToggle", controls.replace("dataset", "data"))
         self.assertIn('mode: "copy"', controls)
         self.assertIn("transferToCurrentDirectory", controls)

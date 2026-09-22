@@ -8,11 +8,13 @@ QUICK_NETWORK = ROOT / "system" / "surface" / "ui" / "network-quick-panel.mjs"
 NATIVE = ROOT / "system" / "composition" / "native" / "main.mjs"
 WEB = ROOT / "system" / "composition" / "web" / "main.mjs"
 APP = ROOT / "system" / "apps" / "settings" / "app.mjs"
+SETTINGS_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "settings.mjs"
 
 
 class SettingsCanonicalNavigationTests(unittest.TestCase):
     def test_settings_owns_only_real_canonical_sections(self):
         controls = SETTINGS.read_text(encoding="utf-8")
+        settings_i18n = SETTINGS_I18N.read_text(encoding="utf-8")
         self.assertIn('id: "appearance"', controls)
         self.assertIn('id: "accessibility"', controls)
         self.assertIn('id: "regional"', controls)
@@ -94,10 +96,12 @@ class SettingsCanonicalNavigationTests(unittest.TestCase):
     def test_visible_product_name_remains_ajustes(self):
         app = APP.read_text(encoding="utf-8")
         controls = SETTINGS.read_text(encoding="utf-8")
+        settings_i18n = SETTINGS_I18N.read_text(encoding="utf-8")
         self.assertIn('title: "Ajustes"', app)
         self.assertIn('label: "Ajustes"', app)
         self.assertIn('monogram: "AJ"', app)
-        self.assertIn('"Ajustes"', controls)
+        self.assertIn('t("settings.eyebrow")', controls)
+        self.assertIn('"settings.eyebrow": "Ajustes"', settings_i18n)
         self.assertNotIn('title: "Configurações"', app)
 
 

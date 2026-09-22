@@ -1,4 +1,6 @@
-export const SURFACE_RENDER_LIFECYCLE_SCHEMA = "ordax.surface-render-lifecycle/3";
+import { assertLocalizationPort } from "./localization.mjs";
+
+export const SURFACE_RENDER_LIFECYCLE_SCHEMA = "ordax.surface-render-lifecycle/4";
 
 export function assertSurfaceRenderLifecycle(value) {
   if (
@@ -11,5 +13,6 @@ export function assertSurfaceRenderLifecycle(value) {
   ) {
     throw new TypeError("A compatible Surface render lifecycle with readable and writable app targets is required");
   }
+  assertLocalizationPort(value.localization);
   return value;
 }

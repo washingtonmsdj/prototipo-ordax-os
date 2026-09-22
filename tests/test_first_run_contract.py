@@ -40,7 +40,7 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertEqual(contract["regional"]["surface_complete_locales"], ["pt-BR"])
         self.assertEqual(
             contract["regional"]["surface_translation_status"]["en-US"],
-            "shared-shell-implemented-app-controls-migrating",
+            "shared-shell-files-primary-settings-system-navigation-implemented-more-controls-migrating",
         )
         for locale in ("es-ES", "de-DE", "fr-FR"):
             self.assertEqual(
@@ -73,8 +73,8 @@ class FirstRunContractTests(unittest.TestCase):
 
     def test_regional_choices_remain_editable_after_first_run(self):
         settings = SETTINGS.read_text(encoding="utf-8")
-        self.assertIn('Object.freeze({ id: "regional", label: "Idioma e região" })', settings)
-        self.assertIn('regional: Object.freeze({', settings)
+        self.assertIn('Object.freeze({ id: "regional", messageId: "settings.section.regional" })', settings)
+        self.assertIn('t(`settings.section.${activeSection}`)', settings)
         self.assertIn('if (preferenceId === "regional.locale")', settings)
         self.assertIn('if (preferenceId === "regional.time-zone")', settings)
         self.assertIn('["appearance", "accessibility", "regional"].includes(activeSection)', settings)

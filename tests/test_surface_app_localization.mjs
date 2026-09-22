@@ -1,0 +1,102 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { readFile } from "node:fs/promises";
+
+import { LOCALIZATION_SCHEMA } from "../system/contracts/localization.mjs";
+import {
+  SURFACE_RENDER_LIFECYCLE_SCHEMA,
+  assertSurfaceRenderLifecycle,
+} from "../system/contracts/surface-render-lifecycle.mjs";
+
+function localizationPort() {
+  return Object.freeze({
+    schema: LOCALIZATION_SCHEMA,
+    getLocale() {
+      return "en-US";
+    },
+    translate(messageId) {
+      return messageId;
+    },
+    subscribe(listener) {
+      listener("en-US");
+      return () => {};
+    },
+  });
+}
+
+test("Surface lifecycle v4 requires the shared localization port", () => {
+  const base = {
+    schema: SURFACE_RENDER_LIFECYCLE_SCHEMA,
+    subscribeRender() {
+      return () => {};
+    },
+    getAppTarget() {
+      return null;
+    },
+    setAppTarget() {
+      return null;
+    },
+  };
+  assert.throws(
+    () => assertSurfaceRenderLifecycle(base),
+    /compatible localization port/,
+  );
+  const lifecycle = Object.freeze({ ...base, localization: localizationPort() });
+  assert.equal(assertSurfaceRenderLifecycle(lifecycle), lifecycle);
+  assert.equal(SURFACE_RENDER_LIFECYCLE_SCHEMA, "ordax.surface-render-lifecycle/4");
+});
+
+test("Files primary journey consumes shared localization and live locale", async () => {
+  const files = await readFile(
+    new URL("../system/surface/ui/file-space-controls.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(files, /const localization = lifecycle\.localization/);
+  assert.match(files, /const locale = \(\) => localization\.getLocale\(\)/);
+  assert.match(files, /t\("files\.location\.recents"\)/);
+  assert.match(files, /t\("files\.location\.trash"\)/);
+  assert.match(files, /t\("files\.recents\.boundary"\)/);
+  assert.match(files, /t\("files\.trash\.boundary"\)/);
+  assert.match(files, /localeCompare\(right\.name, locale\(\)/);
+  assert.doesNotMatch(files, /FILE_SEARCH_LOCALE/);
+});
+
+test("Settings and System navigation consume the same localization owner", async () => {
+  const settings = await readFile(
+    new URL("../system/surface/ui/settings-overview-controls.mjs", import.meta.url),
+    "utf8",
+  );
+  const system = await readFile(
+    new URL("../system/surface/ui/system-overview-controls.mjs", import.meta.url),
+    "utf8",
+  );
+  for (const source of [settings, system]) {
+    assert.match(source, /const localization = lifecycle\.localization/);
+    assert.match(source, /const t = localization\.translate/);
+  }
+  assert.match(settings, /t\("settings\.navigation\.aria"\)/);
+  assert.match(settings, /t\(section\.messageId\)/);
+  assert.match(system, /t\("system\.navigation\.aria"\)/);
+  assert.match(system, /t\(section\.messageId\)/);
+});
+
+test("English catalog contains primary Files, Settings and System entries", async () => {
+  const filesCatalog = await readFile(
+    new URL("../system/services/i18n/catalog/files.mjs", import.meta.url),
+    "utf8",
+  );
+  const settingsCatalog = await readFile(
+    new URL("../system/services/i18n/catalog/settings.mjs", import.meta.url),
+    "utf8",
+  );
+  const systemCatalog = await readFile(
+    new URL("../system/services/i18n/catalog/system.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(filesCatalog, /"files\.location\.trash": "Trash"/);
+  assert.match(filesCatalog, /"files\.recents\.clearHistory": "Clear history"/);
+  assert.match(filesCatalog, /"files\.trash\.restore": "Restore"/);
+  assert.match(settingsCatalog, /"settings\.section\.regional": "Language and region"/);
+  assert.match(systemCatalog, /"system\.section\.diagnostics": "Diagnostics"/);
+});

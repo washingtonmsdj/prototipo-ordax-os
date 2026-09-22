@@ -16,6 +16,8 @@ on:
       - 'system/contracts/native-install-targets.mjs'
       - 'system/contracts/preference-store.mjs'
       - 'system/contracts/preference-runtime.mjs'
+      - 'system/contracts/localization.mjs'
+      - 'system/contracts/surface-render-lifecycle.mjs'
       - 'system/contracts/sync-runtime.mjs'
       - 'system/contracts/sync-state-store.mjs'
       - 'system/contracts/workspace-metadata-source.mjs'
@@ -51,6 +53,7 @@ on:
       - 'system/services/files/**'
       - 'system/services/projects/**'
       - 'system/services/preferences/**'
+      - 'system/services/i18n/**'
       - 'system/services/sync/**'
       - 'system/services/diagnostics/**'
       - 'system/services/update/**'
@@ -65,6 +68,8 @@ on:
       - 'tests/test_surface_boot_screen.py'
       - 'tests/test_surface_web_builder.py'
       - 'tests/test_surface_preferences.mjs'
+      - 'tests/test_surface_localization.mjs'
+      - 'tests/test_surface_app_localization.mjs'
       - 'tests/test_surface_workspace.mjs'
       - 'tests/test_recent_files.mjs'
       - 'tests/test_recent_files_ui_contract.py'
@@ -137,6 +142,8 @@ on:
       - 'system/contracts/native-install-targets.mjs'
       - 'system/contracts/preference-store.mjs'
       - 'system/contracts/preference-runtime.mjs'
+      - 'system/contracts/localization.mjs'
+      - 'system/contracts/surface-render-lifecycle.mjs'
       - 'system/contracts/sync-runtime.mjs'
       - 'system/contracts/sync-state-store.mjs'
       - 'system/contracts/workspace-metadata-source.mjs'
@@ -172,6 +179,7 @@ on:
       - 'system/services/files/**'
       - 'system/services/projects/**'
       - 'system/services/preferences/**'
+      - 'system/services/i18n/**'
       - 'system/services/sync/**'
       - 'system/services/diagnostics/**'
       - 'system/services/update/**'
@@ -186,6 +194,8 @@ on:
       - 'tests/test_surface_boot_screen.py'
       - 'tests/test_surface_web_builder.py'
       - 'tests/test_surface_preferences.mjs'
+      - 'tests/test_surface_localization.mjs'
+      - 'tests/test_surface_app_localization.mjs'
       - 'tests/test_surface_workspace.mjs'
       - 'tests/test_recent_files.mjs'
       - 'tests/test_recent_files_ui_contract.py'
@@ -280,6 +290,7 @@ jobs:
             system/services/files \
             system/services/projects \
             system/services/preferences \
+            system/services/i18n \
             system/services/sync \
             system/services/diagnostics \
             system/services/update \
@@ -294,6 +305,8 @@ jobs:
             | sort -z \
             | xargs -0 -n1 node --check
           node --test tests/test_surface_preferences.mjs
+          node --test tests/test_surface_localization.mjs
+          node --test tests/test_surface_app_localization.mjs
           node --test tests/test_surface_workspace.mjs
           node --test tests/test_recent_files.mjs
           node --test tests/test_projects.mjs

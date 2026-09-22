@@ -1,6 +1,9 @@
 import { LOCALIZATION_SCHEMA, assertLocalizationPort } from "../../contracts/localization.mjs";
 import { assertPreferenceRuntimePort } from "../../contracts/preference-runtime.mjs";
 import { REGIONAL_LOCALE_PREFERENCE_ID } from "../preferences/regional.mjs";
+import { FILES_SOURCE_MESSAGES, FILES_ENGLISH_MESSAGES } from "./catalog/files.mjs";
+import { SETTINGS_SOURCE_MESSAGES, SETTINGS_ENGLISH_MESSAGES } from "./catalog/settings.mjs";
+import { SYSTEM_SOURCE_MESSAGES, SYSTEM_ENGLISH_MESSAGES } from "./catalog/system.mjs";
 
 export const SURFACE_SOURCE_LOCALE = "pt-BR";
 export const SURFACE_COMPLETE_LOCALES = Object.freeze(["pt-BR"]);
@@ -95,7 +98,10 @@ const SOURCE = Object.freeze({
   "app.system.description": "Entrega, atualizações, conectividade e recursos desta execução do OrdaX.",
   "app.system.panel.0.label": "Sistema",
   "app.system.panel.0.title": "Visão geral",
-  "app.system.panel.0.body": "O estado detalhado do sistema não está disponível neste host."
+  "app.system.panel.0.body": "O estado detalhado do sistema não está disponível neste host.",
+  ...FILES_SOURCE_MESSAGES,
+  ...SETTINGS_SOURCE_MESSAGES,
+  ...SYSTEM_SOURCE_MESSAGES
 });
 
 const ENGLISH = Object.freeze({
@@ -187,7 +193,10 @@ const ENGLISH = Object.freeze({
   "app.system.description": "Delivery, updates, connectivity, and resources for this OrdaX run.",
   "app.system.panel.0.label": "System",
   "app.system.panel.0.title": "Overview",
-  "app.system.panel.0.body": "Detailed system status is unavailable on this host."
+  "app.system.panel.0.body": "Detailed system status is unavailable on this host.",
+  ...FILES_ENGLISH_MESSAGES,
+  ...SETTINGS_ENGLISH_MESSAGES,
+  ...SYSTEM_ENGLISH_MESSAGES
 });
 
 const TABLES = Object.freeze({

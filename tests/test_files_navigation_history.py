@@ -38,9 +38,9 @@ class FilesNavigationHistoryTests(unittest.TestCase):
     def test_navigation_controls_are_accessible_and_responsive(self):
         controls = CONTROLS.read_text(encoding="utf-8")
         css = CSS.read_text(encoding="utf-8")
-        self.assertIn('back.setAttribute("aria-label", "Voltar")', controls)
-        self.assertIn('forward.setAttribute("aria-label", "Avançar")', controls)
-        self.assertIn('up.setAttribute("aria-label", "Subir um nível")', controls)
+        self.assertIn('back.setAttribute("aria-label", t("files.nav.back"))', controls)
+        self.assertIn('forward.setAttribute("aria-label", t("files.nav.forward"))', controls)
+        self.assertIn('up.setAttribute("aria-label", t("files.nav.up"))', controls)
         self.assertIn(".ordax-files-navigation", css)
         self.assertIn(".ordax-files-nav-action", css)
 

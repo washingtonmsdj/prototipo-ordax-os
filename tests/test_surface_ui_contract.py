@@ -59,6 +59,7 @@ INTERNET_BROWSER_SHORTCUTS = APPS / "internet" / "ui" / "browser-shortcuts.mjs"
 SYSTEM_OVERVIEW_CONTROLS = SURFACE / "system-overview-controls.mjs"
 ACCOUNT_OVERVIEW_CONTROLS = SURFACE / "account-overview-controls.mjs"
 SETTINGS_OVERVIEW_CONTROLS = SURFACE / "settings-overview-controls.mjs"
+SETTINGS_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "settings.mjs"
 SYSTEM_TRAY_QUICK_PANELS = SURFACE / "system-tray-quick-panels.mjs"
 NETWORK_QUICK_PANEL = SURFACE / "network-quick-panel.mjs"
 BATTERY_QUICK_PANEL = SURFACE / "battery-quick-panel.mjs"
@@ -168,10 +169,12 @@ class SurfaceUiContractTests(unittest.TestCase):
 
     def test_shared_extensions_use_explicit_surface_render_lifecycle(self):
         lifecycle = SURFACE_LIFECYCLE.read_text(encoding="utf-8")
-        self.assertIn('ordax.surface-render-lifecycle/3', lifecycle)
+        self.assertIn('ordax.surface-render-lifecycle/4', lifecycle)
         self.assertIn("assertSurfaceRenderLifecycle", lifecycle)
         self.assertIn("getAppTarget", lifecycle)
         self.assertIn("setAppTarget", lifecycle)
+        self.assertIn("assertLocalizationPort", lifecycle)
+        self.assertIn("value.localization", lifecycle)
         surface = (SURFACE / "surface.mjs").read_text(encoding="utf-8")
         self.assertIn("getAppTarget(appId)", surface)
         self.assertIn("setAppTarget(appId, target)", surface)
@@ -392,6 +395,7 @@ class SurfaceUiContractTests(unittest.TestCase):
     def test_settings_uses_live_preference_runtime_and_shared_overview(self):
         settings = APP_OWNERS["settings"].read_text(encoding="utf-8")
         overview = SETTINGS_OVERVIEW_CONTROLS.read_text(encoding="utf-8")
+        settings_i18n = SETTINGS_I18N.read_text(encoding="utf-8")
         appearance = APPEARANCE.read_text(encoding="utf-8")
         accessibility = ACCESSIBILITY.read_text(encoding="utf-8")
         preferences = PREFERENCE_CATALOG.read_text(encoding="utf-8")
@@ -407,7 +411,8 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn("assertPreferenceRuntimePort", overview)
         self.assertIn("assertNetworkManagementPort", overview)
         self.assertIn("listPreferenceDefinitions", overview)
-        self.assertIn('"Ajustes"', overview)
+        self.assertIn('t("settings.eyebrow")', overview)
+        self.assertIn('"settings.eyebrow": "Ajustes"', settings_i18n)
         self.assertIn('id: "appearance"', overview)
         self.assertIn('id: "accessibility"', overview)
         self.assertIn('id: "network"', overview)

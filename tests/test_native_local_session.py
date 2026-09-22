@@ -13,6 +13,7 @@ CONTRACT = ROOT / "system/contracts/local-session.mjs"
 COMPOSITION = ROOT / "system/composition/native/main.mjs"
 FIRST_RUN = ROOT / "system/surface/ui/first-run.mjs"
 SETTINGS = ROOT / "system/surface/ui/settings-overview-controls.mjs"
+SETTINGS_I18N = ROOT / "system/services/i18n/catalog/settings.mjs"
 
 spec = importlib.util.spec_from_file_location("ordax_native_local_session_test", HOST)
 host = importlib.util.module_from_spec(spec)
@@ -101,13 +102,15 @@ class NativeLocalSessionTests(unittest.TestCase):
         composition = COMPOSITION.read_text(encoding="utf-8")
         first_run = FIRST_RUN.read_text(encoding="utf-8")
         settings = SETTINGS.read_text(encoding="utf-8")
+        settings_i18n = SETTINGS_I18N.read_text(encoding="utf-8")
         self.assertIn('LOCAL_SESSION_SCHEMA = "ordax.local-session/1"', contract)
         self.assertIn('"/__ordax/native/local-session"', adapter)
         self.assertIn("createNativeLocalSession", composition)
         self.assertIn("mountLocalSessionLock", composition)
         self.assertIn('"security"', first_run)
         self.assertIn("localSessionPort.configureCredential", first_run)
-        self.assertIn('"Segurança"', settings)
+        self.assertIn('messageId: "settings.section.security"', settings)
+        self.assertIn('"settings.section.security": "Segurança"', settings_i18n)
         self.assertNotIn("supabase", adapter.lower())
         self.assertNotIn("identity-session", adapter)
         self.assertNotIn("account", contract.lower())
