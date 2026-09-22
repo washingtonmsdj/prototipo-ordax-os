@@ -287,3 +287,123 @@ func TestPortableRuntimeManifestV3RejectsWrongRuntimeNameAndNonHTTPSURL(t *testi
 		t.Fatal("v3 accepted non-HTTPS Surface runtime URL")
 	}
 }
+
+func TestPortableAIRuntimeManifestV4PinsThreeArtifactsWithoutChangingV3(t *testing.T) {
+	root := t.TempDir()
+	systemPayload := []byte("system-v4")
+	runtimePayload := []byte("surface-runtime-v4")
+	aiPayload := []byte("local-ai-runtime-v4")
+	systemPath := filepath.Join(root, "system.erofs")
+	runtimePath := filepath.Join(root, "native-surface-runtime.erofs")
+	aiPath := filepath.Join(root, "local-ai-runtime.erofs")
+	if err := os.WriteFile(systemPath, systemPayload, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(runtimePath, runtimePayload, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(aiPath, aiPayload, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	manifest, err := buildPortableAIRuntimeManifest(
+		systemPath,
+		runtimePath,
+		aiPath,
+		testCommit,
+		"https://example.invalid/system.erofs",
+		"https://example.invalid/native-surface-runtime.erofs",
+		"https://example.invalid/local-ai-runtime.erofs",
+		defaultRepo,
+		defaultPortableAIRuntimeRecipe,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.Schema != manifestSchemaV4 || len(manifest.Artifacts) != 3 {
+		t.Fatalf("unexpected v4 manifest: %#v", manifest)
+	}
+	expected := []struct {
+		name string
+		role string
+		data []byte
+	}{
+		{"system.erofs", "system-image", systemPayload},
+		{"native-surface-runtime.erofs", "surface-runtime", runtimePayload},
+		{"local-ai-runtime.erofs", "local-ai-runtime", aiPayload},
+	}
+	for index, want := range expected {
+		got := manifest.Artifacts[index]
+		digest := sha256.Sum256(want.data)
+		if got.Name != want.name ||
+			got.Role != want.role ||
+			got.SHA256 != hex.EncodeToString(digest[:]) ||
+			got.Size != int64(len(want.data)) {
+			t.Fatalf("unexpected v4 artifact %d: %#v", index, got)
+		}
+	}
+
+	v3, err := buildPortableRuntimeManifest(
+		systemPath,
+		runtimePath,
+		testCommit,
+		"https://example.invalid/system.erofs",
+		"https://example.invalid/native-surface-runtime.erofs",
+		defaultRepo,
+		defaultPortableRuntimeRecipe,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v3.Schema != manifestSchemaV3 || len(v3.Artifacts) != 2 {
+		t.Fatalf("v3 semantics drifted after v4 support: %#v", v3)
+	}
+}
+
+func TestPortableAIRuntimeManifestV4RejectsWrongAINameAndNonHTTPSURL(t *testing.T) {
+	root := t.TempDir()
+	systemPath := filepath.Join(root, "system.erofs")
+	runtimePath := filepath.Join(root, "native-surface-runtime.erofs")
+	wrongAIPath := filepath.Join(root, "wrong-ai.erofs")
+	for path, payload := range map[string][]byte{
+		systemPath:  []byte("system"),
+		runtimePath: []byte("runtime"),
+		wrongAIPath: []byte("ai"),
+	} {
+		if err := os.WriteFile(path, payload, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := buildPortableAIRuntimeManifest(
+		systemPath,
+		runtimePath,
+		wrongAIPath,
+		testCommit,
+		"https://example.invalid/system.erofs",
+		"https://example.invalid/native-surface-runtime.erofs",
+		"https://example.invalid/local-ai-runtime.erofs",
+		defaultRepo,
+		defaultPortableAIRuntimeRecipe,
+	); err == nil {
+		t.Fatal("v4 accepted non-canonical local AI runtime filename")
+	}
+
+	aiPath := filepath.Join(root, "local-ai-runtime.erofs")
+	if err := os.WriteFile(aiPath, []byte("ai"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := buildPortableAIRuntimeManifest(
+		systemPath,
+		runtimePath,
+		aiPath,
+		testCommit,
+		"https://example.invalid/system.erofs",
+		"https://example.invalid/native-surface-runtime.erofs",
+		"http://example.invalid/local-ai-runtime.erofs",
+		defaultRepo,
+		defaultPortableAIRuntimeRecipe,
+	); err == nil {
+		t.Fatal("v4 accepted non-HTTPS local AI runtime URL")
+	}
+}
+
