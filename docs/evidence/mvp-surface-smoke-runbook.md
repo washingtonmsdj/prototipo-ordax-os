@@ -17,7 +17,7 @@ O harness é deliberadamente somente leitura. Ele complementa — não substitui
 - registra apenas resumos limitados dos dados observados;
 - verifica o tail do log do host por marcadores `traceback`, `segmentation fault` e `fatal`, armazenando apenas hash e contagem;
 - grava um relatório JSON com `PASS/WARN/FAIL` sem executar `POST`, `PUT`, `PATCH` ou `DELETE`;
-- compara baseline e pós-tour de forma fail-closed para confirmar que pertencem ao mesmo boot, às mesmas fontes, à mesma identidade técnica sanitizada do updater e ao mesmo layout físico já aplicado.
+- compara baseline e pós-tour de forma fail-closed para confirmar que pertencem ao mesmo contexto de runtime publicado pela Surface, ao mesmo boot, às mesmas fontes, à mesma identidade técnica sanitizada do updater e ao mesmo layout físico já aplicado.
 
 ### Privacidade da evidência
 
@@ -42,8 +42,9 @@ O relatório de comparação não copia `boot_id`, hashes de fontes ou a impress
 1. para evidência canônica, notebook inicializado pelo **USB Stable/MVP verificado**; Owner/Development pode executar o mesmo harness apenas como diagnóstico de desenvolvimento;
 2. Surface gráfica saudável e em execução;
 3. no Stable/MVP, o release montado em `/system` contém este harness; no Owner/Development, o checkout correspondente está sincronizado;
-4. runtime Native/WebKit ativo — o wrapper resolve automaticamente o runtime verificado em `/run/ordax/runtime/native-surface/rootfs` no Stable/MVP e o runtime dinâmico em Owner/Development;
-5. nenhum reflash, rebuild de kernel ou escrita física é necessário para executar o smoke test.
+4. runtime Native/WebKit ativo e a própria Surface publicou `/run/ordax-surface/runtime-proof-context`; o wrapper aceita somente esse contexto efêmero e então resolve o runtime verificado em `/run/ordax/runtime/native-surface/rootfs` no Stable/MVP ou o runtime dinâmico em Owner/Development;
+5. nenhuma inferência por simples presença de diretórios pode promover uma execução para Stable/MVP;
+6. nenhum reflash, rebuild de kernel ou escrita física é necessário para executar o smoke test.
 
 ## Coleta automática inicial
 
@@ -65,7 +66,7 @@ A saída deve terminar com:
 FAIL=0
 ```
 
-Qualquer `FAIL` precisa ser tratado como evidência de que o recorte integrado ainda não está saudável naquele runtime. Não converter falha em `WARN` apenas para fechar a prova.
+Qualquer `FAIL` precisa ser tratado como evidência de que o recorte integrado ainda não está saudável naquele runtime. Não converter falha em `WARN` apenas para fechar a prova. Para evidência canônica, `baseline.json` deve registrar `distribution_profile=stable-mvp`, `runtime_mode=verified-erofs-overlay`, `evidence_scope=canonical-stable-mvp` e o SHA-256 do runtime verificado publicado pela Surface.
 
 ## Tour manual obrigatório da Surface
 
@@ -125,7 +126,7 @@ A comparação deve terminar com:
 FAIL=0
 ```
 
-Ela falha se qualquer coleta já contiver `FAIL`, se os `boot_id` forem diferentes/ausentes, se as fontes obrigatórias mudarem, se a identidade sanitizada do source do updater mudar ou se a Surface não estiver alinhada ao source nas duas observações. Isso impede juntar acidentalmente evidências de boots, checkouts ou atualizações diferentes em uma única prova física.
+Ela falha se qualquer coleta já contiver `FAIL`, se o `evidence_context` for ausente/inválido/diferente, se os `boot_id` forem diferentes/ausentes, se as fontes obrigatórias mudarem, se a identidade sanitizada do source do updater mudar ou se a Surface não estiver alinhada ao source nas duas observações. Isso impede juntar acidentalmente evidências de boots, checkouts ou atualizações diferentes em uma única prova física.
 
 Uma atualização automática que ocorra entre baseline e pós-tour também invalida esta execução do smoke integrado. Nesse caso, iniciar uma nova sequência baseline -> tour -> pós-tour -> comparação sobre o estado já estabilizado, em vez de reinterpretar as duas sessões como equivalentes.
 
@@ -143,9 +144,9 @@ Depois que `comparison.json` estiver em PASS e os 11 itens de `tour.json` tivere
   --output /var/lib/ordax/mvp-smoke/final.json
 ```
 
-`finalize` não confia cegamente no arquivo de comparação: ele recalcula baseline x pós-tour e exige equivalência semântica com `comparison.json`. Também exige exatamente os 10 ids de tour, todos em `pass`. Um item pendente/falho, comparação editada/stale ou qualquer FAIL automático produz `FAIL>0`.
+`finalize` não confia cegamente no arquivo de comparação: ele recalcula baseline x pós-tour e exige equivalência semântica com `comparison.json`. Também exige exatamente os 11 ids de tour, todos em `pass`. Um item pendente/falho, comparação editada/stale ou qualquer FAIL automático produz `FAIL>0`.
 
-O relatório final não copia `boot_id`, hashes das fontes nem a identidade sanitizada do updater. Ele registra explicitamente `physical_write=false` e `reboot_required=false`.
+O relatório final não copia `boot_id`, hashes das fontes nem a identidade sanitizada do updater. Ele preserva o `evidence_context` validado — incluindo o SHA-256 do runtime verificado no Stable/MVP — e registra explicitamente `physical_write=false` e `reboot_required=false`.
 
 ## Evidência mínima para declarar esta prova física
 
@@ -157,7 +158,8 @@ Antes de atualizar qualquer snapshot canônico para PASS, devem existir juntos:
 - `comparison.json` revisado com `FAIL=0`;
 - `tour.json` com exatamente os 11 itens em `pass`;
 - `final.json` revisado com `FAIL=0`;
-- referência ao SHA exato do checkout testado;
+- `evidence_context` idêntico entre baseline, pós-tour, comparação e final; para afirmação canônica deve ser `stable-mvp + verified-erofs-overlay + canonical-stable-mvp` com SHA-256 de runtime válido;
+- referência ao SHA exato da release Stable/MVP testada;
 - confirmação `PHYSICAL_WRITE=NO` e `REBOOT_REQUIRED=NO` para esta operação;
 - quando Internet fizer parte da afirmação de isolamento/persistência, evidência do runbook específico de Internet.
 

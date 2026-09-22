@@ -14,6 +14,7 @@ DEV_RUN = ROOT / "bootstrap" / "dev-base" / "ordax-run"
 ENTRYPOINT = ROOT / "system" / "entrypoint"
 SUPERVISOR = ROOT / "system" / "supervisor"
 SURFACE = ROOT / "system" / "surface" / "bin" / "ordax-surface"
+PROOF_RUNTIME = ROOT / "system" / "surface" / "bin" / "ordax-proof-runtime.sh"
 BASE_OWNER = ROOT / "system" / "services" / "base-update" / "agent.sh"
 TELEMETRY = ROOT / "system" / "services" / "telemetry" / "base-agent.sh"
 CONTRACT = json.loads(
@@ -29,6 +30,7 @@ class StableRuntimeProfileTests(unittest.TestCase):
             ENTRYPOINT,
             SUPERVISOR,
             SURFACE,
+            PROOF_RUNTIME,
             BASE_OWNER,
             TELEMETRY,
         ):
@@ -164,6 +166,50 @@ class StableRuntimeProfileTests(unittest.TestCase):
             owner,
         )
         self.assertIn('ORDAX_BASE_SOURCE_SHA="$SOURCE_SHA"', owner)
+
+        bindings = text.split("bind_runtime_mounts() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("owner-development)", bindings)
+        self.assertIn("stable-mvp)", bindings)
+        self.assertIn(
+            "Stable/MVP owns a verified /system tree, not a Git checkout",
+            bindings,
+        )
+        owner_bind = bindings.split(
+            'if [ "$DISTRIBUTION_PROFILE" = "owner-development" ]; then',
+            1,
+        )[1]
+        self.assertIn(
+            'mount -o bind "$repo_root" "$RUNTIME_ROOT/srv/ordax-repo"',
+            owner_bind,
+        )
+        stable_case = bindings.split("stable-mvp)", 1)[1].split(";;", 1)[0]
+        self.assertNotIn("/srv/ordax-repo", stable_case)
+        self.assertIn(
+            'mount -o bind "$SYSTEM_ROOT" "$RUNTIME_ROOT/srv/ordax-system"',
+            bindings,
+        )
+
+        self.assertIn(
+            "RUNTIME_PROOF_CONTEXT=$SESSION_DIR/runtime-proof-context",
+            text,
+        )
+        publish = text.split("publish_runtime_proof_context() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("dynamic-native-runtime", publish)
+        self.assertIn("verified-erofs-overlay", publish)
+        self.assertIn("canonical-stable-mvp", publish)
+        self.assertIn('chmod 600 "$temporary"', publish)
+        self.assertIn('rm -f "$RUNTIME_PROOF_CONTEXT"', text)
+        self.assertIn(
+            'configure_keyboard_layout\npublish_runtime_proof_context || fallback_with_reason',
+            text,
+        )
+
+        resolver = PROOF_RUNTIME.read_text(encoding="utf-8")
+        self.assertIn("/run/ordax-surface/runtime-proof-context", resolver)
+        self.assertIn("duplicate distribution profile", resolver)
+        self.assertIn("unknown field in runtime proof context", resolver)
+        self.assertIn("canonical-stable-mvp", resolver)
+        self.assertIn("ORDAX_PROOF_RUNTIME_SHA256", resolver)
 
     def test_stable_base_owner_does_not_run_development_candidate_pipeline(self):
         text = BASE_OWNER.read_text(encoding="utf-8")

@@ -13,7 +13,7 @@ Este runbook fecha a diferença entre os testes de source/CI do app **Internet**
 - valida `session.json` como arquivo regular, limitado, schema v1 e modo `0600`;
 - registra apenas **quantidade de abas, índice ativo e hashes** — nunca URLs visitadas ou conteúdo de páginas;
 - faz probes HTTP **GET-only** no host loopback para confirmar Host exato e rejeição de alias/DNS-rebinding, request-target absoluto, `Origin` estrangeira e `Sec-Fetch-Site: cross-site` nas rotas privilegiadas;
-- permite comparar duas coletas no mesmo boot para provar que o browser host reiniciou e que a sessão de abas permaneceu semanticamente idêntica.
+- permite comparar duas coletas no mesmo boot e no mesmo contexto de runtime publicado pela Surface para provar que o browser host reiniciou e que a sessão de abas permaneceu semanticamente idêntica.
 
 A coleta não testa por automação comportamento visual, foco, scroll, touchpad, permissões WebKit ou downloads. Esses itens continuam manuais abaixo.
 
@@ -22,8 +22,9 @@ A coleta não testa por automação comportamento visual, foco, scroll, touchpad
 1. para evidência canônica, notebook inicializado pelo **USB Stable/MVP verificado**; Owner/Development permanece somente como escopo de desenvolvimento;
 2. Surface gráfica saudável e em execução;
 3. no Stable/MVP, o release montado em `/system` contém este harness; no Owner/Development, o checkout correspondente está sincronizado;
-4. o wrapper resolve automaticamente o runtime WebKit verificado em `/run/ordax/runtime/native-surface/rootfs` ou o runtime dinâmico de desenvolvimento;
-5. nenhuma alteração de kernel, reflash ou escrita física é necessária para o harness.
+4. a Surface publicou `/run/ordax-surface/runtime-proof-context`; o wrapper aceita somente esse contexto efêmero e então resolve o runtime WebKit verificado em `/run/ordax/runtime/native-surface/rootfs` ou o runtime dinâmico de desenvolvimento;
+5. nenhuma inferência por presença de diretórios pode transformar diagnóstico Owner/Development em evidência canônica;
+6. nenhuma alteração de kernel, reflash ou escrita física é necessária para o harness.
 
 ## Coleta inicial
 
@@ -37,7 +38,7 @@ Abra o **Internet**, carregue pelo menos duas páginas HTTPS públicas, altere a
 
 Em Owner/Development, o mesmo harness pode ser chamado por `/workspace/ordax/system/surface/bin/ordax-internet-proof`, mas essa prova não deve ser promovida como evidência canônica Stable/MVP.
 
-A saída deve terminar com `FAIL=0`. Um `WARN` sobre `data/cache` só é aceitável antes de o WebKit ter materializado ambos os diretórios; para a prova final, use o Internet primeiro e repita até o perfil existir.
+A saída deve terminar com `FAIL=0`. Um `WARN` sobre `data/cache` só é aceitável antes de o WebKit ter materializado ambos os diretórios; para a prova final, use o Internet primeiro e repita até o perfil existir. Para evidência canônica, o relatório deve registrar `stable-mvp + verified-erofs-overlay + canonical-stable-mvp` e o SHA-256 do runtime verificado.
 
 ## Prova de persistência após restart da Surface
 
@@ -56,6 +57,7 @@ Reinicie **somente a Surface**, sem reiniciar o notebook. Não altere as abas an
 
 A comparação só passa quando:
 
+- as duas coletas têm o mesmo `evidence_context` válido; para evidência canônica ele deve ser `stable-mvp + verified-erofs-overlay + canonical-stable-mvp` com o mesmo SHA-256 de runtime;
 - as duas coletas têm o mesmo `boot_id`;
 - o PID/start-time do browser host mudou;
 - o hash semântico de `session.json` é idêntico;
@@ -89,6 +91,7 @@ Não alterar `docs/CURRENT-STATE.md` para `PASS` até existirem, juntos:
 - `collect` antes com `FAIL=0`;
 - `collect` depois com `FAIL=0`;
 - `compare` com `FAIL=0`;
+- `evidence_context` canônico e idêntico nas duas coletas e na comparação;
 - checklist manual registrado;
 - evidência explícita para a tentativa de subresource/redirect local;
 - verificação de que os demais apps e o rollback/health continuam saudáveis.

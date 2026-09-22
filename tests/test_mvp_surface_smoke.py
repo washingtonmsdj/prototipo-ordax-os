@@ -4,6 +4,7 @@ import stat
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -150,6 +151,12 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
             "captured_at": "2026-09-20T12:00:00Z",
             "label": label,
             "boot_id": boot_id,
+            "evidence_context": {
+                "distribution_profile": "owner-development",
+                "runtime_mode": "dynamic-native-runtime",
+                "evidence_scope": "development",
+                "runtime_sha256": None,
+            },
             "source": {
                 "files": {
                     relative: {"size": index + 1, "sha256": source_digest}
@@ -205,6 +212,8 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
         self.assertEqual(report["summary"]["fail"], 0, report["checks"])
         self.assertEqual(report["observed"]["file_space_root"]["entry_count"], 2)
         self.assertEqual(report["observed"]["network_status"]["interface_count"], 2)
+        self.assertEqual(report["evidence_context"]["evidence_scope"], "development")
+        self.assertIsNone(report["evidence_context"]["runtime_sha256"])
         self.assertTrue(report["observed"]["keyboard_layout"]["settled"])
         self.assertEqual(report["observed"]["keyboard_layout"]["applied_layout_id"], "br-abnt2")
         self.assertEqual(report["observed"]["update_status"]["status"], "running")
@@ -246,6 +255,58 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
                 "supportedLayoutIds": ["br-abnt2", "us"],
                 "restartRequired": False,
             })
+
+    def test_evidence_context_requires_exact_profile_mode_scope_and_digest(self):
+        self.assertEqual(
+            proof.evidence_context_from_environment(),
+            {
+                "distribution_profile": "owner-development",
+                "runtime_mode": "dynamic-native-runtime",
+                "evidence_scope": "development",
+                "runtime_sha256": None,
+            },
+        )
+
+        with mock.patch.dict(
+            "os.environ",
+            {
+                "ORDAX_PROOF_PROFILE": "stable-mvp",
+                "ORDAX_PROOF_RUNTIME_MODE": "verified-erofs-overlay",
+                "ORDAX_PROOF_EVIDENCE_SCOPE": "canonical-stable-mvp",
+                "ORDAX_PROOF_RUNTIME_SHA256": "c" * 64,
+            },
+            clear=False,
+        ):
+            self.assertEqual(
+                proof.evidence_context_from_environment()["runtime_sha256"],
+                "c" * 64,
+            )
+
+        with mock.patch.dict(
+            "os.environ",
+            {
+                "ORDAX_PROOF_PROFILE": "stable-mvp",
+                "ORDAX_PROOF_RUNTIME_MODE": "dynamic-native-runtime",
+                "ORDAX_PROOF_EVIDENCE_SCOPE": "canonical-stable-mvp",
+                "ORDAX_PROOF_RUNTIME_SHA256": "c" * 64,
+            },
+            clear=False,
+        ):
+            with self.assertRaisesRegex(ValueError, "evidence context"):
+                proof.evidence_context_from_environment()
+
+        with mock.patch.dict(
+            "os.environ",
+            {
+                "ORDAX_PROOF_PROFILE": "stable-mvp",
+                "ORDAX_PROOF_RUNTIME_MODE": "verified-erofs-overlay",
+                "ORDAX_PROOF_EVIDENCE_SCOPE": "canonical-stable-mvp",
+                "ORDAX_PROOF_RUNTIME_SHA256": "",
+            },
+            clear=False,
+        ):
+            with self.assertRaisesRegex(ValueError, "runtime digest"):
+                proof.evidence_context_from_environment()
 
     def test_metrics_validator_rejects_impossible_values(self):
         with self.assertRaises(ValueError):
@@ -306,6 +367,18 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
 
         different_boot = self._comparison_report(boot_id="other-boot", label="after")
         self.assertGreater(proof.compare_reports(baseline, different_boot)["summary"]["fail"], 0)
+
+        different_context = self._comparison_report(label="after")
+        different_context["evidence_context"] = {
+            "distribution_profile": "stable-mvp",
+            "runtime_mode": "verified-erofs-overlay",
+            "evidence_scope": "canonical-stable-mvp",
+            "runtime_sha256": "e" * 64,
+        }
+        self.assertGreater(
+            proof.compare_reports(baseline, different_context)["summary"]["fail"],
+            0,
+        )
 
         different_source = self._comparison_report(label="after")
         source_path = proof.REQUIRED_SOURCE_FILES[0]
@@ -433,10 +506,14 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
         self.assertIn("resolve_ordax_proof_runtime_root", text)
         self.assertIn("/srv/ordax-system/diagnostics/mvp_surface_smoke.py", text)
         self.assertIn('busybox chroot "$RUNTIME_ROOT"', text)
+        self.assertIn("/run/ordax-surface/runtime-proof-context", resolver)
         self.assertIn("/run/ordax/runtime/native-surface/rootfs", resolver)
         self.assertIn("alpine-v3.22-cage-webkitgtk-v1", resolver)
-        self.assertIn("stable-mvp", resolver)
-        self.assertIn("owner-development", resolver)
+        self.assertIn("verified-erofs-overlay", resolver)
+        self.assertIn("canonical-stable-mvp", resolver)
+        self.assertIn("dynamic-native-runtime", resolver)
+        self.assertIn("development", resolver)
+        self.assertNotIn('if [ -x "$stable_root/usr/bin/python3" ]', resolver)
         self.assertNotIn("apk add", text + resolver)
         self.assertNotIn("curl ", text + resolver)
         self.assertEqual(stat.S_IMODE(WRAPPER.stat().st_mode), 0o755)

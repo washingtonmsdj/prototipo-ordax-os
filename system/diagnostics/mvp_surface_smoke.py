@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import http.client
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -23,6 +24,10 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 MAX_BODY = 2 * 1024 * 1024
 MAX_REPORT = 4 * 1024 * 1024
+EVIDENCE_CONTEXTS = {
+    ("owner-development", "dynamic-native-runtime"): "development",
+    ("stable-mvp", "verified-erofs-overlay"): "canonical-stable-mvp",
+}
 UPDATE_PHASES = frozenset({
     "idle",
     "checking",
@@ -87,6 +92,44 @@ def _summary(checks: list[dict]) -> dict:
 
 def _timestamp() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def evidence_context_from_environment() -> dict:
+    distribution_profile = os.environ.get(
+        "ORDAX_PROOF_PROFILE",
+        "owner-development",
+    )
+    runtime_mode = os.environ.get(
+        "ORDAX_PROOF_RUNTIME_MODE",
+        "dynamic-native-runtime",
+    )
+    evidence_scope = os.environ.get(
+        "ORDAX_PROOF_EVIDENCE_SCOPE",
+        EVIDENCE_CONTEXTS.get((distribution_profile, runtime_mode), ""),
+    )
+    runtime_sha256 = os.environ.get("ORDAX_PROOF_RUNTIME_SHA256", "")
+    expected_scope = EVIDENCE_CONTEXTS.get((distribution_profile, runtime_mode))
+    if expected_scope is None or evidence_scope != expected_scope:
+        raise ValueError("physical proof evidence context is invalid")
+
+    if evidence_scope == "canonical-stable-mvp":
+        if not (
+            len(runtime_sha256) == 64
+            and all(char in "0123456789abcdef" for char in runtime_sha256)
+        ):
+            raise ValueError("Stable/MVP proof runtime digest is invalid")
+        normalized_digest = runtime_sha256
+    else:
+        if runtime_sha256:
+            raise ValueError("development proof runtime must not claim a verified digest")
+        normalized_digest = None
+
+    return {
+        "distribution_profile": distribution_profile,
+        "runtime_mode": runtime_mode,
+        "evidence_scope": evidence_scope,
+        "runtime_sha256": normalized_digest,
+    }
 
 
 def _boot_id(proc_root: Path = PROC_ROOT) -> str | None:
@@ -466,6 +509,7 @@ def collect(
         "label": label,
         "boot_id": _boot_id(proc_root),
         "loopback": {"host": host, "port": port},
+        "evidence_context": evidence_context_from_environment(),
         "source": source,
         "observed": observed,
         "host_log": host_log,
@@ -477,6 +521,25 @@ def collect(
 
 def _valid_sha256(value: object) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(char in "0123456789abcdef" for char in value)
+
+
+def _evidence_context(report: dict) -> tuple[str, str, str, str | None] | None:
+    context = report.get("evidence_context")
+    if not isinstance(context, dict):
+        return None
+    distribution_profile = context.get("distribution_profile")
+    runtime_mode = context.get("runtime_mode")
+    evidence_scope = context.get("evidence_scope")
+    runtime_sha256 = context.get("runtime_sha256")
+    expected_scope = EVIDENCE_CONTEXTS.get((distribution_profile, runtime_mode))
+    if expected_scope is None or evidence_scope != expected_scope:
+        return None
+    if evidence_scope == "canonical-stable-mvp":
+        if not _valid_sha256(runtime_sha256):
+            return None
+    elif runtime_sha256 is not None:
+        return None
+    return distribution_profile, runtime_mode, evidence_scope, runtime_sha256
 
 
 def _source_identity(report: dict) -> dict[str, tuple[int, str]] | None:
@@ -537,6 +600,17 @@ def compare_reports(baseline: dict, after: dict, label: str = "mvp-surface-compa
     schemas_ok = baseline.get("schema") == SCHEMA and after.get("schema") == SCHEMA
     checks.append(_check("report_schema", schemas_ok, "relatórios usam o schema esperado" if schemas_ok else "schema de relatório incompatível"))
 
+    baseline_context = _evidence_context(baseline)
+    after_context = _evidence_context(after)
+    same_context = baseline_context is not None and baseline_context == after_context
+    checks.append(_check(
+        "same_evidence_context",
+        same_context,
+        "mesmo perfil/runtime de evidência"
+        if same_context
+        else "perfil/runtime de evidência ausente, inválido ou diferente",
+    ))
+
     baseline_clean = _report_has_no_failures(baseline)
     after_clean = _report_has_no_failures(after)
     checks.append(_check("baseline_failures", baseline_clean, "baseline sem FAIL" if baseline_clean else "baseline contém FAIL ou summary inválido"))
@@ -583,6 +657,15 @@ def compare_reports(baseline: dict, after: dict, label: str = "mvp-surface-compa
         "label": label,
         "baseline_label": baseline.get("label") if isinstance(baseline.get("label"), str) else "",
         "after_label": after.get("label") if isinstance(after.get("label"), str) else "",
+        "evidence_context": (
+            {
+                "distribution_profile": baseline_context[0],
+                "runtime_mode": baseline_context[1],
+                "evidence_scope": baseline_context[2],
+                "runtime_sha256": baseline_context[3],
+            }
+            if same_context else None
+        ),
         "checks": checks,
     }
     report["summary"] = _summary(checks)
@@ -655,7 +738,7 @@ def load_comparison(path: Path) -> dict:
 def _comparison_semantics(report: dict) -> dict:
     return {
         key: report.get(key)
-        for key in ("schema", "label", "baseline_label", "after_label", "checks", "summary")
+        for key in ("schema", "label", "baseline_label", "after_label", "evidence_context", "checks", "summary")
     }
 
 
@@ -719,6 +802,7 @@ def finalize_evidence(
         "after_label": after.get("label") if isinstance(after.get("label"), str) else "",
         "comparison_label": comparison.get("label") if isinstance(comparison.get("label"), str) else "",
         "tour_label": checklist.get("label") if isinstance(checklist.get("label"), str) else "",
+        "evidence_context": expected_comparison.get("evidence_context"),
         "physical_write": False,
         "reboot_required": False,
         "checks": checks,

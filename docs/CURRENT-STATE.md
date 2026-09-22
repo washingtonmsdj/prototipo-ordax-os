@@ -443,7 +443,7 @@ PUBLIC_PHYSICAL_APPLY=NO
 
 Do not reinterpret `PASS_DEVELOPMENT_USB` as canonical release/install proof. The proven target today is the owner/development Git-first USB on the tested notebook.
 
-The source-controlled Stable/MVP physical smoke harness is now ready for the verified runtime and remains non-promotional until executed on the real Stable/MVP USB. It resolves the verified Stable runtime rather than the Owner/Development dynamic root, checks configured/applied physical keyboard state, preserves baseline/after comparison, and requires all 11 manual tour items plus a fresh fail-closed finalization. This is source/CI readiness only: `MVP_SURFACE_SMOKE_PHYSICAL=PENDING` and `CANONICAL_STABLE_GRAPHICAL_MODE=PENDING` remain authoritative until real hardware evidence exists.
+The source-controlled Stable/MVP physical smoke harness is now ready for the verified Stable runtime and remains non-promotional until executed on the real Stable/MVP USB. The running Surface publishes a private ephemeral proof context, and the harness fails closed unless that context identifies the exact Owner/Development dynamic runtime or `stable-mvp + verified-erofs-overlay + canonical-stable-mvp` with its verified runtime SHA-256. The Stable graphical runtime no longer depends on or mounts a Git repository. The smoke also checks configured/applied physical keyboard state, preserves baseline/after comparison, rejects mixed runtime evidence, and requires all 11 manual tour items plus a fresh fail-closed finalization. This is source/CI readiness only: `MVP_SURFACE_SMOKE_PHYSICAL=PENDING` and `CANONICAL_STABLE_GRAPHICAL_MODE=PENDING` remain authoritative until real hardware evidence exists.
 
 ## Deferred/final physical validation
 
