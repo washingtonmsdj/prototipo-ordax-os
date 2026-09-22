@@ -13,24 +13,16 @@ import {
   REGIONAL_TIME_ZONE_PREFERENCE_ID,
   isSupportedRegionalTimeZone,
 } from "../../services/preferences/regional.mjs";
-import { translateFirstRunText } from "../../services/i18n/first-run.mjs";
 import { completeFirstRunState, validateFirstRunState } from "../../services/state/first-run.mjs";
-import {
-  networkManagementActionMessage,
-  networkManagementFailureMessage,
-  runNetworkManagementAction,
-} from "../../services/network/management-runtime.mjs";
+import { runNetworkManagementAction } from "../../services/network/management-runtime.mjs";
+import { firstRunStepLabels, firstRunText } from "../../i18n/first-run.mjs";
 
 const STEPS = Object.freeze(["welcome", "regional", "network", "account", "privacy", "ready"]);
-const STEP_LABELS = Object.freeze(["Início", "Região", "Rede", "Conta", "Privacidade", "Pronto"]);
 
 function el(documentObject, tag, className = "", text = undefined) {
   const node = documentObject.createElement(tag);
   if (className) node.className = className;
-  if (text !== undefined) {
-    const locale = documentObject.documentElement?.lang || "pt-BR";
-    node.textContent = translateFirstRunText(locale, text);
-  }
+  if (text !== undefined) node.textContent = text;
   return node;
 }
 
@@ -46,11 +38,11 @@ function action(documentObject, label, id, primary = false) {
   return button;
 }
 
-function signalLabel(dbm) {
-  if (dbm >= -50) return "Sinal forte";
-  if (dbm >= -60) return "Sinal bom";
-  if (dbm >= -70) return "Sinal regular";
-  return "Sinal fraco";
+function signalLabel(dbm, locale) {
+  if (dbm >= -50) return firstRunText(locale, "strongSignal");
+  if (dbm >= -60) return firstRunText(locale, "goodSignal");
+  if (dbm >= -70) return firstRunText(locale, "fairSignal");
+  return firstRunText(locale, "weakSignal");
 }
 
 export function mountFirstRunExperience(
@@ -91,8 +83,6 @@ export function mountFirstRunExperience(
     accountMode: null,
   };
 
-  documentObject.documentElement.lang = draft.locale;
-
   const previousInert = root.inert;
   const previousAriaHidden = root.getAttribute("aria-hidden");
   root.inert = true;
@@ -125,6 +115,8 @@ export function mountFirstRunExperience(
   let completionError = "";
   let unsubscribeSession = null;
   let unsubscribeActions = null;
+
+  const t = (key, variables = {}) => firstRunText(draft.locale, key, variables);
 
   const restoreRoot = () => {
     root.inert = previousInert;
@@ -162,9 +154,9 @@ export function mountFirstRunExperience(
   const renderProgress = () => {
     progress.replaceChildren();
     const brand = el(documentObject, "div", "ordax-first-run-brand");
-    brand.append(el(documentObject, "strong", "", "OrdaX"), el(documentObject, "span", "", "Primeiro uso"));
+    brand.append(el(documentObject, "strong", "", "OrdaX"), el(documentObject, "span", "", t("firstUse")));
     const list = el(documentObject, "ol", "ordax-first-run-steps");
-    STEP_LABELS.forEach((label, index) => {
+    firstRunStepLabels(draft.locale).forEach((label, index) => {
       const item = el(documentObject, "li", "", label);
       item.dataset.state = index < stepIndex ? "done" : index === stepIndex ? "current" : "pending";
       if (index === stepIndex) item.setAttribute("aria-current", "step");
@@ -175,15 +167,15 @@ export function mountFirstRunExperience(
 
   const renderWelcome = (body) => {
     body.append(heading(
-      "Bem-vindo",
-      "Seu OrdaX começa aqui.",
-      "Vamos configurar este pendrive para uso diário. O MVP executa pelo USB e não instala o sistema no SSD, NVMe ou HD interno.",
+      t("welcomeEyebrow"),
+      t("welcomeTitle"),
+      t("welcomeDetail"),
     ));
     const grid = el(documentObject, "div", "ordax-first-run-grid");
     [
-      ["USB primeiro", "O sistema e seu estado persistente permanecem no pendrive."],
-      ["Conta opcional", "Arquivos, Notas, Internet e Ajustes funcionam sem identidade online."],
-      ["Offline utilizável", "A falta de internet não deve impedir o computador de iniciar."],
+      [t("welcomeUsbTitle"), t("welcomeUsbDetail")],
+      [t("welcomeAccountTitle"), t("welcomeAccountDetail")],
+      [t("welcomeOfflineTitle"), t("welcomeOfflineDetail")],
     ].forEach(([title, detail]) => {
       const item = el(documentObject, "article", "ordax-first-run-tile");
       item.append(el(documentObject, "strong", "", title), el(documentObject, "p", "", detail));
@@ -194,13 +186,13 @@ export function mountFirstRunExperience(
 
   const renderRegional = (body) => {
     body.append(heading(
-      "Idioma e região",
-      "Ajuste idioma e horário.",
-      "Português (Brasil) é o idioma completo desta versão. O relógio passa a usar o fuso escolhido aqui, não uma constante fixa da Surface.",
+      t("regionalEyebrow"),
+      t("regionalTitle"),
+      t("regionalDetail"),
     ));
     const form = el(documentObject, "div", "ordax-first-run-form");
     const localeField = el(documentObject, "label", "ordax-first-run-field");
-    localeField.append(el(documentObject, "span", "", "Idioma"));
+    localeField.append(el(documentObject, "span", "", t("language")));
     const locale = documentObject.createElement("select");
     locale.dataset.firstRunLocale = "";
     REGIONAL_LOCALE_OPTIONS.forEach((entry) => {
@@ -213,7 +205,7 @@ export function mountFirstRunExperience(
     localeField.append(locale);
 
     const zoneField = el(documentObject, "label", "ordax-first-run-field");
-    zoneField.append(el(documentObject, "span", "", "Fuso horário"));
+    zoneField.append(el(documentObject, "span", "", t("timeZone")));
     const zone = documentObject.createElement("select");
     zone.dataset.firstRunTimeZone = "";
     REGIONAL_TIME_ZONE_OPTIONS.forEach((entry) => {
@@ -230,16 +222,16 @@ export function mountFirstRunExperience(
 
   const renderNetwork = (body) => {
     body.append(heading(
-      "Rede",
-      "Conecte-se agora ou continue offline.",
-      "A rede é opcional. Este passo usa o mesmo broker Native de Wi-Fi da Surface; não existe um segundo gerenciador exclusivo do assistente.",
+      t("networkEyebrow"),
+      t("networkTitle"),
+      t("networkDetail"),
     ));
     if (!networkPort) {
       body.append(el(
         documentObject,
         "p",
         "ordax-first-run-notice",
-        "O gerenciamento de Wi-Fi não está disponível neste host. Continue offline e configure a rede quando o adapter estiver disponível.",
+        t("wifiUnavailable"),
       ));
       return;
     }
@@ -247,10 +239,10 @@ export function mountFirstRunExperience(
     const toolbar = el(documentObject, "div", "ordax-first-run-network-toolbar");
     const current = el(documentObject, "div", "ordax-first-run-network-current");
     current.append(
-      el(documentObject, "span", "", networkSnapshot?.currentSsid ? "Conectado" : "Wi-Fi"),
-      el(documentObject, "strong", "", networkSnapshot?.currentSsid ?? (networkSnapshot ? "Sem rede conectada" : "Lendo estado…")),
+      el(documentObject, "span", "", networkSnapshot?.currentSsid ? t("connected") : t("wifi")),
+      el(documentObject, "strong", "", networkSnapshot?.currentSsid ?? (networkSnapshot ? t("noNetwork") : t("readingState"))),
     );
-    const scan = action(documentObject, networkPending ? "Aguarde…" : "Procurar redes", "network-scan");
+    const scan = action(documentObject, networkPending ? t("wait") : t("scanNetworks"), "network-scan");
     scan.disabled = networkPending;
     toolbar.append(current, scan);
     body.append(toolbar);
@@ -267,7 +259,7 @@ export function mountFirstRunExperience(
       .sort((left, right) => right.signalDbm - left.signalDbm)
       .slice(0, 10);
     if (networks.length === 0) {
-      list.append(el(documentObject, "p", "ordax-first-run-empty", "Nenhuma rede listada. Use “Procurar redes”."));
+      list.append(el(documentObject, "p", "ordax-first-run-empty", t("noNetworks")));
     }
     networks.forEach((entry) => {
       const button = action(documentObject, entry.ssid, "network-select");
@@ -278,7 +270,7 @@ export function mountFirstRunExperience(
         documentObject,
         "small",
         "",
-        `${entry.connected ? "Conectada" : entry.saved ? "Salva" : "Disponível"} · ${signalLabel(entry.signalDbm)}`,
+        `${entry.connected ? t("connected") : entry.saved ? t("saved") : t("available")} · ${signalLabel(entry.signalDbm, draft.locale)}`,
       ));
       list.append(button);
     });
@@ -288,7 +280,7 @@ export function mountFirstRunExperience(
     if (selected && !selected.connected) {
       const connectForm = el(documentObject, "div", "ordax-first-run-connect");
       const passwordField = el(documentObject, "label", "ordax-first-run-field");
-      passwordField.append(el(documentObject, "span", "", `Senha de ${selected.ssid}`));
+      passwordField.append(el(documentObject, "span", "", t("passwordFor", { ssid: selected.ssid })));
       const input = documentObject.createElement("input");
       input.type = "password";
       input.autocomplete = "off";
@@ -296,7 +288,7 @@ export function mountFirstRunExperience(
       input.value = passwordDraft;
       input.disabled = networkPending;
       passwordField.append(input);
-      const connect = action(documentObject, "Conectar", "network-connect", true);
+      const connect = action(documentObject, t("connect"), "network-connect", true);
       connect.dataset.firstRunSsid = selected.ssid;
       connect.disabled = networkPending;
       connectForm.append(passwordField, connect);
@@ -306,18 +298,18 @@ export function mountFirstRunExperience(
 
   const renderAccount = (body) => {
     body.append(heading(
-      "Conta OrdaX",
-      "A conta é opcional.",
-      "Continuar sem conta é uma rota oficial do produto. Entrar e Criar conta só ficam ativos quando um provedor real anunciar essas capacidades.",
+      t("accountEyebrow"),
+      t("accountTitle"),
+      t("accountDetail"),
     ));
     const state = el(documentObject, "article", "ordax-first-run-account");
     const copy = sessionSnapshot.state === "signed-in"
-      ? `Conta autenticada como ${sessionSnapshot.displayName}.`
+      ? t("accountSignedIn", { name: sessionSnapshot.displayName })
       : sessionSnapshot.state === "signed-out"
-        ? "O host oferece identidade, mas nenhuma sessão está ativa."
-        : "A identidade online ainda não está configurada neste host.";
+        ? t("accountSignedOut")
+        : t("accountUnavailable");
     state.append(
-      el(documentObject, "strong", "", sessionSnapshot.state === "signed-in" ? sessionSnapshot.displayName : "Conta OrdaX"),
+      el(documentObject, "strong", "", sessionSnapshot.state === "signed-in" ? sessionSnapshot.displayName : t("accountEyebrow")),
       el(documentObject, "p", "", copy),
     );
     body.append(state);
@@ -330,15 +322,15 @@ export function mountFirstRunExperience(
 
     const buttons = el(documentObject, "div", "ordax-first-run-account-actions");
     if (sessionSnapshot.state === "signed-in") {
-      buttons.append(action(documentObject, "Usar esta conta", "account-identity", true));
+      buttons.append(action(documentObject, t("useThisAccount"), "account-identity", true));
     } else {
-      const signIn = action(documentObject, identityPending === "sign-in" ? "Entrando…" : "Entrar", "account-sign-in", true);
+      const signIn = action(documentObject, identityPending === "sign-in" ? t("signingIn") : t("signIn"), "account-sign-in", true);
       signIn.disabled = identityPending !== null || !isIdentityActionSupported(actionsSnapshot, "sign-in");
-      const register = action(documentObject, identityPending === "register" ? "Abrindo cadastro…" : "Criar conta", "account-register");
+      const register = action(documentObject, identityPending === "register" ? t("openingRegistration") : t("createAccount"), "account-register");
       register.disabled = identityPending !== null || !isIdentityActionSupported(actionsSnapshot, "register");
       buttons.append(signIn, register);
     }
-    const local = action(documentObject, "Continuar sem conta", "account-local");
+    const local = action(documentObject, t("continueWithoutAccount"), "account-local");
     local.disabled = identityPending !== null;
     buttons.append(local);
     body.append(buttons);
@@ -352,22 +344,22 @@ export function mountFirstRunExperience(
         documentObject,
         "p",
         "ordax-first-run-note",
-        "Nenhuma senha fictícia é solicitada: as ações online permanecem desativadas até existir integração real de identidade.",
+        t("noFakePassword"),
       ));
     }
   };
 
   const renderPrivacy = (body) => {
     body.append(heading(
-      "Privacidade",
-      "Local primeiro.",
-      "Este assistente não ativa sincronização, backup ou cobrança. Identidade online e proteção local do dispositivo permanecem responsabilidades separadas.",
+      t("privacyEyebrow"),
+      t("privacyTitle"),
+      t("privacyDetail"),
     ));
     const grid = el(documentObject, "div", "ordax-first-run-grid");
     [
-      ["Dados locais", "Arquivos, Notas e preferências continuam no armazenamento persistente do USB."],
-      ["Conta independente", "O uso local não depende de sessão cloud e não deve falhar quando a internet cair."],
-      ["Sem disco interno", "A instalação permanente continua fora do MVP e não é oferecida neste fluxo."],
+      [t("localDataTitle"), t("localDataDetail")],
+      [t("independentAccountTitle"), t("independentAccountDetail")],
+      [t("noInternalDiskTitle"), t("noInternalDiskDetail")],
     ].forEach(([title, detail]) => {
       const item = el(documentObject, "article", "ordax-first-run-tile");
       item.append(el(documentObject, "strong", "", title), el(documentObject, "p", "", detail));
@@ -378,17 +370,17 @@ export function mountFirstRunExperience(
 
   const renderReady = (body) => {
     body.append(heading(
-      "Tudo pronto",
-      "Seu espaço está preparado.",
-      "O assistente só desaparece depois que o estado de conclusão for gravado com sucesso no armazenamento persistente do pendrive.",
+      t("readyEyebrow"),
+      t("readyTitle"),
+      t("readyDetail"),
     ));
     const summary = el(documentObject, "dl", "ordax-first-run-summary");
     const localeLabel = REGIONAL_LOCALE_OPTIONS.find((entry) => entry.value === draft.locale)?.label ?? draft.locale;
     [
-      ["Idioma", localeLabel],
-      ["Fuso", draft.timeZone],
-      ["Conta", draft.accountMode === "identity" ? "Conta OrdaX" : "Somente local"],
-      ["Execução", "Pendrive USB"],
+      [t("language"), localeLabel],
+      [t("timeZone"), draft.timeZone],
+      [t("summaryAccount"), draft.accountMode === "identity" ? t("accountEyebrow") : t("localOnly")],
+      [t("summaryExecution"), t("usbDrive")],
     ].forEach(([key, value]) => {
       summary.append(el(documentObject, "dt", "", key), el(documentObject, "dd", "", value));
     });
@@ -414,11 +406,11 @@ export function mountFirstRunExperience(
     else renderReady(body);
 
     const footer = el(documentObject, "footer", "ordax-first-run-footer");
-    if (stepIndex > 0 && !finishing) footer.append(action(documentObject, "Voltar", "back"));
+    if (stepIndex > 0 && !finishing) footer.append(action(documentObject, t("back"), "back"));
     if (step !== "account") {
       const label = step === "ready"
-        ? finishing ? "Salvando…" : "Entrar no OrdaX"
-        : step === "network" ? "Continuar offline ou conectado" : "Continuar";
+        ? finishing ? t("saving") : t("enterOrdax")
+        : step === "network" ? t("continueConnectedOrOffline") : t("continue");
       const next = action(documentObject, label, step === "ready" ? "finish" : "next", true);
       next.disabled = finishing;
       footer.append(next);
@@ -440,12 +432,12 @@ export function mountFirstRunExperience(
     if (!networkPort || destroyed || networkPending) return;
     const ordinal = ++networkOrdinal;
     networkPending = true;
-    networkMessage = scan ? networkManagementActionMessage("scan", 0) : "Lendo estado do Wi-Fi…";
+    networkMessage = scan ? t("scanPending") : t("readingWifi");
     render();
     try {
       networkSnapshot = await (scan ? networkPort.scan() : networkPort.status());
       if (destroyed || ordinal !== networkOrdinal) return;
-      networkMessage = scan ? networkManagementActionMessage("scan", 1) : "";
+      networkMessage = scan ? t("scanDone") : "";
       if (selectedSsid && !networkSnapshot.networks.some((entry) => entry.ssid === selectedSsid)) {
         selectedSsid = null;
         passwordDraft = "";
@@ -453,8 +445,8 @@ export function mountFirstRunExperience(
     } catch (error) {
       if (destroyed || ordinal !== networkOrdinal) return;
       networkMessage = scan
-        ? networkManagementFailureMessage("scan", error)
-        : "O Wi-Fi não pôde ser lido. Você pode continuar offline.";
+        ? (error instanceof TypeError ? t("invalidWifiCredentials") : t("wifiActionFailed"))
+        : t("wifiReadFailed");
     } finally {
       if (!destroyed && ordinal === networkOrdinal) {
         networkPending = false;
@@ -467,17 +459,21 @@ export function mountFirstRunExperience(
     if (!networkPort || destroyed || networkPending) return;
     const ordinal = ++networkOrdinal;
     networkPending = true;
-    networkMessage = networkManagementActionMessage("connect", 0);
+    networkMessage = t("connectPending");
     passwordDraft = "";
     render();
     try {
       networkSnapshot = await runNetworkManagementAction(networkPort, "connect", { ssid, password });
       if (destroyed || ordinal !== networkOrdinal) return;
       selectedSsid = null;
-      networkMessage = networkManagementActionMessage("connect", 1);
+      networkMessage = t("connectDone");
     } catch (error) {
       if (destroyed || ordinal !== networkOrdinal) return;
-      networkMessage = networkManagementFailureMessage("connect", error);
+      networkMessage = error?.status === 409
+        ? t("connectFailed")
+        : error instanceof TypeError
+          ? t("invalidWifiCredentials")
+          : t("wifiActionFailed");
     } finally {
       if (!destroyed && ordinal === networkOrdinal) {
         networkPending = false;
@@ -497,10 +493,10 @@ export function mountFirstRunExperience(
       sessionSnapshot = sessionPort.getSnapshot();
       actionsSnapshot = actionsPort.getSnapshot();
       identityMessage = sessionSnapshot.state === "signed-in"
-        ? "Conta autenticada. Você pode usá-la neste pendrive."
-        : "A autenticação foi iniciada. O uso local continua disponível.";
+        ? t("identitySuccess")
+        : t("identityStarted");
     } catch {
-      if (!destroyed) identityMessage = "A ação de conta não pôde ser concluída. O uso local continua disponível.";
+      if (!destroyed) identityMessage = t("identityFailed");
     } finally {
       if (!destroyed) {
         identityPending = null;
@@ -522,7 +518,7 @@ export function mountFirstRunExperience(
     } catch {
       if (destroyed) return;
       finishing = false;
-      completionError = "Não foi possível confirmar a gravação do primeiro uso no pendrive. O assistente continua aberto para não perder a configuração.";
+      completionError = t("persistFailed");
       render();
     }
   };
@@ -550,7 +546,7 @@ export function mountFirstRunExperience(
       input.value = "";
       passwordDraft = "";
       if (!password) {
-        networkMessage = "Digite a senha da rede Wi-Fi.";
+        networkMessage = t("enterWifiPassword");
         render();
       } else {
         void connectNetwork(ssid, password);
@@ -574,9 +570,11 @@ export function mountFirstRunExperience(
   const onChange = (event) => {
     if (event.target.matches("[data-first-run-locale]")) {
       draft.locale = event.target.value;
-      documentObject.documentElement.lang = draft.locale;
       render();
-    } else if (event.target.matches("[data-first-run-time-zone]")) draft.timeZone = event.target.value;
+      queueMicrotask(() => overlay.querySelector("[data-first-run-locale]")?.focus?.());
+    } else if (event.target.matches("[data-first-run-time-zone]")) {
+      draft.timeZone = event.target.value;
+    }
   };
 
   const onKeyDown = (event) => {
