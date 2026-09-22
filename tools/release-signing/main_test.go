@@ -629,3 +629,117 @@ func TestSignAndVerifyPortableV3UsesExistingTrustEnvelopeBoundary(t *testing.T) 
 		t.Fatalf("portable v3 signed envelope lost identity: %#v", verified)
 	}
 }
+
+func validManifestV4Bytes() []byte {
+	return []byte(`{
+  "$schema": "prototype-ordax.release-manifest/4",
+  "source_repository": "washingtonmsdj/prototipo-ordax-os",
+  "source_commit": "0123456789abcdef0123456789abcdef01234567",
+  "release_id": "0123456789abcdef0123456789abcdef01234567",
+  "created_from_ci_recipe": "release/portable-usb-v2-ai-runtime/1",
+  "product_mode": "usb",
+  "storage_profile": "portable-usb-v2",
+  "runtime_format": "erofs",
+  "artifacts": [
+    {
+      "name": "system.erofs",
+      "role": "system-image",
+      "url": "https://example.invalid/releases/system.erofs",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "size": 4096
+    },
+    {
+      "name": "native-surface-runtime.erofs",
+      "role": "surface-runtime",
+      "url": "https://example.invalid/runtime/native-surface-runtime.erofs",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "size": 8192
+    },
+    {
+      "name": "local-ai-runtime.erofs",
+      "role": "local-ai-runtime",
+      "url": "https://example.invalid/runtime/local-ai-runtime.erofs",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "size": 16384
+    }
+  ]
+}`)
+}
+
+func TestStrictManifestAcceptsPortableV4WithoutChangingV1V2V3(t *testing.T) {
+	v4, err := strictManifest(validManifestV4Bytes(), defaultRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v4.Schema != manifestSchemaV4 || len(v4.Artifacts) != 3 {
+		t.Fatalf("unexpected v4 manifest: %#v", v4)
+	}
+	if v4.Artifacts[0].Name != "system.erofs" ||
+		v4.Artifacts[1].Name != "native-surface-runtime.erofs" ||
+		v4.Artifacts[2].Name != "local-ai-runtime.erofs" ||
+		v4.Artifacts[2].Role != "local-ai-runtime" {
+		t.Fatalf("v4 artifact order or roles drifted: %#v", v4.Artifacts)
+	}
+	for _, data := range [][]byte{validManifestBytes(), validManifestV2Bytes(), validManifestV3Bytes()} {
+		if _, err := strictManifest(data, defaultRepo); err != nil {
+			t.Fatalf("older manifest rejected after v4 support: %v", err)
+		}
+	}
+}
+
+func TestStrictManifestV4RejectsReorderedOrIncompleteArtifacts(t *testing.T) {
+	var manifest Manifest
+	if err := json.Unmarshal(validManifestV4Bytes(), &manifest); err != nil {
+		t.Fatal(err)
+	}
+	manifest.Artifacts[1], manifest.Artifacts[2] = manifest.Artifacts[2], manifest.Artifacts[1]
+	data, _ := json.Marshal(manifest)
+	if _, err := strictManifest(data, defaultRepo); err == nil {
+		t.Fatal("v4 accepted reordered artifacts")
+	}
+
+	if err := json.Unmarshal(validManifestV4Bytes(), &manifest); err != nil {
+		t.Fatal(err)
+	}
+	manifest.Artifacts = manifest.Artifacts[:2]
+	data, _ = json.Marshal(manifest)
+	if _, err := strictManifest(data, defaultRepo); err == nil || !strings.Contains(err.Error(), "exactly") {
+		t.Fatalf("v4 incomplete artifact set error = %v", err)
+	}
+}
+
+func TestSignAndVerifyPortableV4UsesExistingTrustEnvelopeBoundary(t *testing.T) {
+	root := t.TempDir()
+	privatePath := filepath.Join(root, "private.pem")
+	trustPath := filepath.Join(root, "trust.json")
+	if _, err := generateKeyFiles(privatePath, trustPath, "prototype-1"); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := writeManifestForTest(t, root, validManifestV4Bytes())
+	envelopePath := filepath.Join(root, "portable-v4-envelope.json")
+	commit, err := signManifest(
+		manifestPath,
+		privatePath,
+		trustPath,
+		envelopePath,
+		"prototype-1",
+		defaultRepo,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if commit != "0123456789abcdef0123456789abcdef01234567" {
+		t.Fatalf("unexpected signed v4 commit: %s", commit)
+	}
+	verified, err := verifyEnvelope(envelopePath, trustPath, defaultRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verified.Schema != manifestSchemaV4 ||
+		verified.Artifacts[0].Name != "system.erofs" ||
+		verified.Artifacts[1].Name != "native-surface-runtime.erofs" ||
+		verified.Artifacts[2].Name != "local-ai-runtime.erofs" {
+		t.Fatalf("portable v4 signed envelope lost identity: %#v", verified)
+	}
+}
+
