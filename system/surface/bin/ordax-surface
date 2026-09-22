@@ -479,6 +479,7 @@ remove_stale_seatd_socket() {
 }
 
 cleanup() {
+    rm -f "$RUNTIME_PROOF_CONTEXT" >/dev/null 2>&1 || true
     if [ -n "$NATIVE_INSTALL_BROKER_PID" ]; then
         terminate_child "$NATIVE_INSTALL_BROKER_PID" "Native install broker"
         NATIVE_INSTALL_BROKER_PID=""
@@ -1209,10 +1210,10 @@ ensure_loopback || fallback_with_reason "failed to configure IPv4 loopback for l
 sync_runtime_resolver || echo "ordax-surface: external DNS unavailable inside graphical runtime; continuing local Surface" >>"$HOST_LOG"
 ensure_shared_memory || fallback_with_reason "failed to prepare /dev/shm for wlroots/Xwayland"
 configure_graphics_host || fallback_with_reason "failed to configure OrdaX WebKit graphics host"
-publish_runtime_proof_context || fallback_with_reason "failed to publish active Surface runtime proof context"
 bind_runtime_mounts || fallback_with_reason "failed to bind host resources into graphical runtime"
 prepare_input_stack || fallback_with_reason "failed to prepare physical keyboard/touchpad input devices"
 configure_keyboard_layout
+publish_runtime_proof_context || fallback_with_reason "failed to publish active Surface runtime proof context"
 remove_stale_seatd_socket || fallback_with_reason "failed to clear stale seatd socket before native host startup"
 prepare_power_broker || fallback_with_reason "failed to prepare host power broker"
 ensure_base_update_agent || echo "ordax-surface: base update owner unavailable; continuing Surface startup" >>"$HOST_LOG"
