@@ -7,7 +7,7 @@ import { assertLocalizationPort } from "../../contracts/localization.mjs";
 const POLL_INTERVAL_MS = 30000;
 const POWER_TIME_ZONE = "America/Bahia";
 
-export function formatPowerReceivedAt(value, locale = "pt-BR", fallback = "horário desconhecido") {
+export function formatPowerReceivedAt(value, locale = "pt-BR", fallback = "--") {
   if (!Number.isFinite(value)) return fallback;
   return new Intl.DateTimeFormat(locale, {
     timeZone: POWER_TIME_ZONE,
