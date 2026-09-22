@@ -47,6 +47,17 @@ class PublicReleaseTrustPromotionTests(unittest.TestCase):
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, destination)
 
+        # These tests exercise the historical trust-promotion boundary, not the
+        # repository's live post-consent state. Keep the fixture explicitly before
+        # owner authorization so a later real authorization cannot invalidate it.
+        auth_path = root / "docs/contracts/physical-write-authorization.json"
+        auth = json.loads(auth_path.read_text(encoding="utf-8"))
+        auth["status"] = "blocked-canonical-trust-pending"
+        auth["physical_write_allowed"] = False
+        auth["explicit_owner_authorization"] = False
+        auth["authorization_context_sha256"] = None
+        write_json(auth_path, auth)
+
         (root / "bootstrap/trust").mkdir(parents=True, exist_ok=True)
         (root / "docs/evidence").mkdir(parents=True, exist_ok=True)
 
