@@ -49,8 +49,8 @@ class CurrentExecutionRoadmapTests(unittest.TestCase):
         self.assertIn("estão obsoletos nesse ponto", ROADMAP)
 
     def test_file_space_version_is_current_in_overlay(self):
-        self.assertIn("ordax.file-space/10", FILE_SPACE)
-        self.assertIn("`ordax.file-space/10`", ROADMAP)
+        self.assertIn("ordax.file-space/11", FILE_SPACE)
+        self.assertIn("`ordax.file-space/11`", ROADMAP)
 
     def test_overlay_preserves_fail_closed_promotion_state(self):
         promotion = assignments(PROMOTION)
