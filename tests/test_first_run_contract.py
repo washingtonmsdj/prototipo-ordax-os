@@ -12,6 +12,7 @@ BRANDING = ROOT / "docs" / "contracts" / "branding.json"
 ADAPTER = ROOT / "system" / "adapters" / "native" / "first-run-state.mjs"
 UI = ROOT / "system" / "surface" / "ui" / "first-run.mjs"
 CSS = ROOT / "system" / "surface" / "ui" / "first-run.css"
+SETTINGS = ROOT / "system" / "surface" / "ui" / "settings-overview-controls.mjs"
 NATIVE_MAIN = ROOT / "system" / "composition" / "native" / "main.mjs"
 NATIVE_HTML = ROOT / "system" / "composition" / "native" / "index.html"
 WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.mjs"
@@ -42,6 +43,14 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertTrue(contract["mvp"]["runs_from_usb"])
         self.assertFalse(contract["mvp"]["permanent_internal_disk_install_exposed"])
         self.assertFalse(contract["mvp"]["web_mode_uses_this_device_oobe"])
+        self.assertTrue(contract["regional"]["editable_after_first_run_in_settings"])
+
+    def test_regional_choices_remain_editable_after_first_run(self):
+        settings = SETTINGS.read_text(encoding="utf-8")
+        self.assertIn('Object.freeze({ id: "regional", label: "Idioma e região" })', settings)
+        self.assertIn('regional: Object.freeze({', settings)
+        self.assertIn('if (preferenceId === "regional.locale")', settings)
+        self.assertIn('if (preferenceId === "regional.time-zone")', settings)
 
     def test_native_host_first_run_state_is_atomic_private_and_bounded(self):
         host = load_host_server()
