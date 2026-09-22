@@ -9,6 +9,7 @@ SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
 SOURCE_SHA=unknown
 STATE_ROOT=${ORDAX_STATE_DIR:-/state/ordax}
 PERSISTENT_NATIVE_STATE=$STATE_ROOT/native-state
+KEYBOARD_LAYOUT_STATE=$PERSISTENT_NATIVE_STATE/keyboard-layout
 PERSISTENT_USER_HOME=${ORDAX_USER_HOME:-$STATE_ROOT/home}
 RESCUE_SOURCE=$SYSTEM_ROOT/rescue/agent.sh
 RESCUE_DIR=$STATE_ROOT/rescue
@@ -939,6 +940,45 @@ start_time_sync_agent() {
     kill -0 "$TIME_SYNC_PID" >/dev/null 2>&1
 }
 
+configure_keyboard_layout() {
+    keyboard_layout_id=br-abnt2
+    if [ -r "$KEYBOARD_LAYOUT_STATE" ] && [ ! -L "$KEYBOARD_LAYOUT_STATE" ]; then
+        configured_layout=""
+        IFS= read -r configured_layout <"$KEYBOARD_LAYOUT_STATE" || configured_layout=""
+        case "$configured_layout" in
+            br-abnt2|us)
+                keyboard_layout_id=$configured_layout
+                ;;
+            "")
+                ;;
+            *)
+                echo "ordax-surface: invalid persisted keyboard layout; using br-abnt2" >>"$HOST_LOG"
+                ;;
+        esac
+    fi
+
+    XKB_DEFAULT_RULES=evdev
+    XKB_DEFAULT_VARIANT=
+    XKB_DEFAULT_OPTIONS=
+    case "$keyboard_layout_id" in
+        us)
+            XKB_DEFAULT_MODEL=pc105
+            XKB_DEFAULT_LAYOUT=us
+            ;;
+        *)
+            keyboard_layout_id=br-abnt2
+            XKB_DEFAULT_MODEL=abnt2
+            XKB_DEFAULT_LAYOUT=br
+            ;;
+    esac
+
+    ORDAX_KEYBOARD_LAYOUT_ID=$keyboard_layout_id
+    export XKB_DEFAULT_RULES XKB_DEFAULT_MODEL XKB_DEFAULT_LAYOUT
+    export XKB_DEFAULT_VARIANT XKB_DEFAULT_OPTIONS ORDAX_KEYBOARD_LAYOUT_ID
+    echo "ordax-surface: keyboard layout applied for Cage: $ORDAX_KEYBOARD_LAYOUT_ID" >>"$HOST_LOG"
+    return 0
+}
+
 write_power_request_record() {
     action=${1:-}
     request_boot_id=${2:-}
@@ -1139,6 +1179,7 @@ ensure_shared_memory || fallback_with_reason "failed to prepare /dev/shm for wlr
 configure_graphics_host || fallback_with_reason "failed to configure OrdaX WebKit graphics host"
 bind_runtime_mounts || fallback_with_reason "failed to bind host resources into graphical runtime"
 prepare_input_stack || fallback_with_reason "failed to prepare physical keyboard/touchpad input devices"
+configure_keyboard_layout
 remove_stale_seatd_socket || fallback_with_reason "failed to clear stale seatd socket before native host startup"
 prepare_power_broker || fallback_with_reason "failed to prepare host power broker"
 ensure_base_update_agent || echo "ordax-surface: base update owner unavailable; continuing Surface startup" >>"$HOST_LOG"
