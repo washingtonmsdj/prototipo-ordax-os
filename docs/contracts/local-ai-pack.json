@@ -1,0 +1,45 @@
+{
+  "$schema": "prototype-ordax.local-ai-pack/1",
+  "status": "optional-pack-contract-implemented-publisher-artifact-pending",
+  "scope": "stable-mvp-usb-optional-feature",
+  "partition": "ORDAX-DATA",
+  "root": "/.ordax/ai",
+  "selection": {
+    "creator_option": "include-local-ai",
+    "default_selected_when_compatible_pack_available": true,
+    "may_be_disabled_by_user": true,
+    "base_mvp_must_boot_without_pack": true
+  },
+  "runtime": {
+    "engine_default": "llama.cpp",
+    "engine_executable": "/.ordax/ai/current/bin/llama-server",
+    "model": "/.ordax/ai/current/models/default.gguf",
+    "config": "/.ordax/ai/current/local-ai.json",
+    "host_endpoint": "http://127.0.0.1:11435",
+    "openai_compatible_api_required": true,
+    "remote_endpoint_allowed": false
+  },
+  "recommended_initial_model": {
+    "family": "Qwen3",
+    "size": "4B",
+    "format": "GGUF",
+    "quantization_target": "Q4_K_M-or-equivalent",
+    "reason": "small multilingual baseline suitable for optional MVP local inference",
+    "publisher_pin_required": true,
+    "exact_sha256_pending": true
+  },
+  "integrity": {
+    "signed_pack_manifest_required": true,
+    "sha256_and_size_per_file_required": true,
+    "creator_readback_required": true,
+    "canonical_15_system_artifacts_unchanged": true,
+    "model_or_engine_update_must_not_change_base_system_identity": true
+  },
+  "migration": {
+    "active_pack_pointer": "/.ordax/ai/current",
+    "backend_protocol": "openai-compatible-loopback-v1",
+    "app_contract_stable_across_backend_change": true,
+    "replace_engine_without_surface_rewrite": true,
+    "replace_model_without_surface_rewrite": true
+  }
+}
