@@ -6,6 +6,7 @@ CONTROLS = ROOT / "system" / "surface" / "ui" / "file-space-controls.mjs"
 CSS = ROOT / "system" / "surface" / "ui" / "files.css"
 ADAPTER = ROOT / "system" / "adapters" / "native" / "file-space.mjs"
 CONTRACT = ROOT / "system" / "contracts" / "file-space.mjs"
+FILES_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "files-operational.mjs"
 
 
 class FilesMoveControlsTests(unittest.TestCase):
@@ -28,16 +29,17 @@ class FilesMoveControlsTests(unittest.TestCase):
         self.assertIn("data-file-copy-to-toggle", controls)
         self.assertIn("data-file-transfer-confirm", controls)
         self.assertIn("data-file-transfer-cancel", controls)
-        self.assertIn("Mover para esta pasta", controls)
-        self.assertIn("Copiar para esta pasta", controls)
-        self.assertIn("Navegue até a pasta de destino", controls)
+        self.assertIn('t("files.transfer.moveHere")', controls)
+        self.assertIn('t("files.transfer.copyHere")', controls)
+        self.assertIn('t("files.transfer.navigateMove")', controls)
+        self.assertIn('t("files.transfer.navigateCopy")', controls)
 
     def test_move_rejects_same_folder_and_directory_descendants(self):
         controls = CONTROLS.read_text(encoding="utf-8")
         self.assertIn("listing.path === transferEntry.sourcePath", controls)
         self.assertIn("listing.path === transferEntry.sourceFullPath", controls)
         self.assertIn("listing.path.startsWith(`${transferEntry.sourceFullPath}/`)", controls)
-        self.assertIn("Uma pasta não pode ser movida para dentro dela mesma.", controls)
+        self.assertIn('t("files.transfer.directoryIntoSelf")', controls)
 
     def test_move_errors_are_specific_and_origin_preserving(self):
         controls = CONTROLS.read_text(encoding="utf-8")
@@ -46,8 +48,12 @@ class FilesMoveControlsTests(unittest.TestCase):
         self.assertIn("status === 412", controls)
         self.assertIn("status === 413", controls)
         self.assertIn("status === 422", controls)
-        self.assertIn("Pastas ainda não podem ser movidas entre volumes.", controls)
-        self.assertIn("A origem foi preservada.", controls)
+        self.assertIn('t("files.move.folderCrossVolume")', controls)
+        self.assertIn('t("files.move.failedPreserved")', controls)
+        catalog = FILES_I18N.read_text(encoding="utf-8")
+        self.assertIn('"files.move.folderCrossVolume": "Pastas ainda não podem ser movidas entre volumes."', catalog)
+        self.assertIn('"files.move.failedPreserved": "Não foi possível mover este item. A origem foi preservada."', catalog)
+        self.assertIn('"files.move.failedPreserved": "This item could not be moved. The source was preserved."', catalog)
 
     def test_transfer_panel_is_responsive(self):
         css = CSS.read_text(encoding="utf-8")
