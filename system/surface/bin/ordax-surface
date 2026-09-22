@@ -29,6 +29,7 @@ BASE_UPDATE_AGENT=$BASE_UPDATE_DIR/agent.sh
 BASE_UPDATE_LOG=$BASE_UPDATE_DIR/agent.log
 BASE_UPDATE_PID_FILE=$BASE_UPDATE_DIR/agent.pid
 SESSION_DIR=/run/ordax-surface
+RUNTIME_PROOF_CONTEXT=$SESSION_DIR/runtime-proof-context
 HTTP_LOG=$SESSION_DIR/http.log
 HOST_LOG=$SESSION_DIR/host.log
 TIME_SYNC_LOG=$SESSION_DIR/time-sync.log
@@ -91,6 +92,7 @@ chmod 700 "$SESSION_DIR" "$PERSISTENT_NATIVE_STATE" "$PERSISTENT_USER_HOME" "$RE
 : > "$TIME_SYNC_LOG"
 : > "$NETWORK_LOG"
 : > "$NATIVE_INSTALL_LOG"
+rm -f "$RUNTIME_PROOF_CONTEXT" >/dev/null 2>&1 || true
 
 case "$PRODUCT_MODE" in
     usb|native-disk) ;;
@@ -478,6 +480,7 @@ remove_stale_seatd_socket() {
 }
 
 cleanup() {
+    rm -f "$RUNTIME_PROOF_CONTEXT" >/dev/null 2>&1 || true
     if [ -n "$NATIVE_INSTALL_BROKER_PID" ]; then
         terminate_child "$NATIVE_INSTALL_BROKER_PID" "Native install broker"
         NATIVE_INSTALL_BROKER_PID=""
@@ -855,21 +858,42 @@ configure_graphics_host() {
 
 bind_runtime_mounts() {
     repo_root=${SYSTEM_ROOT%/system}
-    [ -n "$repo_root" ] && [ "$repo_root" != "$SYSTEM_ROOT" ] && [ -d "$repo_root" ] || return 1
-    [ -d /ordax ] || return 1
+    case "$DISTRIBUTION_PROFILE" in
+        owner-development)
+            [ -n "$repo_root" ] && [ "$repo_root" != "$SYSTEM_ROOT" ] && [ -d "$repo_root" ] || {
+                echo "ordax-surface: Owner/Development source repository root is unavailable" >>"$HOST_LOG"
+                return 1
+            }
+            ;;
+        stable-mvp)
+            # Stable/MVP owns a verified /system tree, not a Git checkout.
+            # Do not require or fabricate /srv/ordax-repo in the final USB.
+            repo_root=
+            ;;
+        *)
+            echo "ordax-surface: unsupported distribution profile for runtime bindings" >>"$HOST_LOG"
+            return 1
+            ;;
+    esac
+
+    [ -d "$SYSTEM_ROOT" ] && [ -d /ordax ] || return 1
     mkdir -p \
         "$RUNTIME_ROOT/srv/ordax-system" \
-        "$RUNTIME_ROOT/srv/ordax-repo" \
         "$RUNTIME_ROOT/ordax" \
         "$RUNTIME_ROOT/var/lib/ordax" \
         "$RUNTIME_ROOT/var/lib/ordax-user" \
         "$PERSISTENT_NATIVE_STATE" \
         "$PERSISTENT_USER_HOME" || return 1
+    if [ "$DISTRIBUTION_PROFILE" = "owner-development" ]; then
+        mkdir -p "$RUNTIME_ROOT/srv/ordax-repo" || return 1
+    fi
     chmod 700 "$PERSISTENT_NATIVE_STATE" "$PERSISTENT_USER_HOME" || return 1
     /bin/busybox mount -o bind "$SYSTEM_ROOT" "$RUNTIME_ROOT/srv/ordax-system" >>"$HOST_LOG" 2>&1 || return 1
     SYSTEM_BOUND=1
-    /bin/busybox mount -o bind "$repo_root" "$RUNTIME_ROOT/srv/ordax-repo" >>"$HOST_LOG" 2>&1 || return 1
-    REPO_BOUND=1
+    if [ "$DISTRIBUTION_PROFILE" = "owner-development" ]; then
+        /bin/busybox mount -o bind "$repo_root" "$RUNTIME_ROOT/srv/ordax-repo" >>"$HOST_LOG" 2>&1 || return 1
+        REPO_BOUND=1
+    fi
     /bin/busybox mount -o bind /ordax "$RUNTIME_ROOT/ordax" >>"$HOST_LOG" 2>&1 || return 1
     ORDAX_BOUND=1
     /bin/busybox mount -o bind "$PERSISTENT_NATIVE_STATE" "$RUNTIME_ROOT/var/lib/ordax" >>"$HOST_LOG" 2>&1 || return 1
@@ -884,6 +908,53 @@ bind_runtime_mounts() {
     SYS_BOUND=1
     /bin/busybox mount -o bind /run "$RUNTIME_ROOT/run" >>"$HOST_LOG" 2>&1 || return 1
     RUN_BOUND=1
+}
+
+publish_runtime_proof_context() {
+    runtime_mode=
+    evidence_scope=
+    runtime_sha256=
+
+    case "$DISTRIBUTION_PROFILE" in
+        owner-development)
+            runtime_mode=dynamic-native-runtime
+            evidence_scope=development
+            ;;
+        stable-mvp)
+            [ "$VERIFIED_RUNTIME_MODE" = "verified-erofs-overlay" ] || return 1
+            [ "$RUNTIME_ROOT" = "/run/ordax/runtime/native-surface/rootfs" ] || return 1
+            [ "${#VERIFIED_RUNTIME_SHA256}" -eq 64 ] || return 1
+            case "$VERIFIED_RUNTIME_SHA256" in
+                *[!0-9a-f]*) return 1 ;;
+            esac
+            runtime_mode=verified-erofs-overlay
+            evidence_scope=canonical-stable-mvp
+            runtime_sha256=$VERIFIED_RUNTIME_SHA256
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    temporary=$RUNTIME_PROOF_CONTEXT.tmp.$
+    {
+        printf 'distribution_profile=%s\n' "$DISTRIBUTION_PROFILE"
+        printf 'runtime_mode=%s\n' "$runtime_mode"
+        printf 'evidence_scope=%s\n' "$evidence_scope"
+        printf 'runtime_sha256=%s\n' "$runtime_sha256"
+    } >"$temporary" || {
+        rm -f "$temporary" >/dev/null 2>&1 || true
+        return 1
+    }
+    chmod 600 "$temporary" || {
+        rm -f "$temporary" >/dev/null 2>&1 || true
+        return 1
+    }
+    /bin/busybox mv -f "$temporary" "$RUNTIME_PROOF_CONTEXT" || {
+        rm -f "$temporary" >/dev/null 2>&1 || true
+        return 1
+    }
+    return 0
 }
 
 start_network_broker() {
@@ -1180,6 +1251,7 @@ configure_graphics_host || fallback_with_reason "failed to configure OrdaX WebKi
 bind_runtime_mounts || fallback_with_reason "failed to bind host resources into graphical runtime"
 prepare_input_stack || fallback_with_reason "failed to prepare physical keyboard/touchpad input devices"
 configure_keyboard_layout
+publish_runtime_proof_context || fallback_with_reason "failed to publish active Surface runtime proof context"
 remove_stale_seatd_socket || fallback_with_reason "failed to clear stale seatd socket before native host startup"
 prepare_power_broker || fallback_with_reason "failed to prepare host power broker"
 ensure_base_update_agent || echo "ordax-surface: base update owner unavailable; continuing Surface startup" >>"$HOST_LOG"
