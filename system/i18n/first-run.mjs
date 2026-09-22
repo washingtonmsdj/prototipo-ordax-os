@@ -81,7 +81,14 @@ const EN = Object.freeze({
   identityStarted: "Authentication started. Local use remains available.",
   identityFailed: "The account action could not be completed. Local use remains available.",
   persistFailed: "First-use state could not be confirmed on the USB drive. The assistant stays open to avoid losing your configuration.",
-  enterWifiPassword: "Enter the Wi-Fi password."
+  enterWifiPassword: "Enter the Wi-Fi password.",
+  scanPending: "Searching Wi-Fi networks…",
+  scanDone: "Wi-Fi networks updated.",
+  connectPending: "Connecting to Wi-Fi…",
+  connectDone: "Wi-Fi connected.",
+  connectFailed: "Could not connect. Check the password and whether the network is still available.",
+  invalidWifiCredentials: "SSID or password is outside the accepted limits for this Wi-Fi network.",
+  wifiActionFailed: "The Wi-Fi action could not be completed. The previous network was preserved when applicable."
 });
 
 const PT = Object.freeze({
@@ -165,7 +172,14 @@ const PT = Object.freeze({
   identityStarted: "A autenticação foi iniciada. O uso local continua disponível.",
   identityFailed: "A ação de conta não pôde ser concluída. O uso local continua disponível.",
   persistFailed: "Não foi possível confirmar a gravação do primeiro uso no pendrive. O assistente continua aberto para não perder a configuração.",
-  enterWifiPassword: "Digite a senha da rede Wi-Fi."
+  enterWifiPassword: "Digite a senha da rede Wi-Fi.",
+  scanPending: "Procurando redes Wi-Fi…",
+  scanDone: "Redes Wi-Fi atualizadas.",
+  connectPending: "Conectando ao Wi-Fi…",
+  connectDone: "Wi-Fi conectado.",
+  connectFailed: "Não foi possível conectar. Confira a senha e se a rede ainda está disponível.",
+  invalidWifiCredentials: "SSID ou senha fora dos limites aceitos para esta rede Wi-Fi.",
+  wifiActionFailed: "A ação de Wi-Fi não pôde ser concluída. A rede anterior foi preservada quando aplicável."
 });
 
 const ES = Object.freeze({
@@ -206,7 +220,14 @@ const ES = Object.freeze({
   identitySuccess: "Cuenta autenticada. Puedes usarla en este USB.", identityStarted: "La autenticación comenzó. El uso local sigue disponible.",
   identityFailed: "No se pudo completar la acción de cuenta. El uso local sigue disponible.",
   persistFailed: "No se pudo confirmar el primer uso en el USB. El asistente permanece abierto para no perder la configuración.",
-  enterWifiPassword: "Introduce la contraseña del Wi-Fi."
+  enterWifiPassword: "Introduce la contraseña del Wi-Fi.",
+  scanPending: "Buscando redes Wi-Fi…",
+  scanDone: "Redes Wi-Fi actualizadas.",
+  connectPending: "Conectando al Wi-Fi…",
+  connectDone: "Wi-Fi conectado.",
+  connectFailed: "No se pudo conectar. Revisa la contraseña y que la red siga disponible.",
+  invalidWifiCredentials: "El SSID o la contraseña está fuera de los límites aceptados para esta red Wi-Fi.",
+  wifiActionFailed: "No se pudo completar la acción de Wi-Fi. Se conservó la red anterior cuando correspondía."
 });
 
 const FR = Object.freeze({
@@ -247,7 +268,14 @@ const FR = Object.freeze({
   identitySuccess: "Compte authentifié. Vous pouvez l’utiliser sur cette clé USB.", identityStarted: "Authentification démarrée. L’usage local reste disponible.",
   identityFailed: "L’action de compte n’a pas pu être terminée. L’usage local reste disponible.",
   persistFailed: "Impossible de confirmer le premier usage sur la clé USB. L’assistant reste ouvert pour préserver la configuration.",
-  enterWifiPassword: "Saisissez le mot de passe Wi-Fi."
+  enterWifiPassword: "Saisissez le mot de passe Wi-Fi.",
+  scanPending: "Recherche des réseaux Wi-Fi…",
+  scanDone: "Réseaux Wi-Fi actualisés.",
+  connectPending: "Connexion au Wi-Fi…",
+  connectDone: "Wi-Fi connecté.",
+  connectFailed: "Connexion impossible. Vérifiez le mot de passe et la disponibilité du réseau.",
+  invalidWifiCredentials: "Le SSID ou le mot de passe dépasse les limites acceptées pour ce réseau Wi-Fi.",
+  wifiActionFailed: "L’action Wi-Fi n’a pas pu être terminée. Le réseau précédent a été préservé lorsque c’était possible."
 });
 
 const CATALOGS = Object.freeze({
