@@ -18,17 +18,22 @@ import (
 const (
 	manifestSchema                = "prototype-ordax.release-manifest/1"
 	manifestSchemaV2              = "prototype-ordax.release-manifest/2"
-	manifestSchemaV3              = "prototype-ordax.release-manifest/3"
-	defaultRepo                   = "washingtonmsdj/prototipo-ordax-os"
-	defaultRecipe                 = "release/native/1"
-	defaultPortableRecipe         = "release/portable-usb-v2/1"
-	defaultPortableRuntimeRecipe  = "release/portable-usb-v2-runtime/1"
-	maxArtifact                   = int64(16 << 30)
+	manifestSchemaV3               = "prototype-ordax.release-manifest/3"
+	manifestSchemaV4               = "prototype-ordax.release-manifest/4"
+	defaultRepo                    = "washingtonmsdj/prototipo-ordax-os"
+	defaultRecipe                  = "release/native/1"
+	defaultPortableRecipe          = "release/portable-usb-v2/1"
+	defaultPortableRuntimeRecipe   = "release/portable-usb-v2-runtime/1"
+	defaultPortableAIRuntimeRecipe = "release/portable-usb-v2-local-ai/1"
+	maxArtifact                    = int64(16 << 30)
 )
 
 var (
-	commitPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
-	recipePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,127}$`)
+	commitPattern   = regexp.MustCompile(`^[0-9a-f]{40}$`)
+	shaPattern      = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	revisionPattern = regexp.MustCompile(`^[0-9a-f]{7,64}$`)
+	licensePattern  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9.+-]{0,63}$`)
+	recipePattern   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,127}$`)
 )
 
 type Manifest struct {
@@ -39,8 +44,9 @@ type Manifest struct {
 	CreatedFromCIRecipe string     `json:"created_from_ci_recipe"`
 	ProductMode         string     `json:"product_mode,omitempty"`
 	StorageProfile      string     `json:"storage_profile,omitempty"`
-	RuntimeFormat       string     `json:"runtime_format,omitempty"`
-	Artifacts           []Artifact `json:"artifacts"`
+	RuntimeFormat       string          `json:"runtime_format,omitempty"`
+	Artifacts           []Artifact      `json:"artifacts"`
+	LocalAI             *LocalAIBinding `json:"local_ai,omitempty"`
 }
 
 type Artifact struct {
@@ -49,6 +55,42 @@ type Artifact struct {
 	URL    string `json:"url"`
 	SHA256 string `json:"sha256"`
 	Size   int64  `json:"size"`
+}
+
+type LocalAIBinding struct {
+	Contract             string `json:"contract"`
+	SourceLockSchema     string `json:"source_lock_schema"`
+	SourceLockSHA256     string `json:"source_lock_sha256"`
+	EngineID             string `json:"engine_id"`
+	EngineRepository     string `json:"engine_repository"`
+	EngineSourceCommit   string `json:"engine_source_commit"`
+	EngineLicense        string `json:"engine_license"`
+	ModelID              string `json:"model_id"`
+	ModelRepository      string `json:"model_repository"`
+	ModelFilename        string `json:"model_filename"`
+	ModelUpstreamRevision string `json:"model_upstream_revision"`
+	ModelSHA256          string `json:"model_sha256"`
+	ModelSize            int64  `json:"model_size"`
+	ModelLicense         string `json:"model_license"`
+}
+
+type LocalAISourceLock struct {
+	Schema string `json:"$schema"`
+	Engine struct {
+		ID         string `json:"id"`
+		Repository string `json:"repository"`
+		Commit     string `json:"commit"`
+		License    string `json:"license"`
+	} `json:"engine"`
+	Model struct {
+		ID               string `json:"id"`
+		Repository       string `json:"repository"`
+		Filename         string `json:"filename"`
+		SHA256           string `json:"sha256"`
+		SizeBytes        int64  `json:"size_bytes"`
+		License          string `json:"license"`
+		UpstreamRevision string `json:"upstream_revision"`
+	} `json:"model"`
 }
 
 func ensureRealParent(path string) (string, error) {
@@ -245,6 +287,99 @@ func buildPortableRuntimeManifest(systemPath, runtimePath, sourceCommit, systemU
 	}, nil
 }
 
+func loadLocalAISourceLock(path string) (LocalAIBinding, error) {
+	absolute, err := ensureRealParent(path)
+	if err != nil {
+		return LocalAIBinding{}, err
+	}
+	info, err := os.Lstat(absolute)
+	if err != nil {
+		return LocalAIBinding{}, err
+	}
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Size() <= 0 || info.Size() > 64<<10 {
+		return LocalAIBinding{}, errors.New("local AI source lock must be a bounded regular non-symlink file")
+	}
+	data, err := os.ReadFile(absolute)
+	if err != nil {
+		return LocalAIBinding{}, err
+	}
+	var lock LocalAISourceLock
+	if err := json.Unmarshal(data, &lock); err != nil {
+		return LocalAIBinding{}, fmt.Errorf("invalid local AI source lock: %w", err)
+	}
+	if lock.Schema != "prototype-ordax.local-ai-source-lock/1" {
+		return LocalAIBinding{}, errors.New("unsupported local AI source lock schema")
+	}
+	if lock.Engine.ID == "" || len(lock.Engine.ID) > 128 ||
+		lock.Engine.Repository == "" || len(lock.Engine.Repository) > 512 ||
+		!commitPattern.MatchString(lock.Engine.Commit) ||
+		!licensePattern.MatchString(lock.Engine.License) {
+		return LocalAIBinding{}, errors.New("invalid local AI engine source identity")
+	}
+	if lock.Model.ID == "" || len(lock.Model.ID) > 128 ||
+		lock.Model.Repository == "" || len(lock.Model.Repository) > 512 ||
+		lock.Model.Filename == "" || filepath.Base(lock.Model.Filename) != lock.Model.Filename ||
+		!shaPattern.MatchString(lock.Model.SHA256) ||
+		lock.Model.SizeBytes <= 0 || lock.Model.SizeBytes > maxArtifact ||
+		!licensePattern.MatchString(lock.Model.License) ||
+		!revisionPattern.MatchString(lock.Model.UpstreamRevision) {
+		return LocalAIBinding{}, errors.New("invalid local AI model source identity")
+	}
+	digest := sha256.Sum256(data)
+	return LocalAIBinding{
+		Contract:              "ordax.local-ai/1",
+		SourceLockSchema:      lock.Schema,
+		SourceLockSHA256:      hex.EncodeToString(digest[:]),
+		EngineID:              lock.Engine.ID,
+		EngineRepository:      lock.Engine.Repository,
+		EngineSourceCommit:    lock.Engine.Commit,
+		EngineLicense:         lock.Engine.License,
+		ModelID:               lock.Model.ID,
+		ModelRepository:       lock.Model.Repository,
+		ModelFilename:         lock.Model.Filename,
+		ModelUpstreamRevision: lock.Model.UpstreamRevision,
+		ModelSHA256:           lock.Model.SHA256,
+		ModelSize:             lock.Model.SizeBytes,
+		ModelLicense:          lock.Model.License,
+	}, nil
+}
+
+func buildPortableAIManifest(systemPath, runtimePath, aiRuntimePath, sourceLockPath, sourceCommit, systemURL, runtimeURL, aiRuntimeURL, repository, recipe string) (Manifest, error) {
+	if err := validateHTTPSURL(aiRuntimeURL); err != nil {
+		return Manifest{}, fmt.Errorf("local AI runtime artifact URL: %w", err)
+	}
+	manifest, err := buildPortableRuntimeManifest(
+		systemPath,
+		runtimePath,
+		sourceCommit,
+		systemURL,
+		runtimeURL,
+		repository,
+		recipe,
+	)
+	if err != nil {
+		return Manifest{}, err
+	}
+	aiDigest, aiSize, err := hashNamedArtifact(aiRuntimePath, "local-ai-runtime.erofs", "release-manifest/4 local AI runtime")
+	if err != nil {
+		return Manifest{}, err
+	}
+	binding, err := loadLocalAISourceLock(sourceLockPath)
+	if err != nil {
+		return Manifest{}, err
+	}
+	manifest.Schema = manifestSchemaV4
+	manifest.Artifacts = append(manifest.Artifacts, Artifact{
+		Name:   "local-ai-runtime.erofs",
+		Role:   "local-ai-runtime",
+		URL:    aiRuntimeURL,
+		SHA256: aiDigest,
+		Size:   aiSize,
+	})
+	manifest.LocalAI = &binding
+	return manifest, nil
+}
+
 func writeManifest(path string, manifest Manifest) error {
 	absolute, err := ensureRealParent(path)
 	if err != nil {
@@ -288,14 +423,17 @@ func writeManifest(path string, manifest Manifest) error {
 func run(args []string) error {
 	flags := flag.NewFlagSet("ordax-release-manifest", flag.ContinueOnError)
 	artifact := flags.String("artifact", "", "verified release artifact path")
-	runtimeArtifact := flags.String("runtime-artifact", "", "verified native-surface-runtime.erofs path for schema 3")
+	runtimeArtifact := flags.String("runtime-artifact", "", "verified native-surface-runtime.erofs path for schema 3 or 4")
+	localAIArtifact := flags.String("local-ai-artifact", "", "verified local-ai-runtime.erofs path for schema 4")
+	localAISourceLock := flags.String("local-ai-source-lock", "", "verified local AI source-lock.json path for schema 4")
 	commit := flags.String("source-commit", "", "exact lowercase 40-hex source commit")
 	artifactURL := flags.String("artifact-url", "", "canonical HTTPS URL for the exact system artifact")
-	runtimeArtifactURL := flags.String("runtime-artifact-url", "", "canonical HTTPS URL for native-surface-runtime.erofs for schema 3")
+	runtimeArtifactURL := flags.String("runtime-artifact-url", "", "canonical HTTPS URL for native-surface-runtime.erofs for schema 3 or 4")
+	localAIArtifactURL := flags.String("local-ai-artifact-url", "", "canonical HTTPS URL for local-ai-runtime.erofs for schema 4")
 	out := flags.String("out", "", "new release-manifest.json path")
 	repository := flags.String("repository", defaultRepo, "source repository")
 	recipe := flags.String("recipe", "", "CI recipe identity; defaults by schema")
-	schema := flags.String("manifest-schema", "1", "release manifest schema major: 1, 2 or 3")
+	schema := flags.String("manifest-schema", "1", "release manifest schema major: 1, 2, 3 or 4")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -333,8 +471,28 @@ func run(args []string) error {
 			*repository,
 			selectedRecipe,
 		)
+	case "4":
+		if *runtimeArtifact == "" || *runtimeArtifactURL == "" ||
+			*localAIArtifact == "" || *localAIArtifactURL == "" || *localAISourceLock == "" {
+			return errors.New("release-manifest/4 requires Surface runtime, local AI runtime and local AI source lock inputs")
+		}
+		if selectedRecipe == "" {
+			selectedRecipe = defaultPortableAIRuntimeRecipe
+		}
+		manifest, err = buildPortableAIManifest(
+			*artifact,
+			*runtimeArtifact,
+			*localAIArtifact,
+			*localAISourceLock,
+			*commit,
+			*artifactURL,
+			*runtimeArtifactURL,
+			*localAIArtifactURL,
+			*repository,
+			selectedRecipe,
+		)
 	default:
-		return errors.New("unsupported manifest schema major; expected 1, 2 or 3")
+		return errors.New("unsupported manifest schema major; expected 1, 2, 3 or 4")
 	}
 	if err != nil {
 		return err
@@ -350,12 +508,21 @@ func run(args []string) error {
 		manifest.Artifacts[0].SHA256,
 		manifest.Artifacts[0].Size,
 	)
-	if manifest.Schema == manifestSchemaV3 {
+	if manifest.Schema == manifestSchemaV3 || manifest.Schema == manifestSchemaV4 {
 		fmt.Printf(
 			"RUNTIME_ARTIFACT_NAME=%s\nRUNTIME_ARTIFACT_SHA256=%s\nRUNTIME_ARTIFACT_SIZE=%d\n",
 			manifest.Artifacts[1].Name,
 			manifest.Artifacts[1].SHA256,
 			manifest.Artifacts[1].Size,
+		)
+	}
+	if manifest.Schema == manifestSchemaV4 {
+		fmt.Printf(
+			"LOCAL_AI_ARTIFACT_NAME=%s\nLOCAL_AI_ARTIFACT_SHA256=%s\nLOCAL_AI_ARTIFACT_SIZE=%d\nLOCAL_AI_SOURCE_LOCK_SHA256=%s\n",
+			manifest.Artifacts[2].Name,
+			manifest.Artifacts[2].SHA256,
+			manifest.Artifacts[2].Size,
+			manifest.LocalAI.SourceLockSHA256,
 		)
 	}
 	return nil
