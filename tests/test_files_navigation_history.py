@@ -32,7 +32,7 @@ class FilesNavigationHistoryTests(unittest.TestCase):
         load_block = controls.split("const load = async", 1)[1].split("const navigateHistory", 1)[0]
         self.assertIn("const changedPath = Boolean(listing && listing.path !== next.path)", load_block)
         self.assertIn("if (changedPath)", load_block)
-        self.assertIn('message = "Não foi possível abrir este local."', load_block)
+        self.assertIn('message = t("files.location.openFailed")', load_block)
         self.assertLess(load_block.index("const next = validateFileListing"), load_block.index("searchQuery = \"\""))
 
     def test_navigation_controls_are_accessible_and_responsive(self):
