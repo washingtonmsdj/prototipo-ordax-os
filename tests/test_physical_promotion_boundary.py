@@ -214,20 +214,20 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             workflow,
         )
 
-    def test_repository_stable_mvp_authorization_is_explicitly_unset(self):
+    def test_repository_stable_mvp_authorization_records_exact_owner_consent_without_target(self):
         auth = json.loads(
             (ROOT / "docs/contracts/physical-write-authorization.json").read_text(
                 encoding="utf-8"
             )
         )
-        self.assertEqual(
-            auth["status"],
-            "blocked-explicit-physical-authorization-pending",
-        )
-        self.assertFalse(auth["physical_write_allowed"])
-        self.assertFalse(auth["explicit_owner_authorization"])
-        self.assertIsNone(auth["authorization_context_sha256"])
+        self.assertEqual(auth["status"], "authorized")
+        self.assertTrue(auth["physical_write_allowed"])
+        self.assertTrue(auth["explicit_owner_authorization"])
+        self.assertRegex(auth["authorization_context_sha256"], r"^[0-9a-f]{64}$")
         self.assertEqual(auth["scope"], "first-real-stable-mvp-usb-proof")
+        self.assertEqual(auth["release_sequence"], 1)
+        for forbidden in ("physical_path", "device_path", "disk_number", "volume_id"):
+            self.assertNotIn(forbidden, auth)
 
     def _set_pending_owner_authorization(self, root: Path) -> Path:
         auth_path = root / "docs/contracts/physical-write-authorization.json"
