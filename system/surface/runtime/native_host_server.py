@@ -53,6 +53,9 @@ NETWORK_STATUS_PATH = "/__ordax/native/network-status"
 NETWORK_MANAGEMENT_PATH = "/__ordax/native/network-management"
 UPDATE_HISTORY_PATH = "/__ordax/native/update-history"
 NATIVE_INSTALL_TARGETS_PATH = "/__ordax/native/native-install-targets"
+LOCAL_AI_STATUS_PATH = "/__ordax/native/local-ai/status"
+LOCAL_AI_CHAT_PATH = "/__ordax/native/local-ai/chat"
+LOCAL_AI_CONFIG_FILE = "/var/lib/ordax/local-ai.json"
 UPDATE_STATE_FILE = "/run/ordax-update/state.json"
 HEALTH_STATE_FILE = "/run/ordax-update/healthy-sha"
 PREFERENCES_FILE = "/var/lib/ordax/preferences.json"
@@ -80,6 +83,10 @@ MAX_NETWORK_SCAN_BYTES = 512 * 1024
 MAX_NETWORKS = 32
 MAX_NATIVE_INSTALL_SNAPSHOT_BYTES = 256 * 1024
 MAX_NATIVE_INSTALL_TARGETS = 64
+MAX_LOCAL_AI_BODY = 64 * 1024
+MAX_LOCAL_AI_RESPONSE_BYTES = 2 * 1024 * 1024
+MAX_LOCAL_AI_MESSAGES = 32
+MAX_LOCAL_AI_MESSAGE_CHARS = 16 * 1024
 MAX_SURFACE_HEARTBEAT_BODY = 512
 MAX_CLIENT_DIAGNOSTIC_BODY = 512
 MAX_PREFERENCE_BODY = 8192
@@ -2380,6 +2387,161 @@ def record_surface_health(source_sha: str) -> None:
     os.replace(temporary, HEALTH_STATE_FILE)
 
 
+
+def read_local_ai_config() -> dict | None:
+    try:
+        with open(LOCAL_AI_CONFIG_FILE, "r", encoding="utf-8") as handle:
+            value = json.load(handle)
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+    if (
+        not isinstance(value, dict)
+        or value.get("schema") != "ordax.local-ai-config/1"
+        or value.get("enabled") is not True
+    ):
+        return None
+    endpoint = value.get("endpoint")
+    engine = value.get("engine")
+    model = value.get("model")
+    if not all(isinstance(item, str) and item for item in (endpoint, engine, model)):
+        return None
+    parsed = urlsplit(endpoint)
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname not in {"127.0.0.1", "localhost"}
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.path not in ("", "/")
+        or parsed.port is None
+        or len(engine) > 64
+        or len(model) > 256
+    ):
+        return None
+    return {
+        "endpoint": endpoint.rstrip("/"),
+        "engine": engine,
+        "model": model,
+    }
+
+
+def _local_ai_json_request(
+    config: dict,
+    method: str,
+    path: str,
+    payload: dict | None = None,
+    *,
+    timeout: float = 30.0,
+) -> dict:
+    body = None
+    headers = {"Accept": "application/json"}
+    if payload is not None:
+        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    request = Request(config["endpoint"] + path, data=body, headers=headers, method=method)
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            raw = response.read(MAX_LOCAL_AI_RESPONSE_BYTES + 1)
+            status = int(response.status)
+    except HTTPError as exc:
+        raw = exc.read(MAX_LOCAL_AI_RESPONSE_BYTES + 1)
+        status = int(exc.code)
+    except (URLError, OSError, TimeoutError) as exc:
+        raise RuntimeError("local AI backend is unavailable") from exc
+    if len(raw) > MAX_LOCAL_AI_RESPONSE_BYTES:
+        raise RuntimeError("local AI response exceeds size limit")
+    if status < 200 or status >= 300:
+        raise RuntimeError("local AI backend rejected the request")
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("local AI backend returned invalid JSON") from exc
+    if not isinstance(value, dict):
+        raise RuntimeError("local AI backend returned invalid payload")
+    return value
+
+
+def local_ai_status_snapshot() -> dict:
+    config = read_local_ai_config()
+    unavailable = {
+        "schema": "ordax.local-ai-status/1",
+        "state": "unavailable",
+        "backend": None,
+        "model": None,
+    }
+    if config is None:
+        return unavailable
+    try:
+        _local_ai_json_request(config, "GET", "/v1/models", timeout=2.0)
+    except RuntimeError:
+        return unavailable
+    return {
+        "schema": "ordax.local-ai-status/1",
+        "state": "ready",
+        "backend": config["engine"],
+        "model": config["model"],
+    }
+
+
+def validate_local_ai_messages(value: object) -> list[dict]:
+    if not isinstance(value, list) or not 1 <= len(value) <= MAX_LOCAL_AI_MESSAGES:
+        raise ValueError("invalid local AI message list")
+    result = []
+    total_chars = 0
+    for entry in value:
+        if not isinstance(entry, dict) or set(entry) != {"role", "content"}:
+            raise ValueError("invalid local AI message")
+        role = entry.get("role")
+        content = entry.get("content")
+        if role not in {"system", "user", "assistant"}:
+            raise ValueError("invalid local AI role")
+        if (
+            not isinstance(content, str)
+            or not content
+            or len(content) > MAX_LOCAL_AI_MESSAGE_CHARS
+            or "\x00" in content
+        ):
+            raise ValueError("invalid local AI content")
+        total_chars += len(content)
+        if total_chars > MAX_LOCAL_AI_BODY:
+            raise ValueError("local AI context is too large")
+        result.append({"role": role, "content": content})
+    return result
+
+
+def complete_local_ai(messages: list[dict]) -> dict:
+    config = read_local_ai_config()
+    if config is None:
+        raise RuntimeError("local AI is not configured")
+    value = _local_ai_json_request(
+        config,
+        "POST",
+        "/v1/chat/completions",
+        {
+            "model": config["model"],
+            "messages": messages,
+            "stream": False,
+            "temperature": 0.2,
+        },
+        timeout=120.0,
+    )
+    choices = value.get("choices")
+    if not isinstance(choices, list) or not choices:
+        raise RuntimeError("local AI response has no choices")
+    first = choices[0]
+    message = first.get("message") if isinstance(first, dict) else None
+    text = message.get("content") if isinstance(message, dict) else None
+    if not isinstance(text, str) or not text or len(text) > 131072:
+        raise RuntimeError("local AI response content is invalid")
+    return {
+        "schema": "ordax.local-ai-response/1",
+        "text": text,
+        "backend": config["engine"],
+        "model": config["model"],
+    }
+
+
 class NativeHostServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
@@ -2511,11 +2673,14 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if not self._request_is_trusted():
             return
         parsed_path = urlsplit(self.path).path
-        if parsed_path in {SESSION_PATH, FILES_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
+        if parsed_path in {SESSION_PATH, FILES_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH, LOCAL_AI_STATUS_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
         if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
+            return
+        if parsed_path == LOCAL_AI_STATUS_PATH:
+            self._write_json(200, local_ai_status_snapshot())
             return
         if parsed_path == METRICS_PATH:
             try:
@@ -2782,6 +2947,24 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             return
 
         parsed_path = urlsplit(self.path).path
+        if parsed_path == LOCAL_AI_CHAT_PATH:
+            payload = self._read_json_body(MAX_LOCAL_AI_BODY)
+            if payload is None or set(payload) != {"messages"}:
+                self._empty(400)
+                return
+            try:
+                messages = validate_local_ai_messages(payload.get("messages"))
+                response = complete_local_ai(messages)
+            except ValueError:
+                self._empty(400)
+                return
+            except RuntimeError as exc:
+                print(f"ordax-native-host: local AI unavailable: {exc}", file=sys.stderr, flush=True)
+                self._empty(503)
+                return
+            self._write_json(200, response)
+            return
+
         if parsed_path == FILE_IMPORT_PATH:
             try:
                 logical_path, name = requested_file_import_target(self.path)
