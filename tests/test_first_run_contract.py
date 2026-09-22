@@ -35,7 +35,8 @@ class FirstRunContractTests(unittest.TestCase):
             contract["flow"],
             ["welcome", "regional", "network", "account", "privacy", "ready"],
         )
-        self.assertEqual(contract["regional"]["complete_locales"], ["pt-BR", "en-US", "es-ES"])
+        self.assertEqual(contract["regional"]["complete_locales"], ["pt-BR", "en-US", "es-ES", "de-DE", "fr-FR"])
+        self.assertEqual(contract["regional"]["completeness_scope"], "first-run-oobe-only")
         self.assertTrue(contract["network"]["skippable"])
         self.assertTrue(contract["network"]["password_is_transient_only"])
         self.assertTrue(contract["account"]["optional"])
@@ -71,7 +72,9 @@ class FirstRunContractTests(unittest.TestCase):
         )
         self.assertTrue(host.valid_first_run_state({**initial, "locale": "en-US"}))
         self.assertTrue(host.valid_first_run_state({**initial, "locale": "es-ES"}))
-        self.assertFalse(host.valid_first_run_state({**initial, "locale": "fr-FR"}))
+        self.assertTrue(host.valid_first_run_state({**initial, "locale": "de-DE"}))
+        self.assertTrue(host.valid_first_run_state({**initial, "locale": "fr-FR"}))
+        self.assertFalse(host.valid_first_run_state({**initial, "locale": "it-IT"}))
 
         with tempfile.TemporaryDirectory() as directory:
             host.FIRST_RUN_FILE = str(Path(directory) / "first-run.json")
