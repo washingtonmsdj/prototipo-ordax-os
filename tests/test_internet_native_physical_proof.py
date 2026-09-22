@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROOF = ROOT / "system" / "diagnostics" / "internet_native_physical_proof.py"
 WRAPPER = ROOT / "system" / "surface" / "bin" / "ordax-internet-proof"
+PROOF_RUNTIME_HELPER = ROOT / "system" / "surface" / "lib" / "physical-proof-runtime.sh"
 
 spec = importlib.util.spec_from_file_location("ordax_internet_physical_proof", PROOF)
 proof = importlib.util.module_from_spec(spec)
@@ -117,6 +118,11 @@ class InternetNativePhysicalProofTests(unittest.TestCase):
             "captured_at": "2026-09-20T12:00:00Z",
             "label": "before",
             "boot_id": "boot-a",
+            "evidence_context": {
+                "distribution_profile": "owner-development",
+                "runtime_mode": "dynamic-native-runtime",
+                "evidence_scope": "development",
+            },
             "browser_host_processes": [{"pid": 100, "start_ticks": 500}],
             "session": {"semantic_sha256": "a" * 64, "url_count": 3, "active_index": 1},
         }
@@ -125,6 +131,11 @@ class InternetNativePhysicalProofTests(unittest.TestCase):
             "captured_at": "2026-09-20T12:01:00Z",
             "label": "after",
             "boot_id": "boot-a",
+            "evidence_context": {
+                "distribution_profile": "owner-development",
+                "runtime_mode": "dynamic-native-runtime",
+                "evidence_scope": "development",
+            },
             "browser_host_processes": [{"pid": 101, "start_ticks": 900}],
             "session": {"semantic_sha256": "a" * 64, "url_count": 3, "active_index": 1},
         }
@@ -137,25 +148,65 @@ class InternetNativePhysicalProofTests(unittest.TestCase):
             {
                 "schema": proof.SCHEMA,
                 "boot_id": "same",
+                "evidence_context": {
+                    "distribution_profile": "owner-development",
+                    "runtime_mode": "dynamic-native-runtime",
+                    "evidence_scope": "development",
+                },
                 "browser_host_processes": [{"pid": 10, "start_ticks": 20}],
                 "session": {"semantic_sha256": "b" * 64, "url_count": 1, "active_index": 0},
             },
             {
                 "schema": proof.SCHEMA,
                 "boot_id": "same",
+                "evidence_context": {
+                    "distribution_profile": "owner-development",
+                    "runtime_mode": "dynamic-native-runtime",
+                    "evidence_scope": "development",
+                },
                 "browser_host_processes": [{"pid": 10, "start_ticks": 20}],
                 "session": {"semantic_sha256": "b" * 64, "url_count": 1, "active_index": 0},
             },
         )
         self.assertGreater(report["summary"]["fail"], 0)
 
-    def test_wrapper_targets_existing_webkit_runtime_without_installing_dependencies(self):
+    def test_compare_rejects_mixed_development_and_stable_evidence(self):
+        before = {
+            "schema": proof.SCHEMA,
+            "boot_id": "same",
+            "evidence_context": {
+                "distribution_profile": "owner-development",
+                "runtime_mode": "dynamic-native-runtime",
+                "evidence_scope": "development",
+            },
+            "browser_host_processes": [{"pid": 10, "start_ticks": 20}],
+            "session": {"semantic_sha256": "b" * 64, "url_count": 1, "active_index": 0},
+        }
+        after = {
+            **before,
+            "evidence_context": {
+                "distribution_profile": "stable-mvp",
+                "runtime_mode": "verified-erofs-overlay",
+                "evidence_scope": "canonical-stable-mvp",
+            },
+            "browser_host_processes": [{"pid": 11, "start_ticks": 30}],
+        }
+        report = proof.compare_reports(before, after)
+        self.assertGreater(report["summary"]["fail"], 0)
+
+    def test_wrapper_targets_existing_active_runtime_without_installing_dependencies(self):
         text = WRAPPER.read_text(encoding="utf-8")
-        self.assertIn("alpine-v3.22-cage-webkitgtk-v1", text)
+        helper = PROOF_RUNTIME_HELPER.read_text(encoding="utf-8")
+        self.assertIn("physical-proof-runtime.sh", text)
         self.assertIn("/srv/ordax-system/diagnostics/internet_native_physical_proof.py", text)
-        self.assertIn('busybox chroot "$RUNTIME_ROOT"', text)
-        self.assertNotIn("apk add", text)
-        self.assertNotIn("curl ", text)
+        self.assertIn("select_ordax_physical_proof_runtime", text)
+        self.assertIn("exec_ordax_physical_proof", text)
+        self.assertIn("alpine-v3.22-cage-webkitgtk-v1", helper)
+        self.assertIn("verified-erofs-overlay", helper)
+        self.assertIn("canonical-stable-mvp", helper)
+        self.assertIn('busybox chroot "$RUNTIME_ROOT"', helper)
+        self.assertNotIn("apk add", text + helper)
+        self.assertNotIn("curl ", text + helper)
         self.assertEqual(stat.S_IMODE(WRAPPER.stat().st_mode), 0o755)
 
 
