@@ -496,7 +496,9 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
         self.assertIn('rm -f "$RUNTIME_PROOF_CONTEXT"', launcher)
         self.assertLess(
             launcher.index("configure_keyboard_layout\npublish_runtime_proof_context"),
-            launcher.index("native_host_server.py"),
+            launcher.index(
+                "/usr/bin/python3 /srv/ordax-system/surface/runtime/native_host_server.py"
+            ),
         )
 
     def test_collector_has_no_mutating_http_methods(self):
