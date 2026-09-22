@@ -204,8 +204,11 @@ function interpolate(text, values = {}) {
 
 export function createSurfaceLocalization(preferenceRuntime) {
   const preferences = assertPreferenceRuntimePort(preferenceRuntime);
-  let locale = preferences.getSnapshot()[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_SOURCE_LOCALE;
+  let observedLocale =
+    preferences.getSnapshot()[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_SOURCE_LOCALE;
   const listeners = new Set();
+  const currentLocale = () =>
+    preferences.getSnapshot()[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_SOURCE_LOCALE;
 
   const translate = (messageId, values = {}) => {
     if (typeof messageId !== "string" || !messageId) {
@@ -215,14 +218,14 @@ export function createSurfaceLocalization(preferenceRuntime) {
     if (typeof source !== "string") {
       throw new TypeError(`Unknown Surface localization message: ${messageId}`);
     }
-    const translated = TABLES[locale]?.[messageId] ?? source;
+    const translated = TABLES[currentLocale()]?.[messageId] ?? source;
     return interpolate(translated, values);
   };
 
   const port = {
     schema: LOCALIZATION_SCHEMA,
     getLocale() {
-      return locale;
+      return currentLocale();
     },
     translate,
     subscribe(listener) {
@@ -241,9 +244,9 @@ export function createSurfaceLocalization(preferenceRuntime) {
 
   const unsubscribePreferences = preferences.subscribe((snapshot) => {
     const next = snapshot[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_SOURCE_LOCALE;
-    if (next === locale) return;
-    locale = next;
-    for (const listener of [...listeners]) listener(locale);
+    if (next === observedLocale) return;
+    observedLocale = next;
+    for (const listener of [...listeners]) listener(observedLocale);
   });
 
   assertLocalizationPort(port);
