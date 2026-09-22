@@ -9,7 +9,8 @@ The Native/USB first-run experience is localized in:
 - `pt-BR` — Português (Brasil), default;
 - `en-US` — English (United States), technical fallback;
 - `es-419` — Español (Latinoamérica);
-- `fr-FR` — Français (France).
+- `fr-FR` — Français (France);
+- `de-DE` — Deutsch (Deutschland).
 
 The locale is persisted as a regional preference. Changing the language in the
 OOBE rerenders that experience immediately from one shared message catalog; it
@@ -24,9 +25,7 @@ The four locales above are complete for the first-run/OOBE surface only. The
 wider Surface and first-party apps still contain Portuguese strings and must be
 migrated incrementally to shared catalogs before claiming full-system coverage.
 
-The next planned Latin-script locale is `de-DE`. Japanese and Korean should
-not be enabled merely by translating labels: they require reviewed fonts,
-locale behavior and IME/input support on Native hardware.
+Japanese and Korean should not be enabled merely by translating labels: they require reviewed fonts, locale behavior and IME/input support on Native hardware. Additional locales must follow the same coverage-and-input rule rather than being advertised from partial string sets.
 
 ## Rules
 
