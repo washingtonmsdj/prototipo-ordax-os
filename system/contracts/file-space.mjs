@@ -15,6 +15,7 @@ const IMAGE_PREVIEW_MIME_TYPES = new Set([
 ]);
 
 const ENTRY_KINDS = new Set(["file", "directory"]);
+const RESERVED_ENTRY_NAMES = new Set([".ordax-trash"]);
 
 export function validateFileSpacePath(path) {
   if (typeof path !== "string" || !path.startsWith("/")) {
@@ -25,7 +26,16 @@ export function validateFileSpacePath(path) {
   }
   if (path === "/") return path;
   const parts = path.split("/").slice(1);
-  if (parts.some((part) => !part || part === "." || part === ".." || part.includes("\0"))) {
+  if (
+    parts.some(
+      (part) =>
+        !part
+        || part === "."
+        || part === ".."
+        || part.includes("\0")
+        || RESERVED_ENTRY_NAMES.has(part),
+    )
+  ) {
     throw new TypeError("File-space path contains an invalid segment");
   }
   return path;
@@ -41,7 +51,8 @@ export function validateFileEntry(value) {
     value.name === "." ||
     value.name === ".." ||
     value.name.includes("/") ||
-    value.name.includes("\0")
+    value.name.includes("\0") ||
+    RESERVED_ENTRY_NAMES.has(value.name)
   ) {
     throw new TypeError("File-space entry name is invalid");
   }
