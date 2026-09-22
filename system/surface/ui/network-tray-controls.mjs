@@ -7,7 +7,7 @@ import { assertLocalizationPort } from "../../contracts/localization.mjs";
 const POLL_INTERVAL_MS = 5000;
 const NETWORK_TIME_ZONE = "America/Bahia";
 
-export function formatNetworkReceivedAt(value, locale = "pt-BR", fallback = "horário desconhecido") {
+export function formatNetworkReceivedAt(value, locale = "pt-BR", fallback = "--") {
   if (!Number.isFinite(value)) return fallback;
   return new Intl.DateTimeFormat(locale, {
     timeZone: NETWORK_TIME_ZONE,
