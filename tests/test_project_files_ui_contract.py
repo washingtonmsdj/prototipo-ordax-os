@@ -6,6 +6,7 @@ CONTROLS = ROOT / "system" / "surface" / "ui" / "file-space-controls.mjs"
 COMPOSITION = ROOT / "system" / "composition" / "native" / "main.mjs"
 WORKFLOW = ROOT / ".github" / "workflows" / "surface-web-candidate.yml"
 FILES_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "files.mjs"
+FILES_OPERATIONAL_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "files-operational.mjs"
 
 
 class ProjectFilesUiContractTests(unittest.TestCase):
@@ -40,7 +41,7 @@ class ProjectFilesUiContractTests(unittest.TestCase):
         self.assertIn("projectPort.rename(renamingProjectId, projectRenameDraft)", rename_block)
         self.assertNotIn("port.renameEntry(", rename_block)
         self.assertIn("project.path !== listing.path", rename_block)
-        self.assertIn("A pasta continua em", rename_block)
+        self.assertIn('t("files.project.renamed"', rename_block)
         self.assertIn('t("files.form.projectRenameHint", { path: project.path })', controls)
         files_i18n = FILES_I18N.read_text(encoding="utf-8")
         self.assertIn(
@@ -107,8 +108,17 @@ class ProjectFilesUiContractTests(unittest.TestCase):
         self.assertNotIn("recordFileOpened", click_block)
         self.assertNotIn("projectPort.remove", click_block)
         self.assertNotIn("renameEntry(", click_block)
-        self.assertIn("O último arquivo deste projeto não está mais disponível. O projeto foi preservado.", controls)
-        self.assertIn("Não foi possível retomar o último arquivo deste projeto. O projeto foi preservado.", controls)
+        self.assertIn('t("files.project.resumeMissing")', controls)
+        self.assertIn('t("files.project.resumeFailed")', controls)
+        operational = FILES_OPERATIONAL_I18N.read_text(encoding="utf-8")
+        self.assertIn(
+            '"files.project.resumeMissing": "O último arquivo deste projeto não está mais disponível. O projeto foi preservado."',
+            operational,
+        )
+        self.assertIn(
+            '"files.project.resumeFailed": "The project\'s last file could not be resumed. The project was preserved."',
+            operational,
+        )
 
     def test_stale_project_resume_recovery_is_exact_reference_guarded_and_non_destructive(self):
         controls = CONTROLS.read_text(encoding="utf-8")
@@ -131,8 +141,8 @@ class ProjectFilesUiContractTests(unittest.TestCase):
         self.assertIn(guard, recovery_block)
         self.assertIn(clear, recovery_block)
         self.assertLess(recovery_block.index(guard), recovery_block.index(clear))
-        self.assertIn("A referência do último arquivo mudou. Nada foi alterado.", recovery_block)
-        self.assertIn("Referência do último arquivo esquecida. Nenhum arquivo foi apagado.", recovery_block)
+        self.assertIn('t("files.project.lastFileChanged")', recovery_block)
+        self.assertIn('t("files.project.lastFileForgotten")', recovery_block)
         self.assertNotIn("port.renameEntry(", recovery_block)
         self.assertNotIn("port.moveEntry(", recovery_block)
         self.assertNotIn("port.copyFile(", recovery_block)
