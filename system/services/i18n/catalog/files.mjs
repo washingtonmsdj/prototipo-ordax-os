@@ -124,7 +124,14 @@ export const FILES_SOURCE_MESSAGES = Object.freeze({
   "files.action.exportLimit": "Exportação rápida limitada a 64 MiB",
   "files.preview.aria": "Visualização do arquivo",
   "files.preview.opening": "Abrindo arquivo…",
-  "files.preview.boundary": "Visualização segura de texto UTF-8, limitada a 256 KB. O conteúdo não é executado."
+  "files.preview.boundary": "Visualização segura de texto UTF-8, limitada a 256 KB. O conteúdo não é executado.",
+  "files.preview.readOnly": "somente leitura",
+  "files.transfer.copyTitle": "Copiar arquivo",
+  "files.transfer.moveTitle": "Mover item",
+  "files.transfer.copyConfirm": "Copiar para esta pasta",
+  "files.transfer.moveConfirm": "Mover para esta pasta",
+  "files.transfer.copyHint": "Confirme para copiar sem substituir itens existentes.",
+  "files.transfer.moveHint": "Confirme para mover sem substituir itens existentes."
 });
 
 export const FILES_ENGLISH_MESSAGES = Object.freeze({
@@ -253,5 +260,12 @@ export const FILES_ENGLISH_MESSAGES = Object.freeze({
   "files.action.exportLimit": "Quick export limited to 64 MiB",
   "files.preview.aria": "File preview",
   "files.preview.opening": "Opening file…",
-  "files.preview.boundary": "Safe UTF-8 text preview, limited to 256 KB. Content is not executed."
+  "files.preview.boundary": "Safe UTF-8 text preview, limited to 256 KB. Content is not executed.",
+  "files.preview.readOnly": "read-only",
+  "files.transfer.copyTitle": "Copy file",
+  "files.transfer.moveTitle": "Move item",
+  "files.transfer.copyConfirm": "Copy to this folder",
+  "files.transfer.moveConfirm": "Move to this folder",
+  "files.transfer.copyHint": "Confirm to copy without replacing existing items.",
+  "files.transfer.moveHint": "Confirm to move without replacing existing items."
 });
