@@ -758,6 +758,10 @@ func verifySurfaceRuntimeEROFS(path string) error {
 	return verifyEROFSArtifact(path, "Surface runtime image")
 }
 
+func verifyLocalAIRuntimeEROFS(path string) error {
+	return verifyEROFSArtifact(path, "local AI runtime image")
+}
+
 func verifyExistingPortableRelease(path string, m Manifest, payload, envelope []byte) error {
 	if m.Schema != manifestSchemaV2 {
 		return errors.New("portable materialized release requires release-manifest/2")
@@ -1027,6 +1031,90 @@ func materializeRuntimeBlob(client *http.Client, root string, artifact Artifact)
 		return "", false, err
 	}
 	path, err := verifyRuntimeStoreFile(root, artifact)
+	if err != nil {
+		return "", false, err
+	}
+	return path, false, nil
+}
+
+func verifyAIRuntimeStoreFile(root string, artifact Artifact) (string, error) {
+	aiRuntimeDir := filepath.Join(root, "ai-runtimes", "sha256", artifact.SHA256)
+	info, err := os.Lstat(aiRuntimeDir)
+	if err != nil {
+		return "", err
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return "", errors.New("local AI runtime store entry is not a safe directory")
+	}
+	entries, err := os.ReadDir(aiRuntimeDir)
+	if err != nil {
+		return "", err
+	}
+	if len(entries) != 1 || entries[0].Name() != "local-ai-runtime.erofs" {
+		return "", errors.New("local AI runtime store entry contains unexpected files")
+	}
+	runtimePath := filepath.Join(aiRuntimeDir, "local-ai-runtime.erofs")
+	actualHash, actualSize, err := hashFile(runtimePath)
+	if err != nil || actualSize != artifact.Size {
+		return "", errors.New("local AI runtime stored size is invalid")
+	}
+	if actualHash != artifact.SHA256 {
+		return "", errors.New("local AI runtime stored digest mismatch")
+	}
+	if err := verifyLocalAIRuntimeEROFS(runtimePath); err != nil {
+		return "", err
+	}
+	return runtimePath, nil
+}
+
+func materializeAIRuntimeBlob(client *http.Client, root string, artifact Artifact) (string, bool, error) {
+	if artifact.Name != "local-ai-runtime.erofs" || artifact.Role != "local-ai-runtime" {
+		return "", false, errors.New("invalid local AI runtime artifact identity")
+	}
+	digestRoot := filepath.Join(root, "ai-runtimes", "sha256")
+	if err := ensureDir(digestRoot, 0o755); err != nil {
+		return "", false, err
+	}
+	targetDir := filepath.Join(digestRoot, artifact.SHA256)
+	if info, err := os.Lstat(targetDir); err == nil {
+		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return "", false, errors.New("local AI runtime digest target exists but is not a safe directory")
+		}
+		path, err := verifyAIRuntimeStoreFile(root, artifact)
+		return path, true, err
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", false, err
+	}
+
+	stage, err := os.MkdirTemp(digestRoot, ".ai-runtime-staging-"+artifact.SHA256[:12]+"-")
+	if err != nil {
+		return "", false, err
+	}
+	keepStage := false
+	defer func() {
+		if !keepStage {
+			_ = os.RemoveAll(stage)
+		}
+	}()
+
+	stagePath := filepath.Join(stage, "local-ai-runtime.erofs")
+	if err := downloadArtifact(client, artifact, stagePath); err != nil {
+		return "", false, err
+	}
+	if err := verifyLocalAIRuntimeEROFS(stagePath); err != nil {
+		return "", false, fmt.Errorf("verify local AI runtime image: %w", err)
+	}
+	if err := syncDir(stage); err != nil {
+		return "", false, err
+	}
+	if err := os.Rename(stage, targetDir); err != nil {
+		return "", false, err
+	}
+	keepStage = true
+	if err := syncDir(digestRoot); err != nil {
+		return "", false, err
+	}
+	path, err := verifyAIRuntimeStoreFile(root, artifact)
 	if err != nil {
 		return "", false, err
 	}
@@ -1462,8 +1550,12 @@ func inspectRelease(client *http.Client, envelopeURL string, trust TrustAnchor, 
 		ArtifactSHA256:      artifact.SHA256,
 		ArtifactSize:        artifact.Size,
 	}
-	if manifest.Schema == manifestSchemaV3 {
+	if manifest.Schema == manifestSchemaV3 || manifest.Schema == manifestSchemaV4 {
 		receipt.Artifacts = append([]Artifact(nil), manifest.Artifacts...)
+	}
+	if manifest.Schema == manifestSchemaV4 {
+		binding := *manifest.LocalAI
+		receipt.LocalAI = &binding
 	}
 	return receipt, nil
 }
@@ -1478,7 +1570,7 @@ func materialize(client *http.Client, envelopeURL, root string, trust TrustAncho
 		return MaterializeReceipt{}, err
 	}
 	if manifest.Schema != manifestSchema {
-		return MaterializeReceipt{}, errors.New("materialize supports release-manifest/1 only; use materialize-portable for v2 or materialize-portable-v3 for v3")
+		return MaterializeReceipt{}, errors.New("materialize supports release-manifest/1 only; use the dedicated portable materializer for manifest v2, v3 or v4")
 	}
 	if expectedCommit != "" {
 		if !commitPattern.MatchString(expectedCommit) {
