@@ -36,7 +36,17 @@
     "editable_after_first_run_in_settings": true,
     "keyboard_layout_contract": "docs/contracts/keyboard-layout.json",
     "keyboard_layout_selector_exposed": false,
-    "keyboard_layout_selector_gate": "safe-current-session-apply-or-pre-surface-handoff"
+    "keyboard_layout_selector_gate": "safe-current-session-apply-or-pre-surface-handoff",
+    "preview_locales": [
+      "en-US",
+      "es-419"
+    ],
+    "supported_locale_catalog": [
+      "pt-BR",
+      "en-US",
+      "es-419"
+    ],
+    "localization_contract": "docs/contracts/localization.json"
   },
   "network": {
     "skippable": true,
