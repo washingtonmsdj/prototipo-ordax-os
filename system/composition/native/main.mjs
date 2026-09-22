@@ -260,6 +260,7 @@ async function start() {
   const keyboardLayoutAvailable = keyboardLayout !== null;
   const browserWebContentAvailable = browserSession.getSnapshot().supported;
   const intelligenceSystemAvailable = true;
+  const localSessionAvailable = localSession !== null;
   const host = createNativeSurfaceHost(window, {
     bootControlAvailable,
     userFileSpaceAvailable,
@@ -270,6 +271,7 @@ async function start() {
     keyboardLayoutAvailable,
     browserWebContentAvailable,
     intelligenceSystemAvailable,
+    localSessionAvailable,
   });
 
   validateAccountRuntime(
