@@ -138,6 +138,20 @@ const internetComponent = await loadOptionalComponentRuntime({
   },
 });
 
+const assistantComponent = await loadOptionalComponentRuntime({
+  componentId: "assistant",
+  importer: () => import("../../apps/assistant/runtime.mjs"),
+  componentManager,
+  context: {
+    root,
+    localAi: null,
+    surfaceLifecycle: surface,
+  },
+  onError(error) {
+    console.warn("OrdaX Assistant runtime unavailable", error);
+  },
+});
+
 bootScreen.ready();
 
 window.addEventListener(
@@ -145,6 +159,7 @@ window.addEventListener(
   () => {
     systemOverviewControls.destroy();
     internetComponent?.destroy();
+    assistantComponent?.destroy();
     notesComponent?.destroy();
     networkQuickPanel?.destroy();
     quickPanelControls?.destroy();
