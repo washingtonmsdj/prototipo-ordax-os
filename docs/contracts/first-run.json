@@ -7,19 +7,24 @@
     "state_port": "system/contracts/first-run-state-store.mjs",
     "native_adapter": "system/adapters/native/first-run-state.mjs",
     "native_host": "system/surface/runtime/native_host_server.py",
-    "surface_ui": "system/surface/ui/first-run.mjs"
+    "surface_ui": "system/surface/ui/first-run.mjs",
+    "local_session_contract": "system/contracts/local-session.mjs",
+    "local_session_adapter": "system/adapters/native/local-session.mjs",
+    "local_session_ui": "system/surface/ui/local-session-lock.mjs"
   },
   "persistence": {
     "native_path": "/var/lib/ordax/first-run.json",
     "persistent_usb_state": true,
     "completion_must_be_durable_before_dismiss": true,
     "state_is_separate_from_user_preferences": true,
-    "state_is_separate_from_identity_session": true
+    "state_is_separate_from_identity_session": true,
+    "state_is_separate_from_local_session_secret": true
   },
   "flow": [
     "welcome",
     "regional",
     "network",
+    "security",
     "account",
     "privacy",
     "ready"
@@ -73,5 +78,22 @@
     "runs_from_usb": true,
     "permanent_internal_disk_install_exposed": false,
     "web_mode_uses_this_device_oobe": false
+  },
+  "security": {
+    "local_session_optional": true,
+    "minimum_secret_characters": 6,
+    "maximum_secret_characters": 128,
+    "secret_is_transient_in_surface": true,
+    "secret_must_not_enter_first_run_state": true,
+    "secret_must_not_enter_telemetry": true,
+    "credential_owner": "native-host",
+    "credential_path": "/var/lib/ordax/local-session-credential.json",
+    "credential_format": "scrypt-verifier-with-random-salt",
+    "starts_locked_on_next_surface_start_when_configured": true,
+    "bad_or_unreadable_credential_fails_closed": true,
+    "account_identity_independent": true,
+    "network_independent": true,
+    "protection_scope": "surface-session-not-storage-encryption",
+    "configurable_after_first_run_in_settings": true
   }
 }
