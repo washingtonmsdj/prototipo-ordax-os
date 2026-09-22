@@ -233,7 +233,7 @@ export function createSurfaceLocalization(preferenceRuntime) {
         throw new TypeError("Localization listener must be a function");
       }
       listeners.add(listener);
-      listener(locale);
+      listener(currentLocale());
       return () => listeners.delete(listener);
     },
     dispose() {
@@ -257,7 +257,7 @@ export function surfaceMessageIds() {
   return Object.freeze(Object.keys(SOURCE));
 }
 
-export function surfaceLocaleCoverage(locale) {
+export function surfaceCatalogCoverage(locale) {
   const table = TABLES[locale] ?? null;
   const total = Object.keys(SOURCE).length;
   const translated = table ? Object.keys(table).length : 0;
