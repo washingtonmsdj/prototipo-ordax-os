@@ -2,13 +2,14 @@ import {
   assertNetworkStatusPort,
   validateNetworkStatusSnapshot,
 } from "../../contracts/network-status.mjs";
+import { assertLocalizationPort } from "../../contracts/localization.mjs";
 
 const POLL_INTERVAL_MS = 5000;
 const NETWORK_TIME_ZONE = "America/Bahia";
 
-export function formatNetworkReceivedAt(value) {
-  if (!Number.isFinite(value)) return "horário desconhecido";
-  return new Intl.DateTimeFormat("pt-BR", {
+export function formatNetworkReceivedAt(value, locale = "pt-BR", fallback = "horário desconhecido") {
+  if (!Number.isFinite(value)) return fallback;
+  return new Intl.DateTimeFormat(locale, {
     timeZone: NETWORK_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
@@ -48,49 +49,81 @@ function stateCopy(entry) {
       kind: "unknown",
       state: "unknown",
       signalLevel: 0,
-      label: "Rede indisponível",
-      title: "Nenhuma interface de rede observada",
+      quality: null,
     };
   }
   if (entry.state !== "connected") {
-    const kindLabel =
-      entry.kind === "wifi" ? "Wi-Fi" : entry.kind === "ethernet" ? "Cabo" : "Rede";
-    const stateLabel = entry.state === "unknown" ? "estado desconhecido" : "desconectado";
     return {
       kind: entry.kind,
       state: entry.state,
       signalLevel: 0,
-      label: entry.state === "unknown" ? kindLabel : `${kindLabel} desconectado`,
-      title: `${kindLabel}: ${stateLabel}`,
+      quality: null,
     };
   }
   if (entry.kind === "wifi") {
     const level = signalLevel(entry.signalDbm);
-    const quality = ["", "fraco", "regular", "bom", "forte"][level] ?? "";
+    const quality = [null, "weak", "fair", "good", "strong"][level] ?? null;
     return {
       kind: "wifi",
       state: "connected",
       signalLevel: level,
-      label: "Wi-Fi",
-      title: `Wi-Fi conectado${quality ? ` · sinal ${quality}` : ""}`,
-    };
-  }
-  if (entry.kind === "ethernet") {
-    return {
-      kind: "ethernet",
-      state: "connected",
-      signalLevel: 0,
-      label: "Cabo",
-      title: "Rede por cabo conectada",
+      quality,
     };
   }
   return {
-    kind: "other",
+    kind: entry.kind === "ethernet" ? "ethernet" : "other",
     state: "connected",
     signalLevel: 0,
-    label: "Rede",
-    title: "Rede conectada",
+    quality: null,
   };
+}
+
+function networkKindLabel(summary, t) {
+  if (summary.kind === "wifi") return t("network.kind.wifi");
+  if (summary.kind === "ethernet") return t("network.kind.ethernet");
+  return t("network.kind.generic");
+}
+
+function networkSummaryCopy(summary, t) {
+  if (summary.kind === "unknown") {
+    return Object.freeze({
+      label: t("network.status.unavailable"),
+      title: t("network.status.noInterface"),
+    });
+  }
+  const kind = networkKindLabel(summary, t);
+  if (summary.state !== "connected") {
+    const state = summary.state === "unknown"
+      ? t("network.state.unknown")
+      : t("network.state.disconnected");
+    return Object.freeze({
+      label: summary.state === "unknown"
+        ? kind
+        : t("network.status.disconnectedLabel", { kind }),
+      title: t("network.status.detail", { kind, state }),
+    });
+  }
+  if (summary.kind === "wifi") {
+    const quality = summary.quality
+      ? t(`network.signal.${summary.quality}`)
+      : "";
+    return Object.freeze({
+      label: kind,
+      title: quality
+        ? t("network.status.wifiConnectedSignal", { quality })
+        : t("network.status.wifiConnected"),
+    });
+  }
+  if (summary.kind === "ethernet") {
+    return Object.freeze({
+      label: kind,
+      title: t("network.status.ethernetConnected"),
+    });
+  }
+  return Object.freeze({
+    label: kind,
+    title: t("network.status.connected"),
+  });
 }
 
 export function summarizeNetworkStatus(value) {
@@ -101,12 +134,15 @@ export function summarizeNetworkStatus(value) {
 export function mountNetworkTrayControls(
   root,
   networkStatus,
+  localization,
   { pollIntervalMs = POLL_INTERVAL_MS } = {},
 ) {
   if (!(root instanceof Element)) {
     throw new TypeError("Network tray controls require a Surface root Element");
   }
   const port = assertNetworkStatusPort(networkStatus);
+  const localizationPort = assertLocalizationPort(localization);
+  const t = localizationPort.translate;
   const tray = root.querySelector("[data-connectivity-tray]");
   const label = root.querySelector("[data-connectivity-label]");
   const icon = root.querySelector("[data-connectivity-icon]");
@@ -121,13 +157,18 @@ export function mountNetworkTrayControls(
 
   const render = (snapshot, { stale = false } = {}) => {
     const next = summarizeNetworkStatus(snapshot);
+    const copy = networkSummaryCopy(next, t);
     tray.dataset.networkKind = next.kind;
     tray.dataset.networkState = next.state;
     tray.dataset.networkObservation = stale ? "stale" : "current";
     tray.title = stale
-      ? `Dados antigos · ${next.title} · última leitura recebida pela Surface às ${formatNetworkReceivedAt(lastSuccessAt)}`
-      : next.title;
-    label.textContent = stale ? `${next.label} · antigo` : next.label;
+      ? `Dados antigos · ${copy.title} · última leitura recebida pela Surface às ${formatNetworkReceivedAt(
+        lastSuccessAt,
+        localizationPort.getLocale(),
+        t("common.time.unknown"),
+      )}`
+      : copy.title;
+    label.textContent = stale ? `${copy.label} · antigo` : copy.label;
     icon.dataset.state = stale
       ? "unknown"
       : next.state === "connected" ? "online" : "offline";
@@ -140,8 +181,8 @@ export function mountNetworkTrayControls(
     tray.dataset.networkKind = "unknown";
     tray.dataset.networkState = "unknown";
     tray.dataset.networkObservation = "unavailable";
-    tray.title = "Estado detalhado da rede indisponível";
-    label.textContent = "Rede";
+    tray.title = t("network.tray.detailUnavailable");
+    label.textContent = t("network.kind.generic");
     icon.dataset.state = "unknown";
     icon.dataset.networkKind = "unknown";
     icon.dataset.signalLevel = "0";
@@ -169,6 +210,14 @@ export function mountNetworkTrayControls(
     }
   };
 
+  const unsubscribeLocalization = localizationPort.subscribe(() => {
+    if (destroyed) return;
+    if (lastSnapshot) {
+      render(lastSnapshot, { stale: false });
+    } else {
+      renderUnavailable();
+    }
+  });
   void refresh();
   const timer = setInterval(() => void refresh(), pollIntervalMs);
 
@@ -177,6 +226,7 @@ export function mountNetworkTrayControls(
     destroy() {
       destroyed = true;
       clearInterval(timer);
+      unsubscribeLocalization();
       lastSnapshot = null;
       lastSuccessAt = null;
       delete tray.dataset.networkObservation;
