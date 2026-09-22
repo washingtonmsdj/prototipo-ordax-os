@@ -358,6 +358,7 @@ export function mountFirstRunExperience(
     secret.minLength = 6;
     secret.maxLength = 128;
     secret.value = localSessionSecretDraft;
+    secret.placeholder = translateFirstRunText(draft.locale, "PIN ou senha local");
     secret.dataset.firstRunLocalSessionSecret = "";
     secret.disabled = localSessionPending;
     secretField.append(secret);
@@ -370,6 +371,7 @@ export function mountFirstRunExperience(
     confirm.minLength = 6;
     confirm.maxLength = 128;
     confirm.value = localSessionConfirmDraft;
+    confirm.placeholder = translateFirstRunText(draft.locale, "Confirmar PIN ou senha");
     confirm.dataset.firstRunLocalSessionConfirm = "";
     confirm.disabled = localSessionPending;
     confirmField.append(confirm);
@@ -508,7 +510,7 @@ export function mountFirstRunExperience(
         ? finishing ? "Salvando…" : "Entrar no OrdaX"
         : step === "network" ? "Continuar offline ou conectado" : "Continuar";
       const next = action(documentObject, label, step === "ready" ? "finish" : "next", true);
-      next.disabled = finishing;
+      next.disabled = finishing || (step === "security" && localSessionPending);
       footer.append(next);
     }
     card.append(body, footer);
