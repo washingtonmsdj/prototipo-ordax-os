@@ -121,6 +121,70 @@ jobs:
           echo 'RELEASE_PUBLISHED=NO'
           echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
 
+      - name: Prove portable v4 manifest pins local AI runtime and source lock
+        run: |
+          set -euo pipefail
+          tool="$PWD/out/release-manifest/ordax-release-manifest-linux-amd64"
+          work="$RUNNER_TEMP/release-manifest-v4-proof"
+          mkdir -p "$work"
+          printf 'ci-system-erofs-v4\n' > "$work/system.erofs"
+          printf 'ci-surface-runtime-erofs-v4\n' > "$work/native-surface-runtime.erofs"
+          printf 'ci-local-ai-runtime-erofs-v4\n' > "$work/local-ai-runtime.erofs"
+          cat > "$work/source-lock.json" <<'JSON'
+          {
+            "$schema": "prototype-ordax.local-ai-source-lock/1",
+            "engine": {
+              "id": "llama.cpp",
+              "repository": "https://github.com/ggml-org/llama.cpp",
+              "commit": "7ab4ee7baad2d920464cbacfad4f4b07cf111fd2",
+              "license": "MIT"
+            },
+            "model": {
+              "id": "qwen3.5-0.8b-q4_0",
+              "repository": "ggml-org/Qwen3.5-0.8B-GGUF",
+              "filename": "Qwen3.5-0.8B-Q4_0.gguf",
+              "sha256": "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf",
+              "size_bytes": 563036064,
+              "license": "Apache-2.0",
+              "upstream_revision": "9447f74"
+            }
+          }
+          JSON
+          "$tool" \
+            --manifest-schema 4 \
+            --artifact "$work/system.erofs" \
+            --runtime-artifact "$work/native-surface-runtime.erofs" \
+            --local-ai-artifact "$work/local-ai-runtime.erofs" \
+            --local-ai-source-lock "$work/source-lock.json" \
+            --source-commit 0123456789abcdef0123456789abcdef01234567 \
+            --artifact-url https://example.invalid/system.erofs \
+            --runtime-artifact-url https://example.invalid/native-surface-runtime.erofs \
+            --local-ai-artifact-url https://example.invalid/local-ai-runtime.erofs \
+            --out "$work/release-manifest-v4.json" | tee "$work/output-v4.txt"
+          python - "$work/release-manifest-v4.json" "$work/local-ai-runtime.erofs" "$work/source-lock.json" <<'PY'
+          import hashlib, json, pathlib, sys
+          manifest = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          ai = pathlib.Path(sys.argv[2]).read_bytes()
+          source_lock = pathlib.Path(sys.argv[3]).read_bytes()
+          assert manifest['$schema'] == 'prototype-ordax.release-manifest/4'
+          assert [(a['name'], a['role']) for a in manifest['artifacts']] == [
+              ('system.erofs', 'system-image'),
+              ('native-surface-runtime.erofs', 'surface-runtime'),
+              ('local-ai-runtime.erofs', 'local-ai-runtime'),
+          ]
+          assert manifest['artifacts'][2]['sha256'] == hashlib.sha256(ai).hexdigest()
+          binding = manifest['local_ai']
+          assert binding['contract'] == 'ordax.local-ai/1'
+          assert binding['source_lock_sha256'] == hashlib.sha256(source_lock).hexdigest()
+          assert binding['engine_source_commit'] == '7ab4ee7baad2d920464cbacfad4f4b07cf111fd2'
+          assert binding['model_sha256'] == '57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf'
+          assert binding['model_size'] == 563036064
+          print('RELEASE_MANIFEST_V4_LOCAL_AI_BINDING=PASS')
+          PY
+          echo 'REAL_LOCAL_AI_RUNTIME_BUILT=NO'
+          echo 'RELEASE_SIGNED=NO'
+          echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
+
       - name: Upload public tooling candidates only
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
