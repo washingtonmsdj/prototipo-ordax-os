@@ -259,23 +259,40 @@ def checkout_engine(lock, mirror, destination):
     commit = lock["engine"]["commit"]
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=False)
-    run(["git", "init", str(destination)])
-    run(["git", "-C", str(destination), "remote", "add", "origin", str(mirror)])
-    run(["git", "-C", str(destination), "fetch", "--no-tags", "origin", "refs/ordax/pinned"])
-    run(["git", "-C", str(destination), "checkout", "--detach", "FETCH_HEAD"])
-    actual = run(["git", "-C", str(destination), "rev-parse", "HEAD"], capture=True).stdout.strip().lower()
-    if actual != commit:
-        raise RuntimeBuildError("llama.cpp checkout differs from pin")
-    status = run(
-        ["git", "-C", str(destination), "status", "--porcelain=v1", "--untracked-files=no"],
+    archive = destination.parent / "llama.cpp-source.tar"
+    run([
+        "git",
+        "--git-dir", str(mirror),
+        "archive",
+        "--format=tar",
+        "--output", str(archive),
+        "refs/ordax/pinned",
+    ])
+    if archive.is_symlink() or not archive.is_file() or archive.stat().st_size <= 0:
+        raise RuntimeBuildError("llama.cpp source archive was not created safely")
+    with tarfile.open(archive, "r") as tar:
+        members = []
+        for member in tar.getmembers():
+            name = member.name
+            if not name or name.startswith("/") or ".." in Path(name).parts:
+                raise RuntimeBuildError(f"unsafe llama.cpp archive path: {name}")
+            if member.isdev() or member.isfifo():
+                raise RuntimeBuildError(f"unsupported llama.cpp archive object: {name}")
+            members.append(member)
+        tar.extractall(destination, members=members, filter="data")
+    archive.unlink()
+    if (destination / ".git").exists():
+        raise RuntimeBuildError("llama.cpp source export unexpectedly contains Git metadata")
+    if (destination / ".gitmodules").exists():
+        raise RuntimeBuildError("unreviewed llama.cpp submodules are forbidden")
+    if not (destination / "CMakeLists.txt").is_file() or not (destination / "tools/server/CMakeLists.txt").is_file():
+        raise RuntimeBuildError("llama.cpp source export is incomplete")
+    actual = run(
+        ["git", "--git-dir", str(mirror), "rev-parse", "refs/ordax/pinned^{commit}"],
         capture=True,
-    ).stdout
-    if status.strip():
-        raise RuntimeBuildError("llama.cpp checkout is dirty before build")
-    if (Path(destination) / ".gitmodules").exists():
-        submodules = run(["git", "-C", str(destination), "submodule", "status"], capture=True).stdout.strip()
-        if submodules:
-            raise RuntimeBuildError("unreviewed llama.cpp submodules are forbidden")
+    ).stdout.strip().lower()
+    if actual != commit:
+        raise RuntimeBuildError("llama.cpp exported source differs from pin")
 
 
 def deterministic_env():
@@ -318,6 +335,7 @@ def build_engine(lock, source, work):
             "-DGGML_BUILD_EXAMPLES=OFF",
             "-DLLAMA_BUILD_NUMBER=0",
             f"-DLLAMA_BUILD_COMMIT={commit}",
+            f"-DGGML_BUILD_COMMIT={commit}",
             "-DCMAKE_EXE_LINKER_FLAGS=-static",
             f"-DCMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG {prefix}",
             f"-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG {prefix}",
