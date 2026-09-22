@@ -9,6 +9,7 @@ SERVER = ROOT / "system" / "surface" / "runtime" / "native_host_server.py"
 ADAPTER = ROOT / "system" / "adapters" / "native" / "file-space.mjs"
 CONTROLS = ROOT / "system" / "surface" / "ui" / "file-space-controls.mjs"
 CONTRACT = ROOT / "system" / "contracts" / "file-space.mjs"
+FILES_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "files-operational.mjs"
 
 spec = importlib.util.spec_from_file_location("ordax_native_host_export_test", SERVER)
 native_host = importlib.util.module_from_spec(spec)
@@ -65,7 +66,10 @@ class NativeFileExportTests(unittest.TestCase):
         self.assertIn("anchor.download = fileNameFromPath(path)", adapter)
         self.assertIn("revokeObjectURL", adapter)
         self.assertIn("exportSelected", controls)
-        self.assertIn("limite de exportação de 64 MiB", controls)
+        self.assertIn('t("files.export.tooLarge")', controls)
+        catalog = FILES_I18N.read_text(encoding="utf-8")
+        self.assertIn('"files.export.tooLarge": "Este arquivo ultrapassa o limite de exportação de 64 MiB."', catalog)
+        self.assertIn('"files.export.tooLarge": "This file exceeds the 64 MiB export limit."', catalog)
 
     def test_native_server_marks_download_as_attachment_and_nosniff(self):
         server = SERVER.read_text(encoding="utf-8")
