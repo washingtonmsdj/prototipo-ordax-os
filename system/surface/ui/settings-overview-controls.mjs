@@ -693,7 +693,7 @@ export function mountSettingsOverviewControls(
     const view = node(documentObject, "div", "ordax-settings-view");
     renderHeader(view);
     renderSectionNavigation(view);
-    if (activeSection === "appearance" || activeSection === "accessibility") {
+    if (["appearance", "accessibility", "regional"].includes(activeSection)) {
       renderPreferences(view, activeSection);
     } else if (activeSection === "network") {
       renderNetwork(view);
