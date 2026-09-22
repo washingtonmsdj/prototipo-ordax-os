@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 import { PREFERENCE_RUNTIME_SCHEMA } from "../system/contracts/preference-runtime.mjs";
+import { createDesktopShellMarkup } from "../system/surface/ui/desktop-shell.mjs";
 import {
   SURFACE_COMPLETE_LOCALES,
   SURFACE_ENGLISH_TARGET_LOCALE,
@@ -87,6 +88,18 @@ test("catalog coverage is explicit and does not claim full Surface completion", 
   assert.equal(surfaceLocaleCoverage("pt-BR").complete, true);
   assert.equal(surfaceLocaleCoverage("en-US").complete, true);
   assert.equal(surfaceLocaleCoverage("es-ES").complete, false);
+});
+
+test("desktop shell is born in English when regional locale is English", () => {
+  const localization = createSurfaceLocalization(preferenceRuntime("en-US"));
+  const markup = createDesktopShellMarkup(localization);
+  assert.match(markup, /aria-label="Main applications"/);
+  assert.match(markup, />Files</);
+  assert.match(markup, />Your space</);
+  assert.match(markup, /placeholder="Search applications"/);
+  assert.match(markup, />Area 01</);
+  assert.doesNotMatch(markup, /Aplicativos principais|>Arquivos<|>Seu espaço</);
+  localization.dispose();
 });
 
 test("unknown Surface message ids fail closed", () => {
