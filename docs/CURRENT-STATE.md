@@ -155,16 +155,18 @@ first-party app metadata. Unsupported message IDs fail closed; locales without a
 shared translation fall back to PT-BR source copy explicitly.
 
 English is **not** yet marked as a complete Surface locale. Files now covers its
-primary navigation/search/list/selection/Recents/Trash journey through the shared
-catalog, and Settings/System cover their section navigation/header copy. Secondary
-forms and operational messages plus Account, Notes, Internet and quick-panel copy
-still require migration. Spanish, German and French remain OOBE-complete but
+primary navigation/search/list/selection/Recents/Trash journey plus common forms,
+locale-aware sorting, export and preview controls through the shared catalog.
+Settings/System cover their section navigation/header copy. Files operational/error
+messages plus Account, Notes, Internet, deeper Settings/System content and
+quick-panel copy still require migration. Spanish, German and French remain OOBE-complete but
 Surface-incomplete.
 
 ```text
 SURFACE_LOCALIZATION_OWNER=PASS_SOURCE
 SURFACE_SHARED_SHELL_EN_US=PASS_SOURCE
 FILES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
+FILES_FORMS_SORT_EXPORT_PREVIEW_EN_US=PASS_SOURCE
 SETTINGS_SYSTEM_NAV_EN_US=PASS_SOURCE
 SURFACE_COMPLETE_LOCALES=pt-BR
 SURFACE_EN_US_APP_CONTROLS=MIGRATING
