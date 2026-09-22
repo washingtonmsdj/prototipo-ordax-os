@@ -124,10 +124,11 @@ Um usuário deve conseguir:
 6. chegar à Surface e **usar o sistema diretamente pelo USB**, inclusive sem conta online;
 7. conectar à rede durante o primeiro uso ou posteriormente;
 8. usar Arquivos, Notas, Internet, Ajustes e Sistema;
-9. atualizar por canal oficial;
-10. recuperar automaticamente de atualização defeituosa;
-11. acessar login/cadastro somente quando identidade real estiver habilitada;
-12. usar `/conta/` como área autenticada separada da landing quando uma sessão real existir.
+9. ter **Ordax Intelligence** como capacidade do sistema, com inferência local incluída na distribuição Stable/MVP e degradação segura se o backend falhar;
+10. atualizar por canal oficial;
+11. recuperar automaticamente de atualização defeituosa;
+12. acessar login/cadastro somente quando identidade real estiver habilitada;
+13. usar `/conta/` como área autenticada separada da landing quando uma sessão real existir.
 
 ## 6. Gates do MVP público
 
@@ -141,6 +142,7 @@ Bloqueiam lançamento:
 - boot USB -> OOBE/primeiro uso -> Surface -> apps;
 - primeiro uso persistente com rota oficial **Continuar sem conta** e rede opcional;
 - teclado físico utilizável no layout documentado para o hardware suportado; no MVP PT-BR, ABNT2 é o padrão Native e US é uma alternativa persistente;
+- Ordax Intelligence presente como serviço de sistema e payload local de inferência verificável incluído na mídia/release; falha da IA não pode impedir boot/Surface;
 - uso real sem instalação no disco interno;
 - update oficial sem Git;
 - recovery/rollback;
@@ -213,6 +215,8 @@ site oficial
 ```
 
 O Creator do MVP prepara mídia removível. Não oferece gravação/instalação em disco interno.
+
+**IA não é um extra selecionável do Creator.** O Stable/MVP inclui Ordax Intelligence e seu backend local verificado como parte do produto. Depois da instalação, modelo, quantização ou engine podem evoluir por atualização governada; isso não equivale a oferecer um checkbox para instalar o OrdaX sem sua camada de Intelligence.
 
 ### Estado técnico atual do USB durável v2
 
@@ -298,6 +302,10 @@ O mínimo futuro da conta pública é criar conta, entrar, sair, recuperar acess
 `/conta/` permanece fail-closed enquanto identidade/sessão reais não estiverem conectadas. Não simular dados, dispositivos, sync ou assinatura.
 
 Conta online e PIN/senha local do dispositivo são responsabilidades diferentes. Web, Mobile, backup e sincronização aparecem somente como **Em breve** até existirem de verdade; sincronização cloud não é requisito para o MVP USB.
+
+## 11.1 Idiomas do lançamento
+
+O primeiro uso Native oferece **pt-BR, en-US, es-ES, de-DE e fr-FR**. Essa cobertura é do OOBE; não chamar inglês, espanhol, alemão ou francês de “Surface completa” enquanto telas/apps ainda tiverem texto fixo em português. A prioridade de migração do restante do produto é: inglês primeiro, espanhol em seguida, depois alemão e francês. PT-BR permanece idioma-fonte e padrão inicial.
 
 ## 12. Ordem recomendada de lançamento
 
