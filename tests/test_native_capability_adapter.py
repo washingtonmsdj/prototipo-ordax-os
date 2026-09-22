@@ -18,11 +18,13 @@ class NativeCapabilityAdapterTests(unittest.TestCase):
         self.assertIn('"system.metrics"', text)
         self.assertIn('"power.status"', text)
         self.assertIn('"network.status"', text)
+        self.assertIn('"input.keyboard-layout"', text)
         self.assertIn("bootControlAvailable", text)
         self.assertIn("userFileSpaceAvailable", text)
         self.assertIn("systemMetricsAvailable", text)
         self.assertIn("powerStatusAvailable", text)
         self.assertIn("networkStatusAvailable", text)
+        self.assertIn("keyboardLayoutAvailable", text)
         self.assertIn("validateSurfaceSnapshot", text)
         self.assertIn("navigator.onLine", text)
 
@@ -40,11 +42,13 @@ class NativeCapabilityAdapterTests(unittest.TestCase):
         self.assertIn("systemMetricsAvailable = systemMetrics !== null", text)
         self.assertIn("powerStatusAvailable = powerStatus !== null", text)
         self.assertIn("networkStatusAvailable = networkStatus !== null", text)
+        self.assertIn("keyboardLayoutAvailable = keyboardLayout !== null", text)
         self.assertIn("bootControlAvailable,", text)
         self.assertIn("userFileSpaceAvailable,", text)
         self.assertIn("systemMetricsAvailable,", text)
         self.assertIn("powerStatusAvailable,", text)
         self.assertIn("networkStatusAvailable,", text)
+        self.assertIn("keyboardLayoutAvailable,", text)
         self.assertIn("createNativeSurfaceHost(window, {", text)
 
     def test_native_optional_capability_probes_run_in_parallel(self):
@@ -60,6 +64,7 @@ class NativeCapabilityAdapterTests(unittest.TestCase):
             "createNativeFileSpace",
             "createNativeNetworkStatus",
             "createNativeNetworkManagement",
+            "createNativeKeyboardLayout",
             "createNativeSystemMetrics",
             "createNativePowerStatus",
         ):
