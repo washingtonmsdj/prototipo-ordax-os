@@ -46,5 +46,8 @@
     "agent_mode_enabled": false,
     "mcp_proxy_enabled": false,
     "runtime_model_download_allowed": false
+  },
+  "runtime_defaults": {
+    "reasoning": "off"
   }
 }
