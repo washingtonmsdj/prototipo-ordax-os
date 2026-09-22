@@ -28,10 +28,10 @@
     "complete_locales": [
       "pt-BR",
       "en-US",
-      "es-ES"
+      "es-419",
+      "fr-FR"
     ],
     "default_locale": "pt-BR",
-    "launch_locale_policy": "pt-BR-en-US-es-ES-complete-before-public-mvp",
     "default_time_zone": "America/Bahia",
     "time_zone_preference": "regional.time-zone",
     "missing_preference_recovery": "seed-from-completed-first-run",
@@ -39,7 +39,9 @@
     "editable_after_first_run_in_settings": true,
     "keyboard_layout_contract": "docs/contracts/keyboard-layout.json",
     "keyboard_layout_selector_exposed": false,
-    "keyboard_layout_selector_gate": "safe-current-session-apply-or-pre-surface-handoff"
+    "keyboard_layout_selector_gate": "safe-current-session-apply-or-pre-surface-handoff",
+    "fallback_locale": "en-US",
+    "localization_scope": "first-run-oobe"
   },
   "network": {
     "skippable": true,
