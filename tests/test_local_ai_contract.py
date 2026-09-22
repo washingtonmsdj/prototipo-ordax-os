@@ -41,6 +41,13 @@ class LocalAiContractTests(unittest.TestCase):
             lock["distribution"]["initial_release_schema_target"],
             "prototype-ordax.release-manifest/4",
         )
+        self.assertEqual(lock["runtime_security"]["listen_host"], "127.0.0.1")
+        self.assertEqual(lock["runtime_security"]["listen_port"], 17865)
+        self.assertFalse(lock["runtime_security"]["web_ui_enabled"])
+        self.assertFalse(lock["runtime_security"]["built_in_tools_enabled"])
+        self.assertFalse(lock["runtime_security"]["agent_mode_enabled"])
+        self.assertFalse(lock["runtime_security"]["mcp_proxy_enabled"])
+        self.assertFalse(lock["runtime_security"]["runtime_model_download_allowed"])
 
     def test_surface_boundary_is_provider_neutral(self):
         port = PORT.read_text(encoding="utf-8")
