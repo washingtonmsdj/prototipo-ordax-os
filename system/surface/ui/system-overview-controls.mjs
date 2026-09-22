@@ -1,5 +1,9 @@
 import { assertAppActivationPort } from "../../contracts/app-activation.mjs";
 import {
+  assertIntelligencePort,
+  validateIntelligenceSnapshot,
+} from "../../contracts/intelligence.mjs";
+import {
   assertComponentManager,
   validateComponentManagerSnapshot,
 } from "../../contracts/component-manager.mjs";
@@ -21,6 +25,7 @@ import {
 } from "../../contracts/update-status.mjs";
 import { PRODUCT_VERSION, productVersionLabel } from "../../contracts/product-version.mjs";
 import { createComponentUpdateScopes } from "../../services/components/update-presentation.mjs";
+import { explainSystemStateWithIntelligence } from "../../services/intelligence/client-actions.mjs";
 import {
   deliveryLabel,
   formatUpdateTimestamp,
@@ -84,6 +89,7 @@ const CAPABILITY_LABELS = Object.freeze({
   "filesystem.user-space": "Espaço local do usuário",
   "system.metrics": "Métricas do dispositivo",
   "power.status": "Estado da bateria",
+  "intelligence.system": "Ordax Intelligence",
 });
 
 function node(documentObject, tag, className, text) {
@@ -159,6 +165,7 @@ export function mountSystemOverviewControls(
   appActivation = null,
   diagnosticReviewController = null,
   componentManager = null,
+  intelligence = null,
 ) {
   if (!(root instanceof Element)) {
     throw new TypeError("System overview controls require a Surface root Element");
@@ -170,6 +177,7 @@ export function mountSystemOverviewControls(
   const historyPort = updateHistory === null ? null : assertUpdateHistoryPort(updateHistory);
   const activationPort = appActivation === null ? null : assertAppActivationPort(appActivation);
   const componentPort = componentManager === null ? null : assertComponentManager(componentManager);
+  const intelligencePort = intelligence === null ? null : assertIntelligencePort(intelligence);
   const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
   const documentObject = root.ownerDocument;
 
@@ -187,6 +195,12 @@ export function mountSystemOverviewControls(
   let historySnapshot = null;
   let historyMessage = "";
   let componentSnapshot = componentPort?.getSnapshot() ?? null;
+  let intelligenceSnapshot = intelligencePort === null
+    ? null
+    : validateIntelligenceSnapshot(intelligencePort.getSnapshot());
+  let intelligencePending = false;
+  let intelligenceAnswer = "";
+  let intelligenceMessage = "";
   let historyOrdinal = 0;
   let activeSection = validSystemSection(lifecycle.getAppTarget("system"))
     ? lifecycle.getAppTarget("system")
@@ -222,6 +236,9 @@ export function mountSystemOverviewControls(
     }
     if (element.dataset.systemDiagnosticsExport !== undefined) {
       return Object.freeze({ kind: "diagnostics-export", value: "" });
+    }
+    if (element.dataset.systemIntelligenceExplain !== undefined) {
+      return Object.freeze({ kind: "intelligence-explain", value: "" });
     }
     return null;
   };
@@ -959,6 +976,75 @@ export function mountSystemOverviewControls(
     view.append(section);
   };
 
+  const renderIntelligence = (view) => {
+    const section = node(documentObject, "section", "ordax-system-section");
+    const heading = node(documentObject, "div", "ordax-system-section-heading");
+    const headingCopy = node(documentObject, "div");
+    headingCopy.append(
+      node(documentObject, "span", "ordax-system-section-kicker", "Intelligence"),
+      node(documentObject, "h4", "ordax-system-section-title", "Explicação local do estado"),
+    );
+    const action = node(
+      documentObject,
+      "button",
+      "ordax-system-action",
+      intelligencePending ? "Explicando…" : "Explicar estado",
+    );
+    action.type = "button";
+    action.dataset.systemIntelligenceExplain = "";
+    const ready = intelligenceSnapshot?.state === "ready";
+    action.disabled = !ready || intelligencePending;
+    action.title = ready
+      ? "Usar Ordax Intelligence para explicar somente os sinais locais exibidos por Sistema"
+      : "Ordax Intelligence não está pronta nesta execução";
+    heading.append(headingCopy, action);
+    section.append(heading);
+
+    const stateLabel = intelligenceSnapshot === null
+      ? "Não exposta neste modo"
+      : intelligenceSnapshot.state === "ready"
+        ? "Pronta"
+        : intelligenceSnapshot.state === "busy"
+          ? "Ocupada"
+          : intelligenceSnapshot.state === "degraded"
+            ? "Degradada"
+            : "Com erro";
+    const detail = intelligenceSnapshot?.modelId
+      ? `${stateLabel} · ${intelligenceSnapshot.modelId}`
+      : stateLabel;
+    section.append(
+      node(
+        documentObject,
+        "p",
+        "ordax-system-section-copy",
+        `Estado: ${detail}. Esta consulta é local, somente leitura e não executa ações no dispositivo.`,
+      ),
+    );
+
+    if (intelligenceMessage) {
+      const message = node(
+        documentObject,
+        "p",
+        intelligenceAnswer ? "ordax-system-message" : "ordax-system-warning",
+        intelligenceMessage,
+      );
+      message.setAttribute("role", "status");
+      message.setAttribute("aria-live", "polite");
+      section.append(message);
+    }
+    if (intelligenceAnswer) {
+      const answer = node(documentObject, "article", "ordax-system-history-item");
+      answer.dataset.state = "info";
+      answer.append(
+        node(documentObject, "strong", "", "Explicação da Ordax Intelligence"),
+        node(documentObject, "p", "ordax-system-section-copy", intelligenceAnswer),
+        node(documentObject, "small", "", "Fonte: snapshot local de Sistema · autoridade: nenhuma"),
+      );
+      section.append(answer);
+    }
+    view.append(section);
+  };
+
   const renderDiagnosticReviewMount = (view) => {
     if (diagnosticReviewController === null) return null;
     const mount = node(documentObject, "div", "");
@@ -989,6 +1075,7 @@ export function mountSystemOverviewControls(
       renderStorage(view);
     } else if (activeSection === "diagnostics") {
       diagnosticMount = renderDiagnosticReviewMount(view);
+      renderIntelligence(view);
       renderCapabilities(view);
     } else if (activeSection === "about") {
       renderComponentVersions(view);
@@ -1082,7 +1169,39 @@ export function mountSystemOverviewControls(
       return;
     }
     const historyRefresh = event.target.closest("[data-system-history-refresh]");
-    if (historyRefresh && root.contains(historyRefresh)) void refreshHistory();
+    if (historyRefresh && root.contains(historyRefresh)) {
+      void refreshHistory();
+      return;
+    }
+
+    const intelligenceExplain = event.target.closest("[data-system-intelligence-explain]");
+    if (
+      intelligenceExplain
+      && root.contains(intelligenceExplain)
+      && intelligencePort
+      && intelligenceSnapshot?.state === "ready"
+      && !intelligencePending
+    ) {
+      intelligencePending = true;
+      intelligenceAnswer = "";
+      intelligenceMessage = "Analisando somente os sinais locais exibidos por Sistema…";
+      replaceView();
+      void explainSystemStateWithIntelligence(intelligencePort, {
+        surface: hostSnapshot,
+        metrics: metricsSnapshot,
+      }).then((response) => {
+        if (destroyed) return;
+        intelligenceAnswer = response.text;
+        intelligenceMessage = "Explicação local concluída. Nenhuma ação foi executada.";
+      }).catch(() => {
+        if (destroyed) return;
+        intelligenceMessage = "Não foi possível obter uma explicação local nesta execução.";
+      }).finally(() => {
+        if (destroyed) return;
+        intelligencePending = false;
+        replaceView();
+      });
+    }
   };
 
   root.addEventListener("click", onClick);
@@ -1110,6 +1229,10 @@ export function mountSystemOverviewControls(
     componentSnapshot = validateComponentManagerSnapshot(snapshot);
     replaceView();
   });
+  const unsubscribeIntelligence = intelligencePort?.subscribe((snapshot) => {
+    intelligenceSnapshot = validateIntelligenceSnapshot(snapshot);
+    replaceView();
+  });
   const unsubscribeUpdate = updatePort?.subscribe((snapshot) => {
     const previousAppliedSha = updateSnapshot?.lastAppliedSha ?? "";
     updateSnapshot = validateUpdateStatusSnapshot(snapshot);
@@ -1129,6 +1252,7 @@ export function mountSystemOverviewControls(
       historyOrdinal += 1;
       disposeDiagnosticsReview();
       unsubscribeUpdate?.();
+      unsubscribeIntelligence?.();
       unsubscribeComponents?.();
       unsubscribeActivation?.();
       unsubscribeHost?.();

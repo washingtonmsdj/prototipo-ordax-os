@@ -41,6 +41,8 @@ import { createProjectContinuityFileSpace } from "../../services/files/project-c
 import { createNotificationsRuntime } from "../../services/notifications/runtime.mjs";
 import { createUpdateNotificationBridge } from "../../services/notifications/update-bridge.mjs";
 import { createDiagnosticJournalRuntime } from "../../services/diagnostics/runtime.mjs";
+import { createLocalAiRuntime } from "../../services/local-ai/runtime.mjs";
+import { createIntelligenceRuntime } from "../../services/intelligence/runtime.mjs";
 import { createUpdateDiagnosticRecorder } from "../../services/diagnostics/update-recorder.mjs";
 import { createPreferenceSyncRuntime } from "../../services/sync/preference-runtime.mjs";
 import { createWorkspaceMetadataBridge } from "../../services/sync/workspace-metadata.mjs";
@@ -170,6 +172,33 @@ async function start() {
     manifests: listSystemComponents(),
     store: componentStateStore,
   });
+  const localAiFetch = typeof window.fetch === "function"
+    ? window.fetch.bind(window)
+    : async () => {
+        throw new Error("Native loopback fetch is unavailable");
+      };
+  const localAi = createLocalAiRuntime({
+    fetchImpl: localAiFetch,
+  });
+  const intelligence = createIntelligenceRuntime({ inferencePort: localAi });
+  const updateLocalAiHealth = (snapshot) => {
+    componentManager.setCurrentHealth(
+      "local-ai-service",
+      snapshot.state === "ready" || snapshot.state === "busy" ? "healthy" : "failed",
+    );
+  };
+  const updateIntelligenceHealth = (snapshot) => {
+    componentManager.setCurrentHealth(
+      "ordax-intelligence",
+      snapshot.state === "ready" || snapshot.state === "busy" ? "healthy" : "failed",
+    );
+  };
+  const unsubscribeLocalAiHealth = localAi.subscribe(updateLocalAiHealth);
+  const unsubscribeIntelligenceHealth = intelligence.subscribe(updateIntelligenceHealth);
+  updateLocalAiHealth(localAi.getSnapshot());
+  updateIntelligenceHealth(intelligence.getSnapshot());
+  void localAi.probe();
+
   const localWorkspaceStore = createNativeWorkspaceStore(window);
   const recentFiles = fileSpace === null ? null : createRecentFilesRuntime({
     store: createNativeRecentFilesStore(window),
@@ -223,6 +252,7 @@ async function start() {
   const networkManagementAvailable = networkManagement !== null;
   const keyboardLayoutAvailable = keyboardLayout !== null;
   const browserWebContentAvailable = browserSession.getSnapshot().supported;
+  const intelligenceSystemAvailable = true;
   const host = createNativeSurfaceHost(window, {
     bootControlAvailable,
     userFileSpaceAvailable,
@@ -232,6 +262,7 @@ async function start() {
     networkManagementAvailable,
     keyboardLayoutAvailable,
     browserWebContentAvailable,
+    intelligenceSystemAvailable,
   });
 
   validateAccountRuntime(
@@ -354,6 +385,7 @@ async function start() {
     appActivation,
     null,
     componentManager,
+    intelligence,
   );
   const updateControls = mountUpdateControls(root, updateWatcher, appActivation);
   const powerControls = mountPowerControls(root, powerActions);
@@ -377,6 +409,7 @@ async function start() {
       surfaceLifecycle: surface,
       fileSpace,
       appActivation,
+      intelligence,
     },
     onError(error) {
       reportClientDiagnostic("notes-runtime", error);
@@ -447,6 +480,10 @@ async function start() {
       updateNotificationBridge.destroy();
       updateDiagnosticRecorder.dispose();
       updateWatcher.dispose();
+      unsubscribeIntelligenceHealth();
+      unsubscribeLocalAiHealth();
+      intelligence.dispose();
+      localAi.dispose();
       componentManager.destroy();
       surface.destroy();
       identityActions.dispose();

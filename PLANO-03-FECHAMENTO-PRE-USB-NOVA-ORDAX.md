@@ -22,6 +22,21 @@ Nenhuma seção deste plano autoriza escrita física.
 
 ---
 
+## 0.1 Progresso após a auditoria
+
+A primeira lacuna P0 já foi atacada na mesma linha arquitetural deste plano:
+
+- composição Native: `ordax.local-ai/1 -> ordax.intelligence/1`;
+- descoberta do modelo ativo fica dentro do owner local-AI, não na Surface;
+- Notas possui consumidor consultivo de resumo, com contexto bounded + provenance;
+- Sistema possui consumidor consultivo de explicação de estado, limitado ao snapshot local permitido;
+- nenhum dos consumidores ganha autoridade de mutação ou importa provider/modelo diretamente;
+- ausência do backend continua degradável e não crítica para o boot.
+
+Isso fecha `INTELLIGENCE_REAL_SYSTEM_CONSUMER` em **source**, mas não fecha o item
+inteiro de entrega Stable: montar `local-ai-runtime.erofs` e iniciar o backend no
+handoff v4 continua pendente antes do USB.
+
 ## 1. Decisão principal
 
 **Não gerar ainda o primeiro USB Stable/MVP físico.**

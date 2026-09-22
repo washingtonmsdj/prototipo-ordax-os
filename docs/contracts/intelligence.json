@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.intelligence/1",
-  "status": "mvp-system-foundation",
+  "status": "mvp-system-consultative-integration",
   "product_name": "Ordax Intelligence",
   "layer": "system-intelligence",
   "stable_port": "ordax.intelligence/1",
@@ -19,7 +19,14 @@
     "inference_backend_contract": "ordax.local-ai/1",
     "inference_backend_owner": "system/services/local-ai",
     "model_and_engine_replaceable": true,
-    "cloud_provider_required": false
+    "cloud_provider_required": false,
+    "production_native_composition": true,
+    "first_party_consultative_consumers": [
+      "notes",
+      "system"
+    ],
+    "direct_provider_access_from_consumers": false,
+    "stable_v4_backend_lifecycle": "pending-mount-and-launch"
   },
   "authority": {
     "mvp_authority": "none",
@@ -57,5 +64,12 @@
     "reuse_mode": "architecture-invariants-reimplemented-clean-room",
     "source_ledger": "docs/SOURCE-MIGRATION.md",
     "bulk_legacy_import": false
+  },
+  "mvp_policy": {
+    "first_party_consumer_source_proof": true,
+    "note_summary_is_read_only": true,
+    "system_explanation_is_read_only": true,
+    "backend_absence_must_not_block_surface": true,
+    "stable_v4_backend_lifecycle_required_pre_usb": true
   }
 }

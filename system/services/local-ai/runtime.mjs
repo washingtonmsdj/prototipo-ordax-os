@@ -27,11 +27,12 @@ export function createLocalAiRuntime({
     throw new TypeError("Local AI runtime requires fetch");
   }
   const base = normalizeEndpoint(endpoint);
+  let activeModelId = modelId;
   let snapshot = validateLocalAiSnapshot({
     schema: LOCAL_AI_PORT_SCHEMA,
-    state: modelId ? "stopped" : "unavailable",
-    engineId: modelId ? engineId : null,
-    modelId,
+    state: activeModelId ? "stopped" : "unavailable",
+    engineId: activeModelId ? engineId : null,
+    modelId: activeModelId,
     offline: true,
     migratable: true,
   });
@@ -53,8 +54,40 @@ export function createLocalAiRuntime({
       return () => listeners.delete(listener);
     },
     async probe() {
-      if (!modelId) return snapshot;
       try {
+        if (!activeModelId) {
+          const modelsResponse = await fetchImpl(base + "/v1/models", {
+            method: "GET",
+            cache: "no-store",
+            credentials: "omit",
+          });
+          if (!modelsResponse.ok) {
+            publish({
+              schema: LOCAL_AI_PORT_SCHEMA,
+              state: "unavailable",
+              engineId: null,
+              modelId: null,
+              offline: true,
+              migratable: true,
+            });
+            return snapshot;
+          }
+          const payload = await modelsResponse.json();
+          const discovered = payload?.data?.[0]?.id;
+          if (typeof discovered !== "string" || !discovered.trim() || discovered.length > 160) {
+            publish({
+              schema: LOCAL_AI_PORT_SCHEMA,
+              state: "unavailable",
+              engineId: null,
+              modelId: null,
+              offline: true,
+              migratable: true,
+            });
+            return snapshot;
+          }
+          activeModelId = discovered.trim();
+        }
+
         const response = await fetchImpl(base + "/health", {
           method: "GET",
           cache: "no-store",
@@ -64,16 +97,16 @@ export function createLocalAiRuntime({
           schema: LOCAL_AI_PORT_SCHEMA,
           state: response.ok ? "ready" : "error",
           engineId,
-          modelId,
+          modelId: activeModelId,
           offline: true,
           migratable: true,
         });
       } catch {
         publish({
           schema: LOCAL_AI_PORT_SCHEMA,
-          state: "stopped",
-          engineId,
-          modelId,
+          state: activeModelId ? "stopped" : "unavailable",
+          engineId: activeModelId ? engineId : null,
+          modelId: activeModelId,
           offline: true,
           migratable: true,
         });
@@ -93,7 +126,7 @@ export function createLocalAiRuntime({
           cache: "no-store",
           credentials: "omit",
           body: JSON.stringify({
-            model: modelId,
+            model: activeModelId,
             messages: [{ role: "user", content: input.prompt }],
             max_tokens: input.maxTokens,
             stream: false,
@@ -106,7 +139,7 @@ export function createLocalAiRuntime({
           throw new Error("Local AI returned an invalid completion");
         }
         publish({ ...snapshot, state: "ready" });
-        return Object.freeze({ text: text.trim(), engineId, modelId });
+        return Object.freeze({ text: text.trim(), engineId, modelId: activeModelId });
       } catch (error) {
         publish({ ...snapshot, state: "error" });
         throw error;
