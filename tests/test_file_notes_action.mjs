@@ -3,6 +3,10 @@ import test from "node:test";
 
 import { NOTES_FILE_IMPORTER_SCHEMA } from "../system/contracts/notes-file-importer.mjs";
 import {
+  FILES_OPERATIONAL_ENGLISH_MESSAGES,
+  FILES_OPERATIONAL_SOURCE_MESSAGES,
+} from "../system/services/i18n/catalog/files-operational.mjs";
+import {
   createFileNotesActionPresentation,
   importSelectedFileToNotes,
   messageForNotesFileImport,
@@ -14,6 +18,20 @@ const FILE = Object.freeze({
   path: "/Documentos/roteiro.txt",
 });
 
+function translator(messages) {
+  return (messageId, values = {}) => {
+    let text = messages[messageId];
+    if (typeof text !== "string") throw new TypeError(`missing message: ${messageId}`);
+    for (const [key, value] of Object.entries(values)) {
+      text = text.replaceAll(`{${key}}`, String(value));
+    }
+    return text;
+  };
+}
+
+const pt = translator(FILES_OPERATIONAL_SOURCE_MESSAGES);
+const en = translator(FILES_OPERATIONAL_ENGLISH_MESSAGES);
+
 function importer(run) {
   return Object.freeze({
     schema: NOTES_FILE_IMPORTER_SCHEMA,
@@ -23,7 +41,7 @@ function importer(run) {
 
 test("action is hidden without an importer or when the selection is not a file", () => {
   assert.deepEqual(
-    createFileNotesActionPresentation({ importerAvailable: false, busy: false, selected: FILE }),
+    createFileNotesActionPresentation({ importerAvailable: false, busy: false, selected: FILE, translate: pt }),
     { visible: false, label: "", disabled: true, title: "" },
   );
   assert.deepEqual(
@@ -31,6 +49,7 @@ test("action is hidden without an importer or when the selection is not a file",
       importerAvailable: true,
       busy: false,
       selected: { kind: "directory", name: "Projeto", path: "/Projeto" },
+      translate: pt,
     }),
     { visible: false, label: "", disabled: true, title: "" },
   );
@@ -41,6 +60,7 @@ test("file action describes copy semantics and exposes a stable busy state", () 
     importerAvailable: true,
     busy: false,
     selected: FILE,
+    translate: pt,
   });
   assert.equal(ready.visible, true);
   assert.equal(ready.label, "Criar nota");
@@ -52,6 +72,7 @@ test("file action describes copy semantics and exposes a stable busy state", () 
     importerAvailable: true,
     busy: true,
     selected: FILE,
+    translate: pt,
   });
   assert.equal(busy.visible, true);
   assert.equal(busy.label, "Criando nota…");
@@ -66,7 +87,7 @@ test("successful import messages distinguish durable, degraded, and session pers
     sourcePath: FILE.path,
     persistence: "device",
     persistenceOk: true,
-  }, FILE.name);
+  }, FILE.name, pt);
   assert.equal(durable.kind, "success");
   assert.equal(durable.openNotes, true);
   assert.match(durable.text, /arquivo original foi preservado/i);
@@ -78,7 +99,7 @@ test("successful import messages distinguish durable, degraded, and session pers
     sourcePath: FILE.path,
     persistence: "device",
     persistenceOk: false,
-  }, FILE.name);
+  }, FILE.name, pt);
   assert.equal(degraded.kind, "warning");
   assert.equal(degraded.openNotes, true);
   assert.match(degraded.text, /persistência no dispositivo está degradada/i);
@@ -90,7 +111,7 @@ test("successful import messages distinguish durable, degraded, and session pers
     sourcePath: FILE.path,
     persistence: "session",
     persistenceOk: true,
-  }, FILE.name);
+  }, FILE.name, pt);
   assert.equal(session.kind, "neutral");
   assert.equal(session.openNotes, true);
   assert.match(session.text, /somente nesta sessão/i);
@@ -103,6 +124,7 @@ test("failed imports remain in Files and never expose host exception detail", as
       throw new Error(secret);
     }),
     FILE,
+    pt,
   );
 
   assert.deepEqual(outcome.result, { status: "failed", code: "notes-create-failed" });
@@ -126,6 +148,7 @@ test("the selected file identity is captured and the importer receives only its 
       };
     }),
     FILE,
+    pt,
   );
 
   assert.deepEqual(calls, [FILE.path]);
@@ -137,7 +160,31 @@ test("invalid importer output fails closed instead of reaching presentation as s
   const outcome = await importSelectedFileToNotes(
     importer(async () => ({ status: "created", noteId: "missing-fields" })),
     FILE,
+    pt,
   );
   assert.deepEqual(outcome.result, { status: "failed", code: "notes-create-failed" });
   assert.equal(outcome.presentation.openNotes, false);
 });
+
+test("Files to Notes action and feedback localize in English", async () => {
+  const presentation = createFileNotesActionPresentation({
+    importerAvailable: true,
+    busy: false,
+    selected: FILE,
+    translate: en,
+  });
+  assert.equal(presentation.label, "Create note");
+  assert.match(presentation.title, /preserves the original file/i);
+
+  const message = messageForNotesFileImport({
+    status: "created",
+    noteId: "note-en",
+    projectId: "project-1",
+    sourcePath: FILE.path,
+    persistence: "device",
+    persistenceOk: true,
+  }, FILE.name, en);
+  assert.equal(message.kind, "success");
+  assert.match(message.text, /original file was preserved/i);
+});
+
