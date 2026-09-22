@@ -108,7 +108,7 @@ CANONICAL_SYSTEM_RUNTIME_COMPLETE=NO
 ```
 
 
-The canonical prototype trust ceremony and public handoff are complete. The eligible toolkit bound to `2172eb6a18430910afd036199ec492ad63dc185d` passed read-only preflight; canonical Ed25519 key material was generated locally, independent public derivation matched, the proof signature passed, recovery was verified from a distinct restored copy, and the recovered signing envelope passed public verification. The exact public anchor is now pinned in Git and the minimal-bootstrap trust binding is resolved. Physical authorization nevertheless remains fail-closed because explicit owner authorization is still false. The local PEM remains a controlled prototype signing backend rather than the intended long-term production custody model; independent off-device custody and managed non-exportable KMS/HSM remain broad-distribution hardening requirements, with signed trust rotation required before broad public distribution.
+The canonical prototype trust ceremony and public handoff are complete. The eligible toolkit bound to `2172eb6a18430910afd036199ec492ad63dc185d` passed read-only preflight; canonical Ed25519 key material was generated locally, independent public derivation matched, the proof signature passed, recovery was verified from a distinct restored copy, and the recovered signing envelope passed public verification. The exact public anchor is now pinned in Git and the minimal-bootstrap trust binding is resolved. The owner has explicitly authorized the scope `first-real-stable-mvp-usb-proof` for release sequence 1 and the source-controlled authorization contract is `authorized`. This still does not select a USB or authorize erasing any particular device; live target revalidation, Windows UAC and target-specific destructive confirmation remain pending. The local PEM remains a controlled prototype signing backend rather than the intended long-term production custody model; independent off-device custody and managed non-exportable KMS/HSM remain broad-distribution hardening requirements, with signed trust rotation required before broad public distribution.
 
 The first formal human product version is **OrdaX Prototype v0.1.0**. Product version, Entrega, Git SHA and component/app versions are separate identities: v0.1.0 identifies the prototype product milestone, Entrega identifies the notebook-facing delivery sequence, the SHA remains the exact technical build identity, and each component may evolve its own SemVer. First-party apps on the `0.x` line are **Beta**; `1.0.0` remains reserved for the first stable release of each app. Internet is currently `0.3.0 Beta` and Notes is `0.4.0 Beta`, both using `git-app` in Owner/Development. Arquivos, Ajustes, Conta and Sistema are `0.1.0 Beta` and remain `bundled`. A component having its own version does not mean it already has a production-independent update channel: `git-app` is a development delivery mode, while production-independent activation remains gated behind the signed `component-slot` path with pending health, promotion and rollback. Product v1.0 remains reserved for the stable product rather than being inferred from prototype maturity, component versions or delivery count.
 
@@ -116,11 +116,30 @@ The first formal human product version is **OrdaX Prototype v0.1.0**. Product ve
 
 The shared graphical source remains under `system/surface/ui/` with platform-neutral contracts, workspace/window lifecycle and capability-driven app availability. Notes is a first-party **application** with stable app id `notes`, version `0.4.0 Beta` and `git-app` delivery in Owner/Development. Native/USB may enrich it through the optional `filesystem.user-space` capability, and a future signed `component-slot`/app-package flow can target that same app identity instead of creating a Native-only fork. A general Store/package manager and production-independent app updater are not implemented yet. Notes provides local projects, a visual structured-text editor, editable checklists, real local-file/web references, autosave and device-local Native persistence through a bounded loopback state endpoint; Web uses local browser persistence with an explicit session fallback. Notes stores rich formatting as bounded blocks/marks rather than raw HTML or visible Markdown, keeps a plain-text body for search/import continuity, and migrates existing local snapshot schema v1 state to schema v2 on validation/save. Project organization now has a complete local lifecycle: projects can be renamed, non-base projects can be removed without deleting their notes, selected notes can move between projects, and checklist items can be removed. The stable `Meu espaço` project remains the non-destructive fallback for notes from removed projects. Internet is the first-party browser app with stable id `internet`, version `0.3.0 Beta` and `git-app` delivery in Owner/Development; this version identity does not claim a production Store/updater. Its shared Surface owns the approved concept structure (navigation toolbar, workspace/tab rail, central web viewport and project-context panel), while Native/USB provide `browser.web-content` through a separate unprivileged WebKit context and one external WebView per tab. The native slice supports up to 16 tabs, back/forward/reload, tab search, keyboard accelerators, persisted public tab URLs/order/active tab, project-context selection, explicit saved web references with bounded per-reference notes, automatic reference cleanup after project removal, public-network filtering and an exact loopback Host/browser-provenance boundary. Saved project references are owned by a neutral project-domain runtime and persist in the Native privileged profile with honest session fallback; the external page never receives project storage capability. Web intentionally exposes an unavailable browser-session port rather than pretending arbitrary sites can be safely embedded. Notes web references activate this same `internet` app. Internet also owns bounded device-local favorites through a neutral `ordax.browser-favorites/1` port; the Native privileged profile persists them while external website WebViews receive no access to that store. Native hardware proof for the new WebKit host remains pending, so the browser slice is implemented in source but not yet marked physically proven. Ajustes now owns persisted Surface-level contrast, motion and text-scale preferences; text scale changes the shared typographic base without claiming host-level accessibility control. Platform-specific behavior belongs in adapters/compositions, not in forks of the shared Surface. The normal Home now keeps technical delivery/recovery markers out of the area label; real delivery identity and update details live in Sistema. The visible settings identity is standardized as **Ajustes** while preserving the stable internal app id `settings`.
 
+### Ordax Intelligence and local inference
+
+Ordax Intelligence is now a first-class system service with stable contract `ordax.intelligence/1`; an Assistant UI is only a possible client. The service sits above the provider-neutral `ordax.local-ai/1` inference boundary, so model and engine can evolve without redefining Files, Notes, Search or future system clients. The Stable/MVP product policy requires a verified local inference payload in the distribution, but neither Intelligence nor its model is boot-critical: inference failure degrades the capability instead of blocking boot, Surface, recovery, files or updates.
+
+The initial source lock pins a small Qwen3.5 GGUF model and a llama.cpp source commit. The exact model bytes are pinned, while the exact engine artifact and signed Stable/MVP engine/model materialization are still pending. Therefore the repository has the architecture/runtime contract but does **not** yet claim that local inference is physically installed on the first Stable USB.
+
+```text
+ORDAX_INTELLIGENCE_CONTRACT=ordax.intelligence/1
+ORDAX_INTELLIGENCE_LAYER=SYSTEM
+ASSISTANT_APP_OWNS_INTELLIGENCE=NO
+LOCAL_AI_BACKEND_CONTRACT=ordax.local-ai/1
+LOCAL_AI_STABLE_MVP_DISTRIBUTION_REQUIRED=YES
+LOCAL_AI_BOOT_CRITICAL=NO
+LOCAL_AI_MODEL_ARTIFACT_PINNED=YES
+LOCAL_AI_ENGINE_ARTIFACT_PINNED=NO
+LOCAL_AI_SIGNED_STABLE_MATERIALIZATION=PENDING
+LOCAL_AI_PHYSICAL_STABLE_MVP_PROOF=PENDING
+```
+
 ### First run, regional preferences and physical keyboard
 
 The Native/USB first-use flow is now implemented as a persistent device-owned OOBE rather than a presentation-only screen. It follows `welcome -> regional -> network -> account -> privacy -> ready`, stores completion separately from preferences and identity, and does not dismiss until durable state has been written. The MVP always offers a local-only route: account creation/sign-in is optional and capability-driven, provider unavailability does not block first use, and cloud sync is not an MVP requirement. Network setup is skippable and reuses the existing Native network-management port; Wi-Fi credentials remain transient and do not enter first-run state.
 
-Regional choices are real persisted preferences. The complete locale in this prototype is `pt-BR`; the default time zone is `America/Bahia`, and both remain editable later under **Ajustes -> Idioma e região**. Physical keyboard layout is a separate Native device capability, not a Web preference: `br-abnt2` is the Stable/MVP default and `us` is the alternative. The selected layout is stored privately on the USB and mapped to fixed `XKB_DEFAULT_*` values before Cage starts. Arbitrary XKB values and shell input from HTTP are rejected. When the configured layout differs from the layout already applied to the running compositor, Ajustes reports that a new Surface start is required; no fake live-switch behavior is claimed. The OOBE keyboard selector intentionally remains hidden until a safe current-session application or pre-Surface handoff exists.
+Regional choices are real persisted preferences. The first-use OOBE is translated for `pt-BR`, `en-US`, `es-ES`, `de-DE` and `fr-FR`; this does not claim that the whole Surface is already translated into all five languages. PT-BR remains the source/default locale while broader Surface/app migration prioritizes English, then Spanish, German and French. The default time zone is `America/Bahia`, and locale/time zone remain editable later under **Ajustes -> Idioma e região**. Physical keyboard layout is a separate Native device capability, not a Web preference: `br-abnt2` is the Stable/MVP default and `us` is the alternative. The selected layout is stored privately on the USB and mapped to fixed `XKB_DEFAULT_*` values before Cage starts. Arbitrary XKB values and shell input from HTTP are rejected. When the configured layout differs from the layout already applied to the running compositor, Ajustes reports that a new Surface start is required; no fake live-switch behavior is claimed. The OOBE keyboard selector intentionally remains hidden until a safe current-session application or pre-Surface handoff exists.
 
 ```text
 FIRST_RUN_OOBE=PASS_SOURCE_NATIVE_USB
@@ -128,7 +147,9 @@ FIRST_RUN_PERSISTENT=YES
 FIRST_RUN_ACCOUNT_OPTIONAL=YES
 FIRST_RUN_LOCAL_ONLY_ALWAYS_AVAILABLE=YES
 FIRST_RUN_NETWORK_SKIPPABLE=YES
-FIRST_RUN_COMPLETE_LOCALE=pt-BR
+FIRST_RUN_SOURCE_LOCALE=pt-BR
+FIRST_RUN_OOBE_COMPLETE_LOCALES=pt-BR,en-US,es-ES,de-DE,fr-FR
+FIRST_RUN_FULL_SURFACE_TRANSLATIONS=PT_BR_SOURCE_ONLY_OTHERS_MIGRATING
 FIRST_RUN_DEFAULT_TIME_ZONE=America/Bahia
 FIRST_RUN_WEB_DEVICE_OOBE=NO
 KEYBOARD_LAYOUT_NATIVE=PASS_SOURCE
@@ -438,8 +459,9 @@ CANONICAL_NATIVE_DISK_INSTALL_PROVEN=NO_POST_MVP
 CREATOR_PUBLIC_PHYSICAL_APPLY_IMPLEMENTED=NO
 RELEASE_TRUST=PASS_CANONICAL_PUBLIC_ANCHOR_PINNED
 PHYSICAL_AUTHORIZATION_ELIGIBLE=YES
-PHYSICAL_WRITE_AUTHORIZED=NO
-DESTRUCTIVE_AUTHORIZATION=NO
+PHYSICAL_WRITE_AUTHORIZED=YES_FIRST_STABLE_MVP_USB_PROOF
+PHYSICAL_TARGET_SELECTED=NO
+PHYSICAL_TARGET_DESTRUCTIVE_CONFIRMATION=PENDING
 MVP_SURFACE_SMOKE_HARNESS=PASS_SOURCE
 MVP_SURFACE_SMOKE_PHYSICAL=PENDING
 CANONICAL_STABLE_GRAPHICAL_MODE=PENDING
@@ -467,13 +489,15 @@ BROADER_HARDWARE_COVERAGE=PENDING_FINAL
 ## Current priorities
 
 1. prioritize the Stable/MVP **USB system path**: preserve the green Portable v3/QEMU/UEFI source path and close the remaining real-hardware gates for first canonical USB boot, cold health, known-good promotion and rollback without coupling ordinary app changes to a full system reboot;
+2. complete the signed **local inference payload**: pin/build the exact llama.cpp engine artifact, package the pinned model, integrate both into Stable/MVP media/release materialization and prove local inference without making AI boot-critical;
+3. continue the shared localization migration after the five-language OOBE, prioritizing full English Surface coverage, then Spanish, German and French without exposing partially translated screens as complete;
 2. keep the current first-party apps useful and coherent as Beta components, focusing app work on correctness, regression coverage and genuine MVP gaps; move an app toward production-independent packaging only when the signed `component-slot` path is actually ready to prove it;
 3. continue hardening staged/transactional Owner/Development Git-first activation while keeping it explicitly separate from the Stable/MVP public update channel;
-4. execute the integrated Surface smoke only on the eventual Stable/MVP physical USB for canonical promotion; Owner/Development evidence remains development-only and CI or an unexecuted runbook must never become physical PASS;
-5. continue account/cloud preference and workspace continuity through neutral contracts without making an authenticated provider or cloud sync an MVP boot dependency;
-6. keep the already-pinned canonical Ed25519 public trust stable, keep private signing material outside Git/CI/chat, and treat independent off-device custody plus managed non-exportable signing as broad-distribution hardening rather than an unfinished first-prototype trust ceremony;
-7. keep all physical writers fail-closed until the separate owner authorization, non-published candidate review, exact target confirmation/UAC and post-write verification are deliberately completed; source/CI readiness alone never authorizes a USB mutation;
-8. continue product experience work that does not weaken boot safety, including the early graphical OrdaX splash with mandatory text fallback; leave suspend/resume, audio, acceleration-quality, long-run and broader-hardware exercises for final physical validation unless an MVP gate depends on them sooner.
+6. execute the integrated Surface smoke only on the eventual Stable/MVP physical USB for canonical promotion; Owner/Development evidence remains development-only and CI or an unexecuted runbook must never become physical PASS;
+7. continue account/cloud preference and workspace continuity through neutral contracts without making an authenticated provider or cloud sync an MVP boot dependency;
+8. keep the already-pinned canonical Ed25519 public trust stable, keep private signing material outside Git/CI/chat, and treat independent off-device custody plus managed non-exportable signing as broad-distribution hardening rather than an unfinished first-prototype trust ceremony;
+9. keep all physical writers fail-closed until the separate owner authorization, non-published candidate review, exact target confirmation/UAC and post-write verification are deliberately completed; source/CI readiness alone never authorizes a USB mutation;
+10. continue product experience work that does not weaken boot safety, including the early graphical OrdaX splash with mandatory text fallback; leave suspend/resume, audio, acceleration-quality, long-run and broader-hardware exercises for final physical validation unless an MVP gate depends on them sooner.
 
 ## Autonomous recovery and observation boundary
 
