@@ -29,5 +29,14 @@
     "signed_release_artifact_required": true,
     "initial_release_schema_target": "prototype-ordax.release-manifest/4",
     "independent_component_slot_is_future_migration": true
+  },
+  "runtime_security": {
+    "listen_host": "127.0.0.1",
+    "listen_port": 17865,
+    "web_ui_enabled": false,
+    "built_in_tools_enabled": false,
+    "agent_mode_enabled": false,
+    "mcp_proxy_enabled": false,
+    "runtime_model_download_allowed": false
   }
 }
