@@ -51,6 +51,7 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertIn('regional: Object.freeze({', settings)
         self.assertIn('if (preferenceId === "regional.locale")', settings)
         self.assertIn('if (preferenceId === "regional.time-zone")', settings)
+        self.assertIn('["appearance", "accessibility", "regional"].includes(activeSection)', settings)
 
     def test_native_host_first_run_state_is_atomic_private_and_bounded(self):
         host = load_host_server()
