@@ -349,7 +349,7 @@ O gate é de produto/source. Ele **não** substitui:
 ### P1 — experiência cotidiana
 
 4. Arquivos: remoção segura/lixeira. — **PASS_SOURCE**
-5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE. — **IN_PROGRESS**: owner + shell inglês `PASS_SOURCE`; jornada primária de Arquivos e navegação de Ajustes/Sistema em inglês `PASS_SOURCE`; controles secundários e demais apps ainda em migração
+5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE. — **IN_PROGRESS**: owner + shell inglês `PASS_SOURCE`; Arquivos core e navegação de Ajustes/Sistema também `PASS_SOURCE`; copy operacional e demais apps ainda em migração
 6. Diagnóstico/recovery em Sistema. — **PENDING**
 7. Inventário mínimo/suporte de hardware. — **PENDING**
 
