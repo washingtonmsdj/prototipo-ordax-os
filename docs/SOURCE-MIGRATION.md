@@ -159,11 +159,30 @@ NOTES=Do not copy the SSH/QEMU/F7 subsystem. Reimplement additive authorization,
 
 Physical SSH/live-sync evidence remains pending because the USB is on Windows and the notebook is not booted from it.
 
+## Ledger 004 - Ordax Intelligence architecture invariants
+
+```text
+COMPONENT=ordax-intelligence-architecture-invariants
+LEGACY_REPOSITORY=washingtonmsdj/novo-ordax-os
+LEGACY_COMMIT=49fe41fa67d9032f2e349e86592304e64d6c2d88
+LEGACY_PATH=docs/intelligence/* + .foundation/ARCHITECTURE.md + .foundation/LAYERS.md
+RESPONSIBILITY=system intelligence layer separated from model execution, with governed context/tools/providers
+WHY_NEEDED=owner decision makes local system Intelligence part of Stable/MVP while preserving provider-neutral evolution
+DEPENDENCIES=shared Runtime/service contracts; local inference backend; explicit future capability/tool grants
+SECURITY_REVIEW=no legacy runtime or agent code copied; authority remains none in MVP; no implicit tools, file writes, shell, network egress, installation or disk mutation
+TESTS=tests/test_intelligence_runtime.mjs + component/local-AI contract regression
+ARTIFACT_SHA256=NOT_APPLICABLE_SOURCE_REIMPLEMENTATION
+DECISION=REIMPLEMENTED
+TARGET_PATH=system/contracts/intelligence.mjs + system/services/intelligence + docs/contracts/intelligence.json
+IMPLEMENTATION=COMPLETE
+NOTES=Preserve the legacy separation Ordax Intelligence -> AI Runtime/Inference Broker while reimplementing clean-room in the current architecture. Assistant UI is a client, not the intelligence owner.
+```
+
 ## Current ledger state
 
 ```text
-REVIEWED_COMPONENT_COUNT=3
-IMPLEMENTED_MIGRATION_COUNT=0
+REVIEWED_COMPONENT_COUNT=4
+IMPLEMENTED_MIGRATION_COUNT=1
 BULK_LEGACY_IMPORT=NO
 LEGACY_REPOSITORY_CHANGED_BY_MIGRATION=NO
 ```
