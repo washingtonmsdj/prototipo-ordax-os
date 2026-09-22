@@ -50,6 +50,7 @@ UPDATE_CONTROLS = SURFACE / "update-controls.mjs"
 UPDATE_PRESENTATION = ROOT / "system" / "services" / "update" / "presentation.mjs"
 DESKTOP_SHELL = SURFACE / "desktop-shell.mjs"
 SURFACE_LOCALIZATION = ROOT / "system" / "services" / "i18n" / "surface.mjs"
+SETTINGS_LOCALIZATION = ROOT / "system" / "services" / "i18n" / "catalog" / "settings.mjs"
 SURFACE_LIFECYCLE = ROOT / "system" / "contracts" / "surface-render-lifecycle.mjs"
 FILE_SPACE_CONTROLS = SURFACE / "file-space-controls.mjs"
 NOTES_WORKSPACE_CONTROLS = APPS / "notes" / "ui" / "workspace-controls.mjs"
@@ -409,7 +410,9 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn("assertPreferenceRuntimePort", overview)
         self.assertIn("assertNetworkManagementPort", overview)
         self.assertIn("listPreferenceDefinitions", overview)
-        self.assertIn('"Ajustes"', overview)
+        settings_localization = SETTINGS_LOCALIZATION.read_text(encoding="utf-8")
+        self.assertIn('t("settings.eyebrow")', overview)
+        self.assertIn('"settings.eyebrow": "Ajustes"', settings_localization)
         self.assertIn('id: "appearance"', overview)
         self.assertIn('id: "accessibility"', overview)
         self.assertIn('id: "network"', overview)
