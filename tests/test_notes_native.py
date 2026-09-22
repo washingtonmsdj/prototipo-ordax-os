@@ -114,7 +114,7 @@ class NotesNativeTests(unittest.TestCase):
         self.assertIn('id: "notes"', owner)
         self.assertIn('extensionId: "notes-workspace"', owner)
         self.assertIn('./notes/app.mjs', catalog)
-        self.assertIn('railButton("notes", "Notas", ICONS.notes)', shell)
+        self.assertIn('railButton("notes", t("app.notes.title"), ICONS.notes, t)', shell)
 
         component_runtime = NOTES_COMPONENT_RUNTIME.read_text(encoding="utf-8")
         version = NOTES_VERSION.read_text(encoding="utf-8")
