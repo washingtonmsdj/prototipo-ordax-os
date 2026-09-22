@@ -1,4 +1,4 @@
-export const FILE_SPACE_SCHEMA = "ordax.file-space/10";
+export const FILE_SPACE_SCHEMA = "ordax.file-space/11";
 export const MAX_TEXT_FILE_BYTES = 256 * 1024;
 export const MAX_FILE_COPY_BYTES = 64 * 1024 * 1024;
 export const MAX_FILE_EXPORT_BYTES = 64 * 1024 * 1024;
@@ -71,6 +71,47 @@ export function validateFileListing(value) {
   return Object.freeze({ path, entries: Object.freeze(entries) });
 }
 
+const TRASH_ID_RE = /^[0-9a-f]{32}$/;
+
+export function validateTrashEntry(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError("Trash entry must be an object");
+  }
+  if (typeof value.id !== "string" || !TRASH_ID_RE.test(value.id)) {
+    throw new TypeError("Trash entry id is invalid");
+  }
+  const entry = validateFileEntry(value);
+  const originalPath = validateFileSpacePath(value.originalPath);
+  if (originalPath === "/") {
+    throw new TypeError("Trash entry original path must identify an entry");
+  }
+  const expectedSuffix = originalPath.startsWith("/") ? originalPath.split("/").at(-1) : "";
+  if (expectedSuffix !== entry.name) {
+    throw new TypeError("Trash entry name must match its original path");
+  }
+  if (!Number.isSafeInteger(value.trashedAt) || value.trashedAt < 0) {
+    throw new TypeError("Trash entry trashedAt must be a non-negative epoch millisecond");
+  }
+  return Object.freeze({
+    id: value.id,
+    name: entry.name,
+    kind: entry.kind,
+    size: entry.size,
+    modifiedAt: entry.modifiedAt,
+    originalPath,
+    trashedAt: value.trashedAt,
+  });
+}
+
+export function validateTrashListing(value) {
+  if (!value || typeof value !== "object" || !Array.isArray(value.entries)) {
+    throw new TypeError("Trash listing is invalid");
+  }
+  return Object.freeze({
+    entries: Object.freeze(value.entries.map(validateTrashEntry)),
+  });
+}
+
 export function validateTextFile(value) {
   if (!value || typeof value !== "object") {
     throw new TypeError("Text-file payload must be an object");
@@ -118,11 +159,14 @@ export function assertFileSpacePort(port) {
     typeof port.renameEntry !== "function" ||
     typeof port.copyFile !== "function" ||
     typeof port.moveEntry !== "function" ||
+    typeof port.trashEntry !== "function" ||
+    typeof port.listTrash !== "function" ||
+    typeof port.restoreTrashEntry !== "function" ||
     typeof port.exportFile !== "function" ||
     typeof port.importFile !== "function"
   ) {
     throw new TypeError(
-      "File-space port must implement list(), createDirectory(), readTextFile(), renameEntry(), copyFile(), moveEntry(), exportFile(), and importFile()",
+      "File-space port must implement list(), createDirectory(), readTextFile(), renameEntry(), copyFile(), moveEntry(), trashEntry(), listTrash(), restoreTrashEntry(), exportFile(), and importFile()",
     );
   }
   return port;
