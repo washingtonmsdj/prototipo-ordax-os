@@ -43,13 +43,13 @@
     ],
     "surface_translation_status": {
       "pt-BR": "source-language",
-      "en-US": "migration-in-progress",
+      "en-US": "shared-shell-implemented-app-controls-migrating",
       "es-ES": "migration-in-progress",
       "de-DE": "migration-in-progress",
       "fr-FR": "migration-in-progress"
     },
     "default_locale": "pt-BR",
-    "launch_locale_policy": "oobe-five-locales-surface-migrates-without-false-completeness",
+    "launch_locale_policy": "oobe-five-locales-shared-surface-catalog-with-explicit-completeness",
     "default_time_zone": "America/Bahia",
     "time_zone_preference": "regional.time-zone",
     "missing_preference_recovery": "seed-from-completed-first-run",
