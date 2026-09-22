@@ -102,16 +102,29 @@ class CurrentStateFirstRunInputTests(unittest.TestCase):
         )
         self.assertNotIn("public anchor is still not pinned", self.current)
 
-    def test_physical_authorization_remains_separate_and_fail_closed(self):
+    def test_physical_authorization_is_scope_bound_while_target_execution_remains_pending(self):
+        self.assertEqual(self.authorization["status"], "authorized")
+        self.assertTrue(self.authorization["physical_write_allowed"])
+        self.assertTrue(self.authorization["explicit_owner_authorization"])
         self.assertEqual(
-            self.authorization["status"],
-            "blocked-explicit-physical-authorization-pending",
+            self.authorization["scope"],
+            "first-real-stable-mvp-usb-proof",
         )
-        self.assertFalse(self.authorization["physical_write_allowed"])
-        self.assertFalse(self.authorization["explicit_owner_authorization"])
+        self.assertEqual(self.authorization["release_sequence"], 1)
+        self.assertRegex(
+            self.authorization["authorization_context_sha256"],
+            r"^[0-9a-f]{64}$",
+        )
         self.assertIn("PHYSICAL_AUTHORIZATION_ELIGIBLE=YES", self.current)
-        self.assertIn("PHYSICAL_WRITE_AUTHORIZED=NO", self.current)
-        self.assertIn("DESTRUCTIVE_AUTHORIZATION=NO", self.current)
+        self.assertIn(
+            "PHYSICAL_WRITE_AUTHORIZED=YES_FIRST_STABLE_MVP_USB_PROOF",
+            self.current,
+        )
+        self.assertIn("PHYSICAL_TARGET_SELECTED=NO", self.current)
+        self.assertIn(
+            "PHYSICAL_TARGET_DESTRUCTIVE_CONFIRMATION=PENDING",
+            self.current,
+        )
         self.assertIn(
             "CANONICAL_SIGNED_RELEASE_BOOT_PROVEN=NO_PHYSICAL_STABLE_MVP_PENDING",
             self.current,

@@ -327,7 +327,7 @@ FULL_BOOTSTRAP_CANONICAL_TRUST_PROOF_ARTIFACT_SHA256=079aad05492867000989fa2c276
 
 The canonical release channel resolves `release-envelope.json`; the URL selects bytes and Ed25519 verification decides authenticity. The release acquisition code remains fail-closed with SHA-256 verification, exact source-commit binding, safe materialization, atomic activation and known-good preservation.
 
-### Canonical release trust — public anchor pinned, physical authorization still blocked
+### Canonical release trust — public anchor pinned, first Stable/MVP proof authorized
 
 ```text
 RELEASE_TRUST_POLICY=RESOLVED
@@ -353,10 +353,14 @@ EXTERNAL_OFFLINE_BACKUP_REQUIRED_BEFORE_BROAD_DISTRIBUTION=YES
 PUBLIC_TRUST_PROMOTION=PASS_PUBLIC_HANDOFF_VALIDATED
 MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=YES
 PHYSICAL_AUTHORIZATION_ELIGIBLE=YES
-PHYSICAL_WRITE_ALLOWED=NO
+PHYSICAL_WRITE_ALLOWED=YES_FIRST_STABLE_MVP_USB_PROOF
+PHYSICAL_WRITE_SCOPE=first-real-stable-mvp-usb-proof
+PHYSICAL_WRITE_RELEASE_SEQUENCE=1
+PHYSICAL_TARGET_SELECTED=NO
+PHYSICAL_TARGET_DESTRUCTIVE_CONFIRMATION=PENDING
 ```
 
-The eligible Windows trust toolkit from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`) completed operator steps 1, 2 and 3 on 2026-09-21. The uploaded `OrdaX-Public-Trust-Handoff.zip` was then independently revalidated: archive shape, exact public hashes and the recovered Ed25519 signing proof all passed. The exact public anchor is now pinned at `bootstrap/trust/release-ed25519.json`, the minimal bootstrap trust group is resolved and the physical-authorization bindings are populated. The private key remains outside Git/USB/Actions artifacts and is not recorded here. A same-host encrypted backup copy was verified byte-for-byte; this is accepted for the first controlled prototype but is not called independent off-device custody, which remains required before broad public distribution. Public trust promotion does not authorize destructive media writes: explicit owner authorization remains false and `PHYSICAL_WRITE_ALLOWED=NO`.
+The eligible Windows trust toolkit from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`) completed operator steps 1, 2 and 3 on 2026-09-21. The uploaded `OrdaX-Public-Trust-Handoff.zip` was then independently revalidated: archive shape, exact public hashes and the recovered Ed25519 signing proof all passed. The exact public anchor is now pinned at `bootstrap/trust/release-ed25519.json`, the minimal bootstrap trust group is resolved and the physical-authorization bindings are populated. The private key remains outside Git/USB/Actions artifacts and is not recorded here. A same-host encrypted backup copy was verified byte-for-byte; this is accepted for the first controlled prototype but is not called independent off-device custody, which remains required before broad public distribution. Public trust promotion itself did not authorize destructive media writes. On 2026-09-22 the owner separately provided the exact Stable/MVP authorization phrase for scope `first-real-stable-mvp-usb-proof`, release sequence 1. The source-controlled authorization is now recorded and bound to the proven source context. This does not select a disk, does not identify a physical target and does not replace the later live USB revalidation, Windows UAC or target-specific destructive confirmation.
 
 ## Creator and physical-write boundary
 
@@ -381,11 +385,12 @@ CREATOR_PORTABLE_PHYSICAL_WRITER_WHOLE_DISK_RAW=NO
 CREATOR_PORTABLE_PHYSICAL_WRITER_UAC_REQUIRED=YES
 CREATOR_PORTABLE_PHYSICAL_WRITER_LIVE_USB_REVALIDATION=YES
 CREATOR_PUBLIC_PHYSICAL_APPLY_IMPLEMENTED=NO
-PHYSICAL_WRITE_AUTHORIZED=NO
-DESTRUCTIVE_AUTHORIZATION=NO
+PHYSICAL_WRITE_AUTHORIZED=YES_FIRST_STABLE_MVP_USB_PROOF
+PHYSICAL_TARGET_SELECTED=NO
+PHYSICAL_TARGET_DESTRUCTIVE_CONFIRMATION=PENDING
 ```
 
-The Windows destructive backend remains compile-time isolated behind `ordax_raw_backend` and unreachable from the public Creator command. The final Portable writer is now implemented inside that tagged boundary: it executes the Core-owned 35-operation `ORDAX-ESP + ORDAX-DATA` plan directly on a revalidated USB, copies 15 exact artifacts, performs per-artifact sync/readback SHA-256+size verification, and does not require a target-sized whole-disk RAW image. **Implementation does not authorize use**: canonical trust, physical-promotion bindings, public reachability and explicit destructive authorization remain separate closed gates.
+The Windows destructive backend remains compile-time isolated behind `ordax_raw_backend` and unreachable from the public Creator command. The final Portable writer is now implemented inside that tagged boundary: it executes the Core-owned 35-operation `ORDAX-ESP + ORDAX-DATA` plan directly on a revalidated USB, copies 15 exact artifacts, performs per-artifact sync/readback SHA-256+size verification, and does not require a target-sized whole-disk RAW image. **Implementation alone did not authorize use.** Canonical trust and physical-promotion bindings are resolved, and the owner has now explicitly authorized the exact first Stable/MVP USB proof scope. Public reachability remains closed, and choosing/revalidating a concrete USB plus Windows UAC and the target-specific destructive confirmation remain separate execution gates.
 
 The byte-complete media workflow remains proven with ephemeral CI trust and disposable media only. That proof establishes composition and growth behavior; it does not establish canonical public trust or authorize a product-media write. The notebook development-USB boot is a separate physical proof and must not be used to collapse those boundaries.
 
