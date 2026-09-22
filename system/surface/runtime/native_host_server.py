@@ -2881,6 +2881,7 @@ class NativeHostServer(ThreadingHTTPServer):
         self.network_lock = threading.Lock()
         self.native_install_paths = native_install_broker_paths(network_session_dir)
         self.native_install_lock = threading.Lock()
+        self.file_trash_lock = threading.Lock()
         self.local_session_lock = threading.Lock()
         self.local_session_locked = os.path.isfile(LOCAL_SESSION_CREDENTIAL_FILE)
         self.local_session_failures = 0
@@ -2989,7 +2990,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if not self._request_is_trusted():
             return
         parsed_path = urlsplit(self.path).path
-        if parsed_path in {SESSION_PATH, FILES_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
+        if parsed_path in {SESSION_PATH, FILES_PATH, TRASH_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
         if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH, LOCAL_SESSION_PATH} and self.client_address[0] != "127.0.0.1":
@@ -3062,6 +3063,20 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             return
         if parsed_path == UPDATE_HISTORY_PATH:
             self._write_json(200, read_update_history())
+            return
+        if parsed_path == TRASH_PATH:
+            try:
+                with self.server.file_trash_lock:
+                    trash = list_user_trash(self.server.user_root)
+            except (OSError, UnicodeError, ValueError) as exc:
+                print(
+                    f"ordax-native-host: could not read user trash safely: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._empty(503)
+                return
+            self._write_json(200, trash)
             return
         if parsed_path == IMAGE_PREVIEW_PATH:
             try:
@@ -3665,6 +3680,27 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                         payload.get("destinationPath"),
                     )
                     status = 200
+                elif action == "trash-entry":
+                    if set(payload) != {"action", "path", "name"}:
+                        self._empty(400)
+                        return
+                    with self.server.file_trash_lock:
+                        listing = trash_user_entry(
+                            self.server.user_root,
+                            payload.get("path"),
+                            payload.get("name"),
+                        )
+                    status = 200
+                elif action == "restore-trash-entry":
+                    if set(payload) != {"action", "id"}:
+                        self._empty(400)
+                        return
+                    with self.server.file_trash_lock:
+                        listing = restore_user_trash_entry(
+                            self.server.user_root,
+                            payload.get("id"),
+                        )
+                    status = 200
                 else:
                     self._empty(400)
                     return
@@ -3674,7 +3710,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             except FileSpaceCopyChangedError:
                 self._empty(412)
                 return
-            except FileSpaceCrossDeviceMoveError:
+            except (FileSpaceCrossDeviceMoveError, FileSpaceTrashCrossDeviceError):
                 self._empty(422)
                 return
             except ValueError:
