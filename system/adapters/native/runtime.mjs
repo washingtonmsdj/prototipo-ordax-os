@@ -19,6 +19,7 @@ export function createNativeSurfaceHost(
     networkManagementAvailable = false,
     keyboardLayoutAvailable = false,
     browserWebContentAvailable = false,
+    localAiAvailable = false,
   } = {},
 ) {
   if (!windowRef?.navigator) {
@@ -48,6 +49,9 @@ export function createNativeSurfaceHost(
     }
     if (browserWebContentAvailable) {
       capabilityIds.push("browser.web-content");
+    }
+    if (localAiAvailable) {
+      capabilityIds.push("ai.local");
     }
     if (bootControlAvailable) {
       capabilityIds.push("system.boot-control");
