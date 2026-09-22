@@ -1,12 +1,17 @@
 export const FILES_OPERATIONAL_SOURCE_MESSAGES = Object.freeze({
   "files.copy.suggested": "{base} - cópia{extension}",
-  "files.form.cancel": "Cancelar",
-
   "files.transfer.chooseDestination": "Escolha uma pasta de destino.",
   "files.transfer.chooseOtherFolderCopy": "Escolha outra pasta para copiar este arquivo.",
   "files.transfer.sameFolder": "O item já está nesta pasta. Escolha outra pasta.",
   "files.transfer.directoryIntoSelf": "Uma pasta não pode ser movida para dentro dela mesma.",
+  "files.transfer.copying": "Copiando",
+  "files.transfer.moving": "Movendo",
+  "files.transfer.copyAria": "Copiar arquivo",
+  "files.transfer.moveAria": "Mover item",
+  "files.transfer.currentDestination": "Destino atual: {path}",
   "files.transfer.openingDestination": "Abrindo destino…",
+  "files.transfer.copyHere": "Copiar para esta pasta",
+  "files.transfer.moveHere": "Mover para esta pasta",
   "files.transfer.confirmCopy": "Confirme para copiar sem substituir itens existentes.",
   "files.transfer.confirmMove": "Confirme para mover sem substituir itens existentes.",
   "files.transfer.navigateCopy": "Navegue até a pasta de destino e escolha “Copiar para esta pasta”.",
@@ -38,7 +43,6 @@ export const FILES_OPERATIONAL_SOURCE_MESSAGES = Object.freeze({
   "files.recents.removed": "“{name}” foi removido de Recentes. O arquivo não foi apagado.",
   "files.recents.cleared": "Histórico limpo. Nenhum arquivo foi apagado.",
 
-  "files.preview.opening": "Abrindo arquivo…",
   "files.preview.tooLarge": "Este arquivo é grande demais para a visualização rápida (máximo 256 KB).",
   "files.preview.invalidUtf8": "A visualização rápida aceita apenas texto UTF-8 válido.",
   "files.preview.failed": "Não foi possível visualizar este arquivo.",
@@ -100,6 +104,7 @@ export const FILES_OPERATIONAL_SOURCE_MESSAGES = Object.freeze({
   "files.copy.failed": "Não foi possível copiar este arquivo.",
 
   "files.rename.enterName": "Digite o novo nome.",
+  "files.rename.success": "“{oldName}” foi renomeado para “{newName}”.",
   "files.rename.unchanged": "O nome não foi alterado.",
   "files.rename.permission": "O OrdaX não tem permissão para renomear este item.",
   "files.rename.invalidName": "O novo nome não é válido.",
@@ -115,13 +120,18 @@ export const FILES_OPERATIONAL_SOURCE_MESSAGES = Object.freeze({
 
 export const FILES_OPERATIONAL_ENGLISH_MESSAGES = Object.freeze({
   "files.copy.suggested": "{base} - copy{extension}",
-  "files.form.cancel": "Cancel",
-
   "files.transfer.chooseDestination": "Choose a destination folder.",
   "files.transfer.chooseOtherFolderCopy": "Choose another folder to copy this file.",
   "files.transfer.sameFolder": "The item is already in this folder. Choose another folder.",
   "files.transfer.directoryIntoSelf": "A folder cannot be moved inside itself.",
+  "files.transfer.copying": "Copying",
+  "files.transfer.moving": "Moving",
+  "files.transfer.copyAria": "Copy file",
+  "files.transfer.moveAria": "Move item",
+  "files.transfer.currentDestination": "Current destination: {path}",
   "files.transfer.openingDestination": "Opening destination…",
+  "files.transfer.copyHere": "Copy to this folder",
+  "files.transfer.moveHere": "Move to this folder",
   "files.transfer.confirmCopy": "Confirm to copy without replacing existing items.",
   "files.transfer.confirmMove": "Confirm to move without replacing existing items.",
   "files.transfer.navigateCopy": "Navigate to the destination folder and choose “Copy to this folder”.",
@@ -153,7 +163,6 @@ export const FILES_OPERATIONAL_ENGLISH_MESSAGES = Object.freeze({
   "files.recents.removed": "“{name}” was removed from Recents. The file was not deleted.",
   "files.recents.cleared": "History cleared. No files were deleted.",
 
-  "files.preview.opening": "Opening file…",
   "files.preview.tooLarge": "This file is too large for quick preview (maximum 256 KB).",
   "files.preview.invalidUtf8": "Quick preview accepts only valid UTF-8 text.",
   "files.preview.failed": "This file could not be previewed.",
@@ -215,6 +224,7 @@ export const FILES_OPERATIONAL_ENGLISH_MESSAGES = Object.freeze({
   "files.copy.failed": "This file could not be copied.",
 
   "files.rename.enterName": "Enter the new name.",
+  "files.rename.success": "“{oldName}” was renamed to “{newName}”.",
   "files.rename.unchanged": "The name was not changed.",
   "files.rename.permission": "OrdaX does not have permission to rename this item.",
   "files.rename.invalidName": "The new name is invalid.",
