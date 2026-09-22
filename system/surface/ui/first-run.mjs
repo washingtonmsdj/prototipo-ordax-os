@@ -13,6 +13,7 @@ import {
   REGIONAL_TIME_ZONE_PREFERENCE_ID,
   isSupportedRegionalTimeZone,
 } from "../../services/preferences/regional.mjs";
+import { translateFirstRunText } from "../../services/i18n/first-run.mjs";
 import { completeFirstRunState, validateFirstRunState } from "../../services/state/first-run.mjs";
 import {
   networkManagementActionMessage,
@@ -26,7 +27,10 @@ const STEP_LABELS = Object.freeze(["Início", "Região", "Rede", "Conta", "Priva
 function el(documentObject, tag, className = "", text = undefined) {
   const node = documentObject.createElement(tag);
   if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
+  if (text !== undefined) {
+    const locale = documentObject.documentElement?.lang || "pt-BR";
+    node.textContent = translateFirstRunText(locale, text);
+  }
   return node;
 }
 
@@ -86,6 +90,8 @@ export function mountFirstRunExperience(
     timeZone: isSupportedRegionalTimeZone(detectedTimeZone) ? detectedTimeZone : initial.timeZone,
     accountMode: null,
   };
+
+  documentObject.documentElement.lang = draft.locale;
 
   const previousInert = root.inert;
   const previousAriaHidden = root.getAttribute("aria-hidden");
@@ -566,8 +572,11 @@ export function mountFirstRunExperience(
   };
 
   const onChange = (event) => {
-    if (event.target.matches("[data-first-run-locale]")) draft.locale = event.target.value;
-    else if (event.target.matches("[data-first-run-time-zone]")) draft.timeZone = event.target.value;
+    if (event.target.matches("[data-first-run-locale]")) {
+      draft.locale = event.target.value;
+      documentObject.documentElement.lang = draft.locale;
+      render();
+    } else if (event.target.matches("[data-first-run-time-zone]")) draft.timeZone = event.target.value;
   };
 
   const onKeyDown = (event) => {
