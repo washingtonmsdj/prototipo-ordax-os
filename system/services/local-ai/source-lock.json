@@ -25,8 +25,9 @@
   "distribution": {
     "model_committed_to_git": false,
     "engine_binary_committed_to_git": false,
-    "signed_component_required": true,
-    "creator_may_bundle_after_signed_component_exists": true,
-    "network_download_required_at_runtime": false
+    "network_download_required_at_runtime": false,
+    "signed_release_artifact_required": true,
+    "initial_release_schema_target": "prototype-ordax.release-manifest/4",
+    "independent_component_slot_is_future_migration": true
   }
 }
