@@ -1,7 +1,10 @@
 #!/bin/sh
 set -eu
 
-BIN_DIR=${0%/*}
+case "$0" in
+    */*) BIN_DIR=${0%/*} ;;
+    *) BIN_DIR=. ;;
+esac
 PROOF_RUNTIME_LIB=$BIN_DIR/../lib/physical-proof-runtime.sh
 COLLECTOR=/srv/ordax-system/diagnostics/mvp_surface_smoke.py
 
