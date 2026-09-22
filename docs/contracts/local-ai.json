@@ -1,0 +1,67 @@
+{
+  "$schema": "prototype-ordax.local-ai/1",
+  "status": "mvp-foundation-implemented-runtime-package-pending",
+  "product_scope": "stable-mvp-usb",
+  "principles": {
+    "local_first": true,
+    "works_without_account": true,
+    "works_without_network_after_package_install": true,
+    "provider_and_model_replaceable": true,
+    "assistant_has_no_implicit_host_privilege": true,
+    "shell_execution_allowed": false,
+    "raw_disk_access_allowed": false,
+    "release_trust_bypass_allowed": false
+  },
+  "component": {
+    "id": "assistant",
+    "version": "0.1.0",
+    "release_mode": "component-slot",
+    "criticality": "optional",
+    "failure_domain": "app"
+  },
+  "runtime_contract": "ordax.ai-runtime/1",
+  "default_profile": {
+    "engine_id": "llama.cpp",
+    "model_id": "qwen3-0.6b-q4-k-m",
+    "model_family": "Qwen3",
+    "quantization": "Q4_K_M",
+    "distribution_license": "Apache-2.0",
+    "network_required_for_inference": false,
+    "purpose": "lightweight-local-text-assistant"
+  },
+  "alternative_profiles": [
+    {
+      "id": "balanced",
+      "model_id": "qwen3-1.7b-q4-k-m",
+      "network_required_for_inference": false
+    },
+    {
+      "id": "smollm3",
+      "model_id": "smollm3-3b-q4-k-m",
+      "network_required_for_inference": false
+    }
+  ],
+  "creator_selection": {
+    "contract": "docs/contracts/creator-feature-selection.json",
+    "local_ai_selected_by_default": true,
+    "user_may_omit": true,
+    "first_authorized_physical_proof_changes_writer": false
+  },
+  "migration": {
+    "engine_identity_is_configuration": true,
+    "model_identity_is_configuration": true,
+    "conversation_format_provider_neutral": true,
+    "future_provider_may_be_local_or_cloud": true,
+    "changing_provider_must_not_change_app_identity": true,
+    "model_bytes_are_not_repository_source": true,
+    "signed_package_required_for_stable_mvp": true
+  },
+  "mvp_scope": {
+    "text_chat": true,
+    "summarize_user_selected_text": true,
+    "explain_sanitized_diagnostics": true,
+    "autonomous_admin_agent": false,
+    "background_system_control": false,
+    "arbitrary_file_indexing": false
+  }
+}
