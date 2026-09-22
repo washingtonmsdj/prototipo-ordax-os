@@ -67,6 +67,19 @@ export const coreComponentManifests = Object.freeze([
     dependencies: ["surface-shell"],
   }),
   defineComponentManifest({
+    id: "ai-runtime-service",
+    title: "OrdaX AI Runtime",
+    kind: "service",
+    version: "0.1.0",
+    releaseMode: "bundled",
+    criticality: "optional",
+    failureDomain: "service",
+    restartScope: "component",
+    healthMode: "process",
+    owner: "system/services/ai",
+    dependencies: ["surface-shell"],
+  }),
+  defineComponentManifest({
     id: "local-ai-service",
     title: "IA Local",
     kind: "service",
@@ -77,7 +90,7 @@ export const coreComponentManifests = Object.freeze([
     restartScope: "component",
     healthMode: "process",
     owner: "system/services/local-ai",
-    dependencies: ["surface-shell"],
+    dependencies: ["ai-runtime-service"],
   }),
   defineComponentManifest({
     id: "clock-service",
