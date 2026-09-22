@@ -16,6 +16,8 @@ export const FILES_OPERATIONAL_SOURCE_MESSAGES = Object.freeze({
   "files.transfer.confirmMove": "Confirme para mover sem substituir itens existentes.",
   "files.transfer.navigateCopy": "Navegue até a pasta de destino e escolha “Copiar para esta pasta”.",
   "files.transfer.navigateMove": "Navegue até a pasta de destino e escolha “Mover para esta pasta”.",
+  "files.transfer.copied": "“{name}” foi copiado para {path}.",
+  "files.transfer.moved": "“{name}” foi movido para {path}.",
   "files.transfer.copyCancelled": "Cópia cancelada. Nenhum item foi alterado.",
   "files.transfer.moveCancelled": "Movimento cancelado. Nenhum item foi alterado.",
 
@@ -53,6 +55,7 @@ export const FILES_OPERATIONAL_SOURCE_MESSAGES = Object.freeze({
   "files.copy.changed": "O arquivo mudou durante a cópia. Nenhuma cópia parcial foi mantida.",
   "files.move.changed": "O arquivo mudou antes da conclusão do movimento. A origem não foi removida.",
   "files.copy.tooLarge": "Este arquivo ultrapassa o limite de cópia de 64 MiB.",
+  "files.move.tooLargeCrossVolume": "Mover este arquivo entre volumes ultrapassa o limite seguro de 64 MiB.",
   "files.move.folderCrossVolume": "Pastas ainda não podem ser movidas entre volumes.",
   "files.transfer.noSpace": "Não há espaço suficiente no destino.",
   "files.transfer.sourceOrDestinationMissing": "A origem ou o destino não existe mais. Atualize e tente novamente.",
@@ -71,6 +74,7 @@ export const FILES_OPERATIONAL_SOURCE_MESSAGES = Object.freeze({
   "files.import.destinationMissing": "A pasta de destino não existe mais. Atualize e tente novamente.",
   "files.import.noSpace": "Não há espaço suficiente para importar este arquivo.",
   "files.import.invalid": "O arquivo ou o destino não é válido para importação.",
+  "files.import.success": "“{name}” foi importado para {path}.",
   "files.import.failed": "Não foi possível importar este arquivo. Nenhum arquivo parcial foi mantido.",
 
   "files.trash.moved": "“{name}” foi movido para a Lixeira e pode ser restaurado.",
@@ -87,6 +91,7 @@ export const FILES_OPERATIONAL_SOURCE_MESSAGES = Object.freeze({
   "files.restore.crossVolume": "A restauração cruzaria um limite de volume não suportado. O item continua na Lixeira.",
   "files.restore.permission": "O OrdaX não tem permissão para restaurar no local original. O item continua na Lixeira.",
   "files.restore.invalid": "A entrada da Lixeira não é válida para restauração.",
+  "files.restore.success": "“{name}” foi restaurado para {path}.",
   "files.restore.failed": "Não foi possível restaurar este item. Ele continua na Lixeira.",
 
   "files.export.tooLarge": "Este arquivo ultrapassa o limite de exportação de 64 MiB.",
@@ -94,6 +99,7 @@ export const FILES_OPERATIONAL_SOURCE_MESSAGES = Object.freeze({
   "files.export.missing": "Este arquivo não existe mais. Atualize a pasta.",
   "files.export.permission": "O OrdaX não tem permissão para exportar este arquivo.",
   "files.export.invalid": "Este item não pode ser exportado.",
+  "files.export.started": "Download de “{name}” iniciado.",
   "files.export.failed": "Não foi possível exportar este arquivo.",
 
   "files.copy.enterName": "Digite o nome da cópia.",
@@ -102,6 +108,9 @@ export const FILES_OPERATIONAL_SOURCE_MESSAGES = Object.freeze({
   "files.copy.sourceMissing": "O arquivo de origem não existe mais.",
   "files.copy.invalidName": "O nome da cópia não é válido.",
   "files.copy.failed": "Não foi possível copiar este arquivo.",
+
+  "files.item.collision": "Já existe um item com esse nome. Nada foi substituído.",
+  "files.item.missing": "Este item não existe mais. Atualize a pasta.",
 
   "files.rename.enterName": "Digite o novo nome.",
   "files.rename.success": "“{oldName}” foi renomeado para “{newName}”.",
@@ -136,6 +145,8 @@ export const FILES_OPERATIONAL_ENGLISH_MESSAGES = Object.freeze({
   "files.transfer.confirmMove": "Confirm to move without replacing existing items.",
   "files.transfer.navigateCopy": "Navigate to the destination folder and choose “Copy to this folder”.",
   "files.transfer.navigateMove": "Navigate to the destination folder and choose “Move to this folder”.",
+  "files.transfer.copied": "“{name}” was copied to {path}.",
+  "files.transfer.moved": "“{name}” was moved to {path}.",
   "files.transfer.copyCancelled": "Copy cancelled. No items were changed.",
   "files.transfer.moveCancelled": "Move cancelled. No items were changed.",
 
@@ -173,6 +184,7 @@ export const FILES_OPERATIONAL_ENGLISH_MESSAGES = Object.freeze({
   "files.copy.changed": "The file changed during copy. No partial copy was kept.",
   "files.move.changed": "The file changed before the move completed. The source was not removed.",
   "files.copy.tooLarge": "This file exceeds the 64 MiB copy limit.",
+  "files.move.tooLargeCrossVolume": "Moving this file across volumes exceeds the safe 64 MiB limit.",
   "files.move.folderCrossVolume": "Folders cannot yet be moved across volumes.",
   "files.transfer.noSpace": "There is not enough space at the destination.",
   "files.transfer.sourceOrDestinationMissing": "The source or destination no longer exists. Refresh and try again.",
@@ -191,6 +203,7 @@ export const FILES_OPERATIONAL_ENGLISH_MESSAGES = Object.freeze({
   "files.import.destinationMissing": "The destination folder no longer exists. Refresh and try again.",
   "files.import.noSpace": "There is not enough space to import this file.",
   "files.import.invalid": "The file or destination is not valid for import.",
+  "files.import.success": "“{name}” was imported to {path}.",
   "files.import.failed": "This file could not be imported. No partial file was kept.",
 
   "files.trash.moved": "“{name}” was moved to Trash and can be restored.",
@@ -207,6 +220,7 @@ export const FILES_OPERATIONAL_ENGLISH_MESSAGES = Object.freeze({
   "files.restore.crossVolume": "Restore would cross an unsupported volume boundary. The item remains in Trash.",
   "files.restore.permission": "OrdaX does not have permission to restore to the original location. The item remains in Trash.",
   "files.restore.invalid": "The Trash entry is not valid for restore.",
+  "files.restore.success": "“{name}” was restored to {path}.",
   "files.restore.failed": "This item could not be restored. It remains in Trash.",
 
   "files.export.tooLarge": "This file exceeds the 64 MiB export limit.",
@@ -214,6 +228,7 @@ export const FILES_OPERATIONAL_ENGLISH_MESSAGES = Object.freeze({
   "files.export.missing": "This file no longer exists. Refresh the folder.",
   "files.export.permission": "OrdaX does not have permission to export this file.",
   "files.export.invalid": "This item cannot be exported.",
+  "files.export.started": "Download of “{name}” started.",
   "files.export.failed": "This file could not be exported.",
 
   "files.copy.enterName": "Enter a name for the copy.",
@@ -222,6 +237,9 @@ export const FILES_OPERATIONAL_ENGLISH_MESSAGES = Object.freeze({
   "files.copy.sourceMissing": "The source file no longer exists.",
   "files.copy.invalidName": "The copy name is invalid.",
   "files.copy.failed": "This file could not be copied.",
+
+  "files.item.collision": "An item with this name already exists. Nothing was replaced.",
+  "files.item.missing": "This item no longer exists. Refresh the folder.",
 
   "files.rename.enterName": "Enter the new name.",
   "files.rename.success": "“{oldName}” was renamed to “{newName}”.",
