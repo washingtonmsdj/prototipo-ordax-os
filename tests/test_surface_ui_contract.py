@@ -49,6 +49,7 @@ POWER_CONTROLS = SURFACE / "power-controls.mjs"
 UPDATE_CONTROLS = SURFACE / "update-controls.mjs"
 UPDATE_PRESENTATION = ROOT / "system" / "services" / "update" / "presentation.mjs"
 DESKTOP_SHELL = SURFACE / "desktop-shell.mjs"
+SURFACE_LOCALIZATION = ROOT / "system" / "services" / "i18n" / "surface.mjs"
 SURFACE_LIFECYCLE = ROOT / "system" / "contracts" / "surface-render-lifecycle.mjs"
 FILE_SPACE_CONTROLS = SURFACE / "file-space-controls.mjs"
 NOTES_WORKSPACE_CONTROLS = APPS / "notes" / "ui" / "workspace-controls.mjs"
@@ -71,6 +72,7 @@ class SurfaceUiContractTests(unittest.TestCase):
             SURFACE / "surface.mjs",
             SURFACE / "surface-state.mjs",
             DESKTOP_SHELL,
+            SURFACE_LOCALIZATION,
             SURFACE_LIFECYCLE,
             FILE_SPACE_CONTROLS,
             NOTES_WORKSPACE_CONTROLS,
@@ -327,7 +329,9 @@ class SurfaceUiContractTests(unittest.TestCase):
 
         self.assertIn('id: "internet"', internet)
         self.assertIn('extensionId: "internet-browser"', internet)
-        self.assertIn('railButton("internet", "Internet", ICONS.internet)', shell)
+        self.assertIn('railButton("internet", t("app.internet.title"), ICONS.internet, t)', shell)
+        localization = SURFACE_LOCALIZATION.read_text(encoding="utf-8")
+        self.assertIn('"app.internet.title": "Internet"', localization)
         self.assertIn("assertBrowserSessionPort", controls)
         self.assertIn("assertSurfaceRenderLifecycle", controls)
         self.assertIn('getAppTarget("internet")', controls)
@@ -752,7 +756,9 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn('root.querySelector("[data-quick-battery-power]")', battery)
         self.assertIn('"Conectada"', battery)
         self.assertIn('"Desconectada"', battery)
-        self.assertIn("Fonte de energia", shell)
+        localization = SURFACE_LOCALIZATION.read_text(encoding="utf-8")
+        self.assertIn('"shell.quick.powerSource": "Fonte de energia"', localization)
+        self.assertIn("data-ordax-power-source-label", shell)
         self.assertNotIn("/__ordax/native/", battery)
         self.assertIn("mountBatteryQuickPanel", native_main)
         self.assertIn('reportClientDiagnostic("battery-quick-panel", error)', native_main)
@@ -783,7 +789,9 @@ class SurfaceUiContractTests(unittest.TestCase):
         css = (SURFACE / "surface.css").read_text(encoding="utf-8")
         tokens = (SURFACE / "tokens.css").read_text(encoding="utf-8")
         self.assertIn('aria-live="polite"', shell)
-        self.assertIn('aria-label="Estado e áreas da Surface"', shell)
+        localization = SURFACE_LOCALIZATION.read_text(encoding="utf-8")
+        self.assertIn('"shell.statusbar.aria": "Estado e áreas da Surface"', localization)
+        self.assertIn('aria-label="${t("shell.statusbar.aria")}"', shell)
         self.assertIn('role="dialog"', shell)
         self.assertIn("data-window-layer", shell)
         self.assertIn('event.key === "Escape"', surface)
