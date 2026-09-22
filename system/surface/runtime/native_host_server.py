@@ -114,6 +114,7 @@ MAX_RELEASE_HISTORY_ENTRIES = 80
 MAX_APPLICATION_HISTORY_ENTRIES = 200
 STANDARD_USER_DIRECTORIES = ("Documentos", "Imagens", "Downloads")
 PREFERENCE_ID_RE = re.compile(r"^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$")
+FIRST_RUN_LOCALES = frozenset(("pt-BR", "en-US", "es-419", "fr-FR"))
 FIRST_RUN_TIME_ZONES = frozenset((
     "America/Bahia",
     "America/Sao_Paulo",
@@ -122,7 +123,6 @@ FIRST_RUN_TIME_ZONES = frozenset((
     "America/Noronha",
 ))
 FIRST_RUN_ACCOUNT_MODES = frozenset(("local-only", "identity"))
-FIRST_RUN_LOCALES = frozenset(("pt-BR", "en-US", "es-ES"))
 KEYBOARD_LAYOUT_IDS = ("br-abnt2", "us")
 KEYBOARD_LAYOUT_ID_SET = frozenset(KEYBOARD_LAYOUT_IDS)
 DEFAULT_KEYBOARD_LAYOUT_ID = "br-abnt2"
