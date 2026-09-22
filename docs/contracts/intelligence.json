@@ -1,0 +1,61 @@
+{
+  "$schema": "prototype-ordax.intelligence/1",
+  "status": "mvp-system-foundation",
+  "product_name": "Ordax Intelligence",
+  "layer": "system-intelligence",
+  "stable_port": "ordax.intelligence/1",
+  "owner": "system/services/intelligence",
+  "mvp": {
+    "included_in_stable_mvp": true,
+    "required_for_boot": false,
+    "required_for_surface_start": false,
+    "local_inference_backend_required_in_distribution": true,
+    "failure_mode": "degrade-intelligence-without-blocking-os"
+  },
+  "architecture": {
+    "surface_and_apps_are_clients": true,
+    "assistant_ui_is_not_intelligence_owner": true,
+    "runtime_policy_owner": "Ordax Intelligence",
+    "inference_backend_contract": "ordax.local-ai/1",
+    "inference_backend_owner": "system/services/local-ai",
+    "model_and_engine_replaceable": true,
+    "cloud_provider_required": false
+  },
+  "authority": {
+    "mvp_authority": "none",
+    "implicit_tool_execution": false,
+    "implicit_file_write": false,
+    "implicit_shell_execution": false,
+    "implicit_network_egress": false,
+    "implicit_package_install": false,
+    "implicit_system_mutation": false,
+    "implicit_raw_disk_access": false
+  },
+  "context": {
+    "provenance_required": true,
+    "bounded_context_required": true,
+    "prompt_content_is_not_authority": true,
+    "cross_scope_access_requires_explicit_future_policy": true
+  },
+  "initial_capabilities": [
+    "ask",
+    "explain",
+    "summarize",
+    "diagnose"
+  ],
+  "deferred_capabilities": [
+    "agent-manager",
+    "shared-memory",
+    "knowledge-manager",
+    "tool-manager",
+    "task-scheduler",
+    "capability-bridge",
+    "multi-agent-coordination"
+  ],
+  "migration": {
+    "legacy_repository": "washingtonmsdj/novo-ordax-os",
+    "reuse_mode": "architecture-invariants-reimplemented-clean-room",
+    "source_ledger": "docs/SOURCE-MIGRATION.md",
+    "bulk_legacy_import": false
+  }
+}
