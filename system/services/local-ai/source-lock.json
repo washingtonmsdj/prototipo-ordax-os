@@ -20,7 +20,8 @@
     "size_bytes": 563036064,
     "license": "Apache-2.0",
     "upstream_revision": "9447f74",
-    "download_at_build_time_only": true
+    "download_at_build_time_only": true,
+    "license_text_path": "third_party/licenses/Apache-2.0.txt"
   },
   "distribution": {
     "model_committed_to_git": false,
