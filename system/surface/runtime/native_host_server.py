@@ -122,7 +122,7 @@ FIRST_RUN_TIME_ZONES = frozenset((
     "America/Noronha",
 ))
 FIRST_RUN_ACCOUNT_MODES = frozenset(("local-only", "identity"))
-FIRST_RUN_LOCALES = frozenset(("pt-BR", "en-US", "es-ES"))
+FIRST_RUN_LOCALES = frozenset(("pt-BR", "en-US", "es-ES", "de-DE", "fr-FR"))
 KEYBOARD_LAYOUT_IDS = ("br-abnt2", "us")
 KEYBOARD_LAYOUT_ID_SET = frozenset(KEYBOARD_LAYOUT_IDS)
 DEFAULT_KEYBOARD_LAYOUT_ID = "br-abnt2"
