@@ -70,6 +70,10 @@ No database, auth or Edge Function mutation was made there.
 
 For Supabase, OrdaX identity therefore requires either a dedicated project or a development branch/project that passes the preflight in `infra/supabase/identity/preflight.sql`. Creating a paid branch/project remains a separate explicit action.
 
+The provider-specific email/password HTTP adapter is implemented in `supabase_password.py`. It uses only a Supabase `sb_publishable_` key and the public Auth API for signup, password sign-in, refresh, current-user lookup and sign-out. It does not own cookies or public routes and is not instantiated by the gateway while the canonical provider remains unconfigured. Passwords are transient request inputs and are never written by the adapter.
+
+Activation remains deliberately separate from implementation: a clean Supabase target must pass the read-only preflight, `0001_ordax_profiles.sql` must be applied there, the same-origin deployment/session owner must be connected, and the public legal-readiness gate must be complete before credential collection is exposed.
+
 ## Non-goals of this foundation
 
 - no production identity provider is enabled;
