@@ -4,7 +4,7 @@ Status: **HARNESS IMPLEMENTADO; PROVA FÍSICA AINDA NÃO DECLARADA**
 
 Este runbook valida, no notebook real, a saúde integrada da **Surface compartilhada** e das capacidades Native necessárias para o recorte funcional do MVP. Ele não muda produto, não grava mídia, não arma update e não substitui os gates de trust/Creator/Stable.
 
-O harness é deliberadamente somente leitura. Ele complementa — não substitui — a prova específica de Internet em `docs/evidence/internet-native-physical-proof-runbook.md`.
+O harness é deliberadamente somente leitura. Ele complementa — não substitui — a prova específica de Internet em `docs/evidence/internet-native-physical-proof-runbook.md`. O mesmo coletor pode ser usado em Owner/Development e Stable/MVP, mas cada relatório grava o perfil/runtime observado e comparações entre escopos diferentes falham fechado. Somente `evidence_scope=canonical-stable-mvp` sobre `verified-erofs-overlay` pode compor a evidência canônica Stable/MVP.
 
 ## O que o harness verifica automaticamente
 
@@ -12,7 +12,7 @@ O harness é deliberadamente somente leitura. Ele complementa — não substitui
 
 - confirma a presença e registra somente tamanho + SHA-256 das fontes compartilhadas de Arquivos, Notas, Internet, Ajustes, Sistema, composição Native e Surface;
 - confirma que o documento Native da Surface responde pelo loopback esperado;
-- lê e valida os contratos observacionais de métricas, rede, energia e raiz de Arquivos;
+- lê e valida os contratos observacionais de métricas, rede, energia, layout do teclado físico e raiz de Arquivos; o layout configurado precisa estar realmente aplicado, sem restart pendente;
 - lê e valida por `GET` o estado vivo do atualizador e o histórico de atualização, sem confirmar health nem disparar qualquer ação;
 - registra apenas resumos limitados dos dados observados;
 - verifica o tail do log do host por marcadores `traceback`, `segmentation fault` e `fatal`, armazenando apenas hash e contagem;
@@ -39,18 +39,18 @@ O relatório de comparação não copia `boot_id`, hashes de fontes ou a impress
 
 ## Pré-condições
 
-1. notebook inicializado pelo **Owner / Development USB**;
+1. para evidência canônica, notebook inicializado pelo **USB Stable/MVP** e Surface em `verified-erofs-overlay`; Owner/Development continua válido apenas como diagnóstico de desenvolvimento;
 2. Surface gráfica saudável e em execução;
-3. checkout sincronizado para a entrega contendo este harness;
-4. runtime Native/WebKit já materializado;
-5. nenhum reflash, rebuild de kernel ou escrita física é necessário para executar o smoke test.
+3. release Stable/MVP contém este harness em `/system` — não depende de checkout Git;
+4. runtime Native/WebKit ativo e o contexto de runtime publicado pela própria Surface em `/run/ordax-surface/runtime-proof-context`;
+5. nenhum reflash, rebuild de kernel ou escrita física é realizado pelo smoke test.
 
 ## Coleta automática inicial
 
-No shell de manutenção Owner/Development, execute:
+No shell local do Stable/MVP, execute:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-mvp-smoke collect \
+/system/surface/bin/ordax-mvp-smoke collect \
   --label mvp-surface-baseline \
   --output /var/lib/ordax/mvp-smoke/baseline.json
 ```
@@ -63,14 +63,16 @@ A saída deve terminar com:
 FAIL=0
 ```
 
-Qualquer `FAIL` precisa ser tratado como evidência de que o recorte integrado ainda não está saudável naquele runtime. Não converter falha em `WARN` apenas para fechar a prova.
+Qualquer `FAIL` precisa ser tratado como evidência de que o recorte integrado ainda não está saudável naquele runtime. Não converter falha em `WARN` apenas para fechar a prova. Para a prova canônica, confirme também no JSON que `evidence_context.evidence_scope` é `canonical-stable-mvp`, `distribution_profile` é `stable-mvp` e `runtime_mode` é `verified-erofs-overlay`.
+
+Para repetir o mesmo diagnóstico no USB Owner/Development, use `/workspace/ordax/system/surface/bin/ordax-mvp-smoke`. Esses relatórios ficam marcados como `development` e **não** fecham o gate Stable/MVP.
 
 ## Tour manual obrigatório da Surface
 
 Antes do tour, gere o checklist machine-readable da mesma sessão:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-mvp-smoke tour-template \
+/system/surface/bin/ordax-mvp-smoke tour-template \
   --label mvp-surface-tour \
   --output /var/lib/ordax/mvp-smoke/tour.json
 ```
@@ -83,7 +85,7 @@ Depois da coleta inicial, registrar PASS/FAIL separadamente para cada item:
 2. **Arquivos:** abre sem derrubar a Surface, lista a raiz real, navega por ao menos uma pasta e retorna pelo breadcrumb. Se uma mutação de teste for feita, use somente conteúdo descartável do espaço do usuário e remova-o ao final.
 3. **Notas:** abre, permite criar/editar uma nota de teste e preserva o conteúdo após uma recarga/reabertura normal da Surface conforme o armazenamento local disponível.
 4. **Internet:** abre uma página HTTPS pública e mantém chrome/rail/painel do OrdaX utilizáveis. Para isolamento, persistência de abas e limites de rede, executar também o harness específico `ordax-internet-proof`.
-5. **Ajustes:** tema e ao menos uma preferência de acessibilidade suportada mudam a Surface e permanecem coerentes após reabrir a janela.
+5. **Ajustes:** tema e ao menos uma preferência de acessibilidade suportada mudam a Surface e permanecem coerentes após reabrir a janela. Em **Idioma e região**, confirme que o layout físico aparece como **Em uso** (não “Próximo início”) e digite ao menos uma tecla/caractere que diferencie o layout selecionado, além de pontuação comum, para validar o teclado real.
 6. **Sistema:** Visão geral, Atualizações, Armazenamento, Diagnóstico e Sobre abrem sem dados fictícios; métricas/armazenamento e estado de atualização exibidos devem ser compatíveis com a coleta automática.
 7. **Rede e energia:** estados aparecem somente quando a capacidade correspondente existe. Não executar desligamento/reinício como parte deste smoke test; ações de energia possuem prova própria.
 8. **Isolamento de falha:** alternar entre os cinco apps principais não deve encerrar a Surface nem corromper o estado dos demais apps.
@@ -95,7 +97,7 @@ Depois da coleta inicial, registrar PASS/FAIL separadamente para cada item:
 Sem reiniciar o notebook, execute novamente:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-mvp-smoke collect \
+/system/surface/bin/ordax-mvp-smoke collect \
   --label mvp-surface-after-tour \
   --output /var/lib/ordax/mvp-smoke/after-tour.json
 ```
@@ -109,7 +111,7 @@ A existência de dois relatórios sem falha mostra que os endpoints essenciais, 
 Depois das duas coletas, ainda sem reiniciar ou atualizar deliberadamente o notebook, execute:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-mvp-smoke compare \
+/system/surface/bin/ordax-mvp-smoke compare \
   --label mvp-surface-same-session \
   --baseline /var/lib/ordax/mvp-smoke/baseline.json \
   --after /var/lib/ordax/mvp-smoke/after-tour.json \
@@ -131,7 +133,7 @@ Uma atualização automática que ocorra entre baseline e pós-tour também inva
 Depois que `comparison.json` estiver em PASS e os 10 itens de `tour.json` tiverem sido revisados, finalize a sessão:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-mvp-smoke finalize \
+/system/surface/bin/ordax-mvp-smoke finalize \
   --label mvp-surface-final \
   --baseline /var/lib/ordax/mvp-smoke/baseline.json \
   --after /var/lib/ordax/mvp-smoke/after-tour.json \
@@ -154,7 +156,8 @@ Antes de atualizar qualquer snapshot canônico para PASS, devem existir juntos:
 - `comparison.json` revisado com `FAIL=0`;
 - `tour.json` com exatamente os 10 itens em `pass`;
 - `final.json` revisado com `FAIL=0`;
-- referência ao SHA exato do checkout testado;
+- `evidence_context` dos relatórios/final igual a `stable-mvp + verified-erofs-overlay + canonical-stable-mvp` quando a afirmação for canônica;
+- referência ao SHA exato da release Stable/MVP testada;
 - confirmação `PHYSICAL_WRITE=NO` e `REBOOT_REQUIRED=NO` para esta operação;
 - quando Internet fizer parte da afirmação de isolamento/persistência, evidência do runbook específico de Internet.
 
