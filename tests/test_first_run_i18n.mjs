@@ -6,7 +6,7 @@ import {
   firstRunText,
 } from "../system/i18n/first-run.mjs";
 
-const LOCALES = ["pt-BR", "en-US", "es-419", "fr-FR"];
+const LOCALES = ["pt-BR", "en-US", "es-419", "fr-FR", "de-DE"];
 
 test("first-run catalogs expose complete navigation for MVP locales", () => {
   for (const locale of LOCALES) {
@@ -22,6 +22,7 @@ test("first-run catalogs expose complete navigation for MVP locales", () => {
 test("first-run interpolation is locale aware and unknown locale falls back to English", () => {
   assert.equal(firstRunText("pt-BR", "passwordFor", { ssid: "Casa" }), "Senha de Casa");
   assert.equal(firstRunText("es-419", "passwordFor", { ssid: "Casa" }), "Contraseña de Casa");
+  assert.equal(firstRunText("de-DE", "passwordFor", { ssid: "Casa" }), "Passwort für Casa");
   assert.equal(firstRunText("xx-YY", "continue"), "Continue");
 });
 
