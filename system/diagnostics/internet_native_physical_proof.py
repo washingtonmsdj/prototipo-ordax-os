@@ -20,6 +20,40 @@ RUN = Path("/run/ordax-surface")
 EVIDENCE = Path("/var/lib/ordax/internet-proof")
 MAX_SESSION = 128 * 1024
 MAX_TABS = 16
+EVIDENCE_CONTEXTS = {
+    ("owner-development", "dynamic-native-runtime"): "development",
+    ("stable-mvp", "verified-erofs-overlay"): "canonical-stable-mvp",
+}
+
+
+def evidence_context_from_environment() -> dict:
+    distribution_profile = os.environ.get("ORDAX_PROOF_PROFILE", "owner-development")
+    runtime_mode = os.environ.get("ORDAX_PROOF_RUNTIME_MODE", "dynamic-native-runtime")
+    evidence_scope = os.environ.get(
+        "ORDAX_PROOF_EVIDENCE_SCOPE",
+        EVIDENCE_CONTEXTS.get((distribution_profile, runtime_mode), ""),
+    )
+    runtime_sha256 = os.environ.get("ORDAX_PROOF_RUNTIME_SHA256", "")
+    expected_scope = EVIDENCE_CONTEXTS.get((distribution_profile, runtime_mode))
+    if expected_scope is None or evidence_scope != expected_scope:
+        raise ValueError("physical proof evidence context is invalid")
+    if evidence_scope == "canonical-stable-mvp":
+        if not (
+            len(runtime_sha256) == 64
+            and all(char in "0123456789abcdef" for char in runtime_sha256)
+        ):
+            raise ValueError("Stable/MVP proof runtime digest is invalid")
+        normalized_digest = runtime_sha256
+    else:
+        if runtime_sha256:
+            raise ValueError("development proof runtime must not claim a verified digest")
+        normalized_digest = None
+    return {
+        "distribution_profile": distribution_profile,
+        "runtime_mode": runtime_mode,
+        "evidence_scope": evidence_scope,
+        "runtime_sha256": normalized_digest,
+    }
 
 
 def _sha(data: bytes) -> str:
@@ -201,6 +235,7 @@ def collect(label: str, host: str = "127.0.0.1", port: int = 8765,
     report = {
         "schema": SCHEMA, "captured_at": _timestamp(), "label": label,
         "boot_id": _boot_id(proc_root), "loopback": {"host": host, "port": port},
+        "evidence_context": evidence_context_from_environment(),
         "browser_host_processes": processes, "profile": profile_state,
         "session": session, "host_log": _log_snapshot(run_root), "checks": checks,
     }
@@ -208,9 +243,42 @@ def collect(label: str, host: str = "127.0.0.1", port: int = 8765,
     return report
 
 
+def _evidence_context(report: dict) -> tuple[str, str, str, str | None] | None:
+    context = report.get("evidence_context")
+    if not isinstance(context, dict):
+        return None
+    distribution_profile = context.get("distribution_profile")
+    runtime_mode = context.get("runtime_mode")
+    evidence_scope = context.get("evidence_scope")
+    runtime_sha256 = context.get("runtime_sha256")
+    expected_scope = EVIDENCE_CONTEXTS.get((distribution_profile, runtime_mode))
+    if expected_scope is None or evidence_scope != expected_scope:
+        return None
+    if evidence_scope == "canonical-stable-mvp":
+        if not (
+            isinstance(runtime_sha256, str)
+            and len(runtime_sha256) == 64
+            and all(char in "0123456789abcdef" for char in runtime_sha256)
+        ):
+            return None
+    elif runtime_sha256 is not None:
+        return None
+    return distribution_profile, runtime_mode, evidence_scope, runtime_sha256
+
+
 def compare(before: dict, after: dict) -> dict:
     checks = []
     checks.append(_ck("report_schema", before.get("schema") == SCHEMA and after.get("schema") == SCHEMA, "ambas as coletas usam o schema esperado"))
+    before_context = _evidence_context(before)
+    after_context = _evidence_context(after)
+    same_context = before_context is not None and before_context == after_context
+    checks.append(_ck(
+        "same_evidence_context",
+        same_context,
+        "mesmo perfil/runtime de evidência"
+        if same_context
+        else "perfil/runtime de evidência ausente, inválido ou diferente",
+    ))
     checks.append(_ck("same_boot", bool(before.get("boot_id")) and before.get("boot_id") == after.get("boot_id"), "boot_id permaneceu igual"))
     bp = before.get("browser_host_processes") or []
     ap = after.get("browser_host_processes") or []
@@ -222,7 +290,20 @@ def compare(before: dict, after: dict) -> dict:
     checks.append(_ck("tab_session_persisted", digest_ok, "hash semântico da sessão permaneceu igual"))
     shape_ok = isinstance(bs.get("url_count"), int) and bs.get("url_count") > 0 and bs.get("url_count") == ass.get("url_count") and bs.get("active_index") == ass.get("active_index")
     checks.append(_ck("tab_shape_persisted", shape_ok, "quantidade de abas e índice ativo permaneceram iguais"))
-    report = {"schema": COMPARE_SCHEMA, "compared_at": _timestamp(), "checks": checks}
+    report = {
+        "schema": COMPARE_SCHEMA,
+        "compared_at": _timestamp(),
+        "evidence_context": (
+            {
+                "distribution_profile": before_context[0],
+                "runtime_mode": before_context[1],
+                "evidence_scope": before_context[2],
+                "runtime_sha256": before_context[3],
+            }
+            if same_context else None
+        ),
+        "checks": checks,
+    }
     report["summary"] = _summary(checks)
     return report
 
