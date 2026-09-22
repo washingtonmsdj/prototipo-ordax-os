@@ -81,10 +81,10 @@
     },
     {
       "id": "assistant",
-      "title": "Assistente",
+      "title": "Assistente OrdaX",
       "description": "IA local opcional para conversar, resumir conteúdo escolhido e explicar diagnósticos sanitizados.",
       "monogram": "IA",
-      "display_title": "Assistente"
+      "display_title": "Assistente OrdaX"
     },
     {
       "id": "settings",
