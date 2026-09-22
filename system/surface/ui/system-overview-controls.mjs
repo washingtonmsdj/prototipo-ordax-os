@@ -47,35 +47,12 @@ const SYSTEM_WINDOW_SELECTOR = '[data-window-id="system"]';
 const SYSTEM_EXTENSION_SELECTOR = '[data-app-extension="system-overview"]';
 
 const SYSTEM_SECTIONS = Object.freeze([
-  Object.freeze({ id: "overview", label: "Visão geral" }),
-  Object.freeze({ id: "updates", label: "Atualizações" }),
-  Object.freeze({ id: "storage", label: "Armazenamento" }),
-  Object.freeze({ id: "diagnostics", label: "Diagnóstico" }),
-  Object.freeze({ id: "about", label: "Sobre" }),
+  Object.freeze({ id: "overview", messageId: "system.section.overview" }),
+  Object.freeze({ id: "updates", messageId: "system.section.updates" }),
+  Object.freeze({ id: "storage", messageId: "system.section.storage" }),
+  Object.freeze({ id: "diagnostics", messageId: "system.section.diagnostics" }),
+  Object.freeze({ id: "about", messageId: "system.section.about" }),
 ]);
-
-const SECTION_COPY = Object.freeze({
-  overview: Object.freeze({
-    title: "Visão geral",
-    subtitle: "Estado atual do OrdaX, conectividade e sinais que exigem atenção.",
-  }),
-  updates: Object.freeze({
-    title: "Atualizações",
-    subtitle: "Entrega observada, aplicação, recuperação e histórico deste dispositivo.",
-  }),
-  storage: Object.freeze({
-    title: "Armazenamento",
-    subtitle: "Espaço do usuário medido pelo host, sem inferir a capacidade de outros volumes.",
-  }),
-  diagnostics: Object.freeze({
-    title: "Diagnóstico",
-    subtitle: "Capacidades desta execução e, quando disponível, uma revisão local explícita e sanitizada.",
-  }),
-  about: Object.freeze({
-    title: "Sobre",
-    subtitle: "Identidade da entrega e limites de versionamento dos componentes do OrdaX.",
-  }),
-});
 
 function validSystemSection(value) {
   return SYSTEM_SECTIONS.some((section) => section.id === value);
@@ -179,6 +156,8 @@ export function mountSystemOverviewControls(
   const componentPort = componentManager === null ? null : assertComponentManager(componentManager);
   const intelligencePort = intelligence === null ? null : assertIntelligencePort(intelligence);
   const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
   const documentObject = root.ownerDocument;
 
   let hostSnapshot = validateSurfaceSnapshot(hostPort.getSnapshot());
@@ -288,11 +267,15 @@ export function mountSystemOverviewControls(
   const renderHeader = (view) => {
     const header = node(documentObject, "header", "ordax-system-header");
     const copy = node(documentObject, "div", "ordax-system-header-copy");
-    const sectionCopy = SECTION_COPY[activeSection];
     copy.append(
-      node(documentObject, "span", "ordax-system-eyebrow", "Sistema"),
-      node(documentObject, "h3", "ordax-system-title", sectionCopy.title),
-      node(documentObject, "p", "ordax-system-subtitle", sectionCopy.subtitle),
+      node(documentObject, "span", "ordax-system-eyebrow", t("system.eyebrow")),
+      node(documentObject, "h3", "ordax-system-title", t(`system.section.${activeSection}`)),
+      node(
+        documentObject,
+        "p",
+        "ordax-system-subtitle",
+        t(`system.section.${activeSection}.subtitle`),
+      ),
     );
 
     const health = node(documentObject, "span", "ordax-system-health");
@@ -316,9 +299,14 @@ export function mountSystemOverviewControls(
 
   const renderSectionNavigation = (view) => {
     const navigation = node(documentObject, "nav", "ordax-system-navigation");
-    navigation.setAttribute("aria-label", "Seções de Sistema");
+    navigation.setAttribute("aria-label", t("system.navigation.aria"));
     for (const section of SYSTEM_SECTIONS) {
-      const button = node(documentObject, "button", "ordax-system-navigation-item", section.label);
+      const button = node(
+        documentObject,
+        "button",
+        "ordax-system-navigation-item",
+        t(section.messageId),
+      );
       button.type = "button";
       button.dataset.systemSection = section.id;
       const active = activeSection === section.id;
