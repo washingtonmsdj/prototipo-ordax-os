@@ -123,7 +123,7 @@ Um usuário deve conseguir:
 5. concluir o primeiro uso Native no próprio USB, escolhendo idioma/fuso, com rede opcional e **conta opcional**;
 6. chegar à Surface e **usar o sistema diretamente pelo USB**, inclusive sem conta online;
 7. conectar à rede durante o primeiro uso ou posteriormente;
-8. usar Arquivos, Notas, Internet, Ajustes e Sistema;
+8. usar Arquivos, Notas, Internet, Ajustes e Sistema; quando a IA local estiver incluída na mídia, usar também o Assistente sem depender de conta ou nuvem;
 9. atualizar por canal oficial;
 10. recuperar automaticamente de atualização defeituosa;
 11. acessar login/cadastro somente quando identidade real estiver habilitada;
@@ -213,6 +213,23 @@ site oficial
 ```
 
 O Creator do MVP prepara mídia removível. Não oferece gravação/instalação em disco interno.
+
+### IA local opcional no Creator
+
+O MVP possui um contrato de seleção para o componente **IA local**. A experiência planejada do Creator apresenta **Incluir IA local** marcada por padrão, mas o usuário pode desmarcar e criar um OrdaX plenamente utilizável sem IA.
+
+A IA é um componente opcional e não ganha autoridade sobre boot, trust, shell, disco RAW ou ações administrativas. O app mantém identidade estável `assistant`; motor e modelo ficam atrás de `ordax.ai-runtime/1`, permitindo migrar de modelo ou engine sem refazer a Surface.
+
+O primeiro proof físico Stable/MVP já autorizado permanece ligado ao contexto exato do writer atual. Por isso, o contrato de seleção pode evoluir agora, mas a ligação do checkbox ao **writer físico** só entra em uma revisão posterior com novo contexto de autorização. Isso evita invalidar silenciosamente a autorização do primeiro proof.
+
+```text
+Creator
+ -> Incluir IA local [marcado por padrão]
+ -> marcado: exige pacote local assinado/verificado
+ -> desmarcado: OrdaX funciona normalmente sem IA
+ -> nunca faz fallback silencioso para nuvem
+```
+
 
 ### Estado técnico atual do USB durável v2
 
