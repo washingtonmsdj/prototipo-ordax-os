@@ -44,9 +44,9 @@ class FilesModifiedTimeTests(unittest.TestCase):
         self.assertIn("Intl.DateTimeFormat", controls)
         self.assertIn('sortKey === "modified"', controls)
         self.assertIn("left.modifiedAt - right.modifiedAt", controls)
-        self.assertIn('sortButton("Modificado", "modified")', controls)
-        self.assertIn("formatModifiedAt(entry.modifiedAt)", controls)
-        self.assertIn("formatModifiedAt(selected.modifiedAt)", controls)
+        self.assertIn('sortButton(t("files.column.modified"), "modified")', controls)
+        self.assertIn("formatModifiedAt(entry.modifiedAt, locale())", controls)
+        self.assertIn("formatModifiedAt(selected.modifiedAt, locale())", controls)
 
     def test_modified_column_is_part_of_real_list_layout(self):
         css = CSS.read_text(encoding="utf-8")
