@@ -238,8 +238,9 @@ Estado atual do caminho v2:
 - `release-manifest/2`: compatibilidade preservada;
 - `release-manifest/3`: generator + signer + verifier + aquisição não-ativante implementados e verdes em CI, com `system.erofs` + `native-surface-runtime.erofs`;
 - runtime gráfico v3: armazenamento content-addressed por SHA-256 e reuso de bytes verificados entre releases implementados;
-- materialização portátil: implementada sem ativação implícita;
-- revalidação offline exata da release assinada: implementada para v2 e v3;
+- `release-manifest/4`: caminho de protocolo implementado para acrescentar `local-ai-runtime.erofs`, com binding assinado ao source-lock do engine/modelo e armazenamento da IA por SHA-256 separado do runtime gráfico; o EROFS **real** de llama.cpp + modelo ainda é gate pendente e v4 não substitui ainda o boot v3 provado;
+- materialização portátil: implementada sem ativação implícita; v4 também permanece não-ativante;
+- revalidação offline exata da release assinada: implementada para v2, v3 e para o caminho de protocolo v4;
 - mount EROFS + estado ext4 + runtime system read-only: prova descartável verde;
 - helper de mount portátil dentro do initramfs: conectado ao PID1 candidato; continua sem autoridade de assinatura/ativação própria;
 - estado de ativação `current/known-good/candidate/rejected`: implementado no ext4 persistente;
