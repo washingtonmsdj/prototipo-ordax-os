@@ -6,13 +6,11 @@ import {
   assertNetworkStatusPort,
   validateNetworkStatusSnapshot,
 } from "../../contracts/network-status.mjs";
-import {
-  networkManagementActionMessage,
-  networkManagementFailureMessage,
-  runNetworkManagementAction,
-} from "../../services/network/management-runtime.mjs";
+import { runNetworkManagementAction } from "../../services/network/management-runtime.mjs";
+import { assertLocalizationPort } from "../../contracts/localization.mjs";
 import {
   formatNetworkReceivedAt,
+  localizeNetworkSummary,
   summarizeNetworkStatus,
 } from "./network-tray-controls.mjs";
 
@@ -25,22 +23,42 @@ function node(documentObject, tag, className, text) {
   return element;
 }
 
-function signalLabel(signalDbm) {
-  if (signalDbm >= -50) return "Sinal forte";
-  if (signalDbm >= -60) return "Sinal bom";
-  if (signalDbm >= -70) return "Sinal regular";
-  return "Sinal fraco";
+function signalLabel(signalDbm, t) {
+  if (signalDbm >= -50) return t("network.signal.labelStrong");
+  if (signalDbm >= -60) return t("network.signal.labelGood");
+  if (signalDbm >= -70) return t("network.signal.labelFair");
+  return t("network.signal.labelWeak");
+}
+
+function networkActionMessage(action, state, t) {
+  return t(`network.action.${action}.${state === 1 ? "done" : "pending"}`);
+}
+
+function networkFailureMessage(action, error, t) {
+  if (error?.status === 409 && action === "connect") {
+    return t("network.action.connect.conflict");
+  }
+  if (error?.status === 409 && action === "reconnect") {
+    return t("network.action.reconnect.conflict");
+  }
+  if (error instanceof TypeError) {
+    return t("network.action.invalid");
+  }
+  return t("network.action.failed");
 }
 
 export function mountNetworkQuickPanel(
   root,
   networkStatus,
   networkManagement = null,
+  localization = null,
 ) {
   if (!(root instanceof Element)) {
     throw new TypeError("Network quick panel requires a Surface root Element");
   }
   const statusPort = networkStatus === null ? null : assertNetworkStatusPort(networkStatus);
+  const localizationPort = assertLocalizationPort(localization);
+  const t = localizationPort.translate;
   const managementPort =
     networkManagement === null ? null : assertNetworkManagementPort(networkManagement);
   const panel = root.querySelector('[data-quick-panel="network"]');
@@ -159,36 +177,46 @@ export function mountNetworkQuickPanel(
     const summary = node(documentObject, "div", "ordax-quick-network-summary");
     if (statusSnapshot) {
       const state = summarizeNetworkStatus(statusSnapshot);
+      const stateCopy = localizeNetworkSummary(state, t);
       summary.dataset.observation = statusReadFailed ? "stale" : "current";
       summary.append(
         node(
           documentObject,
           "strong",
           "",
-          statusReadFailed ? `${state.label} · dados antigos` : state.label,
+          statusReadFailed
+            ? t("network.quick.staleLabel", { label: stateCopy.label })
+            : stateCopy.label,
         ),
         node(
           documentObject,
           "span",
           "",
           statusReadFailed
-            ? `${state.title} · última leitura recebida pela Surface às ${formatNetworkReceivedAt(statusLastSuccessAt)}`
-            : state.title,
+            ? t("network.quick.staleDetail", {
+                title: stateCopy.title,
+                time: formatNetworkReceivedAt(
+                  statusLastSuccessAt,
+                  localizationPort.getLocale(),
+                  t("common.time.unknown"),
+                ),
+              })
+            : stateCopy.title,
         ),
       );
     } else {
       summary.dataset.observation = statusReadFailed ? "unavailable" : "loading";
       summary.append(
-        node(documentObject, "strong", "", "Rede"),
+        node(documentObject, "strong", "", t("network.quick.heading")),
         node(
           documentObject,
           "span",
           "",
           statusPort
             ? statusReadFailed
-              ? "Estado da conexão indisponível no momento."
-              : "Lendo estado da conexão…"
-            : "Detalhes locais de rede indisponíveis neste ambiente.",
+              ? t("network.quick.statusUnavailable")
+              : t("network.quick.statusLoading")
+            : t("network.quick.localDetailsUnavailable"),
         ),
       );
     }
@@ -200,7 +228,7 @@ export function mountNetworkQuickPanel(
           documentObject,
           "p",
           "ordax-quick-empty",
-          "O gerenciamento rápido de Wi-Fi não está disponível neste ambiente.",
+          t("network.quick.managementUnavailable"),
         ),
       );
       restoreInteraction(interaction);
@@ -220,10 +248,16 @@ export function mountNetworkQuickPanel(
       button.disabled = pending;
       actions.append(button);
     };
-    addAction("scan", pending ? "Aguarde…" : "Procurar redes", true);
-    if (managementSnapshot?.currentSsid) addAction("disconnect", "Desconectar");
+    addAction(
+      "scan",
+      pending ? t("network.quick.wait") : t("network.quick.scan"),
+      true,
+    );
+    if (managementSnapshot?.currentSsid) {
+      addAction("disconnect", t("network.quick.disconnect"));
+    }
     if (managementSnapshot?.savedSsid && !managementSnapshot.currentSsid) {
-      addAction("reconnect", "Reconectar");
+      addAction("reconnect", t("network.quick.reconnect"));
     }
     content.append(actions);
 
@@ -239,7 +273,13 @@ export function mountNetworkQuickPanel(
         documentObject,
         "p",
         "ordax-quick-message",
-        `Redes exibidas com dados antigos · última leitura recebida pela Surface às ${formatNetworkReceivedAt(managementLastSuccessAt)}.`,
+        t("network.quick.staleNetworks", {
+          time: formatNetworkReceivedAt(
+            managementLastSuccessAt,
+            localizationPort.getLocale(),
+            t("common.time.unknown"),
+          ),
+        }),
       );
       stale.dataset.observation = "stale";
       content.append(stale);
@@ -252,8 +292,8 @@ export function mountNetworkQuickPanel(
           "p",
           "ordax-quick-empty",
           managementReadFailed
-            ? "O gerenciamento de Wi-Fi está indisponível no momento."
-            : "Lendo Wi-Fi…",
+            ? t("network.quick.wifiUnavailable")
+            : t("network.quick.wifiLoading"),
         ),
       );
       restoreInteraction(interaction);
@@ -263,7 +303,7 @@ export function mountNetworkQuickPanel(
     if (managementSnapshot.currentSsid) {
       const current = node(documentObject, "div", "ordax-quick-current");
       current.append(
-        node(documentObject, "span", "ordax-quick-kicker", "Conectado"),
+        node(documentObject, "span", "ordax-quick-kicker", t("network.quick.connected")),
         node(documentObject, "strong", "", managementSnapshot.currentSsid),
       );
       content.append(current);
@@ -279,7 +319,7 @@ export function mountNetworkQuickPanel(
           documentObject,
           "p",
           "ordax-quick-empty",
-          "Use “Procurar redes” para encontrar redes Wi-Fi compatíveis.",
+          t("network.quick.empty"),
         ),
       );
     } else {
@@ -298,7 +338,14 @@ export function mountNetworkQuickPanel(
             documentObject,
             "small",
             "",
-            `${entry.connected ? "Conectada" : entry.saved ? "Salva" : "Disponível"} · ${signalLabel(entry.signalDbm)}`,
+            t("network.quick.networkDetail", {
+              state: entry.connected
+                ? t("network.quick.networkConnected")
+                : entry.saved
+                  ? t("network.quick.networkSaved")
+                  : t("network.quick.networkAvailable"),
+              signal: signalLabel(entry.signalDbm, t),
+            }),
           ),
         );
         button.append(
@@ -316,7 +363,7 @@ export function mountNetworkQuickPanel(
     if (selected && !selected.connected) {
       const form = node(documentObject, "div", "ordax-quick-network-form");
       const label = node(documentObject, "label", "ordax-quick-network-password");
-      label.append(node(documentObject, "span", "", `Senha de ${selected.ssid}`));
+      label.append(node(documentObject, "span", "", t("network.quick.password", { ssid: selected.ssid })));
       const input = documentObject.createElement("input");
       input.type = "password";
       input.autocomplete = "off";
@@ -325,7 +372,7 @@ export function mountNetworkQuickPanel(
       input.value = passwordDraftSsid === selected.ssid ? passwordDraft : "";
       input.disabled = pending;
       label.append(input);
-      const connect = node(documentObject, "button", "ordax-quick-action ordax-quick-action-primary", "Conectar");
+      const connect = node(documentObject, "button", "ordax-quick-action ordax-quick-action-primary", t("network.quick.connect"));
       connect.type = "button";
       connect.dataset.quickNetworkAction = "connect";
       connect.dataset.quickWifiSsid = selected.ssid;
@@ -334,7 +381,7 @@ export function mountNetworkQuickPanel(
       content.append(form);
     }
 
-    const settings = node(documentObject, "button", "ordax-quick-settings-link", "Abrir Ajustes de rede");
+    const settings = node(documentObject, "button", "ordax-quick-settings-link", t("network.quick.openSettings"));
     settings.type = "button";
     settings.dataset.launchApp = "settings";
     settings.dataset.appTarget = "network";
@@ -367,7 +414,7 @@ export function mountNetworkQuickPanel(
       managementSnapshot = nextSnapshot;
       managementReadFailed = false;
       managementLastSuccessAt = Date.now();
-      if (message === "O gerenciamento de Wi-Fi está temporariamente indisponível.") {
+      if (message === t("network.quick.temporarilyUnavailable")) {
         message = "";
       }
       if (
@@ -381,7 +428,7 @@ export function mountNetworkQuickPanel(
       if (destroyed || ordinal !== managementOrdinal) return;
       managementReadFailed = true;
       if (managementSnapshot === null) {
-        message = "O gerenciamento de Wi-Fi está temporariamente indisponível.";
+        message = t("network.quick.temporarilyUnavailable");
       }
     }
   };
@@ -396,7 +443,7 @@ export function mountNetworkQuickPanel(
     const ordinal = ++actionOrdinal;
     managementOrdinal += 1;
     pending = true;
-    message = networkManagementActionMessage(action, 0);
+    message = networkActionMessage(action, 0, t);
     render();
 
     try {
@@ -409,11 +456,11 @@ export function mountNetworkQuickPanel(
       managementLastSuccessAt = Date.now();
       selectedSsid = null;
       clearPasswordDraft();
-      message = networkManagementActionMessage(action, 1);
+      message = networkActionMessage(action, 1, t);
       await refreshStatus();
     } catch (error) {
       if (destroyed || ordinal !== actionOrdinal) return;
-      message = networkManagementFailureMessage(action, error);
+      message = networkFailureMessage(action, error, t);
     } finally {
       if (!destroyed && ordinal === actionOrdinal) {
         pending = false;
@@ -462,7 +509,7 @@ export function mountNetworkQuickPanel(
       input.value = "";
       clearPasswordDraft();
       if (!password) {
-        message = "Digite a senha da rede Wi-Fi.";
+        message = t("network.quick.passwordRequired");
         render();
         return;
       }
@@ -489,6 +536,10 @@ export function mountNetworkQuickPanel(
     }
   };
 
+  const unsubscribeLocalization = localizationPort.subscribe(() => {
+    if (!destroyed) render();
+  });
+
   panel.addEventListener("ordax:quick-panel-open", onOpen);
   panel.addEventListener("ordax:quick-panel-close", onClose);
   panel.addEventListener("click", onClick);
@@ -503,6 +554,7 @@ export function mountNetworkQuickPanel(
       managementOrdinal += 1;
       actionOrdinal += 1;
       clearPasswordDraft();
+      unsubscribeLocalization();
       statusSnapshot = null;
       statusLastSuccessAt = null;
       managementSnapshot = null;
