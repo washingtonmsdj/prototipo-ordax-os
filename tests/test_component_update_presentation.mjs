@@ -23,7 +23,7 @@ assert.equal(appVersionStage("1.0.0"), "stable");
 
 assert.deepEqual(
   new Set(apps.keys()),
-  new Set(["files", "settings", "account", "internet", "notes"]),
+  new Set(["files", "settings", "account", "internet", "notes", "assistant"]),
 );
 assert.equal(system.has("system"), true, "Sistema belongs to the system update scope");
 assert.equal(system.has("ordax-base"), true);
@@ -42,6 +42,9 @@ assert.equal(apps.get("internet").updateChannel.id, "development-git");
 assert.equal(apps.get("notes").version, "0.4.0");
 assert.equal(apps.get("notes").versionStage, "beta");
 assert.equal(apps.get("notes").updateChannel.id, "development-git");
+assert.equal(apps.get("assistant").version, "0.1.0");
+assert.equal(apps.get("assistant").versionStage, "beta");
+assert.equal(apps.get("assistant").updateChannel.id, "development-git");
 
 assert.equal(system.get("system").version, "0.1.0");
 assert.equal(system.get("system").versionStage, "beta");
