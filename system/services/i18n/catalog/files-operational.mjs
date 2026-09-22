@@ -45,6 +45,8 @@ export const FILES_OPERATIONAL_SOURCE_MESSAGES = Object.freeze({
   "files.recents.removed": "“{name}” foi removido de Recentes. O arquivo não foi apagado.",
   "files.recents.cleared": "Histórico limpo. Nenhum arquivo foi apagado.",
 
+  "files.preview.readOnlyMeta": "{size} · somente leitura",
+  "files.preview.close": "Fechar",
   "files.preview.tooLarge": "Este arquivo é grande demais para a visualização rápida (máximo 256 KB).",
   "files.preview.invalidUtf8": "A visualização rápida aceita apenas texto UTF-8 válido.",
   "files.preview.failed": "Não foi possível visualizar este arquivo.",
@@ -174,6 +176,8 @@ export const FILES_OPERATIONAL_ENGLISH_MESSAGES = Object.freeze({
   "files.recents.removed": "“{name}” was removed from Recents. The file was not deleted.",
   "files.recents.cleared": "History cleared. No files were deleted.",
 
+  "files.preview.readOnlyMeta": "{size} · read only",
+  "files.preview.close": "Close",
   "files.preview.tooLarge": "This file is too large for quick preview (maximum 256 KB).",
   "files.preview.invalidUtf8": "Quick preview accepts only valid UTF-8 text.",
   "files.preview.failed": "This file could not be previewed.",
