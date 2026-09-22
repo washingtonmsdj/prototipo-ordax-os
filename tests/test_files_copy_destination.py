@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SERVER = ROOT / "system" / "surface" / "runtime" / "native_host_server.py"
 ADAPTER = ROOT / "system" / "adapters" / "native" / "file-space.mjs"
 CONTROLS = ROOT / "system" / "surface" / "ui" / "file-space-controls.mjs"
+FILES_LOCALIZATION = ROOT / "system" / "services" / "i18n" / "catalog" / "files.mjs"
 CONTRACT = ROOT / "system" / "contracts" / "file-space.mjs"
 CSS = ROOT / "system" / "surface" / "ui" / "files.css"
 
@@ -63,7 +64,9 @@ class FilesCopyDestinationTests(unittest.TestCase):
         self.assertIn("data.fileCopyToToggle", controls.replace("dataset", "data"))
         self.assertIn('mode: "copy"', controls)
         self.assertIn("transferToCurrentDirectory", controls)
-        self.assertIn('"Copiar para esta pasta"', controls)
+        catalog = FILES_LOCALIZATION.read_text(encoding="utf-8")
+        self.assertIn('t(isCopy ? "files.transfer.copyConfirm" : "files.transfer.moveConfirm")', controls)
+        self.assertIn('"files.transfer.copyConfirm": "Copiar para esta pasta"', catalog)
         self.assertIn(
             "port.copyFile(listing.path, selected.name, listing.path, newName)",
             controls,
