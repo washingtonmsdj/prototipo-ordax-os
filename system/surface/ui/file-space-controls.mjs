@@ -289,10 +289,15 @@ export function mountFileSpaceControls(
   };
 
   const renderLocations = (container) => {
-    const heading = node(documentObject, "p", "ordax-files-section-label", "Locais");
+    const heading = node(documentObject, "p", "ordax-files-section-label", t("files.location.section"));
     container.append(heading);
     LOCATIONS.forEach((location, index) => {
-      const button = node(documentObject, "button", "ordax-files-location", location.label);
+      const button = node(
+        documentObject,
+        "button",
+        "ordax-files-location",
+        t(location.messageId),
+      );
       button.type = "button";
       button.dataset.fileOpenPath = location.path;
       const active = Boolean(
@@ -304,14 +309,24 @@ export function mountFileSpaceControls(
 
       if (index === 0) {
         if (recentPort) {
-          const recent = node(documentObject, "button", "ordax-files-location", "Recentes");
+          const recent = node(
+            documentObject,
+            "button",
+            "ordax-files-location",
+            t("files.location.recents"),
+          );
           recent.type = "button";
           recent.dataset.fileOpenRecent = "";
           recent.dataset.active = String(recentMode);
           recent.setAttribute("aria-current", recentMode ? "page" : "false");
           container.append(recent);
         }
-        const trash = node(documentObject, "button", "ordax-files-location", "Lixeira");
+        const trash = node(
+          documentObject,
+          "button",
+          "ordax-files-location",
+          t("files.location.trash"),
+        );
         trash.type = "button";
         trash.dataset.fileOpenTrash = "";
         trash.dataset.active = String(trashMode);
@@ -321,7 +336,9 @@ export function mountFileSpaceControls(
     });
 
     if (projectPort) {
-      container.append(node(documentObject, "p", "ordax-files-section-label", "Projetos"));
+      container.append(
+        node(documentObject, "p", "ordax-files-section-label", t("files.location.projects")),
+      );
       for (const project of projectSnapshot?.projects ?? []) {
         const button = node(documentObject, "button", "ordax-files-location", project.name);
         button.type = "button";
@@ -367,7 +384,12 @@ export function mountFileSpaceControls(
   };
 
   const renderBreadcrumb = (container) => {
-    const rootButton = node(documentObject, "button", "ordax-files-crumb", "Meu espaço");
+    const rootButton = node(
+      documentObject,
+      "button",
+      "ordax-files-crumb",
+      t("files.location.mySpace"),
+    );
     rootButton.type = "button";
     rootButton.dataset.fileOpenPath = "/";
     container.append(rootButton);
@@ -511,7 +533,7 @@ export function mountFileSpaceControls(
   };
 
   const normalizedSearchQuery = () =>
-    searchQuery.trim().toLocaleLowerCase(FILE_SEARCH_LOCALE);
+    searchQuery.trim().toLocaleLowerCase(locale());
 
   const compareEntryNames = (left, right) =>
     left.name.localeCompare(right.name, FILE_SEARCH_LOCALE, {
@@ -524,7 +546,7 @@ export function mountFileSpaceControls(
     const query = normalizedSearchQuery();
     const filtered = query
       ? listing.entries.filter((entry) =>
-          entry.name.toLocaleLowerCase(FILE_SEARCH_LOCALE).includes(query),
+          entry.name.toLocaleLowerCase(locale()).includes(query),
         )
       : [...listing.entries];
 
@@ -572,7 +594,7 @@ export function mountFileSpaceControls(
       "aria-label",
       active
         ? `${label}, ordenação ${sortDirection === "asc" ? "crescente" : "decrescente"}`
-        : `Ordenar por ${label.toLocaleLowerCase(FILE_SEARCH_LOCALE)}`,
+        : `Ordenar por ${label.toLocaleLowerCase(locale())}`,
     );
     button.append(
       node(documentObject, "span", "", label),
@@ -747,7 +769,7 @@ export function mountFileSpaceControls(
         nameCell,
         node(documentObject, "span", "ordax-file-meta", entry.kind === "directory" ? "Pasta" : "Arquivo"),
         node(documentObject, "span", "ordax-file-meta", entry.kind === "directory" ? "—" : formatSize(entry.size)),
-        node(documentObject, "span", "ordax-file-meta", formatModifiedAt(entry.modifiedAt)),
+        node(documentObject, "span", "ordax-file-meta", formatModifiedAt(entry.modifiedAt, locale())),
       );
       list.append(row);
     }
@@ -776,7 +798,7 @@ export function mountFileSpaceControls(
         documentObject,
         "span",
         "ordax-files-details-path",
-        `Modificado: ${formatModifiedAt(selected.modifiedAt)}`,
+        `Modificado: ${formatModifiedAt(selected.modifiedAt, locale())}`,
       ),
     );
 
@@ -948,11 +970,11 @@ export function mountFileSpaceControls(
 
   const visibleRecentEntries = () => {
     const entries = recentSnapshot?.entries ?? [];
-    const query = recentSearchQuery.trim().toLocaleLowerCase(FILE_SEARCH_LOCALE);
+    const query = recentSearchQuery.trim().toLocaleLowerCase(locale());
     if (!query) return [...entries];
     return entries.filter((entry) =>
-      entry.name.toLocaleLowerCase(FILE_SEARCH_LOCALE).includes(query)
-      || entry.path.toLocaleLowerCase(FILE_SEARCH_LOCALE).includes(query),
+      entry.name.toLocaleLowerCase(locale()).includes(query)
+      || entry.path.toLocaleLowerCase(locale()).includes(query),
     );
   };
 
@@ -1020,7 +1042,7 @@ export function mountFileSpaceControls(
         nameCell,
         node(documentObject, "span", "ordax-file-meta", "Arquivo"),
         node(documentObject, "span", "ordax-file-meta", parentPath(entry.path)),
-        node(documentObject, "span", "ordax-file-meta", formatModifiedAt(entry.openedAt)),
+        node(documentObject, "span", "ordax-file-meta", formatModifiedAt(entry.openedAt, locale())),
       );
       list.append(row);
     }
@@ -1041,7 +1063,7 @@ export function mountFileSpaceControls(
         documentObject,
         "span",
         "ordax-files-details-path",
-        `Aberto: ${formatModifiedAt(selected.openedAt)}`,
+        `Aberto: ${formatModifiedAt(selected.openedAt, locale())}`,
       ),
     );
     const actions = node(documentObject, "div", "ordax-files-details-actions");
@@ -1181,7 +1203,7 @@ export function mountFileSpaceControls(
           entry.kind === "directory" ? "Pasta" : formatSize(entry.size),
         ),
         node(documentObject, "span", "ordax-file-meta", parentPath(entry.originalPath)),
-        node(documentObject, "span", "ordax-file-meta", formatModifiedAt(entry.trashedAt)),
+        node(documentObject, "span", "ordax-file-meta", formatModifiedAt(entry.trashedAt, locale())),
       );
       list.append(row);
     }
@@ -1207,7 +1229,7 @@ export function mountFileSpaceControls(
         documentObject,
         "span",
         "ordax-files-details-path",
-        `Movido para a Lixeira: ${formatModifiedAt(selected.trashedAt)}`,
+        `Movido para a Lixeira: ${formatModifiedAt(selected.trashedAt, locale())}`,
       ),
     );
     const actions = node(documentObject, "div", "ordax-files-details-actions");
