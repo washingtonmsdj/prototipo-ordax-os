@@ -295,14 +295,14 @@ async function start() {
   }
   let networkQuickPanel = null;
   try {
-    networkQuickPanel = mountNetworkQuickPanel(root, networkStatus, networkManagement);
+    networkQuickPanel = mountNetworkQuickPanel(root, networkStatus, networkManagement, surface.localization);
   } catch (error) {
     reportClientDiagnostic("network-quick-panel", error);
   }
   let batteryTrayControls = null;
   if (powerStatus) {
     try {
-      batteryTrayControls = mountBatteryTrayControls(root, powerStatus);
+      batteryTrayControls = mountBatteryTrayControls(root, powerStatus, surface.localization);
     } catch (error) {
       reportClientDiagnostic("battery-tray-status", error);
     }
@@ -310,7 +310,7 @@ async function start() {
   let batteryQuickPanel = null;
   if (powerStatus) {
     try {
-      batteryQuickPanel = mountBatteryQuickPanel(root, powerStatus);
+      batteryQuickPanel = mountBatteryQuickPanel(root, powerStatus, surface.localization);
     } catch (error) {
       reportClientDiagnostic("battery-quick-panel", error);
     }
@@ -318,7 +318,7 @@ async function start() {
   let networkTrayControls = null;
   if (networkStatus) {
     try {
-      networkTrayControls = mountNetworkTrayControls(root, networkStatus);
+      networkTrayControls = mountNetworkTrayControls(root, networkStatus, surface.localization);
     } catch (error) {
       reportClientDiagnostic("network-tray-status", error);
     }
