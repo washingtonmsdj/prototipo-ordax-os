@@ -135,8 +135,16 @@ test("regional preferences share the first-run supported values", () => {
     }),
     expectedPreferences({ "regional.time-zone": "America/Sao_Paulo" }),
   );
+  assert.equal(
+    createPreferenceSnapshot({ "regional.locale": "en-US" })["regional.locale"],
+    "en-US",
+  );
+  assert.equal(
+    createPreferenceSnapshot({ "regional.locale": "es-ES" })["regional.locale"],
+    "es-ES",
+  );
   assert.throws(
-    () => createPreferenceSnapshot({ "regional.locale": "en-US" }),
+    () => createPreferenceSnapshot({ "regional.locale": "fr-FR" }),
     /Unsupported regional\.locale/,
   );
   assert.throws(
