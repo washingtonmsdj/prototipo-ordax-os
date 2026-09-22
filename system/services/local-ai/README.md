@@ -1,10 +1,8 @@
 # OrdaX Local AI
 
-Local AI is an **optional Stable/MVP component**, never a boot dependency.
+Local AI is the default **AI Runtime / Inference Broker** for Stable/MVP. It is part of the target distribution, but it is never a boot dependency.
 
-The stable Surface boundary is `ordax.local-ai/1`. The UI talks only to this
-provider-neutral port. It must not import llama.cpp, OpenVINO, a specific model
-vendor, or a cloud API directly.
+The backend boundary is `ordax.local-ai/1`. Product surfaces do **not** own this backend and should consume `ordax.intelligence/1` through the OrdaX Intelligence service. The inference backend must not leak llama.cpp, OpenVINO, a specific model vendor, or a cloud API into product semantics.
 
 ## Initial implementation direction
 
@@ -23,17 +21,10 @@ Engine and model identities are separate. A future release may replace
 llama.cpp with OpenVINO or another local provider, and may replace the model,
 without changing the Surface contract or user-facing assistant identity.
 
-The model is stored outside `system.erofs` under the Local AI component root,
-so it can be added, removed or upgraded independently.
+The model is stored outside `system.erofs` under the Local AI component root so its engine/model bytes can evolve independently. Stable/MVP product policy still requires a verified local inference payload to be included; independent updateability does not make the capability an optional product feature.
 
-## Creator
+## Creator and delivery
 
-The intended public Creator option is **Incluir IA local / Include local AI /
-Incluir IA local**, selected by default once the signed bundle is available.
-The user can turn it off.
+Stable/MVP Creator does not expose an option to omit system Intelligence. Once the signed engine/model bundle is promoted, it is materialized as part of the product payload. Users may later change or upgrade a model/engine through a governed update path, but that is different from shipping a product without its Intelligence layer.
 
-The first real Stable/MVP USB authorization is already bound to a frozen Creator
-source context. Therefore the Creator UI itself is not changed until that first
-physical proof is completed; changing the writer before that proof would
-invalidate the authorization binding. This is deliberate, not a temporary
-bypass.
+The source contract alone does not prove that the model is already present on a physical USB. The exact engine artifact, signed package/materialization path and real-hardware proof remain release gates. Until they close, the repository must report the local inference payload as pending rather than silently downloading it at boot.
