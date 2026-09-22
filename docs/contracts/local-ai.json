@@ -1,0 +1,67 @@
+{
+  "$schema": "prototype-ordax.local-ai/1",
+  "status": "mvp-optional-component-foundation",
+  "product_scope": "stable-mvp-usb",
+  "required_for_boot": false,
+  "required_for_offline_use": false,
+  "default_creator_selection": "include-when-bundle-available",
+  "creator_toggle": {
+    "label_pt_BR": "Incluir IA local",
+    "label_en_US": "Include local AI",
+    "label_es_ES": "Incluir IA local",
+    "user_may_disable": true,
+    "must_not_change_core_os_layout": true,
+    "activation_after_first_physical_proof": true,
+    "reason": "the first Stable/MVP physical authorization is bound to the frozen Creator source context"
+  },
+  "runtime": {
+    "engine_boundary": "OpenAI-compatible loopback HTTP",
+    "listen_scope": "127.0.0.1-only",
+    "internet_required_for_inference": false,
+    "engine_migratable": true,
+    "model_migratable": true,
+    "engine_default": "llama.cpp",
+    "engine_owner_upstream": "ggml-org/llama.cpp",
+    "model_format": "GGUF",
+    "model_default_candidate": "Qwen3.5-0.8B-Q4_0",
+    "model_license_candidate": "Apache-2.0",
+    "exact_model_artifact_pinned": true,
+    "exact_engine_artifact_pinned": false,
+    "source_lock": "system/services/local-ai/source-lock.json",
+    "artifact_activation_gate": "signed-component-manifest-with-sha256-size-license-and-source"
+  },
+  "storage": {
+    "component_root": "/.ordax/components/local-ai",
+    "engine_root": "/.ordax/components/local-ai/runtime",
+    "model_root": "/.ordax/components/local-ai/models",
+    "user_data_root": "/var/lib/ordax/local-ai",
+    "model_must_not_live_in_system_erofs": true,
+    "removal_preserves_user_files": true
+  },
+  "migration": {
+    "stable_service_contract": "ordax.local-ai/1",
+    "provider_specific_ui_allowed": false,
+    "model_id_persisted_separately_from_engine_id": true,
+    "engine_swap_requires_surface_changes": false,
+    "model_swap_requires_surface_changes": false,
+    "future_backends": [
+      "llama.cpp",
+      "OpenVINO",
+      "other-local-provider"
+    ]
+  },
+  "privacy": {
+    "prompts_local_by_default": true,
+    "cloud_fallback_implicit": false,
+    "file_access_implicit": false,
+    "tool_execution_implicit": false,
+    "telemetry_prompt_content_allowed": false
+  },
+  "mvp_policy": {
+    "recommended": true,
+    "mandatory": false,
+    "small_model_first": true,
+    "hardware_probe_before_start": true,
+    "failure_must_not_block_surface": true
+  }
+}

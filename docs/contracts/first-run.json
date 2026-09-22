@@ -26,9 +26,12 @@
   ],
   "regional": {
     "complete_locales": [
-      "pt-BR"
+      "pt-BR",
+      "en-US",
+      "es-ES"
     ],
     "default_locale": "pt-BR",
+    "launch_locale_policy": "pt-BR-en-US-es-ES-complete-before-public-mvp",
     "default_time_zone": "America/Bahia",
     "time_zone_preference": "regional.time-zone",
     "missing_preference_recovery": "seed-from-completed-first-run",
