@@ -92,6 +92,24 @@ def load_source_lock(path=SOURCE_LOCK):
         raise RuntimeBuildError("llama.cpp source commit is not exact 40-hex")
     if engine.get("license") != "MIT" or engine.get("build_targets") != ["llama-server"]:
         raise RuntimeBuildError("unexpected llama.cpp build identity")
+    engine_artifact = engine.get("artifact")
+    if not isinstance(engine_artifact, dict) or set(engine_artifact) != {
+        "platform",
+        "binary_format",
+        "linkage",
+        "sha256",
+        "size_bytes",
+    }:
+        raise RuntimeBuildError("engine artifact pin is missing or malformed")
+    if (
+        engine_artifact.get("platform") != "linux-x86_64"
+        or engine_artifact.get("binary_format") != "ELF"
+        or engine_artifact.get("linkage") != "static"
+        or not SHA256_RE.fullmatch(str(engine_artifact.get("sha256", "")))
+        or not isinstance(engine_artifact.get("size_bytes"), int)
+        or not 0 < engine_artifact["size_bytes"] <= 512 << 20
+    ):
+        raise RuntimeBuildError("engine artifact pin is invalid")
 
     if not SAFE_ID_RE.fullmatch(str(model.get("id", ""))):
         raise RuntimeBuildError("model id is unsafe")
@@ -141,6 +159,8 @@ def load_source_lock(path=SOURCE_LOCK):
         raise RuntimeBuildError("local AI distribution requirement was lost")
     if contract.get("runtime", {}).get("listen_scope") != "127.0.0.1-only":
         raise RuntimeBuildError("loopback-only contract was lost")
+    if contract.get("runtime", {}).get("exact_engine_artifact_pinned") is not True:
+        raise RuntimeBuildError("local AI contract must require an exact engine artifact pin")
     return lock
 
 
@@ -494,6 +514,14 @@ def build(out_dir, cache_dir):
         checkout_engine(lock, mirror, source)
         engine = build_engine(lock, source, work)
         engine_identity = verify_static_engine(engine, lock)
+        engine_pin = lock["engine"]["artifact"]
+        if (
+            engine_identity["sha256"] != engine_pin["sha256"]
+            or engine_identity["size"] != engine_pin["size_bytes"]
+        ):
+            raise RuntimeBuildError(
+                "built llama-server differs from exact pinned engine artifact"
+            )
 
         engine_license = source / "LICENSE"
         if (
@@ -567,6 +595,9 @@ def build(out_dir, cache_dir):
                 "id": lock["engine"]["id"],
                 "source_commit": lock["engine"]["commit"],
                 "license": lock["engine"]["license"],
+                "platform": engine_pin["platform"],
+                "binary_format": engine_pin["binary_format"],
+                "linkage": engine_pin["linkage"],
                 **engine_identity,
             },
             "model": {
@@ -633,6 +664,17 @@ def verify(out_dir):
         raise RuntimeBuildError("model size pin was lost")
     if provenance.get("engine", {}).get("source_commit") != lock["engine"]["commit"]:
         raise RuntimeBuildError("engine source pin was lost")
+    engine_pin = lock["engine"]["artifact"]
+    if provenance.get("engine", {}).get("sha256") != engine_pin["sha256"]:
+        raise RuntimeBuildError("engine artifact hash pin was lost")
+    if provenance.get("engine", {}).get("size") != engine_pin["size_bytes"]:
+        raise RuntimeBuildError("engine artifact size pin was lost")
+    if provenance.get("engine", {}).get("platform") != engine_pin["platform"]:
+        raise RuntimeBuildError("engine artifact platform pin was lost")
+    if provenance.get("engine", {}).get("binary_format") != engine_pin["binary_format"]:
+        raise RuntimeBuildError("engine artifact format pin was lost")
+    if provenance.get("engine", {}).get("linkage") != engine_pin["linkage"]:
+        raise RuntimeBuildError("engine artifact linkage pin was lost")
     if provenance.get("engine", {}).get("static") is not True:
         raise RuntimeBuildError("engine is not recorded as static")
     if provenance.get("runtime_security") != lock["runtime_security"]:
