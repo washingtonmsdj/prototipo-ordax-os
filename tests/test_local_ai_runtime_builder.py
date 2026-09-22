@@ -32,6 +32,7 @@ class LocalAiRuntimeBuilderTests(unittest.TestCase):
         self.assertEqual(lock["model"]["sha256"], "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf")
         self.assertEqual(lock["model"]["size_bytes"], 563036064)
         self.assertEqual(lock["model"]["license_text_path"], "third_party/licenses/Apache-2.0.txt")
+        self.assertEqual(lock["runtime_defaults"], {"reasoning": "off"})
         self.assertEqual(
             lock["runtime_security"],
             {
@@ -50,6 +51,7 @@ class LocalAiRuntimeBuilderTests(unittest.TestCase):
         launcher = BUILDER.launcher_text(lock)
         self.assertIn("--host 127.0.0.1", launcher)
         self.assertIn("--port 17865", launcher)
+        self.assertIn("--reasoning off", launcher)
         self.assertIn("--no-ui", launcher)
         self.assertIn("--no-slots", launcher)
         self.assertIn(lock["model"]["filename"], launcher)
