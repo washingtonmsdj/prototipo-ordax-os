@@ -9,7 +9,9 @@ export const REGIONAL_TIME_ZONE_PREFERENCE_ID = "regional.time-zone";
 const LOCALE_LABELS = Object.freeze({
   "pt-BR": "Português (Brasil)",
   "en-US": "English (United States)",
-  "es-ES": "Español (España / Latinoamérica)",
+  "es-ES": "Español",
+  "de-DE": "Deutsch",
+  "fr-FR": "Français",
 });
 
 const TIME_ZONE_LABELS = Object.freeze({
@@ -55,7 +57,7 @@ export const regionalLocalePreference = choicePreference({
   id: REGIONAL_LOCALE_PREFERENCE_ID,
   title: "Idioma",
   description:
-    "Português (Brasil), English (United States) e Español são os idiomas de lançamento do MVP. A preferência é persistente e pode ser alterada depois.",
+    "O primeiro uso oferece Português (Brasil), English, Español, Deutsch e Français. A tradução do restante da Surface evolui pelo mesmo catálogo sem declarar cobertura completa antes da migração.",
   defaultValue: "pt-BR",
   options: REGIONAL_LOCALE_OPTIONS,
   values: LOCALES,
