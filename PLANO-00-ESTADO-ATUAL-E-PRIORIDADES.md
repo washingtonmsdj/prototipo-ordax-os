@@ -29,9 +29,9 @@ Portanto, os planos antigos que dizem que ainda faltam “tela local completa”
 
 ### Arquivos
 
-`ordax.file-space/10` já cobre navegação/listagem, criação de pasta, leitura textual limitada, renomeação, cópia/duplicação, movimento com regras explícitas, importação/exportação, metadados reais, busca/ordenação, Recentes locais, retomada da última pasta validada e catálogo local de Projetos.
+`ordax.file-space/11` já cobre navegação/listagem, criação de pasta, leitura textual limitada, renomeação, cópia/duplicação, movimento com regras explícitas, importação/exportação, **lixeira recuperável com restauração no-clobber**, metadados reais, busca/ordenação, Recentes locais, retomada da última pasta validada e catálogo local de Projetos. A lixeira pertence ao mesmo owner de file-space, usa namespace interno reservado e invisível, preserva caminho de origem em metadata privada e não oferece exclusão permanente no fluxo cotidiano do MVP.
 
-Continuam lacunas reais como lixeira/exclusão recuperável, múltiplos itens/diretórios em operações que ainda não suportam isso, associações de “Abrir com”, miniaturas/visualizadores ampliados e outros recursos que exigem contrato próprio. A composição Web não deve fingir um filesystem real quando não houver adapter.
+Continuam lacunas reais como múltiplos itens/diretórios em operações que ainda não suportam isso, associações de “Abrir com”, miniaturas/visualizadores ampliados e outros recursos que exigem contrato próprio. Exclusão permanente/esvaziar Lixeira permanece deliberadamente fora deste primeiro recorte recuperável. A composição Web não deve fingir um filesystem real quando não houver adapter.
 
 ### Ajustes
 
