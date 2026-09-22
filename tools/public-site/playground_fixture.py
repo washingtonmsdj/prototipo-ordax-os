@@ -25,7 +25,17 @@ FIELD_RE = re.compile(
 )
 CATALOG_RE = re.compile(r"\b([a-z][a-z0-9-]*)App\b")
 MESSAGE_RE = re.compile(
-    r'^\s*"([^"]+)":\s*"((?:\\.|[^"\\])*)",?\s*
+    r'^\s*"([^"]+)":\s*"((?:\\.|[^"\\])*)",?\s*$',
+    re.MULTILINE,
+)
+RAIL_RE = re.compile(
+    r'railButton\("([a-z][a-z0-9-]*)",\s*t\("([^"]+)"\),\s*ICONS\.[a-zA-Z0-9]+,\s*t\)'
+)
+SPACE_RE = re.compile(r'spaceLink\("([^"]+)",\s*"([^"]+)",\s*t\)')
+AREA_RE = re.compile(r't\("surface\.area\.label",\s*\{\s*ordinal:\s*"([^"]+)"\s*\}\)')
+COMMAND_RE = re.compile(r't\("shell\.launcher\.command"\)')
+SPACE_LABEL_RE = re.compile(r't\("shell\.space\.title"\)')
+
 
 class PlaygroundFixtureError(RuntimeError):
     """Raised when the generated fixture cannot represent current Surface source."""
