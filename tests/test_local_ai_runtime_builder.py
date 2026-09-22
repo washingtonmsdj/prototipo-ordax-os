@@ -73,14 +73,14 @@ class LocalAiRuntimeBuilderTests(unittest.TestCase):
             with self.assertRaisesRegex(BUILDER.RuntimeBuildError, "runtime security"):
                 BUILDER.load_source_lock(path)
 
-    def test_builder_rejects_engine_artifact_drift(self):
+    def test_builder_rejects_malformed_engine_artifact_pin(self):
         lock = json.loads(SOURCE_LOCK.read_text(encoding="utf-8"))
-        lock["engine"]["artifact"]["sha256"] = "0" * 64
+        lock["engine"]["artifact"]["sha256"] = "0" * 63
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "source-lock.json"
             path.write_text(json.dumps(lock), encoding="utf-8")
-            loaded = BUILDER.load_source_lock(path)
-            self.assertEqual(loaded["engine"]["artifact"]["sha256"], "0" * 64)
+            with self.assertRaisesRegex(BUILDER.RuntimeBuildError, "engine artifact pin"):
+                BUILDER.load_source_lock(path)
 
     def test_model_url_is_revision_pinned(self):
         lock = BUILDER.load_source_lock()
