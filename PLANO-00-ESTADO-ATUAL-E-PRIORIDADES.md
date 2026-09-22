@@ -47,7 +47,7 @@ Provedor real de identidade, transporte autenticado, isolamento por conta, perfi
 
 ### Surface e prova física
 
-O harness read-only do smoke integrado existe no source com coleta baseline/pós-tour, checklist machine-readable gerado por `tour-template` e `finalize` fail-closed que recalcula a comparação e exige os 10 itens do tour em PASS. Isso melhora a qualidade da evidência, mas não converte execução pendente em PASS físico.
+O harness read-only do smoke integrado existe no source com coleta baseline/pós-tour, checklist machine-readable gerado por `tour-template` e `finalize` fail-closed que recalcula a comparação e exige os 10 itens do tour em PASS. Ele agora lê o contexto de runtime publicado pela própria Surface, separa `development` de `canonical-stable-mvp`, funciona diretamente sobre o `verified-erofs-overlay` do Stable/MVP e observa o layout físico do teclado exigindo estado configurado=aplicado. Isso melhora a qualidade da evidência, mas não converte execução pendente em PASS físico.
 
 Estados canônicos que permanecem explícitos em `docs/PROMOTION-GATES.md`:
 
