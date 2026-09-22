@@ -241,10 +241,17 @@ def prepare_engine_mirror(lock, cache_dir):
     if mirror.exists() and not (mirror / "HEAD").is_file():
         raise RuntimeBuildError("llama.cpp mirror cache is unsafe")
     if not mirror.exists():
-        run(["git", "clone", "--mirror", repository, str(mirror)])
-    run(["git", "-C", str(mirror), "fetch", "--no-tags", "origin", commit])
+        run(["git", "init", "--bare", str(mirror)])
+        run(["git", "-C", str(mirror), "remote", "add", "origin", repository])
+    remote = run(["git", "-C", str(mirror), "remote", "get-url", "origin"], capture=True).stdout.strip()
+    if remote != repository:
+        raise RuntimeBuildError("llama.cpp mirror remote differs from source lock")
+    run([
+        "git", "-C", str(mirror), "fetch", "--depth=1", "--no-tags",
+        "origin", commit + ":refs/ordax/pinned",
+    ])
     actual = run(
-        ["git", "-C", str(mirror), "rev-parse", commit + "^{commit}"],
+        ["git", "-C", str(mirror), "rev-parse", "refs/ordax/pinned^{commit}"],
         capture=True,
     ).stdout.strip().lower()
     if actual != commit:
