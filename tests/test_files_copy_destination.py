@@ -9,6 +9,7 @@ ADAPTER = ROOT / "system" / "adapters" / "native" / "file-space.mjs"
 CONTROLS = ROOT / "system" / "surface" / "ui" / "file-space-controls.mjs"
 CONTRACT = ROOT / "system" / "contracts" / "file-space.mjs"
 CSS = ROOT / "system" / "surface" / "ui" / "files.css"
+FILES_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "files-operational.mjs"
 
 spec = importlib.util.spec_from_file_location("ordax_native_copy_destination_test", SERVER)
 native_host = importlib.util.module_from_spec(spec)
@@ -63,7 +64,10 @@ class FilesCopyDestinationTests(unittest.TestCase):
         self.assertIn("data.fileCopyToToggle", controls.replace("dataset", "data"))
         self.assertIn('mode: "copy"', controls)
         self.assertIn("transferToCurrentDirectory", controls)
-        self.assertIn('"Copiar para esta pasta"', controls)
+        self.assertIn('t("files.transfer.copyHere")', controls)
+        catalog = FILES_I18N.read_text(encoding="utf-8")
+        self.assertIn('"files.transfer.copyHere": "Copiar para esta pasta"', catalog)
+        self.assertIn('"files.transfer.copyHere": "Copy to this folder"', catalog)
         self.assertIn(
             "port.copyFile(listing.path, selected.name, listing.path, newName)",
             controls,
