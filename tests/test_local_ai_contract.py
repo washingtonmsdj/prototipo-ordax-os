@@ -44,8 +44,8 @@ class LocalAiContractTests(unittest.TestCase):
         component_catalog = COMPONENT_CATALOG.read_text(encoding="utf-8")
         self.assertIn('id: "assistant"', app)
         self.assertIn('"ai.local"', app)
-        self.assertIn('releaseMode: "component-slot"', component)
-        self.assertIn('criticality: "optional"', component)
+        self.assertIn('releaseMode: "bundled"', component)
+        self.assertIn('criticality: "optional"', component)\n        self.assertEqual(contract["migration"]["future_component_release_mode"], "component-slot")
         self.assertIn("assistantApp", catalog)
         self.assertIn("assistantComponent", component_catalog)
 
