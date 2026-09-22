@@ -120,7 +120,7 @@ The shared graphical source remains under `system/surface/ui/` with platform-neu
 
 Ordax Intelligence is now a first-class system service with stable contract `ordax.intelligence/1`; an Assistant UI is only a possible client. The service sits above the provider-neutral `ordax.local-ai/1` inference boundary, so model and engine can evolve without redefining Files, Notes, Search or future system clients. The Stable/MVP product policy requires a verified local inference payload in the distribution, but neither Intelligence nor its model is boot-critical: inference failure degrades the capability instead of blocking boot, Surface, recovery, files or updates.
 
-The initial source lock pins a small Qwen3.5 GGUF model and a llama.cpp source commit. The exact model bytes are pinned, while the exact engine artifact and signed Stable/MVP engine/model materialization are still pending. The source release protocol now supports `prototype-ordax.release-manifest/4`: it binds `local-ai-runtime.erofs` to the canonical local-AI source lock, stores that runtime content-addressed by SHA-256, and can revalidate the signed release offline. This is **protocol/source support**, not a claim that the real llama.cpp + model EROFS has already been built, published or written to a Stable USB.
+The initial source lock pins Qwen3.5-0.8B-Q4_0 by exact GGUF SHA-256/size and llama.cpp by exact source commit plus the reproducibly observed `llama-server` ELF SHA-256/size. The real `local-ai-runtime.erofs` is now CI-proven: the current source lock produced byte-identical A/B builds in one job, the EROFS was mounted read-only, the exact model loaded, eight real completion tokens were generated on loopback-only HTTP, and the same runtime produced a real `OK` chat completion inside the pinned Alpine 3.22.5 userspace used by Stable Base. The current candidate engine SHA-256 is `4a974691b9905b88cb46d97c85c2b035b33592a16cd0239ae4c6687f68799afe` (17,039,584 bytes); the current EROFS candidate SHA-256 is `b244056dad3609357e8a70433f53f41becacd8f3bd93da3d8b23f9e99d86e11a` (568,061,952 bytes). `prototype-ordax.release-manifest/4` already binds this payload to the canonical source lock and content-addressed AI runtime store. What remains pending is signed Stable/MVP v4 materialization/activation and the real physical Stable USB proof; the CI candidate was explicitly not published, activated or written to physical media.
 
 ```text
 ORDAX_INTELLIGENCE_CONTRACT=ordax.intelligence/1
@@ -130,10 +130,10 @@ LOCAL_AI_BACKEND_CONTRACT=ordax.local-ai/1
 LOCAL_AI_STABLE_MVP_DISTRIBUTION_REQUIRED=YES
 LOCAL_AI_BOOT_CRITICAL=NO
 LOCAL_AI_MODEL_ARTIFACT_PINNED=YES
-LOCAL_AI_ENGINE_ARTIFACT_PINNED=NO
+LOCAL_AI_ENGINE_ARTIFACT_PINNED=YES
 LOCAL_AI_RELEASE_MANIFEST_V4=PASS_SOURCE
 LOCAL_AI_CONTENT_ADDRESSED_ACQUISITION=PASS_SOURCE
-LOCAL_AI_REAL_RUNTIME_EROFS=PENDING
+LOCAL_AI_REAL_RUNTIME_EROFS=PASS_CI_ALPINE
 LOCAL_AI_SIGNED_STABLE_MATERIALIZATION=PENDING
 LOCAL_AI_PHYSICAL_STABLE_MVP_PROOF=PENDING
 ```

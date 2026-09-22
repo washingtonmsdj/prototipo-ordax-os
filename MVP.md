@@ -238,7 +238,7 @@ Estado atual do caminho v2:
 - `release-manifest/2`: compatibilidade preservada;
 - `release-manifest/3`: generator + signer + verifier + aquisição não-ativante implementados e verdes em CI, com `system.erofs` + `native-surface-runtime.erofs`;
 - runtime gráfico v3: armazenamento content-addressed por SHA-256 e reuso de bytes verificados entre releases implementados;
-- `release-manifest/4`: caminho de protocolo implementado para acrescentar `local-ai-runtime.erofs`, com binding assinado ao source-lock do engine/modelo e armazenamento da IA por SHA-256 separado do runtime gráfico; o EROFS **real** de llama.cpp + modelo ainda é gate pendente e v4 não substitui ainda o boot v3 provado;
+- `release-manifest/4`: caminho de protocolo implementado para acrescentar `local-ai-runtime.erofs`, com binding assinado ao source-lock do engine/modelo e armazenamento da IA por SHA-256 separado do runtime gráfico; o runtime **real** de `llama-server` + Qwen3.5-0.8B-Q4_0 já foi construído duas vezes com bytes idênticos no mesmo job, montado read-only e validado com inferência real tanto no host de CI quanto em Alpine 3.22.5. O engine está pinado por SHA-256/size; a assinatura/materialização Stable v4 e a prova física no USB continuam pendentes, e v4 ainda não substitui o boot v3 fisicamente provado;
 - materialização portátil: implementada sem ativação implícita; v4 também permanece não-ativante;
 - revalidação offline exata da release assinada: implementada para v2, v3 e para o caminho de protocolo v4;
 - mount EROFS + estado ext4 + runtime system read-only: prova descartável verde;

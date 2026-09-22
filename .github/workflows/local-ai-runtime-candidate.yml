@@ -1,0 +1,324 @@
+name: Local AI Runtime Candidate
+
+on:
+  pull_request:
+    paths:
+      - 'bootstrap/local-ai-runtime/**'
+      - 'system/services/local-ai/source-lock.json'
+      - 'docs/contracts/local-ai.json'
+      - 'tests/test_local_ai_contract.py'
+      - 'tests/test_local_ai_runtime_builder.py'
+      - '.github/workflows/local-ai-runtime-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          check-latest: false
+
+      - name: Install bounded local AI build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            binutils cmake curl erofs-utils g++ git iproute2 libc6-dev ninja-build util-linux
+
+      - name: Validate local AI source and builder contracts
+        run: |
+          set -euo pipefail
+          python -m py_compile bootstrap/local-ai-runtime/build.py
+          python -m unittest \
+            tests.test_local_ai_contract \
+            tests.test_local_ai_runtime_builder -v
+
+      - name: Build real local AI runtime twice
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/local-ai-runtime"
+          mkdir -p "$work"
+          python bootstrap/local-ai-runtime/build.py build \
+            --cache-dir "$work/cache" \
+            --out-dir "$work/build-a"
+          python bootstrap/local-ai-runtime/build.py verify \
+            --out-dir "$work/build-a"
+
+          python bootstrap/local-ai-runtime/build.py build \
+            --cache-dir "$work/cache" \
+            --out-dir "$work/build-b"
+          python bootstrap/local-ai-runtime/build.py verify \
+            --out-dir "$work/build-b"
+
+      - name: Prove byte-reproducible engine and EROFS
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/local-ai-runtime"
+          python - \
+            "$work/build-a/local-ai-runtime-provenance.json" \
+            "$work/build-b/local-ai-runtime-provenance.json" <<'PY'
+          import json, pathlib, sys
+          a = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          b = json.loads(pathlib.Path(sys.argv[2]).read_text())
+          assert a['status'] == b['status'] == 'candidate-not-promotable'
+          assert a['engine']['source_commit'] == b['engine']['source_commit'] == '7ab4ee7baad2d920464cbacfad4f4b07cf111fd2'
+          assert a['engine']['static'] is True
+          assert b['engine']['static'] is True
+          assert a['engine']['sha256'] == b['engine']['sha256']
+          assert a['engine']['size'] == b['engine']['size']
+          assert a['model']['sha256'] == b['model']['sha256'] == '57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf'
+          assert a['model']['size'] == b['model']['size'] == 563036064
+          assert a['tree_manifest_sha256'] == b['tree_manifest_sha256']
+          assert a['normalized_tar_sha256'] == b['normalized_tar_sha256']
+          assert a['image']['sha256'] == b['image']['sha256']
+          assert a['image']['size'] == b['image']['size']
+          assert a['runtime_security'] == b['runtime_security']
+          assert a['runtime_security']['listen_host'] == '127.0.0.1'
+          assert a['runtime_security']['built_in_tools_enabled'] is False
+          assert a['runtime_security']['agent_mode_enabled'] is False
+          assert a['runtime_security']['mcp_proxy_enabled'] is False
+          assert a['runtime_security']['runtime_model_download_allowed'] is False
+          assert a['activation_performed'] is False
+          assert a['physical_write_authorized'] is False
+          print('LOCAL_AI_ENGINE_SHA256=' + a['engine']['sha256'])
+          print('LOCAL_AI_ENGINE_SIZE=' + str(a['engine']['size']))
+          print('LOCAL_AI_RUNTIME_EROFS_SHA256=' + a['image']['sha256'])
+          print('LOCAL_AI_RUNTIME_EROFS_SIZE=' + str(a['image']['size']))
+          print('LOCAL_AI_RUNTIME_REPRODUCIBLE=PASS')
+          PY
+
+          cmp "$work/build-a/local-ai-runtime.erofs" "$work/build-b/local-ai-runtime.erofs"
+
+      - name: Mount candidate read-only and prove real local inference
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/local-ai-runtime"
+          image="$work/build-a/local-ai-runtime.erofs"
+          mountpoint="$work/mount"
+          mkdir -p "$mountpoint"
+          sudo mount -o loop,ro "$image" "$mountpoint"
+
+          cleanup() {
+            set +e
+            if [ -n "${server_pid:-}" ]; then
+              kill "$server_pid" 2>/dev/null || true
+              wait "$server_pid" 2>/dev/null || true
+            fi
+            sudo umount "$mountpoint" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          ORDAX_LOCAL_AI_RUNTIME_ROOT="$mountpoint" \
+            "$mountpoint/bin/ordax-local-ai" \
+            >"$work/llama-server.log" 2>&1 &
+          server_pid=$!
+
+          ready=0
+          for _ in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:17865/health >"$work/health.json"; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              cat "$work/llama-server.log"
+              exit 1
+            fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+
+          ss -ltn | grep -E '127\.0\.0\.1:17865[[:space:]]' >/dev/null
+          if ss -ltn | grep -E '0\.0\.0\.0:17865|\[::\]:17865' >/dev/null; then
+            echo "local AI unexpectedly listened beyond IPv4 loopback" >&2
+            exit 1
+          fi
+
+          curl -fsS \
+            -H 'Content-Type: application/json' \
+            -d '{"prompt":"The word after alpha is","n_predict":8,"temperature":0.0,"stream":false}' \
+            http://127.0.0.1:17865/completion \
+            >"$work/completion.json"
+
+          python - "$work/completion.json" <<'PY'
+          import json, pathlib, sys
+          payload = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          content = payload.get('content')
+          tokens = payload.get('tokens_predicted')
+          assert isinstance(content, str) and content.strip(), payload
+          assert isinstance(tokens, int) and tokens > 0, payload
+          assert payload.get('stop') in (True, False), payload
+          print('LOCAL_AI_REAL_MODEL_LOAD=PASS')
+          print('LOCAL_AI_REAL_INFERENCE=PASS')
+          print('LOCAL_AI_GENERATED_TOKENS=' + str(tokens))
+          print('LOCAL_AI_LOOPBACK_ONLY=PASS')
+          PY
+
+          kill "$server_pid"
+          wait "$server_pid" || true
+          server_pid=
+
+          alpine_root="$work/alpine-root"
+          alpine_archive="$work/alpine-minirootfs.tar.gz"
+          python - "$alpine_archive" <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import sys
+          import urllib.request
+
+          contract = json.loads(pathlib.Path("bootstrap/stable-base/source.json").read_text())
+          alpine = contract["alpine"]
+          expected = alpine["archive_sha256"]
+          target = pathlib.Path(sys.argv[1])
+          digest = hashlib.sha256()
+          request = urllib.request.Request(alpine["archive_url"], headers={"User-Agent":"OrdaX-local-ai-alpine-proof/1"})
+          with urllib.request.urlopen(request, timeout=120) as response, target.open("wb") as output:
+              while True:
+                  chunk = response.read(1024 * 1024)
+                  if not chunk:
+                      break
+                  digest.update(chunk)
+                  output.write(chunk)
+          actual = digest.hexdigest()
+          assert actual == expected, (expected, actual)
+          print("LOCAL_AI_ALPINE_BASE_ARCHIVE_SHA256=" + actual)
+          PY
+
+          mkdir -p "$alpine_root"
+          python - "$alpine_archive" "$alpine_root" <<'PY'
+          import importlib.util
+          import pathlib
+          import sys
+
+          archive = pathlib.Path(sys.argv[1]).resolve()
+          root = pathlib.Path(sys.argv[2]).resolve()
+          module_path = pathlib.Path("bootstrap/base/alpine_core.py").resolve()
+          spec = importlib.util.spec_from_file_location("ordax_alpine_core", module_path)
+          if spec is None or spec.loader is None:
+              raise SystemExit("cannot load OrdaX Alpine extraction policy")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          module.safe_extract(archive, root)
+          print("LOCAL_AI_ALPINE_EXTRACTION_POLICY=ORDAX_STABLE_BASE")
+          PY
+
+          mkdir -p "$alpine_root/opt/ordax-local-ai"
+          sudo mount --bind "$mountpoint" "$alpine_root/opt/ordax-local-ai"
+          sudo mount -o remount,bind,ro,nodev,nosuid "$alpine_root/opt/ordax-local-ai"
+          mkdir -p "$alpine_root/proc"
+          sudo mount --bind /proc "$alpine_root/proc"
+          sudo mount -o remount,bind,ro,nodev,nosuid,noexec "$alpine_root/proc"
+
+          alpine_chroot_job=
+          alpine_server_pid=
+          cleanup_alpine() {
+            set +e
+            if [ -n "${alpine_server_pid:-}" ]; then
+              sudo kill "$alpine_server_pid" 2>/dev/null || true
+            fi
+            if [ -n "${alpine_chroot_job:-}" ]; then
+              wait "$alpine_chroot_job" 2>/dev/null || true
+            fi
+            sudo umount "$alpine_root/opt/ordax-local-ai" 2>/dev/null || true
+            sudo umount "$alpine_root/proc" 2>/dev/null || true
+          }
+          trap 'cleanup_alpine; cleanup' EXIT
+
+          sudo chroot "$alpine_root" /bin/sh -c \
+            'IFS=" " read -r pid _ </proc/self/stat; printf "%s\n" "$pid" >/tmp/ordax-local-ai.pid; ORDAX_LOCAL_AI_RUNTIME_ROOT=/opt/ordax-local-ai exec /opt/ordax-local-ai/bin/ordax-local-ai' \
+            >"$work/llama-server-alpine.log" 2>&1 &
+          alpine_chroot_job=$!
+
+          for _ in $(seq 1 30); do
+            if [ -s "$alpine_root/tmp/ordax-local-ai.pid" ]; then
+              alpine_server_pid="$(cat "$alpine_root/tmp/ordax-local-ai.pid")"
+              break
+            fi
+            sleep 1
+          done
+          test -n "$alpine_server_pid"
+
+          alpine_ready=0
+          for _ in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:17865/health >"$work/alpine-health.json"; then
+              alpine_ready=1
+              break
+            fi
+            if ! sudo kill -0 "$alpine_server_pid" 2>/dev/null; then
+              cat "$work/llama-server-alpine.log"
+              exit 1
+            fi
+            sleep 1
+          done
+          test "$alpine_ready" -eq 1
+
+          curl -fsS \
+            -H 'Content-Type: application/json' \
+            -d '{"model":"qwen3.5-0.8b-q4_0","messages":[{"role":"user","content":"Reply with exactly: OK"}],"temperature":0,"max_tokens":16,"stream":false}' \
+            http://127.0.0.1:17865/v1/chat/completions \
+            >"$work/alpine-completion.json"
+
+          python - "$work/alpine-completion.json" <<'PY'
+          import json, pathlib, sys
+          payload = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          choices = payload.get("choices")
+          assert isinstance(choices, list) and choices, payload
+          content = choices[0].get("message", {}).get("content")
+          assert isinstance(content, str) and content.strip(), payload
+          usage = payload.get("usage", {})
+          assert isinstance(usage.get("completion_tokens"), int) and usage["completion_tokens"] > 0, payload
+          print("LOCAL_AI_ALPINE_3_22_5_COMPATIBILITY=PASS")
+          print("LOCAL_AI_ALPINE_REAL_INFERENCE=PASS")
+          PY
+
+          cleanup_alpine
+          trap cleanup EXIT
+
+      - name: Remove unpromoted runtime bytes
+        if: always()
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/local-ai-runtime"
+          sudo umount "$work/mount" 2>/dev/null || true
+          rm -f \
+            "$work/build-a/local-ai-runtime.erofs" \
+            "$work/build-b/local-ai-runtime.erofs" \
+            "$work/cache/Qwen3.5-0.8B-Q4_0.gguf"
+          rm -rf "$work/cache/llama.cpp.git"
+          test ! -e "$work/build-a/local-ai-runtime.erofs"
+          test ! -e "$work/build-b/local-ai-runtime.erofs"
+          echo 'LOCAL_AI_RUNTIME_PUBLISHED=NO'
+          echo 'LOCAL_AI_RUNTIME_ACTIVATED=NO'
+          echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
+
+      - name: Upload proof metadata only
+        if: success()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: local-ai-runtime-candidate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ${{ runner.temp }}/local-ai-runtime/build-a/local-ai-runtime-provenance.json
+            ${{ runner.temp }}/local-ai-runtime/build-b/local-ai-runtime-provenance.json
+            ${{ runner.temp }}/local-ai-runtime/build-a/local-ai-runtime-tree.json
+            ${{ runner.temp }}/local-ai-runtime/build-b/local-ai-runtime-tree.json
+            ${{ runner.temp }}/local-ai-runtime/health.json
+            ${{ runner.temp }}/local-ai-runtime/completion.json
+            ${{ runner.temp }}/local-ai-runtime/alpine-health.json
+            ${{ runner.temp }}/local-ai-runtime/alpine-completion.json
+          if-no-files-found: error
+          retention-days: 14

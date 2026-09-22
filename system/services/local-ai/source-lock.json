@@ -8,7 +8,14 @@
     "build_targets": [
       "llama-server"
     ],
-    "runtime_api": "OpenAI-compatible-loopback"
+    "runtime_api": "OpenAI-compatible-loopback",
+    "artifact": {
+      "platform": "linux-x86_64",
+      "binary_format": "ELF",
+      "linkage": "static",
+      "sha256": "4a974691b9905b88cb46d97c85c2b035b33592a16cd0239ae4c6687f68799afe",
+      "size_bytes": 17039584
+    }
   },
   "model": {
     "id": "qwen3.5-0.8b-q4_0",
@@ -20,7 +27,8 @@
     "size_bytes": 563036064,
     "license": "Apache-2.0",
     "upstream_revision": "9447f74",
-    "download_at_build_time_only": true
+    "download_at_build_time_only": true,
+    "license_text_path": "third_party/licenses/Apache-2.0.txt"
   },
   "distribution": {
     "model_committed_to_git": false,
@@ -29,5 +37,17 @@
     "signed_release_artifact_required": true,
     "initial_release_schema_target": "prototype-ordax.release-manifest/4",
     "independent_component_slot_is_future_migration": true
+  },
+  "runtime_security": {
+    "listen_host": "127.0.0.1",
+    "listen_port": 17865,
+    "web_ui_enabled": false,
+    "built_in_tools_enabled": false,
+    "agent_mode_enabled": false,
+    "mcp_proxy_enabled": false,
+    "runtime_model_download_allowed": false
+  },
+  "runtime_defaults": {
+    "reasoning": "off"
   }
 }
