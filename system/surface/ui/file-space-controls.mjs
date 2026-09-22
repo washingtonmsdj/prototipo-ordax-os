@@ -1114,6 +1114,151 @@ export function mountFileSpaceControls(
     );
   };
 
+  const selectedTrashEntry = () =>
+    trashListing?.entries.find((entry) => entry.id === selectedTrashId) ?? null;
+
+  const renderTrashEntries = (container) => {
+    const list = node(documentObject, "div", "ordax-files-list");
+    list.setAttribute("aria-label", "Itens recuperáveis da Lixeira");
+    const header = node(documentObject, "div", "ordax-files-list-header");
+    header.append(
+      node(documentObject, "span", "", "Nome"),
+      node(documentObject, "span", "", "Tipo"),
+      node(documentObject, "span", "", "Origem"),
+      node(documentObject, "span", "", "Removido"),
+    );
+    list.append(header);
+
+    const entries = trashListing?.entries ?? [];
+    if (entries.length === 0) {
+      list.append(
+        node(
+          documentObject,
+          "div",
+          "ordax-files-empty",
+          pending ? "Lendo a Lixeira…" : "A Lixeira está vazia.",
+        ),
+      );
+      container.append(list);
+      return;
+    }
+
+    for (const entry of entries) {
+      const selected = selectedTrashId === entry.id;
+      const row = node(documentObject, "button", "ordax-file-row");
+      row.type = "button";
+      row.dataset.fileTrashId = entry.id;
+      row.dataset.kind = entry.kind;
+      row.dataset.selected = String(selected);
+      row.setAttribute("aria-pressed", String(selected));
+      row.setAttribute(
+        "aria-label",
+        selected
+          ? `${entry.name}, ${entry.kind === "directory" ? "pasta" : "arquivo"} na Lixeira, selecionado`
+          : `${entry.name}, ${entry.kind === "directory" ? "pasta" : "arquivo"} na Lixeira`,
+      );
+
+      const nameCell = node(documentObject, "span", "ordax-file-name");
+      const icon = node(documentObject, "span", "ordax-file-icon");
+      icon.dataset.kind = entry.kind;
+      icon.setAttribute("aria-hidden", "true");
+      nameCell.append(icon, node(documentObject, "span", "", entry.name));
+      row.append(
+        nameCell,
+        node(
+          documentObject,
+          "span",
+          "ordax-file-meta",
+          entry.kind === "directory" ? "Pasta" : formatSize(entry.size),
+        ),
+        node(documentObject, "span", "ordax-file-meta", parentPath(entry.originalPath)),
+        node(documentObject, "span", "ordax-file-meta", formatModifiedAt(entry.trashedAt)),
+      );
+      list.append(row);
+    }
+    container.append(list);
+  };
+
+  const renderTrashDetails = (container) => {
+    const selected = selectedTrashEntry();
+    if (!selected) return;
+    const details = node(documentObject, "section", "ordax-files-details");
+    details.setAttribute("aria-label", "Detalhes do item selecionado na Lixeira");
+    const summary = node(documentObject, "div", "ordax-files-details-summary");
+    summary.append(
+      node(documentObject, "strong", "ordax-files-details-title", selected.name),
+      node(
+        documentObject,
+        "span",
+        "ordax-files-details-meta",
+        selected.kind === "directory" ? "Pasta recuperável" : `Arquivo recuperável · ${formatSize(selected.size)}`,
+      ),
+      node(documentObject, "span", "ordax-files-details-path", `Origem: ${selected.originalPath}`),
+      node(
+        documentObject,
+        "span",
+        "ordax-files-details-path",
+        `Movido para a Lixeira: ${formatModifiedAt(selected.trashedAt)}`,
+      ),
+    );
+    const actions = node(documentObject, "div", "ordax-files-details-actions");
+    const restore = node(
+      documentObject,
+      "button",
+      "ordax-files-action ordax-files-action-primary",
+      pending ? "Restaurando…" : "Restaurar",
+    );
+    restore.type = "button";
+    restore.dataset.fileTrashRestore = "";
+    restore.disabled = pending;
+    actions.append(restore);
+    details.append(summary, actions);
+    container.append(details);
+  };
+
+  const renderTrashContent = (content) => {
+    const toolbar = node(documentObject, "header", "ordax-files-toolbar");
+    const title = node(documentObject, "div", "ordax-files-breadcrumb");
+    title.append(node(documentObject, "strong", "", "Lixeira"));
+    const actions = node(documentObject, "div", "ordax-files-actions");
+    const refresh = node(
+      documentObject,
+      "button",
+      "ordax-files-action",
+      pending ? "Atualizando…" : "Atualizar",
+    );
+    refresh.type = "button";
+    refresh.dataset.fileTrashRefresh = "";
+    refresh.disabled = pending;
+    actions.append(refresh);
+    toolbar.append(title, actions);
+    content.append(toolbar);
+
+    const count = trashListing?.entries.length ?? 0;
+    const status = node(
+      documentObject,
+      "div",
+      "ordax-files-status",
+      pending
+        ? "Atualizando Lixeira…"
+        : `${count} ${count === 1 ? "item recuperável" : "itens recuperáveis"}`,
+    );
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    content.append(status);
+    if (message) content.append(node(documentObject, "p", "ordax-files-message", message));
+    renderTrashEntries(content);
+    renderTrashDetails(content);
+    content.append(
+      node(
+        documentObject,
+        "p",
+        "ordax-files-boundary",
+        "Mover para a Lixeira é recuperável. Restaurar nunca substitui um item existente no caminho original. Exclusão permanente não faz parte deste fluxo.",
+      ),
+    );
+  };
+
   const createProject = () => {
     if (!projectPort || !listing || listing.path === "/" || pending) return;
     try {
