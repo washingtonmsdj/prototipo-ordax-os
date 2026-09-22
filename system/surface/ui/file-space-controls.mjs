@@ -154,6 +154,9 @@ export function mountFileSpaceControls(
     if (element.dataset.fileRecentPath) {
       return Object.freeze({ kind: "recent-row", value: element.dataset.fileRecentPath });
     }
+    if (element.dataset.fileTrashId) {
+      return Object.freeze({ kind: "trash-row", value: element.dataset.fileTrashId });
+    }
     if (element.dataset.fileSearch !== undefined) {
       return Object.freeze({ kind: "search", value: "" });
     }
@@ -2465,8 +2468,8 @@ export function mountFileSpaceControls(
       }
       return;
     }
-    const trashSelected = event.target.closest("[data-file-trash-selected]");
-    if (trashSelected && root.contains(trashSelected) && !trashMode && !recentMode) {
+    const trashSelectedButton = event.target.closest("[data-file-trash-selected]");
+    if (trashSelectedButton && root.contains(trashSelectedButton) && !trashMode && !recentMode) {
       void trashSelected();
       return;
     }
