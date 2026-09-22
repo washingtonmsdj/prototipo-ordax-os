@@ -65,6 +65,25 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
         self.assertIn('"runtimes"', text)
         self.assertIn('"native-surface-runtime.erofs"', text)
 
+    def test_loop_partition_wait_requires_stable_identity_before_formatting(self):
+        text = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("stable_for: float = 0.75", text)
+        self.assertIn("stable_rdev != info.st_rdev", text)
+        self.assertIn("stat.S_ISBLK(info.st_mode)", text)
+        self.assertIn("loop partition did not become stable", text)
+
+        stage = text.split("def stage_disk", 1)[1].split("def boot_qemu_expected", 1)[0]
+        self.assertGreaterEqual(stage.count("wait_block(esp)"), 2)
+        self.assertGreaterEqual(stage.count("wait_block(data)"), 2)
+        self.assertLess(
+            stage.rindex("wait_block(esp)"),
+            stage.index('run(["mkfs.vfat"'),
+        )
+        self.assertLess(
+            stage.rindex("wait_block(data)"),
+            stage.index('run(["mkfs.exfat"'),
+        )
+
     def test_harness_requires_both_handoff_markers_and_disables_network(self):
         text = SCRIPT.read_text(encoding="utf-8")
         self.assertIn("ORDAX_PORTABLE_V2_HANDOFF=VERIFIED", text)

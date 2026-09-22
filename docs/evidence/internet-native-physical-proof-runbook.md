@@ -19,20 +19,23 @@ A coleta não testa por automação comportamento visual, foco, scroll, touchpad
 
 ## Pré-condições
 
-1. notebook inicializado pelo **Owner / Development USB**;
+1. para evidência canônica, notebook inicializado pelo **USB Stable/MVP verificado**; Owner/Development permanece somente como escopo de desenvolvimento;
 2. Surface gráfica saudável e em execução;
-3. checkout do `system/` já sincronizado para a entrega que contém este harness;
-4. nenhuma alteração de kernel ou reflash é necessária para o harness.
+3. no Stable/MVP, o release montado em `/system` contém este harness; no Owner/Development, o checkout correspondente está sincronizado;
+4. o wrapper resolve automaticamente o runtime WebKit verificado em `/run/ordax/runtime/native-surface/rootfs` ou o runtime dinâmico de desenvolvimento;
+5. nenhuma alteração de kernel, reflash ou escrita física é necessária para o harness.
 
 ## Coleta inicial
 
-Abra o **Internet**, carregue pelo menos duas páginas HTTPS públicas, altere a aba ativa e então, no shell de manutenção do Owner/Development, execute:
+Abra o **Internet**, carregue pelo menos duas páginas HTTPS públicas, altere a aba ativa e então, no **Stable/MVP canônico**, execute:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-internet-proof collect \
+/system/surface/bin/ordax-internet-proof collect \
   --label before-surface-restart \
   --output /var/lib/ordax/internet-proof/before.json
 ```
+
+Em Owner/Development, o mesmo harness pode ser chamado por `/workspace/ordax/system/surface/bin/ordax-internet-proof`, mas essa prova não deve ser promovida como evidência canônica Stable/MVP.
 
 A saída deve terminar com `FAIL=0`. Um `WARN` sobre `data/cache` só é aceitável antes de o WebKit ter materializado ambos os diretórios; para a prova final, use o Internet primeiro e repita até o perfil existir.
 
@@ -41,11 +44,11 @@ A saída deve terminar com `FAIL=0`. Um `WARN` sobre `data/cache` só é aceitá
 Reinicie **somente a Surface**, sem reiniciar o notebook. Não altere as abas antes da segunda coleta. Depois execute:
 
 ```sh
-/workspace/ordax/system/surface/bin/ordax-internet-proof collect \
+/system/surface/bin/ordax-internet-proof collect \
   --label after-surface-restart \
   --output /var/lib/ordax/internet-proof/after.json
 
-/workspace/ordax/system/surface/bin/ordax-internet-proof compare \
+/system/surface/bin/ordax-internet-proof compare \
   /var/lib/ordax/internet-proof/before.json \
   /var/lib/ordax/internet-proof/after.json \
   --output /var/lib/ordax/internet-proof/compare.json

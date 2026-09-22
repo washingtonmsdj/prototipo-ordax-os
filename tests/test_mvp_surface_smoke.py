@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROOF = ROOT / "system" / "diagnostics" / "mvp_surface_smoke.py"
 WRAPPER = ROOT / "system" / "surface" / "bin" / "ordax-mvp-smoke"
+RUNTIME_RESOLVER = ROOT / "system" / "surface" / "bin" / "ordax-proof-runtime.sh"
 
 spec = importlib.util.spec_from_file_location("ordax_mvp_surface_smoke", PROOF)
 proof = importlib.util.module_from_spec(spec)
@@ -65,6 +66,14 @@ class SmokeHandler(BaseHTTPRequestHandler):
             self._send_json({
                 "battery": {"percent": 71, "state": "discharging"},
                 "externalPower": False,
+            })
+            return
+        if self.path == "/__ordax/native/keyboard-layout":
+            self._send_json({
+                "configuredLayoutId": "br-abnt2",
+                "appliedLayoutId": "br-abnt2",
+                "supportedLayoutIds": ["br-abnt2", "us"],
+                "restartRequired": False,
             })
             return
         if self.path == "/__ordax/native/files?path=%2F":
@@ -151,7 +160,13 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
                 "update_status": {
                     "source_identity_sha256": updater_digest,
                     "runtime_surface_matches_source": runtime_matches,
-                }
+                },
+                "keyboard_layout": {
+                    "configured_layout_id": "br-abnt2",
+                    "applied_layout_id": "br-abnt2",
+                    "restart_required": False,
+                    "settled": True,
+                },
             },
             "summary": {"pass": 10, "warn": 0, "fail": fail_count},
         }
@@ -190,6 +205,8 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
         self.assertEqual(report["summary"]["fail"], 0, report["checks"])
         self.assertEqual(report["observed"]["file_space_root"]["entry_count"], 2)
         self.assertEqual(report["observed"]["network_status"]["interface_count"], 2)
+        self.assertTrue(report["observed"]["keyboard_layout"]["settled"])
+        self.assertEqual(report["observed"]["keyboard_layout"]["applied_layout_id"], "br-abnt2")
         self.assertEqual(report["observed"]["update_status"]["status"], "running")
         self.assertEqual(report["observed"]["update_status"]["phase"], "idle")
         self.assertEqual(report["observed"]["update_status"]["delivery_number"], 42)
@@ -211,6 +228,24 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
         })
         self.assertEqual(summary["entry_count"], 1)
         self.assertNotIn("private.txt", json.dumps(summary))
+
+    def test_keyboard_layout_validator_requires_supported_settled_state_shape(self):
+        self.assertEqual(
+            proof.validate_keyboard_layout({
+                "configuredLayoutId": "us",
+                "appliedLayoutId": "us",
+                "supportedLayoutIds": ["br-abnt2", "us"],
+                "restartRequired": False,
+            })["settled"],
+            True,
+        )
+        with self.assertRaises(ValueError):
+            proof.validate_keyboard_layout({
+                "configuredLayoutId": "us",
+                "appliedLayoutId": "br-abnt2",
+                "supportedLayoutIds": ["br-abnt2", "us"],
+                "restartRequired": False,
+            })
 
     def test_metrics_validator_rejects_impossible_values(self):
         with self.assertRaises(ValueError):
@@ -282,6 +317,18 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
 
         stale_surface = self._comparison_report(runtime_matches=False, label="after")
         self.assertGreater(proof.compare_reports(baseline, stale_surface)["summary"]["fail"], 0)
+
+        changed_keyboard = self._comparison_report(label="after")
+        changed_keyboard["observed"]["keyboard_layout"] = {
+            "configured_layout_id": "us",
+            "applied_layout_id": "us",
+            "restart_required": False,
+            "settled": True,
+        }
+        self.assertGreater(
+            proof.compare_reports(baseline, changed_keyboard)["summary"]["fail"],
+            0,
+        )
 
         failed_after = self._comparison_report(fail_count=1, label="after")
         self.assertGreater(proof.compare_reports(baseline, failed_after)["summary"]["fail"], 0)
@@ -379,13 +426,19 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
         self.assertTrue(all(item["status"] == "pass" for item in checks))
         self.assertTrue(all(len(item["sha256"]) == 64 for item in snapshot["files"].values()))
 
-    def test_wrapper_uses_existing_webkit_runtime_and_no_install(self):
+    def test_wrapper_uses_verified_stable_or_development_runtime_without_install(self):
         text = WRAPPER.read_text(encoding="utf-8")
-        self.assertIn("alpine-v3.22-cage-webkitgtk-v1", text)
+        resolver = RUNTIME_RESOLVER.read_text(encoding="utf-8")
+        self.assertIn("ordax-proof-runtime.sh", text)
+        self.assertIn("resolve_ordax_proof_runtime_root", text)
         self.assertIn("/srv/ordax-system/diagnostics/mvp_surface_smoke.py", text)
         self.assertIn('busybox chroot "$RUNTIME_ROOT"', text)
-        self.assertNotIn("apk add", text)
-        self.assertNotIn("curl ", text)
+        self.assertIn("/run/ordax/runtime/native-surface/rootfs", resolver)
+        self.assertIn("alpine-v3.22-cage-webkitgtk-v1", resolver)
+        self.assertIn("stable-mvp", resolver)
+        self.assertIn("owner-development", resolver)
+        self.assertNotIn("apk add", text + resolver)
+        self.assertNotIn("curl ", text + resolver)
         self.assertEqual(stat.S_IMODE(WRAPPER.stat().st_mode), 0o755)
 
     def test_collector_has_no_mutating_http_methods(self):

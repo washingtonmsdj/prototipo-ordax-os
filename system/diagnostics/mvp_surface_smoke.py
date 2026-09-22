@@ -62,6 +62,7 @@ TOUR_ITEMS = (
     "settings",
     "system",
     "network-power",
+    "keyboard-layout",
     "failure-isolation",
     "continuity",
     "post-tour",
@@ -206,6 +207,35 @@ def validate_power(value: object) -> dict:
     if state not in {"charging", "discharging", "full", "not-charging", "unknown"}:
         raise ValueError("invalid battery state")
     return {"battery_present": True, "battery_percent": percent, "battery_state": state, "external_power": external}
+
+
+def validate_keyboard_layout(value: object) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError("keyboard layout payload must be an object")
+    configured = value.get("configuredLayoutId")
+    applied = value.get("appliedLayoutId")
+    supported = value.get("supportedLayoutIds")
+    restart_required = value.get("restartRequired")
+    allowed = {"br-abnt2", "us"}
+    if configured not in allowed or applied not in allowed:
+        raise ValueError("invalid keyboard layout id")
+    if (
+        not isinstance(supported, list)
+        or len(supported) != len(set(supported))
+        or set(supported) != allowed
+    ):
+        raise ValueError("invalid supported keyboard layouts")
+    if not isinstance(restart_required, bool):
+        raise ValueError("invalid keyboard restartRequired")
+    expected_restart = configured != applied
+    if restart_required != expected_restart:
+        raise ValueError("keyboard restartRequired does not match configured/applied state")
+    return {
+        "configured_layout_id": configured,
+        "applied_layout_id": applied,
+        "restart_required": restart_required,
+        "settled": not restart_required,
+    }
 
 
 def _valid_logical_path(path: object) -> bool:
@@ -368,6 +398,7 @@ def live_surface_checks(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, time
         ("system_metrics", "/__ordax/native/metrics", validate_metrics),
         ("network_status", "/__ordax/native/network-status", validate_network),
         ("power_status", "/__ordax/native/power-status", validate_power),
+        ("keyboard_layout", "/__ordax/native/keyboard-layout", validate_keyboard_layout),
         ("file_space_root", f"/__ordax/native/files?path={quote('/', safe='')}", validate_files),
         ("update_status", "/__ordax/native/update", validate_update_status),
         ("update_history", "/__ordax/native/update-history", validate_update_history),
@@ -380,7 +411,17 @@ def live_surface_checks(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, time
                 continue
             summary = validator(_bounded_json(body))
             observed[name] = summary
-            checks.append(_check(name, True, "HTTP 200; payload válido"))
+            healthy = not (
+                name == "keyboard_layout"
+                and summary.get("settled") is not True
+            )
+            checks.append(_check(
+                name,
+                healthy,
+                "HTTP 200; payload válido e estado aplicado"
+                if healthy
+                else "layout configurado ainda não corresponde ao layout aplicado",
+            ))
         except (OSError, ValueError, UnicodeError, json.JSONDecodeError) as exc:
             checks.append(_check(name, False, f"probe falhou: {exc}"))
     return observed, checks
@@ -468,6 +509,21 @@ def _updater_identity(report: dict) -> tuple[str, bool] | None:
     return digest, runtime_matches
 
 
+def _keyboard_identity(report: dict) -> tuple[str, str, bool] | None:
+    observed = report.get("observed")
+    keyboard = observed.get("keyboard_layout") if isinstance(observed, dict) else None
+    if not isinstance(keyboard, dict):
+        return None
+    configured = keyboard.get("configured_layout_id")
+    applied = keyboard.get("applied_layout_id")
+    settled = keyboard.get("settled")
+    if configured not in {"br-abnt2", "us"} or applied not in {"br-abnt2", "us"}:
+        return None
+    if not isinstance(settled, bool):
+        return None
+    return configured, applied, settled
+
+
 def _report_has_no_failures(report: dict) -> bool:
     summary = report.get("summary")
     if not isinstance(summary, dict):
@@ -504,6 +560,22 @@ def compare_reports(baseline: dict, after: dict, label: str = "mvp-surface-compa
 
     runtime_aligned = updater_valid and baseline_updater[1] and after_updater[1]
     checks.append(_check("runtime_surface_aligned", runtime_aligned, "Surface alinhada ao source nas duas coletas" if runtime_aligned else "Surface não está alinhada ao source em uma das coletas"))
+
+    baseline_keyboard = _keyboard_identity(baseline)
+    after_keyboard = _keyboard_identity(after)
+    keyboard_stable = (
+        baseline_keyboard is not None
+        and after_keyboard is not None
+        and baseline_keyboard == after_keyboard
+        and baseline_keyboard[2]
+    )
+    checks.append(_check(
+        "keyboard_layout_stable",
+        keyboard_stable,
+        "mesmo layout físico aplicado e estável nas duas coletas"
+        if keyboard_stable
+        else "layout físico ausente, pendente ou diferente entre as coletas",
+    ))
 
     report = {
         "schema": COMPARE_SCHEMA,

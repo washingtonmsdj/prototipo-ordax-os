@@ -119,16 +119,44 @@ def require_programs() -> None:
         raise ProofError("missing portable-v2 QEMU proof programs: " + ", ".join(missing))
 
 
-def wait_block(path: Path, timeout: float = 10.0) -> None:
+def wait_block(
+    path: Path,
+    timeout: float = 10.0,
+    *,
+    stable_for: float = 0.75,
+) -> None:
+    """Wait until one loop partition node is continuously stable.
+
+    GitHub runners can reuse /dev/loopN quickly enough that a stale partition
+    node from the previous attachment is briefly observable while udev removes
+    it. A single is_block_device() observation can therefore race with mkfs.
+    Require the same block-device identity to remain present continuously
+    before returning instead of adding an unconditional sleep.
+    """
+    if stable_for <= 0 or stable_for >= timeout:
+        raise ValueError("stable_for must be positive and smaller than timeout")
+
     deadline = time.monotonic() + timeout
+    stable_since: float | None = None
+    stable_rdev: int | None = None
     while time.monotonic() < deadline:
+        now = time.monotonic()
         try:
-            if path.is_block_device():
-                return
+            info = path.stat()
+            if stat.S_ISBLK(info.st_mode):
+                if stable_rdev != info.st_rdev:
+                    stable_rdev = info.st_rdev
+                    stable_since = now
+                elif stable_since is not None and now - stable_since >= stable_for:
+                    return
+            else:
+                stable_since = None
+                stable_rdev = None
         except OSError:
-            pass
-        time.sleep(0.1)
-    raise ProofError(f"loop partition did not appear: {path}")
+            stable_since = None
+            stable_rdev = None
+        time.sleep(0.05)
+    raise ProofError(f"loop partition did not become stable: {path}")
 
 
 def unmount(path: Path) -> None:
@@ -306,7 +334,11 @@ def stage_disk(args: argparse.Namespace, inputs: dict[str, Any], work: Path) -> 
         data = Path(loop + "p2")
         wait_block(esp)
         wait_block(data)
+        # Revalidate each node immediately before its formatter. This closes
+        # the stale-node removal race when a loop number is rapidly reused.
+        wait_block(esp)
         run(["mkfs.vfat", "-F", "32", "-n", "ORDAX-ESP", str(esp)])
+        wait_block(data)
         run(["mkfs.exfat", "-L", "ORDAX-DATA", str(data)])
 
         run(["mount", "-t", "vfat", "-o", "rw,umask=0022", str(esp), str(esp_mount)])

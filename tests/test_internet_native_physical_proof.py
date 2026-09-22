@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROOF = ROOT / "system" / "diagnostics" / "internet_native_physical_proof.py"
 WRAPPER = ROOT / "system" / "surface" / "bin" / "ordax-internet-proof"
+RUNTIME_RESOLVER = ROOT / "system" / "surface" / "bin" / "ordax-proof-runtime.sh"
 
 spec = importlib.util.spec_from_file_location("ordax_internet_physical_proof", PROOF)
 proof = importlib.util.module_from_spec(spec)
@@ -149,13 +150,17 @@ class InternetNativePhysicalProofTests(unittest.TestCase):
         )
         self.assertGreater(report["summary"]["fail"], 0)
 
-    def test_wrapper_targets_existing_webkit_runtime_without_installing_dependencies(self):
+    def test_wrapper_targets_verified_stable_or_development_runtime_without_installing_dependencies(self):
         text = WRAPPER.read_text(encoding="utf-8")
-        self.assertIn("alpine-v3.22-cage-webkitgtk-v1", text)
+        resolver = RUNTIME_RESOLVER.read_text(encoding="utf-8")
+        self.assertIn("ordax-proof-runtime.sh", text)
+        self.assertIn("resolve_ordax_proof_runtime_root", text)
         self.assertIn("/srv/ordax-system/diagnostics/internet_native_physical_proof.py", text)
         self.assertIn('busybox chroot "$RUNTIME_ROOT"', text)
-        self.assertNotIn("apk add", text)
-        self.assertNotIn("curl ", text)
+        self.assertIn("/run/ordax/runtime/native-surface/rootfs", resolver)
+        self.assertIn("alpine-v3.22-cage-webkitgtk-v1", resolver)
+        self.assertNotIn("apk add", text + resolver)
+        self.assertNotIn("curl ", text + resolver)
         self.assertEqual(stat.S_IMODE(WRAPPER.stat().st_mode), 0o755)
 
 
