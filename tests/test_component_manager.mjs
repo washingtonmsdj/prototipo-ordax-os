@@ -110,6 +110,7 @@ test("canonical component catalog has one unique owner identity per app and serv
     "files",
     "notes",
     "internet",
+    "assistant",
     "settings",
     "account",
     "system",
