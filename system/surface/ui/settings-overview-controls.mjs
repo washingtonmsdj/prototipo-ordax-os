@@ -1,6 +1,10 @@
 import { assertAppActivationPort } from "../../contracts/app-activation.mjs";
 import { assertNotificationsPort } from "../../contracts/notifications.mjs";
 import {
+  assertLocalSessionPort,
+  validateLocalSessionSnapshot,
+} from "../../contracts/local-session.mjs";
+import {
   assertKeyboardLayoutPort,
   validateKeyboardLayoutSnapshot,
 } from "../../contracts/keyboard-layout.mjs";
@@ -35,6 +39,7 @@ const SETTINGS_SECTIONS = Object.freeze([
   Object.freeze({ id: "accessibility", label: "Acessibilidade" }),
   Object.freeze({ id: "regional", label: "Idioma e região" }),
   Object.freeze({ id: "network", label: "Rede" }),
+  Object.freeze({ id: "security", label: "Segurança" }),
   Object.freeze({ id: "notifications", label: "Notificações" }),
 ]);
 
@@ -54,6 +59,10 @@ const SECTION_COPY = Object.freeze({
   network: Object.freeze({
     title: "Rede",
     subtitle: "Conectividade observada e gerenciamento Wi-Fi somente quando o host expõe essa capacidade.",
+  }),
+  security: Object.freeze({
+    title: "Segurança",
+    subtitle: "Bloqueio local da sessão, independente de Conta e de internet.",
   }),
   notifications: Object.freeze({
     title: "Notificações",
@@ -125,6 +134,7 @@ export function mountSettingsOverviewControls(
   appActivation = null,
   notifications = null,
   keyboardLayout = null,
+  localSession = null,
 ) {
   if (!(root instanceof Element)) {
     throw new TypeError("Settings overview controls require a Surface root Element");
@@ -139,6 +149,8 @@ export function mountSettingsOverviewControls(
   const notificationPort = notifications === null ? null : assertNotificationsPort(notifications);
   const keyboardLayoutPort =
     keyboardLayout === null ? null : assertKeyboardLayoutPort(keyboardLayout);
+  const localSessionPort =
+    localSession === null ? null : assertLocalSessionPort(localSession);
   const documentObject = root.ownerDocument;
 
   let hostSnapshot = validateSurfaceSnapshot(hostPort.getSnapshot());
@@ -153,6 +165,11 @@ export function mountSettingsOverviewControls(
   let keyboardLayoutPending = false;
   let keyboardLayoutMessage = "";
   let keyboardLayoutOrdinal = 0;
+  let localSessionSnapshot = localSessionPort === null
+    ? null
+    : validateLocalSessionSnapshot(localSessionPort.getSnapshot());
+  let localSessionPending = false;
+  let localSessionMessage = "";
   let networkManagementReadFailed = false;
   let networkManagementLastSuccessAt = null;
   let networkManagementPending = false;
@@ -433,6 +450,93 @@ export function mountSettingsOverviewControls(
       options.append(button);
     }
     section.append(options);
+    view.append(section);
+  };
+
+  const renderSecurity = (view) => {
+    const section = node(documentObject, "section", "ordax-settings-section");
+    section.dataset.settingsSecurity = "";
+    section.append(
+      node(documentObject, "span", "ordax-settings-section-kicker", "Sessão local"),
+      node(documentObject, "h4", "ordax-settings-section-title", "Bloqueio deste OrdaX"),
+      node(
+        documentObject,
+        "p",
+        "ordax-settings-section-copy",
+        "A credencial fica somente neste dispositivo e não depende da Conta. "
+          + "Este recurso bloqueia a Surface em execução; ele não criptografa os arquivos do pendrive.",
+      ),
+    );
+
+    if (!localSessionPort || !localSessionSnapshot) {
+      section.append(
+        node(documentObject, "p", "ordax-settings-empty", "O owner de sessão local não está disponível nesta execução."),
+      );
+      view.append(section);
+      return;
+    }
+
+    section.append(
+      node(
+        documentObject,
+        "p",
+        "ordax-settings-section-copy",
+        localSessionSnapshot.credentialConfigured
+          ? "PIN/senha local configurado. O próximo início da Surface começa bloqueado."
+          : "Nenhum PIN/senha local configurado. O bloqueio autenticado fica desativado.",
+      ),
+    );
+
+    const form = node(documentObject, "div", "ordax-settings-security-form");
+    if (!localSessionSnapshot.credentialConfigured) {
+      const secret = documentObject.createElement("input");
+      secret.type = "password";
+      secret.autocomplete = "new-password";
+      secret.minLength = 6;
+      secret.maxLength = 128;
+      secret.placeholder = "Novo PIN ou senha local";
+      secret.dataset.settingsLocalSessionSecret = "";
+      secret.disabled = localSessionPending;
+      const confirm = documentObject.createElement("input");
+      confirm.type = "password";
+      confirm.autocomplete = "new-password";
+      confirm.minLength = 6;
+      confirm.maxLength = 128;
+      confirm.placeholder = "Confirmar PIN ou senha";
+      confirm.dataset.settingsLocalSessionConfirm = "";
+      confirm.disabled = localSessionPending;
+      const configure = node(documentObject, "button", "ordax-settings-notification-action", localSessionPending ? "Salvando…" : "Configurar bloqueio");
+      configure.type = "button";
+      configure.dataset.settingsLocalSessionAction = "configure";
+      configure.disabled = localSessionPending;
+      form.append(secret, confirm, configure);
+    } else {
+      const lock = node(documentObject, "button", "ordax-settings-notification-action", "Bloquear agora");
+      lock.type = "button";
+      lock.dataset.settingsLocalSessionAction = "lock";
+      lock.disabled = localSessionPending;
+      const current = documentObject.createElement("input");
+      current.type = "password";
+      current.autocomplete = "current-password";
+      current.minLength = 6;
+      current.maxLength = 128;
+      current.placeholder = "PIN/senha atual para remover";
+      current.dataset.settingsLocalSessionCurrent = "";
+      current.disabled = localSessionPending;
+      const remove = node(documentObject, "button", "ordax-settings-notification-action", "Remover bloqueio");
+      remove.type = "button";
+      remove.dataset.settingsLocalSessionAction = "remove";
+      remove.disabled = localSessionPending;
+      form.append(lock, current, remove);
+    }
+    section.append(form);
+
+    if (localSessionMessage) {
+      const message = node(documentObject, "p", "ordax-settings-section-copy", localSessionMessage);
+      message.setAttribute("role", "status");
+      message.setAttribute("aria-live", "polite");
+      section.append(message);
+    }
     view.append(section);
   };
 
@@ -801,6 +905,8 @@ export function mountSettingsOverviewControls(
       if (activeSection === "regional") renderKeyboardLayout(view);
     } else if (activeSection === "network") {
       renderNetwork(view);
+    } else if (activeSection === "security") {
+      renderSecurity(view);
     } else if (activeSection === "notifications") {
       renderNotifications(view);
     }
@@ -973,6 +1079,77 @@ export function mountSettingsOverviewControls(
       return;
     }
 
+    const localSessionButton = event.target.closest("[data-settings-local-session-action]");
+    if (
+      localSessionButton
+      && root.contains(localSessionButton)
+      && localSessionPort
+      && localSessionSnapshot
+      && !localSessionPending
+    ) {
+      const action = localSessionButton.dataset.settingsLocalSessionAction;
+      if (action === "lock") {
+        localSessionMessage = "";
+        void localSessionPort.lock().catch(() => {
+          localSessionMessage = "Não foi possível bloquear a sessão.";
+          replaceView();
+        });
+        return;
+      }
+
+      let secret = "";
+      if (action === "configure") {
+        const input = root.querySelector("[data-settings-local-session-secret]");
+        const confirm = root.querySelector("[data-settings-local-session-confirm]");
+        if (!(input instanceof HTMLInputElement) || !(confirm instanceof HTMLInputElement)) return;
+        secret = input.value;
+        const confirmation = confirm.value;
+        input.value = "";
+        confirm.value = "";
+        if (secret.length < 6 || secret !== confirmation) {
+          secret = "";
+          localSessionMessage = "Use pelo menos 6 caracteres e repita exatamente a mesma credencial.";
+          replaceView();
+          return;
+        }
+      } else if (action === "remove") {
+        const input = root.querySelector("[data-settings-local-session-current]");
+        if (!(input instanceof HTMLInputElement)) return;
+        secret = input.value;
+        input.value = "";
+        if (secret.length < 6) {
+          secret = "";
+          localSessionMessage = "Digite o PIN ou senha local atual.";
+          replaceView();
+          return;
+        }
+      } else {
+        return;
+      }
+
+      localSessionPending = true;
+      localSessionMessage = action === "configure" ? "Criando credencial local…" : "Removendo credencial local…";
+      replaceView();
+      const operationSecret = secret;
+      secret = "";
+      const operation = action === "configure"
+        ? localSessionPort.configureCredential(operationSecret)
+        : localSessionPort.removeCredential(operationSecret);
+      void operation.then(() => {
+        localSessionMessage = action === "configure"
+          ? "Bloqueio local configurado."
+          : "Bloqueio autenticado removido.";
+      }).catch((error) => {
+        localSessionMessage = error?.status === 401
+          ? "PIN ou senha local incorreto."
+          : "Não foi possível alterar o bloqueio local.";
+      }).finally(() => {
+        localSessionPending = false;
+        replaceView();
+      });
+      return;
+    }
+
     const dndButton = event.target.closest("[data-settings-notification-dnd]");
     if (dndButton && root.contains(dndButton) && notificationPort && notificationSnapshot) {
       notificationPort.setDoNotDisturb(!notificationSnapshot.doNotDisturb);
@@ -1099,6 +1276,10 @@ export function mountSettingsOverviewControls(
     preferenceSnapshot = snapshot;
     replaceView();
   });
+  const unsubscribeLocalSession = localSessionPort?.subscribe((snapshot) => {
+    localSessionSnapshot = validateLocalSessionSnapshot(snapshot);
+    if (activeSection === "security") replaceView();
+  });
   const unsubscribeNotifications = notificationPort?.subscribe((snapshot) => {
     notificationSnapshot = snapshot;
     if (activeSection === "notifications") replaceView();
@@ -1123,6 +1304,7 @@ export function mountSettingsOverviewControls(
       if (networkPoll !== null) clearInterval(networkPoll);
       if (networkManagementPoll !== null) clearInterval(networkManagementPoll);
       unsubscribeNotifications?.();
+      unsubscribeLocalSession?.();
       unsubscribePreferences?.();
       unsubscribeHost?.();
       unsubscribeActivation?.();
