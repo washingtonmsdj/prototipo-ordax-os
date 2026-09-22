@@ -37,7 +37,8 @@ class LocalAiContractTests(unittest.TestCase):
         self.assertTrue(selection["physical_writer"]["current_authorized_writer_is_not_modified_by_this_contract"])
         self.assertTrue(selection["physical_writer"]["binding_required_before_public_creator_exposure"])
 
-    def test_assistant_is_registered_as_optional_component_slot_app(self):
+    def test_assistant_is_registered_as_optional_bundled_app(self):
+        contract = json.loads(LOCAL_AI.read_text(encoding="utf-8"))
         app = APP.read_text(encoding="utf-8")
         component = COMPONENT.read_text(encoding="utf-8")
         catalog = CATALOG.read_text(encoding="utf-8")
@@ -45,7 +46,8 @@ class LocalAiContractTests(unittest.TestCase):
         self.assertIn('id: "assistant"', app)
         self.assertIn('"ai.local"', app)
         self.assertIn('releaseMode: "bundled"', component)
-        self.assertIn('criticality: "optional"', component)\n        self.assertEqual(contract["migration"]["future_component_release_mode"], "component-slot")
+        self.assertIn('criticality: "optional"', component)
+        self.assertEqual(contract["migration"]["future_component_release_mode"], "component-slot")
         self.assertIn("assistantApp", catalog)
         self.assertIn("assistantComponent", component_catalog)
 
