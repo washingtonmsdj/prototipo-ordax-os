@@ -42,13 +42,14 @@ preference. PT-BR remains the source catalog. The shared desktop shell, launcher
 window chrome, workspace labels, connectivity copy, first-party app titles and
 fallback panel metadata have explicit English catalog entries.
 
-This does **not** make `en-US` a complete Surface locale yet. Files now localizes
-navigation, search, locale-aware sorting, listing, selection, common create/copy/
-rename/project forms, export/preview controls, Recents and recoverable Trash through
-the same owner. Settings and System localize their shared section navigation/header
-copy. Operational/error messages in Files, deeper Settings/System content, Account,
-Notes, Internet and several quick panels still contain PT-BR copy and remain in
-migration. Spanish, German and French
+This does **not** make `en-US` a complete Surface locale yet. **Files is now
+complete in English at source level**: navigation, search, locale-aware sorting,
+listing, selection, create/copy/rename/project forms, import/export, preview,
+Recents, recoverable Trash/restore, operational/error feedback and the Files→Notes
+action all resolve through the shared localization owner. Settings and System
+localize their shared section navigation/header copy. Deeper Settings/System
+content, Account, Notes, Internet and several quick panels still contain PT-BR copy
+and remain in migration. Spanish, German and French
 continue to use explicit source-language fallback outside the already translated
 OOBE until their shared catalogs are implemented.
 
@@ -58,6 +59,9 @@ SURFACE_SOURCE_LOCALE=pt-BR
 SURFACE_SHARED_SHELL_EN_US=PASS_SOURCE
 FILES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 FILES_FORMS_SORT_EXPORT_PREVIEW_EN_US=PASS_SOURCE
+FILES_OPERATIONAL_FEEDBACK_EN_US=PASS_SOURCE
+FILES_TO_NOTES_EN_US=PASS_SOURCE
+FILES_EN_US=PASS_SOURCE
 SETTINGS_SYSTEM_NAV_EN_US=PASS_SOURCE
 SURFACE_COMPLETE_LOCALES=pt-BR
 SURFACE_EN_US_APP_CONTROLS=MIGRATING
