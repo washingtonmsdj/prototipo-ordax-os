@@ -20,6 +20,7 @@ import { createNativePowerActions } from "../../adapters/native/power-actions.mj
 import { createNativePowerStatus } from "../../adapters/native/power-status.mjs";
 import { createNativePreferenceStore } from "../../adapters/native/preferences.mjs";
 import { createNativeFirstRunStateStore } from "../../adapters/native/first-run-state.mjs";
+import { createNativeLocalSession } from "../../adapters/native/local-session.mjs";
 import { createNativeSurfaceHost } from "../../adapters/native/runtime.mjs";
 import { createNativeSystemMetrics } from "../../adapters/native/system-metrics.mjs";
 import { createNativeUpdateHistory } from "../../adapters/native/update-history.mjs";
@@ -60,6 +61,7 @@ import { mountPowerControls } from "../../surface/ui/power-controls.mjs";
 import { mountSurface } from "../../surface/ui/surface.mjs";
 import { createSurfaceBootScreen } from "../../surface/ui/boot-screen.mjs";
 import { mountFirstRunExperience } from "../../surface/ui/first-run.mjs";
+import { mountLocalSessionLock } from "../../surface/ui/local-session-lock.mjs";
 import { mountSettingsOverviewControls } from "../../surface/ui/settings-overview-controls.mjs";
 import { mountSystemOverviewControls } from "../../surface/ui/system-overview-controls.mjs";
 import { mountSystemTrayQuickPanels } from "../../surface/ui/system-tray-quick-panels.mjs";
@@ -86,6 +88,10 @@ async function start() {
   const browserSession = createNativeBrowserSession(window);
   const preferenceStorePromise = createNativePreferenceStore(window);
   const firstRunStateStorePromise = createNativeFirstRunStateStore(window);
+  const localSessionPromise = optionalNativeProbe(
+    "OrdaX native local session unavailable",
+    () => createNativeLocalSession(window),
+  );
   const optionalPortsPromise = Promise.all([
     optionalNativeProbe(
       "OrdaX native client diagnostics unavailable",
@@ -141,9 +147,10 @@ async function start() {
     ),
   ]);
 
-  const [preferenceStore, firstRunStateStore] = await Promise.all([
+  const [preferenceStore, firstRunStateStore, localSession] = await Promise.all([
     preferenceStorePromise,
     firstRunStateStorePromise,
+    localSessionPromise,
   ]);
   const regionalRecovery = seedMissingRegionalPreferencesFromFirstRun(
     preferenceStore.load(),
@@ -360,6 +367,7 @@ async function start() {
       appActivation,
       notifications,
       keyboardLayout,
+      localSession,
     );
   } catch (error) {
     reportClientDiagnostic("settings-network-management", error);
@@ -373,6 +381,7 @@ async function start() {
       appActivation,
       notifications,
       keyboardLayout,
+      localSession,
     );
   }
   const systemOverviewControls = mountSystemOverviewControls(
@@ -445,9 +454,18 @@ async function start() {
       networkManagement,
       identitySession,
       identityActions,
+      localSession,
     });
   } catch (error) {
     reportClientDiagnostic("first-run", error);
+  }
+  let localSessionLock = null;
+  if (localSession) {
+    try {
+      localSessionLock = mountLocalSessionLock(root, localSession);
+    } catch (error) {
+      reportClientDiagnostic("local-session-lock", error);
+    }
   }
   bootScreen.ready();
 
@@ -456,6 +474,7 @@ async function start() {
     () => {
       window.removeEventListener("error", onWindowError);
       window.removeEventListener("unhandledrejection", onUnhandledRejection);
+      localSessionLock?.destroy();
       firstRun?.destroy();
       surfaceHeartbeat.dispose();
       homePending.dispose();
@@ -484,6 +503,7 @@ async function start() {
       unsubscribeLocalAiHealth();
       intelligence.dispose();
       localAi.dispose();
+      localSession?.dispose();
       componentManager.destroy();
       surface.destroy();
       identityActions.dispose();
