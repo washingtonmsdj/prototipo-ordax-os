@@ -140,6 +140,7 @@ Bloqueiam lançamento:
 - primeiro USB canônico Stable/MVP;
 - boot USB -> OOBE/primeiro uso -> Surface -> apps;
 - primeiro uso persistente com rota oficial **Continuar sem conta** e rede opcional;
+- teclado físico utilizável no layout documentado para o hardware suportado; no MVP PT-BR, ABNT2 é o padrão Native e US é uma alternativa persistente;
 - uso real sem instalação no disco interno;
 - update oficial sem Git;
 - recovery/rollback;
@@ -149,6 +150,8 @@ Bloqueiam lançamento:
 - hardware suportado documentado.
 
 **Não bloqueiam o MVP:** instalador Native, boot por SSD/NVMe/HD, dual boot, resize ou particionamento interno.
+
+O layout do teclado físico é uma capability do host Native, não uma preferência Web. A alteração feita em Ajustes é gravada no USB e aplicada pelo Cage no próximo início da Surface. O seletor não deve aparecer no primeiro uso enquanto não existir uma troca segura na sessão atual ou um handoff gráfico anterior ao compositor.
 
 ## 7. Fundação Native pós-MVP
 

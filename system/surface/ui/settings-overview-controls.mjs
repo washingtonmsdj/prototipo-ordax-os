@@ -1,6 +1,10 @@
 import { assertAppActivationPort } from "../../contracts/app-activation.mjs";
 import { assertNotificationsPort } from "../../contracts/notifications.mjs";
 import {
+  assertKeyboardLayoutPort,
+  validateKeyboardLayoutSnapshot,
+} from "../../contracts/keyboard-layout.mjs";
+import {
   assertNetworkManagementPort,
   validateNetworkManagementSnapshot,
 } from "../../contracts/network-management.mjs";
@@ -19,6 +23,7 @@ import {
   runNetworkManagementAction,
 } from "../../services/network/management-runtime.mjs";
 import { listNotificationSources } from "../../services/notifications/catalog.mjs";
+import { KEYBOARD_LAYOUT_OPTIONS } from "../../services/input/keyboard-layout.mjs";
 import { listPreferenceDefinitions } from "../../services/preferences/catalog.mjs";
 import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
 
@@ -119,6 +124,7 @@ export function mountSettingsOverviewControls(
   networkManagement = null,
   appActivation = null,
   notifications = null,
+  keyboardLayout = null,
 ) {
   if (!(root instanceof Element)) {
     throw new TypeError("Settings overview controls require a Surface root Element");
@@ -131,6 +137,8 @@ export function mountSettingsOverviewControls(
     networkManagement === null ? null : assertNetworkManagementPort(networkManagement);
   const activationPort = appActivation === null ? null : assertAppActivationPort(appActivation);
   const notificationPort = notifications === null ? null : assertNotificationsPort(notifications);
+  const keyboardLayoutPort =
+    keyboardLayout === null ? null : assertKeyboardLayoutPort(keyboardLayout);
   const documentObject = root.ownerDocument;
 
   let hostSnapshot = validateSurfaceSnapshot(hostPort.getSnapshot());
@@ -140,6 +148,11 @@ export function mountSettingsOverviewControls(
   let networkLastSuccessAt = null;
   let networkManagementSnapshot = null;
   let notificationSnapshot = notificationPort?.getSnapshot() ?? null;
+  let keyboardLayoutSnapshot = null;
+  let keyboardLayoutReadFailed = false;
+  let keyboardLayoutPending = false;
+  let keyboardLayoutMessage = "";
+  let keyboardLayoutOrdinal = 0;
   let networkManagementReadFailed = false;
   let networkManagementLastSuccessAt = null;
   let networkManagementPending = false;
@@ -176,6 +189,12 @@ export function mountSettingsOverviewControls(
         kind: "network-action",
         value: element.dataset.settingsNetworkAction,
         ssid: element.dataset.settingsWifiSsid ?? null,
+      });
+    }
+    if (element.dataset.settingsKeyboardLayout) {
+      return Object.freeze({
+        kind: "keyboard-layout",
+        value: element.dataset.settingsKeyboardLayout,
       });
     }
     if (element.dataset.settingsNotificationDnd !== undefined) {
@@ -331,6 +350,90 @@ export function mountSettingsOverviewControls(
       }
       view.append(section);
     }
+  };
+
+  const renderKeyboardLayout = (view) => {
+    if (!keyboardLayoutPort) return;
+
+    const section = node(documentObject, "section", "ordax-settings-section");
+    section.dataset.settingsKeyboardLayoutSection = "";
+    section.append(
+      node(documentObject, "span", "ordax-settings-section-kicker", "Teclado físico"),
+      node(documentObject, "h4", "ordax-settings-section-title", "Layout do teclado"),
+      node(
+        documentObject,
+        "p",
+        "ordax-settings-section-copy",
+        "O layout é aplicado pelo Cage antes da Surface iniciar. A escolha fica salva no USB e, quando diferente do layout atual, entra em vigor no próximo início da Surface.",
+      ),
+    );
+
+    if (keyboardLayoutMessage) {
+      const status = node(
+        documentObject,
+        "p",
+        "ordax-settings-keyboard-message",
+        keyboardLayoutMessage,
+      );
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
+      section.append(status);
+    }
+
+    if (keyboardLayoutReadFailed && keyboardLayoutSnapshot === null) {
+      section.append(
+        node(
+          documentObject,
+          "p",
+          "ordax-settings-empty",
+          "O layout do teclado físico está temporariamente indisponível neste host.",
+        ),
+      );
+      view.append(section);
+      return;
+    }
+
+    if (keyboardLayoutSnapshot === null) {
+      section.append(node(documentObject, "p", "ordax-settings-empty", "Lendo layout do teclado…"));
+      view.append(section);
+      return;
+    }
+
+    const stateCopy = keyboardLayoutSnapshot.restartRequired
+      ? "Alteração salva · será aplicada no próximo início da Surface."
+      : "O layout configurado já está em uso nesta Surface.";
+    const state = node(documentObject, "p", "ordax-settings-keyboard-state", stateCopy);
+    state.dataset.restartRequired = String(keyboardLayoutSnapshot.restartRequired);
+    section.append(state);
+
+    const options = node(documentObject, "div", "ordax-settings-keyboard-options");
+    for (const option of KEYBOARD_LAYOUT_OPTIONS) {
+      if (!keyboardLayoutSnapshot.supportedLayoutIds.includes(option.id)) continue;
+      const selected = keyboardLayoutSnapshot.configuredLayoutId === option.id;
+      const applied = keyboardLayoutSnapshot.appliedLayoutId === option.id;
+      const button = node(documentObject, "button", "ordax-settings-keyboard-option");
+      button.type = "button";
+      button.dataset.settingsKeyboardLayout = option.id;
+      button.dataset.selected = String(selected);
+      button.setAttribute("aria-pressed", String(selected));
+      button.disabled = keyboardLayoutPending;
+
+      const copy = node(documentObject, "span", "ordax-settings-keyboard-copy");
+      copy.append(
+        node(documentObject, "strong", "", option.label),
+        node(documentObject, "small", "", option.description),
+      );
+      const markerLabel = selected
+        ? applied ? "Em uso" : "Próximo início"
+        : applied ? "Atual" : "";
+      button.append(
+        copy,
+        node(documentObject, "span", "ordax-settings-keyboard-marker", markerLabel),
+      );
+      options.append(button);
+    }
+    section.append(options);
+    view.append(section);
   };
 
   const renderNotifications = (view) => {
@@ -695,6 +798,7 @@ export function mountSettingsOverviewControls(
     renderSectionNavigation(view);
     if (["appearance", "accessibility", "regional"].includes(activeSection)) {
       renderPreferences(view, activeSection);
+      if (activeSection === "regional") renderKeyboardLayout(view);
     } else if (activeSection === "network") {
       renderNetwork(view);
     } else if (activeSection === "notifications") {
@@ -717,6 +821,53 @@ export function mountSettingsOverviewControls(
   };
 
   const replaceView = () => renderView(true);
+
+  const refreshKeyboardLayout = async () => {
+    if (!keyboardLayoutPort || destroyed || keyboardLayoutPending) return;
+    const ordinal = ++keyboardLayoutOrdinal;
+    try {
+      const nextSnapshot = validateKeyboardLayoutSnapshot(await keyboardLayoutPort.read());
+      if (destroyed || ordinal !== keyboardLayoutOrdinal) return;
+      const changed =
+        keyboardLayoutReadFailed
+        || JSON.stringify(nextSnapshot) !== JSON.stringify(keyboardLayoutSnapshot);
+      keyboardLayoutSnapshot = nextSnapshot;
+      keyboardLayoutReadFailed = false;
+      if (changed && activeSection === "regional") replaceView();
+    } catch {
+      if (destroyed || ordinal !== keyboardLayoutOrdinal) return;
+      const changed = !keyboardLayoutReadFailed;
+      keyboardLayoutReadFailed = true;
+      if (changed && activeSection === "regional") replaceView();
+    }
+  };
+
+  const configureKeyboardLayout = async (layoutId) => {
+    if (!keyboardLayoutPort || keyboardLayoutPending || destroyed) return;
+    const ordinal = ++keyboardLayoutOrdinal;
+    keyboardLayoutPending = true;
+    keyboardLayoutMessage = "Salvando layout do teclado…";
+    replaceView();
+    try {
+      keyboardLayoutSnapshot = validateKeyboardLayoutSnapshot(
+        await keyboardLayoutPort.configure(layoutId),
+      );
+      if (destroyed || ordinal !== keyboardLayoutOrdinal) return;
+      keyboardLayoutReadFailed = false;
+      keyboardLayoutMessage = keyboardLayoutSnapshot.restartRequired
+        ? "Layout salvo. Ele será aplicado no próximo início da Surface."
+        : "Layout salvo e já ativo nesta Surface.";
+    } catch {
+      if (destroyed || ordinal !== keyboardLayoutOrdinal) return;
+      keyboardLayoutMessage =
+        "Não foi possível salvar o layout do teclado. O layout atualmente aplicado foi preservado.";
+    } finally {
+      if (!destroyed && ordinal === keyboardLayoutOrdinal) {
+        keyboardLayoutPending = false;
+        replaceView();
+      }
+    }
+  };
 
   const refreshNetwork = async () => {
     if (!networkPort || destroyed) return;
@@ -841,6 +992,12 @@ export function mountSettingsOverviewControls(
       return;
     }
 
+    const keyboardLayoutButton = event.target.closest("[data-settings-keyboard-layout]");
+    if (keyboardLayoutButton && root.contains(keyboardLayoutButton)) {
+      void configureKeyboardLayout(keyboardLayoutButton.dataset.settingsKeyboardLayout);
+      return;
+    }
+
     const preferenceButton = event.target.closest("[data-settings-preference-id]");
     if (preferenceButton && root.contains(preferenceButton)) {
       preferences.set(
@@ -952,6 +1109,7 @@ export function mountSettingsOverviewControls(
   const networkManagementPoll = networkManagementPort
     ? setInterval(() => void refreshNetworkManagement(), 5000)
     : null;
+  if (keyboardLayoutPort) void refreshKeyboardLayout();
   if (networkPort) void refreshNetwork();
   if (networkManagementPort) void refreshNetworkManagement();
 
@@ -961,6 +1119,7 @@ export function mountSettingsOverviewControls(
       networkReadOrdinal += 1;
       networkManagementReadOrdinal += 1;
       networkActionOrdinal += 1;
+      keyboardLayoutOrdinal += 1;
       if (networkPoll !== null) clearInterval(networkPoll);
       if (networkManagementPoll !== null) clearInterval(networkManagementPoll);
       unsubscribeNotifications?.();

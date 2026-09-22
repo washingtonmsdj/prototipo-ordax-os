@@ -36,6 +36,7 @@ HEALTH_PATH = "/__ordax/native/health"
 SURFACE_HEARTBEAT_PATH = "/__ordax/native/surface-heartbeat"
 CLIENT_DIAGNOSTIC_PATH = "/__ordax/native/client-diagnostic"
 PREFERENCES_PATH = "/__ordax/native/preferences"
+KEYBOARD_LAYOUT_PATH = "/__ordax/native/keyboard-layout"
 FIRST_RUN_PATH = "/__ordax/native/first-run"
 NOTES_PATH = "/__ordax/native/notes"
 COMPONENT_STATE_PATH = "/__ordax/native/component-state"
@@ -55,6 +56,7 @@ NATIVE_INSTALL_TARGETS_PATH = "/__ordax/native/native-install-targets"
 UPDATE_STATE_FILE = "/run/ordax-update/state.json"
 HEALTH_STATE_FILE = "/run/ordax-update/healthy-sha"
 PREFERENCES_FILE = "/var/lib/ordax/preferences.json"
+KEYBOARD_LAYOUT_FILE = "/var/lib/ordax/keyboard-layout"
 FIRST_RUN_FILE = "/var/lib/ordax/first-run.json"
 NOTES_FILE = "/var/lib/ordax/notes.json"
 COMPONENT_STATE_FILE = "/var/lib/ordax/component-state.json"
@@ -81,6 +83,7 @@ MAX_NATIVE_INSTALL_TARGETS = 64
 MAX_SURFACE_HEARTBEAT_BODY = 512
 MAX_CLIENT_DIAGNOSTIC_BODY = 512
 MAX_PREFERENCE_BODY = 8192
+MAX_KEYBOARD_LAYOUT_BODY = 128
 MAX_FIRST_RUN_BODY = 2048
 MAX_NOTES_PAYLOAD = 2 * 1024 * 1024
 MAX_NOTES_BODY = 8 * MAX_NOTES_PAYLOAD + 1024
@@ -119,6 +122,9 @@ FIRST_RUN_TIME_ZONES = frozenset((
     "America/Noronha",
 ))
 FIRST_RUN_ACCOUNT_MODES = frozenset(("local-only", "identity"))
+KEYBOARD_LAYOUT_IDS = ("br-abnt2", "us")
+KEYBOARD_LAYOUT_ID_SET = frozenset(KEYBOARD_LAYOUT_IDS)
+DEFAULT_KEYBOARD_LAYOUT_ID = "br-abnt2"
 NETWORK_INTERFACE_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,32}$")
 CLIENT_DIAGNOSTIC_STAGE_RE = re.compile(r"^[a-z][a-z0-9.-]{0,63}$")
 CLIENT_DIAGNOSTIC_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9]{0,63}$")
@@ -480,6 +486,63 @@ def write_preferences(preferences: dict) -> None:
         os.fsync(directory_fd)
     finally:
         os.close(directory_fd)
+
+
+def read_keyboard_layout_id() -> str:
+    try:
+        info = os.lstat(KEYBOARD_LAYOUT_FILE)
+        if not stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode):
+            return DEFAULT_KEYBOARD_LAYOUT_ID
+        with open(KEYBOARD_LAYOUT_FILE, "r", encoding="utf-8") as handle:
+            layout_id = handle.read(64).strip()
+    except (FileNotFoundError, OSError, UnicodeError):
+        return DEFAULT_KEYBOARD_LAYOUT_ID
+    return layout_id if layout_id in KEYBOARD_LAYOUT_ID_SET else DEFAULT_KEYBOARD_LAYOUT_ID
+
+
+def write_keyboard_layout_id(layout_id: str) -> None:
+    if layout_id not in KEYBOARD_LAYOUT_ID_SET:
+        raise ValueError("invalid keyboard layout id")
+    directory = os.path.dirname(KEYBOARD_LAYOUT_FILE)
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    temporary = f"{KEYBOARD_LAYOUT_FILE}.tmp.{os.getpid()}.{threading.get_ident()}"
+    try:
+        with open(temporary, "w", encoding="utf-8") as handle:
+            os.fchmod(handle.fileno(), 0o600)
+            handle.write(layout_id)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, KEYBOARD_LAYOUT_FILE)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+    try:
+        directory_fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    except OSError:
+        return
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
+def keyboard_layout_snapshot() -> dict:
+    configured_layout_id = read_keyboard_layout_id()
+    applied_layout_id = os.environ.get(
+        "ORDAX_KEYBOARD_LAYOUT_ID",
+        DEFAULT_KEYBOARD_LAYOUT_ID,
+    )
+    if applied_layout_id not in KEYBOARD_LAYOUT_ID_SET:
+        applied_layout_id = DEFAULT_KEYBOARD_LAYOUT_ID
+    return {
+        "configuredLayoutId": configured_layout_id,
+        "appliedLayoutId": applied_layout_id,
+        "supportedLayoutIds": list(KEYBOARD_LAYOUT_IDS),
+        "restartRequired": configured_layout_id != applied_layout_id,
+    }
 
 
 def initial_first_run_state() -> dict:
@@ -2448,7 +2511,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if not self._request_is_trusted():
             return
         parsed_path = urlsplit(self.path).path
-        if parsed_path in {SESSION_PATH, FILES_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
+        if parsed_path in {SESSION_PATH, FILES_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
         if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH} and self.client_address[0] != "127.0.0.1":
@@ -2665,6 +2728,9 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if self.path == PREFERENCES_PATH:
             self._write_json(200, read_preferences())
             return
+        if parsed_path == KEYBOARD_LAYOUT_PATH:
+            self._write_json(200, keyboard_layout_snapshot())
+            return
         if parsed_path == FIRST_RUN_PATH:
             self._write_json(200, read_first_run_state())
             return
@@ -2856,6 +2922,28 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                 self._empty(503)
                 return
             self._write_json(200, snapshot)
+            return
+
+        if parsed_path == KEYBOARD_LAYOUT_PATH:
+            payload = self._read_json_body(MAX_KEYBOARD_LAYOUT_BODY)
+            if (
+                payload is None
+                or set(payload) != {"layoutId"}
+                or payload.get("layoutId") not in KEYBOARD_LAYOUT_ID_SET
+            ):
+                self._empty(400)
+                return
+            try:
+                write_keyboard_layout_id(payload["layoutId"])
+            except (OSError, ValueError) as exc:
+                print(
+                    f"ordax-native-host: could not persist keyboard layout: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._empty(500)
+                return
+            self._write_json(200, keyboard_layout_snapshot())
             return
 
         if parsed_path == FIRST_RUN_PATH:

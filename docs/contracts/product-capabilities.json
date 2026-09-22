@@ -57,6 +57,11 @@
       "security_boundary": "loopback-token-host-network-broker"
     },
     {
+      "id": "input.keyboard-layout",
+      "owner": "system/adapters/native",
+      "security_boundary": "loopback-validated-device-input-state"
+    },
+    {
       "id": "storage.secure-device",
       "owner": "system/adapters",
       "security_boundary": "device-local-secret-storage"
@@ -205,6 +210,7 @@
         "browser.web-content",
         "network.status",
         "network.management",
+        "input.keyboard-layout",
         "filesystem.user-space",
         "system.metrics",
         "power.status",
@@ -230,6 +236,7 @@
         "browser.web-content",
         "network.status",
         "network.management",
+        "input.keyboard-layout",
         "filesystem.user-space",
         "system.metrics",
         "power.status",

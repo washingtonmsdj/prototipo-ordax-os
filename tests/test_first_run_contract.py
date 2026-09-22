@@ -44,6 +44,11 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertFalse(contract["mvp"]["permanent_internal_disk_install_exposed"])
         self.assertFalse(contract["mvp"]["web_mode_uses_this_device_oobe"])
         self.assertTrue(contract["regional"]["editable_after_first_run_in_settings"])
+        self.assertEqual(
+            contract["regional"]["keyboard_layout_contract"],
+            "docs/contracts/keyboard-layout.json",
+        )
+        self.assertFalse(contract["regional"]["keyboard_layout_selector_exposed"])
 
     def test_regional_choices_remain_editable_after_first_run(self):
         settings = SETTINGS.read_text(encoding="utf-8")
