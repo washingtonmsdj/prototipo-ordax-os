@@ -154,6 +154,7 @@ export function mountNetworkTrayControls(
   let polling = false;
   let lastSnapshot = null;
   let lastSuccessAt = null;
+  let readFailed = false;
 
   const render = (snapshot, { stale = false } = {}) => {
     const next = summarizeNetworkStatus(snapshot);
@@ -161,14 +162,17 @@ export function mountNetworkTrayControls(
     tray.dataset.networkKind = next.kind;
     tray.dataset.networkState = next.state;
     tray.dataset.networkObservation = stale ? "stale" : "current";
+    const receivedAt = formatNetworkReceivedAt(
+      lastSuccessAt,
+      localizationPort.getLocale(),
+      t("common.time.unknown"),
+    );
     tray.title = stale
-      ? `Dados antigos · ${copy.title} · última leitura recebida pela Surface às ${formatNetworkReceivedAt(
-        lastSuccessAt,
-        localizationPort.getLocale(),
-        t("common.time.unknown"),
-      )}`
+      ? t("network.tray.staleTitle", { title: copy.title, time: receivedAt })
       : copy.title;
-    label.textContent = stale ? `${copy.label} · antigo` : copy.label;
+    label.textContent = stale
+      ? t("network.tray.staleLabel", { label: copy.label })
+      : copy.label;
     icon.dataset.state = stale
       ? "unknown"
       : next.state === "connected" ? "online" : "offline";
@@ -197,9 +201,11 @@ export function mountNetworkTrayControls(
       if (destroyed) return;
       lastSnapshot = snapshot;
       lastSuccessAt = Date.now();
+      readFailed = false;
       render(snapshot);
     } catch {
       if (destroyed) return;
+      readFailed = true;
       if (lastSnapshot) {
         render(lastSnapshot, { stale: true });
       } else {
@@ -213,7 +219,7 @@ export function mountNetworkTrayControls(
   const unsubscribeLocalization = localizationPort.subscribe(() => {
     if (destroyed) return;
     if (lastSnapshot) {
-      render(lastSnapshot, { stale: false });
+      render(lastSnapshot, { stale: readFailed });
     } else {
       renderUnavailable();
     }
@@ -229,6 +235,7 @@ export function mountNetworkTrayControls(
       unsubscribeLocalization();
       lastSnapshot = null;
       lastSuccessAt = null;
+      readFailed = false;
       delete tray.dataset.networkObservation;
       delete tray.dataset.networkDetailOwner;
     },
