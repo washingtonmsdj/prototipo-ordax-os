@@ -1,0 +1,37 @@
+{
+  "$schema": "prototype-ordax.intelligence/1",
+  "status": "mvp-system-capability-foundation",
+  "product_scope": "stable-mvp-usb",
+  "system_layer": true,
+  "application_identity": false,
+  "surface_dependency": false,
+  "runtime_contract": "ordax.intelligence/1",
+  "implementation": "system/services/intelligence/runtime.mjs",
+  "inference_backend_contract": "ordax.local-ai/1",
+  "default_route": "local",
+  "mvp": {
+    "included_in_product": true,
+    "read_answer_available": true,
+    "typed_tools_enabled": false,
+    "implicit_file_access": false,
+    "implicit_shell_access": false,
+    "implicit_network_mutation": false,
+    "implicit_power_control": false,
+    "implicit_update_control": false,
+    "failure_blocks_boot": false,
+    "failure_blocks_surface": false
+  },
+  "context": {
+    "explicit_sources_only": true,
+    "source_identity_preserved": true,
+    "context_is_never_authority": true,
+    "prompt_injection_must_not_grant_capabilities": true
+  },
+  "evolution": {
+    "engine_replaceable": true,
+    "model_replaceable": true,
+    "remote_provider_may_be_added_later": true,
+    "remote_provider_requires_explicit_policy": true,
+    "assistant_ui_is_only_one_consumer": true
+  }
+}
