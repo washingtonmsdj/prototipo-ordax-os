@@ -168,10 +168,12 @@ class SurfaceUiContractTests(unittest.TestCase):
 
     def test_shared_extensions_use_explicit_surface_render_lifecycle(self):
         lifecycle = SURFACE_LIFECYCLE.read_text(encoding="utf-8")
-        self.assertIn('ordax.surface-render-lifecycle/3', lifecycle)
+        self.assertIn('ordax.surface-render-lifecycle/4', lifecycle)
         self.assertIn("assertSurfaceRenderLifecycle", lifecycle)
         self.assertIn("getAppTarget", lifecycle)
         self.assertIn("setAppTarget", lifecycle)
+        self.assertIn("assertLocalizationPort", lifecycle)
+        self.assertIn("value.localization", lifecycle)
         surface = (SURFACE / "surface.mjs").read_text(encoding="utf-8")
         self.assertIn("getAppTarget(appId)", surface)
         self.assertIn("setAppTarget(appId, target)", surface)
