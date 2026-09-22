@@ -96,6 +96,7 @@ class SettingsCanonicalNavigationTests(unittest.TestCase):
     def test_visible_product_name_remains_ajustes(self):
         app = APP.read_text(encoding="utf-8")
         controls = SETTINGS.read_text(encoding="utf-8")
+        settings_i18n = SETTINGS_I18N.read_text(encoding="utf-8")
         self.assertIn('title: "Ajustes"', app)
         self.assertIn('label: "Ajustes"', app)
         self.assertIn('monogram: "AJ"', app)
