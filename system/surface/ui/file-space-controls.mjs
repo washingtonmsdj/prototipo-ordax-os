@@ -821,6 +821,10 @@ export function mountFileSpaceControls(
     rename.type = "button";
     rename.dataset.fileRenameToggle = "";
     rename.disabled = itemBusy;
+    const trash = node(documentObject, "button", "ordax-files-action", "Mover para Lixeira");
+    trash.type = "button";
+    trash.dataset.fileTrashSelected = "";
+    trash.disabled = itemBusy;
     const open = node(
       documentObject,
       "button",
@@ -834,7 +838,7 @@ export function mountFileSpaceControls(
     if (copyTo) actions.append(copyTo);
     if (exportFile) actions.append(exportFile);
     if (createNote) actions.append(createNote);
-    actions.append(move, rename, open);
+    actions.append(move, rename, trash, open);
 
     details.append(summary, actions);
     container.append(details);
@@ -2364,6 +2368,28 @@ export function mountFileSpaceControls(
       enterRecentMode();
       return;
     }
+    const trashLocation = event.target.closest("[data-file-open-trash]");
+    if (trashLocation && root.contains(trashLocation)) {
+      void enterTrashMode();
+      return;
+    }
+    const trashRefresh = event.target.closest("[data-file-trash-refresh]");
+    if (trashRefresh && root.contains(trashRefresh) && trashMode && !pending) {
+      void enterTrashMode();
+      return;
+    }
+    const trashRow = event.target.closest("[data-file-trash-id]");
+    if (trashRow && root.contains(trashRow) && trashMode) {
+      selectedTrashId = trashRow.dataset.fileTrashId ?? null;
+      message = null;
+      replaceView();
+      return;
+    }
+    const trashRestore = event.target.closest("[data-file-trash-restore]");
+    if (trashRestore && root.contains(trashRestore) && trashMode) {
+      void restoreSelectedTrash();
+      return;
+    }
     const recentRow = event.target.closest("[data-file-recent-path]");
     if (recentRow && root.contains(recentRow) && recentMode) {
       const path = recentRow.dataset.fileRecentPath;
@@ -2437,6 +2463,11 @@ export function mountFileSpaceControls(
       } else {
         selectPath(selected.dataset.fileSelectPath, { focus: true });
       }
+      return;
+    }
+    const trashSelected = event.target.closest("[data-file-trash-selected]");
+    if (trashSelected && root.contains(trashSelected) && !trashMode && !recentMode) {
+      void trashSelected();
       return;
     }
     const createNote = event.target.closest("[data-file-create-note]");
