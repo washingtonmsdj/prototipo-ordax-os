@@ -128,7 +128,7 @@ test("canonical component catalog has one unique owner identity per app and serv
   assert.equal(notes.owner, "system/apps/notes");
   const localAi = components.find((component) => component.id === "local-ai-service");
   assert.equal(localAi.criticality, "system");
-  assert.equal(localAi.releaseMode, "component-slot");
+  assert.equal(localAi.releaseMode, "bundled");
   const intelligence = components.find((component) => component.id === "ordax-intelligence");
   assert.equal(intelligence.criticality, "system");
   assert.equal(intelligence.releaseMode, "bundled");
