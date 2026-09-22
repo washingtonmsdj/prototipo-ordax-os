@@ -34,7 +34,7 @@ class LocalAiContractTests(unittest.TestCase):
         self.assertFalse(feature["required"])
         self.assertTrue(selection["rules"]["checked_feature_requires_verified_signed_package"])
         self.assertTrue(selection["physical_writer"]["current_first_proof_context_is_preserved"])
-        self.assertFalse(selection["physical_writer"]["current_authorized_writer_is_not_modified_by_this_contract"] is False)
+        self.assertTrue(selection["physical_writer"]["current_authorized_writer_is_not_modified_by_this_contract"])
         self.assertTrue(selection["physical_writer"]["binding_required_before_public_creator_exposure"])
 
     def test_assistant_is_registered_as_optional_component_slot_app(self):
