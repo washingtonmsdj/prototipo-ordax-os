@@ -32,7 +32,7 @@ class MVPSeedArtifactBindingsTests(unittest.TestCase):
         self.assertEqual(artifact["source_path"], "bootstrap/initramfs/initramfs.cpio.gz")
         self.assertEqual(artifact["sha256"], "233e7d6379f927bb95c1c895e5b84eb2f5968d84a144fa60581c9a160d68d0df")
 
-    def test_current_release_agent_seed_matches_v3_target_and_keeps_prior_migration(self):
+    def test_current_release_agent_seed_is_recognized_source_for_v4_capable_refresh(self):
         artifact = self.artifact("bootstrap-release-acquisition")
         refresh = json.loads(
             (ROOT / "system/services/base-update/release-agent-refresh.json").read_text(
@@ -40,8 +40,9 @@ class MVPSeedArtifactBindingsTests(unittest.TestCase):
             )
         )
         self.assertEqual(artifact["sha256"], "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740")
-        self.assertEqual(refresh["target_sha256"], "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740")
-        self.assertEqual(artifact["sha256"], refresh["target_sha256"])
+        self.assertEqual(refresh["target_sha256"], "550df685679f1bf15a636729960fe6fc3ffc1afda1a346214ce96716f7170a66")
+        self.assertNotEqual(artifact["sha256"], refresh["target_sha256"])
+        self.assertIn(artifact["sha256"], refresh["allowed_from_sha256"])
         self.assertIn("102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da", refresh["allowed_from_sha256"])
         self.assertIn("ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c", refresh["allowed_from_sha256"])
         self.assertIn(
