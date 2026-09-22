@@ -7,6 +7,8 @@ on:
       - 'docs/contracts/diagnostics.json'
       - 'docs/contracts/branding.json'
       - 'docs/contracts/device-update-coverage.json'
+      - 'docs/contracts/intelligence.json'
+      - 'docs/contracts/local-ai.json'
       - 'system/contracts/diagnostic-journal-store.mjs'
       - 'system/contracts/diagnostic-export.mjs'
       - 'system/contracts/diagnostic-copy.mjs'
@@ -27,6 +29,8 @@ on:
       - 'system/contracts/update-history.mjs'
       - 'system/contracts/app-activation.mjs'
       - 'system/contracts/component-*.mjs'
+      - 'system/contracts/intelligence.mjs'
+      - 'system/contracts/local-ai.mjs'
       - 'system/contracts/recent-files.mjs'
       - 'system/contracts/recent-files-store.mjs'
       - 'system/contracts/project-catalog.mjs'
@@ -48,6 +52,8 @@ on:
       - 'system/services/network/**'
       - 'system/services/apps/**'
       - 'system/services/components/**'
+      - 'system/services/intelligence/**'
+      - 'system/services/local-ai/**'
       - 'system/services/files/**'
       - 'system/services/projects/**'
       - 'system/services/preferences/**'
@@ -95,6 +101,10 @@ on:
       - 'tests/test_app_contract.mjs'
       - 'tests/test_component_manager.mjs'
       - 'tests/test_component_runtime.mjs'
+      - 'tests/test_intelligence_runtime.mjs'
+      - 'tests/test_intelligence_contract.py'
+      - 'tests/test_local_ai_runtime.mjs'
+      - 'tests/test_local_ai_contract.py'
       - 'tests/test_native_component_state.py'
       - 'tests/test_browser_session_integration_contract.py'
       - 'tests/test_browser_session_store.py'
@@ -277,6 +287,8 @@ jobs:
             system/services/account \
             system/services/apps \
             system/services/components \
+            system/services/intelligence \
+            system/services/local-ai \
             system/services/files \
             system/services/projects \
             system/services/preferences \
@@ -315,6 +327,8 @@ jobs:
           node --test tests/test_app_contract.mjs
           node --test tests/test_component_manager.mjs
           node --test tests/test_component_runtime.mjs
+          node --test tests/test_local_ai_runtime.mjs
+          node --test tests/test_intelligence_runtime.mjs
           node --test tests/test_identity_session.mjs
           node --test tests/test_identity_actions.mjs
           node --test tests/test_power_actions.mjs
@@ -354,6 +368,8 @@ jobs:
           python -m unittest tests.test_native_install_runtime -v
           python -m unittest tests.test_system_runtime_contract -v
           python -m unittest tests.test_third_party_inventory -v
+          python -m unittest tests.test_local_ai_contract -v
+          python -m unittest tests.test_intelligence_contract -v
 
       - name: Build and verify deterministic Web client
         run: |
