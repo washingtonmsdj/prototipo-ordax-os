@@ -867,7 +867,7 @@ bind_runtime_mounts() {
             ;;
         stable-mvp)
             # Stable/MVP owns a verified /system tree, not a Git checkout.
-            # Do not require or fabricate /srv/ordax-repo in the final USB.
+            # Do not require or fabricate a development repository bind in the final USB.
             repo_root=
             ;;
         *)
