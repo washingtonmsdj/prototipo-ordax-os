@@ -412,15 +412,15 @@ export function mountFileSpaceControls(
     input.type = "text";
     input.maxLength = 120;
     input.autocomplete = "off";
-    input.placeholder = "Nome da nova pasta";
+    input.placeholder = t("files.form.newFolderName");
     input.value = directoryDraft;
     input.dataset.fileDirectoryName = "";
-    input.setAttribute("aria-label", "Nome da nova pasta");
-    const confirm = node(documentObject, "button", "ordax-files-action ordax-files-action-primary", "Criar");
+    input.setAttribute("aria-label", t("files.form.newFolderName"));
+    const confirm = node(documentObject, "button", "ordax-files-action ordax-files-action-primary", t("files.form.create"));
     confirm.type = "button";
     confirm.dataset.fileCreateDirectory = "";
     confirm.disabled = pending;
-    const cancel = node(documentObject, "button", "ordax-files-action", "Cancelar");
+    const cancel = node(documentObject, "button", "ordax-files-action", t("files.form.cancel"));
     cancel.type = "button";
     cancel.dataset.fileCreateCancel = "";
     cancel.disabled = pending;
@@ -435,11 +435,11 @@ export function mountFileSpaceControls(
     input.type = "text";
     input.maxLength = MAX_PROJECT_NAME_LENGTH;
     input.autocomplete = "off";
-    input.placeholder = "Nome do projeto";
+    input.placeholder = t("files.form.projectName");
     input.value = projectDraft;
     input.dataset.fileProjectName = "";
-    input.setAttribute("aria-label", "Nome do projeto");
-    const confirm = node(documentObject, "button", "ordax-files-action ordax-files-action-primary", "Adicionar");
+    input.setAttribute("aria-label", t("files.form.projectName"));
+    const confirm = node(documentObject, "button", "ordax-files-action ordax-files-action-primary", t("files.form.add"));
     confirm.type = "button";
     confirm.dataset.fileProjectCreate = "";
     const cancel = node(documentObject, "button", "ordax-files-action", "Cancelar");
@@ -459,10 +459,10 @@ export function mountFileSpaceControls(
     input.type = "text";
     input.maxLength = MAX_PROJECT_NAME_LENGTH;
     input.autocomplete = "off";
-    input.placeholder = "Novo nome do projeto";
+    input.placeholder = t("files.form.projectRename");
     input.value = projectRenameDraft;
     input.dataset.fileProjectRenameName = "";
-    input.setAttribute("aria-label", `Novo nome do projeto ${project.name}`);
+    input.setAttribute("aria-label", t("files.form.projectRenameAria", { name: project.name }));
 
     const confirm = node(
       documentObject,
@@ -481,7 +481,7 @@ export function mountFileSpaceControls(
       documentObject,
       "p",
       "ordax-files-boundary",
-      `Isso altera apenas o nome do projeto. A pasta continua em ${project.path}.`,
+      t("files.form.projectRenameHint", { path: project.path }),
     );
     form.append(input, confirm, cancel, note);
     container.append(form);
@@ -536,7 +536,7 @@ export function mountFileSpaceControls(
     searchQuery.trim().toLocaleLowerCase(locale());
 
   const compareEntryNames = (left, right) =>
-    left.name.localeCompare(right.name, FILE_SEARCH_LOCALE, {
+    left.name.localeCompare(right.name, locale(), {
       numeric: true,
       sensitivity: "base",
     });
@@ -593,8 +593,13 @@ export function mountFileSpaceControls(
     button.setAttribute(
       "aria-label",
       active
-        ? `${label}, ordenação ${sortDirection === "asc" ? "crescente" : "decrescente"}`
-        : `Ordenar por ${label.toLocaleLowerCase(locale())}`,
+        ? t("files.sort.aria", {
+            label,
+            direction: sortDirection === "asc"
+              ? t("files.sort.ascending")
+              : t("files.sort.descending"),
+          })
+        : t("files.sort.orderBy", { label: label.toLocaleLowerCase(locale()) }),
     );
     button.append(
       node(documentObject, "span", "", label),
@@ -829,14 +834,14 @@ export function mountFileSpaceControls(
       copyTo.dataset.fileCopyToToggle = "";
       copyTo.disabled = itemBusy || selected.size > MAX_FILE_COPY_BYTES;
       if (selected.size > MAX_FILE_COPY_BYTES) {
-        copyTo.title = "Cópia limitada a 64 MiB";
+        copyTo.title = t("files.action.copyLimit");
       }
-      exportFile = node(documentObject, "button", "ordax-files-action", "Exportar");
+      exportFile = node(documentObject, "button", "ordax-files-action", t("files.action.export"));
       exportFile.type = "button";
       exportFile.dataset.fileExport = "";
       exportFile.disabled = itemBusy || selected.size > MAX_FILE_EXPORT_BYTES;
       if (selected.size > MAX_FILE_EXPORT_BYTES) {
-        exportFile.title = "Exportação rápida limitada a 64 MiB";
+        exportFile.title = t("files.action.exportLimit");
       }
       const notesAction = createFileNotesActionPresentation({
         importerAvailable: Boolean(notesImporterPort),
@@ -889,13 +894,13 @@ export function mountFileSpaceControls(
       input.autocomplete = "off";
       input.value = copyDraft;
       input.dataset.fileCopyName = "";
-      input.setAttribute("aria-label", `Nome da cópia de ${selected.name}`);
+      input.setAttribute("aria-label", t("files.form.copyNameAria", { name: selected.name }));
 
       const confirm = node(
         documentObject,
         "button",
         "ordax-files-action ordax-files-action-primary",
-        "Criar cópia",
+        t("files.form.copyCreate"),
       );
       confirm.type = "button";
       confirm.dataset.fileCopyConfirm = "";
@@ -918,7 +923,7 @@ export function mountFileSpaceControls(
       input.autocomplete = "off";
       input.value = renameDraft;
       input.dataset.fileRenameName = "";
-      input.setAttribute("aria-label", `Novo nome para ${selected.name}`);
+      input.setAttribute("aria-label", t("files.form.renameAria", { name: selected.name }));
 
       const confirm = node(
         documentObject,
@@ -943,7 +948,7 @@ export function mountFileSpaceControls(
   const renderTextPreview = (container) => {
     if (!previewPending && !textPreview) return;
     const preview = node(documentObject, "section", "ordax-files-preview");
-    preview.setAttribute("aria-label", "Visualização do arquivo");
+    preview.setAttribute("aria-label", t("files.preview.aria"));
 
     if (previewPending) {
       const loading = node(documentObject, "div", "ordax-files-preview-loading", "Abrindo arquivo…");
@@ -973,7 +978,7 @@ export function mountFileSpaceControls(
       documentObject,
       "p",
       "ordax-files-preview-note",
-      "Visualização segura de texto UTF-8, limitada a 256 KB. O conteúdo não é executado.",
+      t("files.preview.boundary"),
     );
     preview.append(header, content, note);
     container.append(preview);
