@@ -12,6 +12,7 @@ import { createNativeRecentFilesStore } from "../../adapters/native/recent-files
 import { createNativeProjectStore } from "../../adapters/native/projects.mjs";
 import { createNativeProjectWebReferenceStore } from "../../adapters/native/project-web-references.mjs";
 import { createNativeNetworkManagement } from "../../adapters/native/network-management.mjs";
+import { createNativeKeyboardLayout } from "../../adapters/native/keyboard-layout.mjs";
 import { createNativeNotificationStore } from "../../adapters/native/notifications.mjs";
 import { createNativeNotesStore } from "../../adapters/native/notes.mjs";
 import { createNativeNetworkStatus } from "../../adapters/native/network-status.mjs";
@@ -125,6 +126,10 @@ async function start() {
       () => createNativeNetworkManagement(window),
     ),
     optionalNativeProbe(
+      "OrdaX native keyboard layout unavailable",
+      () => createNativeKeyboardLayout(window),
+    ),
+    optionalNativeProbe(
       "OrdaX native system metrics unavailable",
       () => createNativeSystemMetrics(window),
     ),
@@ -156,6 +161,7 @@ async function start() {
     fileSpace,
     networkStatus,
     networkManagement,
+    keyboardLayout,
     systemMetrics,
     powerStatus,
   ] = await optionalPortsPromise;
@@ -215,6 +221,7 @@ async function start() {
   const powerStatusAvailable = powerStatus !== null;
   const networkStatusAvailable = networkStatus !== null;
   const networkManagementAvailable = networkManagement !== null;
+  const keyboardLayoutAvailable = keyboardLayout !== null;
   const browserWebContentAvailable = browserSession.getSnapshot().supported;
   const host = createNativeSurfaceHost(window, {
     bootControlAvailable,
@@ -223,6 +230,7 @@ async function start() {
     powerStatusAvailable,
     networkStatusAvailable,
     networkManagementAvailable,
+    keyboardLayoutAvailable,
     browserWebContentAvailable,
   });
 
@@ -320,6 +328,7 @@ async function start() {
       networkManagement,
       appActivation,
       notifications,
+      keyboardLayout,
     );
   } catch (error) {
     reportClientDiagnostic("settings-network-management", error);
@@ -332,6 +341,7 @@ async function start() {
       null,
       appActivation,
       notifications,
+      keyboardLayout,
     );
   }
   const systemOverviewControls = mountSystemOverviewControls(
