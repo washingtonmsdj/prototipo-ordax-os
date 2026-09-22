@@ -19,10 +19,12 @@ const (
 	manifestSchema                = "prototype-ordax.release-manifest/1"
 	manifestSchemaV2              = "prototype-ordax.release-manifest/2"
 	manifestSchemaV3              = "prototype-ordax.release-manifest/3"
+	manifestSchemaV4              = "prototype-ordax.release-manifest/4"
 	defaultRepo                   = "washingtonmsdj/prototipo-ordax-os"
 	defaultRecipe                 = "release/native/1"
 	defaultPortableRecipe         = "release/portable-usb-v2/1"
 	defaultPortableRuntimeRecipe  = "release/portable-usb-v2-runtime/1"
+	defaultPortableAIRuntimeRecipe = "release/portable-usb-v2-ai-runtime/1"
 	maxArtifact                   = int64(16 << 30)
 )
 
@@ -245,6 +247,72 @@ func buildPortableRuntimeManifest(systemPath, runtimePath, sourceCommit, systemU
 	}, nil
 }
 
+func buildPortableAIRuntimeManifest(systemPath, runtimePath, aiRuntimePath, sourceCommit, systemURL, runtimeURL, aiRuntimeURL, repository, recipe string) (Manifest, error) {
+	if !commitPattern.MatchString(sourceCommit) {
+		return Manifest{}, errors.New("source commit must be lowercase 40-hex")
+	}
+	if repository == "" {
+		return Manifest{}, errors.New("source repository is required")
+	}
+	if !recipePattern.MatchString(recipe) {
+		return Manifest{}, errors.New("invalid CI recipe identifier")
+	}
+	if err := validateHTTPSURL(systemURL); err != nil {
+		return Manifest{}, fmt.Errorf("system artifact URL: %w", err)
+	}
+	if err := validateHTTPSURL(runtimeURL); err != nil {
+		return Manifest{}, fmt.Errorf("Surface runtime artifact URL: %w", err)
+	}
+	if err := validateHTTPSURL(aiRuntimeURL); err != nil {
+		return Manifest{}, fmt.Errorf("local AI runtime artifact URL: %w", err)
+	}
+	systemDigest, systemSize, err := hashNamedArtifact(systemPath, "system.erofs", "release-manifest/4 system")
+	if err != nil {
+		return Manifest{}, err
+	}
+	runtimeDigest, runtimeSize, err := hashNamedArtifact(runtimePath, "native-surface-runtime.erofs", "release-manifest/4 Surface runtime")
+	if err != nil {
+		return Manifest{}, err
+	}
+	aiDigest, aiSize, err := hashNamedArtifact(aiRuntimePath, "local-ai-runtime.erofs", "release-manifest/4 local AI runtime")
+	if err != nil {
+		return Manifest{}, err
+	}
+	return Manifest{
+		Schema:              manifestSchemaV4,
+		SourceRepository:    repository,
+		SourceCommit:        sourceCommit,
+		ReleaseID:           sourceCommit,
+		CreatedFromCIRecipe: recipe,
+		ProductMode:         "usb",
+		StorageProfile:      "portable-usb-v2",
+		RuntimeFormat:       "erofs",
+		Artifacts: []Artifact{
+			{
+				Name:   "system.erofs",
+				Role:   "system-image",
+				URL:    systemURL,
+				SHA256: systemDigest,
+				Size:   systemSize,
+			},
+			{
+				Name:   "native-surface-runtime.erofs",
+				Role:   "surface-runtime",
+				URL:    runtimeURL,
+				SHA256: runtimeDigest,
+				Size:   runtimeSize,
+			},
+			{
+				Name:   "local-ai-runtime.erofs",
+				Role:   "local-ai-runtime",
+				URL:    aiRuntimeURL,
+				SHA256: aiDigest,
+				Size:   aiSize,
+			},
+		},
+	}, nil
+}
+
 func writeManifest(path string, manifest Manifest) error {
 	absolute, err := ensureRealParent(path)
 	if err != nil {
@@ -288,14 +356,16 @@ func writeManifest(path string, manifest Manifest) error {
 func run(args []string) error {
 	flags := flag.NewFlagSet("ordax-release-manifest", flag.ContinueOnError)
 	artifact := flags.String("artifact", "", "verified release artifact path")
-	runtimeArtifact := flags.String("runtime-artifact", "", "verified native-surface-runtime.erofs path for schema 3")
+	runtimeArtifact := flags.String("runtime-artifact", "", "verified native-surface-runtime.erofs path for schema 3 or 4")
+	aiRuntimeArtifact := flags.String("ai-runtime-artifact", "", "verified local-ai-runtime.erofs path for schema 4")
 	commit := flags.String("source-commit", "", "exact lowercase 40-hex source commit")
 	artifactURL := flags.String("artifact-url", "", "canonical HTTPS URL for the exact system artifact")
-	runtimeArtifactURL := flags.String("runtime-artifact-url", "", "canonical HTTPS URL for native-surface-runtime.erofs for schema 3")
+	runtimeArtifactURL := flags.String("runtime-artifact-url", "", "canonical HTTPS URL for native-surface-runtime.erofs for schema 3 or 4")
+	aiRuntimeArtifactURL := flags.String("ai-runtime-artifact-url", "", "canonical HTTPS URL for local-ai-runtime.erofs for schema 4")
 	out := flags.String("out", "", "new release-manifest.json path")
 	repository := flags.String("repository", defaultRepo, "source repository")
 	recipe := flags.String("recipe", "", "CI recipe identity; defaults by schema")
-	schema := flags.String("manifest-schema", "1", "release manifest schema major: 1, 2 or 3")
+	schema := flags.String("manifest-schema", "1", "release manifest schema major: 1, 2, 3 or 4")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -333,8 +403,26 @@ func run(args []string) error {
 			*repository,
 			selectedRecipe,
 		)
+	case "4":
+		if *runtimeArtifact == "" || *runtimeArtifactURL == "" || *aiRuntimeArtifact == "" || *aiRuntimeArtifactURL == "" {
+			return errors.New("release-manifest/4 requires --runtime-artifact, --runtime-artifact-url, --ai-runtime-artifact and --ai-runtime-artifact-url")
+		}
+		if selectedRecipe == "" {
+			selectedRecipe = defaultPortableAIRuntimeRecipe
+		}
+		manifest, err = buildPortableAIRuntimeManifest(
+			*artifact,
+			*runtimeArtifact,
+			*aiRuntimeArtifact,
+			*commit,
+			*artifactURL,
+			*runtimeArtifactURL,
+			*aiRuntimeArtifactURL,
+			*repository,
+			selectedRecipe,
+		)
 	default:
-		return errors.New("unsupported manifest schema major; expected 1, 2 or 3")
+		return errors.New("unsupported manifest schema major; expected 1, 2, 3 or 4")
 	}
 	if err != nil {
 		return err
@@ -350,12 +438,20 @@ func run(args []string) error {
 		manifest.Artifacts[0].SHA256,
 		manifest.Artifacts[0].Size,
 	)
-	if manifest.Schema == manifestSchemaV3 {
+	if manifest.Schema == manifestSchemaV3 || manifest.Schema == manifestSchemaV4 {
 		fmt.Printf(
 			"RUNTIME_ARTIFACT_NAME=%s\nRUNTIME_ARTIFACT_SHA256=%s\nRUNTIME_ARTIFACT_SIZE=%d\n",
 			manifest.Artifacts[1].Name,
 			manifest.Artifacts[1].SHA256,
 			manifest.Artifacts[1].Size,
+		)
+	}
+	if manifest.Schema == manifestSchemaV4 {
+		fmt.Printf(
+			"AI_RUNTIME_ARTIFACT_NAME=%s\nAI_RUNTIME_ARTIFACT_SHA256=%s\nAI_RUNTIME_ARTIFACT_SIZE=%d\n",
+			manifest.Artifacts[2].Name,
+			manifest.Artifacts[2].SHA256,
+			manifest.Artifacts[2].Size,
 		)
 	}
 	return nil
