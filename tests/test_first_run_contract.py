@@ -40,7 +40,7 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertEqual(contract["regional"]["surface_complete_locales"], ["pt-BR"])
         self.assertEqual(
             contract["regional"]["surface_translation_status"]["en-US"],
-            "shared-shell-files-primary-settings-system-navigation-implemented-more-controls-migrating",
+            "shared-shell-files-primary-forms-sort-export-preview-settings-system-navigation-implemented-more-controls-migrating",
         )
         for locale in ("es-ES", "de-DE", "fr-FR"):
             self.assertEqual(

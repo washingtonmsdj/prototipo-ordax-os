@@ -20,6 +20,7 @@ DESKTOP_SHELL = ROOT / "system" / "surface" / "ui" / "desktop-shell.mjs"
 FILES_CSS = ROOT / "system" / "surface" / "ui" / "files.css"
 SURFACE_LAUNCHER = ROOT / "system" / "surface" / "bin" / "ordax-surface"
 FILES_APP = ROOT / "system" / "apps" / "files" / "app.mjs"
+FILES_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "files.mjs"
 CAPABILITIES = ROOT / "docs" / "contracts" / "product-capabilities.json"
 
 spec = importlib.util.spec_from_file_location("ordax_native_host_files_test", SERVER)
@@ -411,7 +412,10 @@ class NativeUserFilesTests(unittest.TestCase):
         self.assertIn("activateSelectedPath()", controls)
         self.assertIn('selectPath(selected.dataset.fileSelectPath, { focus: true })', controls)
         self.assertIn("ordax-files-preview-content", controls)
-        self.assertIn("Visualização segura de texto UTF-8", controls)
+        self.assertIn('t("files.preview.boundary")', controls)
+        files_i18n = FILES_I18N.read_text(encoding="utf-8")
+        self.assertIn('"files.preview.boundary": "Visualização segura de texto UTF-8', files_i18n)
+        self.assertIn('"files.preview.boundary": "Safe UTF-8 text preview', files_i18n)
         self.assertNotIn("innerHTML", controls)
         self.assertNotIn("📁", controls)
         self.assertNotIn("📄", controls)
