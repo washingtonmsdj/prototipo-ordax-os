@@ -9,14 +9,14 @@ CSS = ROOT / "system" / "surface" / "ui" / "files.css"
 class FilesCurrentFolderSearchTests(unittest.TestCase):
     def test_search_is_local_bounded_and_explicitly_scoped(self):
         controls = CONTROLS.read_text(encoding="utf-8")
-        self.assertIn('const FILE_SEARCH_LOCALE = "pt-BR"', controls)
+        self.assertIn("const locale = () => localization.getLocale()", controls)
         self.assertIn("visibleEntries", controls)
-        self.assertIn("toLocaleLowerCase(FILE_SEARCH_LOCALE)", controls)
+        self.assertIn("toLocaleLowerCase(locale())", controls)
         self.assertIn('searchInput.maxLength = 120', controls)
-        self.assertIn('searchInput.placeholder = "Buscar nesta pasta"', controls)
+        self.assertIn('searchInput.placeholder = t("files.search.folder.placeholder")', controls)
         self.assertIn("searchInput.dataset.fileSearch", controls)
-        self.assertIn("busca nesta pasta", controls)
-        self.assertIn("Nenhum item corresponde à busca nesta pasta.", controls)
+        self.assertIn('t("files.status.countSearch"', controls)
+        self.assertIn('t("files.empty.search")', controls)
         self.assertNotIn("fileSpace.search", controls)
         self.assertNotIn("port.search", controls)
 
