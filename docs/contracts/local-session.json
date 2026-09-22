@@ -1,0 +1,50 @@
+{
+  "$schema": "prototype-ordax.local-session/1",
+  "status": "native-mvp-source-implemented",
+  "scope": "device-local-offline-surface-session-gate",
+  "owners": {
+    "contract": "system/contracts/local-session.mjs",
+    "native_adapter": "system/adapters/native/local-session.mjs",
+    "native_host": "system/surface/runtime/native_host_server.py",
+    "lock_ui": "system/surface/ui/local-session-lock.mjs",
+    "settings_ui": "system/surface/ui/settings-overview-controls.mjs",
+    "first_run_ui": "system/surface/ui/first-run.mjs"
+  },
+  "capability_id": "session.local-lock",
+  "policy": {
+    "independent_from_cloud_account": true,
+    "independent_from_network": true,
+    "credential_optional_in_mvp": true,
+    "without_credential": "unlocked-local-session-no-authenticated-lock",
+    "with_credential_on_surface_start": "locked",
+    "workspace_preserved_while_locked": true,
+    "surface_interaction_inert_while_locked": true,
+    "protection_scope": "surface-session-not-storage-encryption",
+    "does_not_claim_usb_file_encryption": true
+  },
+  "credential": {
+    "native_path": "/var/lib/ordax/local-session-credential.json",
+    "plaintext_persisted": false,
+    "surface_state_persisted": false,
+    "first_run_state_persisted": false,
+    "telemetry_allowed": false,
+    "format": "scrypt-verifier-with-random-salt",
+    "minimum_characters": 6,
+    "maximum_characters": 128,
+    "file_mode": "0600",
+    "atomic_replace": true,
+    "constant_time_verifier_compare": true,
+    "bad_or_unreadable_credential": "fail-closed"
+  },
+  "unlock_protection": {
+    "incorrect_attempt_backoff": "exponential-bounded",
+    "maximum_backoff_seconds": 30,
+    "host_restart_resets_attempt_counter": true
+  },
+  "non_goals": [
+    "disk-encryption",
+    "usb-data-at-rest-encryption",
+    "cloud-account-authentication",
+    "biometric-authentication"
+  ]
+}
