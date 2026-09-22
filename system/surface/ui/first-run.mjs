@@ -14,11 +14,7 @@ import {
   isSupportedRegionalTimeZone,
 } from "../../services/preferences/regional.mjs";
 import { completeFirstRunState, validateFirstRunState } from "../../services/state/first-run.mjs";
-import {
-  networkManagementActionMessage,
-  networkManagementFailureMessage,
-  runNetworkManagementAction,
-} from "../../services/network/management-runtime.mjs";
+import { runNetworkManagementAction } from "../../services/network/management-runtime.mjs";
 import { firstRunStepLabels, firstRunText } from "../../i18n/first-run.mjs";
 
 const STEPS = Object.freeze(["welcome", "regional", "network", "account", "privacy", "ready"]);
@@ -436,12 +432,12 @@ export function mountFirstRunExperience(
     if (!networkPort || destroyed || networkPending) return;
     const ordinal = ++networkOrdinal;
     networkPending = true;
-    networkMessage = scan ? networkManagementActionMessage("scan", 0) : t("readingWifi");
+    networkMessage = scan ? t("scanPending") : t("readingWifi");
     render();
     try {
       networkSnapshot = await (scan ? networkPort.scan() : networkPort.status());
       if (destroyed || ordinal !== networkOrdinal) return;
-      networkMessage = scan ? networkManagementActionMessage("scan", 1) : "";
+      networkMessage = scan ? t("scanDone") : "";
       if (selectedSsid && !networkSnapshot.networks.some((entry) => entry.ssid === selectedSsid)) {
         selectedSsid = null;
         passwordDraft = "";
@@ -449,7 +445,7 @@ export function mountFirstRunExperience(
     } catch (error) {
       if (destroyed || ordinal !== networkOrdinal) return;
       networkMessage = scan
-        ? networkManagementFailureMessage("scan", error)
+        ? (error instanceof TypeError ? t("invalidWifiCredentials") : t("wifiActionFailed"))
         : t("wifiReadFailed");
     } finally {
       if (!destroyed && ordinal === networkOrdinal) {
@@ -463,17 +459,21 @@ export function mountFirstRunExperience(
     if (!networkPort || destroyed || networkPending) return;
     const ordinal = ++networkOrdinal;
     networkPending = true;
-    networkMessage = networkManagementActionMessage("connect", 0);
+    networkMessage = t("connectPending");
     passwordDraft = "";
     render();
     try {
       networkSnapshot = await runNetworkManagementAction(networkPort, "connect", { ssid, password });
       if (destroyed || ordinal !== networkOrdinal) return;
       selectedSsid = null;
-      networkMessage = networkManagementActionMessage("connect", 1);
+      networkMessage = t("connectDone");
     } catch (error) {
       if (destroyed || ordinal !== networkOrdinal) return;
-      networkMessage = networkManagementFailureMessage("connect", error);
+      networkMessage = error?.status === 409
+        ? t("connectFailed")
+        : error instanceof TypeError
+          ? t("invalidWifiCredentials")
+          : t("wifiActionFailed");
     } finally {
       if (!destroyed && ordinal === networkOrdinal) {
         networkPending = false;
