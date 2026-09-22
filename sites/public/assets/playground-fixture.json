@@ -80,6 +80,13 @@
       "display_title": "Internet"
     },
     {
+      "id": "assistant",
+      "title": "Assistente local",
+      "description": "IA local e privada, executada no próprio dispositivo.",
+      "monogram": "IA",
+      "display_title": "Assistente local"
+    },
+    {
       "id": "settings",
       "title": "Preferências do OrdaX",
       "description": "Preferências compartilhadas, aparência e rede do OrdaX.",
