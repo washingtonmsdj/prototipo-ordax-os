@@ -26,6 +26,7 @@ const (
 	manifestSchema   = "prototype-ordax.release-manifest/1"
 	manifestSchemaV2 = "prototype-ordax.release-manifest/2"
 	manifestSchemaV3 = "prototype-ordax.release-manifest/3"
+	manifestSchemaV4 = "prototype-ordax.release-manifest/4"
 	trustSchema      = "prototype-ordax.release-trust/1"
 	defaultRepo    = "washingtonmsdj/prototipo-ordax-os"
 	maxManifest    = 512 << 10
@@ -39,6 +40,8 @@ var (
 	keyIDPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`)
 	commitPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 	shaPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	revisionPattern = regexp.MustCompile(`^[0-9a-f]{7,64}$`)
+	licensePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9.+-]{0,63}$`)
 	recipePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,127}$`)
 )
 
@@ -63,8 +66,9 @@ type Manifest struct {
 	CreatedFromCIRecipe string     `json:"created_from_ci_recipe"`
 	ProductMode         string     `json:"product_mode,omitempty"`
 	StorageProfile      string     `json:"storage_profile,omitempty"`
-	RuntimeFormat       string     `json:"runtime_format,omitempty"`
-	Artifacts           []Artifact `json:"artifacts"`
+	RuntimeFormat       string          `json:"runtime_format,omitempty"`
+	Artifacts           []Artifact      `json:"artifacts"`
+	LocalAI             *LocalAIBinding `json:"local_ai,omitempty"`
 }
 
 type Artifact struct {
@@ -73,6 +77,23 @@ type Artifact struct {
 	URL    string `json:"url"`
 	SHA256 string `json:"sha256"`
 	Size   int64  `json:"size"`
+}
+
+type LocalAIBinding struct {
+	Contract              string `json:"contract"`
+	SourceLockSchema      string `json:"source_lock_schema"`
+	SourceLockSHA256      string `json:"source_lock_sha256"`
+	EngineID              string `json:"engine_id"`
+	EngineRepository      string `json:"engine_repository"`
+	EngineSourceCommit    string `json:"engine_source_commit"`
+	EngineLicense         string `json:"engine_license"`
+	ModelID               string `json:"model_id"`
+	ModelRepository       string `json:"model_repository"`
+	ModelFilename         string `json:"model_filename"`
+	ModelUpstreamRevision string `json:"model_upstream_revision"`
+	ModelSHA256           string `json:"model_sha256"`
+	ModelSize             int64  `json:"model_size"`
+	ModelLicense          string `json:"model_license"`
 }
 
 func validateKeyID(keyID string) error {
@@ -311,8 +332,8 @@ func strictManifest(data []byte, expectedRepository string) (Manifest, error) {
 		if len(manifest.Artifacts) != 1 {
 			return Manifest{}, errors.New("release-manifest/1 requires exactly one system.tar artifact")
 		}
-		if manifest.ProductMode != "" || manifest.StorageProfile != "" || manifest.RuntimeFormat != "" {
-			return Manifest{}, errors.New("release-manifest/1 forbids portable-v2 identity fields")
+		if manifest.ProductMode != "" || manifest.StorageProfile != "" || manifest.RuntimeFormat != "" || manifest.LocalAI != nil {
+			return Manifest{}, errors.New("release-manifest/1 forbids portable-v2 and local AI identity fields")
 		}
 		if manifest.Artifacts[0].Name != "system.tar" || manifest.Artifacts[0].Role != "system" {
 			return Manifest{}, errors.New("release-manifest/1 artifact must be system.tar with role=system")
@@ -320,6 +341,9 @@ func strictManifest(data []byte, expectedRepository string) (Manifest, error) {
 	case manifestSchemaV2:
 		if len(manifest.Artifacts) != 1 {
 			return Manifest{}, errors.New("release-manifest/2 requires exactly one system.erofs artifact")
+		}
+		if manifest.LocalAI != nil {
+			return Manifest{}, errors.New("release-manifest/2 forbids local_ai binding")
 		}
 		if manifest.ProductMode != "usb" || manifest.StorageProfile != "portable-usb-v2" || manifest.RuntimeFormat != "erofs" {
 			return Manifest{}, errors.New("release-manifest/2 requires usb portable-usb-v2 erofs identity")
@@ -331,6 +355,9 @@ func strictManifest(data []byte, expectedRepository string) (Manifest, error) {
 		if len(manifest.Artifacts) != 2 {
 			return Manifest{}, errors.New("release-manifest/3 requires exactly system.erofs and native-surface-runtime.erofs")
 		}
+		if manifest.LocalAI != nil {
+			return Manifest{}, errors.New("release-manifest/3 forbids local_ai binding")
+		}
 		if manifest.ProductMode != "usb" || manifest.StorageProfile != "portable-usb-v2" || manifest.RuntimeFormat != "erofs" {
 			return Manifest{}, errors.New("release-manifest/3 requires usb portable-usb-v2 erofs identity")
 		}
@@ -339,6 +366,42 @@ func strictManifest(data []byte, expectedRepository string) (Manifest, error) {
 		}
 		if manifest.Artifacts[1].Name != "native-surface-runtime.erofs" || manifest.Artifacts[1].Role != "surface-runtime" {
 			return Manifest{}, errors.New("release-manifest/3 second artifact must be native-surface-runtime.erofs with role=surface-runtime")
+		}
+	case manifestSchemaV4:
+		if len(manifest.Artifacts) != 3 {
+			return Manifest{}, errors.New("release-manifest/4 requires system, Surface runtime and local AI runtime artifacts")
+		}
+		if manifest.ProductMode != "usb" || manifest.StorageProfile != "portable-usb-v2" || manifest.RuntimeFormat != "erofs" {
+			return Manifest{}, errors.New("release-manifest/4 requires usb portable-usb-v2 erofs identity")
+		}
+		if manifest.Artifacts[0].Name != "system.erofs" || manifest.Artifacts[0].Role != "system-image" {
+			return Manifest{}, errors.New("release-manifest/4 first artifact must be system.erofs with role=system-image")
+		}
+		if manifest.Artifacts[1].Name != "native-surface-runtime.erofs" || manifest.Artifacts[1].Role != "surface-runtime" {
+			return Manifest{}, errors.New("release-manifest/4 second artifact must be native-surface-runtime.erofs with role=surface-runtime")
+		}
+		if manifest.Artifacts[2].Name != "local-ai-runtime.erofs" || manifest.Artifacts[2].Role != "local-ai-runtime" {
+			return Manifest{}, errors.New("release-manifest/4 third artifact must be local-ai-runtime.erofs with role=local-ai-runtime")
+		}
+		if manifest.LocalAI == nil {
+			return Manifest{}, errors.New("release-manifest/4 requires local_ai source/model binding")
+		}
+		binding := manifest.LocalAI
+		if binding.Contract != "ordax.local-ai/1" ||
+			binding.SourceLockSchema != "prototype-ordax.local-ai-source-lock/1" ||
+			!shaPattern.MatchString(binding.SourceLockSHA256) ||
+			binding.EngineID == "" || len(binding.EngineID) > 128 ||
+			binding.EngineRepository == "" || len(binding.EngineRepository) > 512 ||
+			!commitPattern.MatchString(binding.EngineSourceCommit) ||
+			!licensePattern.MatchString(binding.EngineLicense) ||
+			binding.ModelID == "" || len(binding.ModelID) > 128 ||
+			binding.ModelRepository == "" || len(binding.ModelRepository) > 512 ||
+			binding.ModelFilename == "" || filepath.Base(binding.ModelFilename) != binding.ModelFilename ||
+			!revisionPattern.MatchString(binding.ModelUpstreamRevision) ||
+			!shaPattern.MatchString(binding.ModelSHA256) ||
+			binding.ModelSize <= 0 || binding.ModelSize > maxArtifact ||
+			!licensePattern.MatchString(binding.ModelLicense) {
+			return Manifest{}, errors.New("release-manifest/4 contains invalid local_ai source/model binding")
 		}
 	default:
 		return Manifest{}, errors.New("unsupported release manifest schema")

@@ -188,5 +188,74 @@
     "ci_cross_component_proof": true,
     "ci_signer_agent_run_id": 35640416446,
     "ci_release_agent_run_id": 35640416481
+  },
+  "portable_v4": {
+    "manifest_schema": "prototype-ordax.release-manifest/4",
+    "envelope_schema": "prototype-ordax.release-envelope/1",
+    "trust_schema": "prototype-ordax.release-trust/1",
+    "release_addressing": "source-commit",
+    "product_mode": "usb",
+    "storage_profile": "portable-usb-v2",
+    "runtime_format": "erofs",
+    "artifact_count": 3,
+    "artifacts": [
+      {
+        "name": "system.erofs",
+        "role": "system-image"
+      },
+      {
+        "name": "native-surface-runtime.erofs",
+        "role": "surface-runtime"
+      },
+      {
+        "name": "local-ai-runtime.erofs",
+        "role": "local-ai-runtime"
+      }
+    ],
+    "canonical_artifact_order": true,
+    "local_ai_binding_required": true,
+    "local_ai_contract": "ordax.local-ai/1",
+    "local_ai_source_lock_schema": "prototype-ordax.local-ai-source-lock/1",
+    "local_ai_binding_fields": [
+      "source_lock_sha256",
+      "engine_id",
+      "engine_repository",
+      "engine_source_commit",
+      "engine_license",
+      "model_id",
+      "model_repository",
+      "model_filename",
+      "model_upstream_revision",
+      "model_sha256",
+      "model_size",
+      "model_license"
+    ],
+    "generator_support": true,
+    "signer_support": true,
+    "envelope_verifier_support": true,
+    "acquisition_agent_support": true,
+    "materialization_support": true,
+    "activation_support": false,
+    "boot_handoff_support": false,
+    "production_publication_allowed": false,
+    "channel_inspection_support": true,
+    "materialization_command": "ordax-release-agent materialize-portable-v4",
+    "offline_exact_verification_command": "ordax-release-agent verify-portable-v4-exact",
+    "materialization_root": "/ordax-data/.ordax",
+    "release_layout": ".ordax/releases/<source_commit>/{system.erofs,surface-runtime.sha256,local-ai-runtime.sha256,release-manifest.json,release-envelope.json}",
+    "surface_runtime_store": ".ordax/runtimes/sha256/<runtime_sha256>/native-surface-runtime.erofs",
+    "local_ai_runtime_store": ".ordax/ai-runtimes/sha256/<runtime_sha256>/local-ai-runtime.erofs",
+    "runtime_content_addressed_by": "sha256",
+    "verified_runtime_reuse": true,
+    "system_erofs_superblock_checked": true,
+    "surface_runtime_erofs_superblock_checked": true,
+    "local_ai_runtime_erofs_superblock_checked": true,
+    "current_symlink_created": false,
+    "offline_exact_verification_support": true,
+    "offline_exact_verification_network_access": false,
+    "offline_exact_verification_mutates_release": false,
+    "offline_exact_verification_activation_performed": false,
+    "physical_write_authority_granted": false,
+    "real_local_ai_runtime_artifact_built": false
   }
 }

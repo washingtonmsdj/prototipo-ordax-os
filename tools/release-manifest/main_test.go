@@ -287,3 +287,123 @@ func TestPortableRuntimeManifestV3RejectsWrongRuntimeNameAndNonHTTPSURL(t *testi
 		t.Fatal("v3 accepted non-HTTPS Surface runtime URL")
 	}
 }
+
+
+func validLocalAISourceLockFixture() []byte {
+	return []byte(`{
+  "$schema": "prototype-ordax.local-ai-source-lock/1",
+  "engine": {
+    "id": "llama.cpp",
+    "repository": "https://github.com/ggml-org/llama.cpp",
+    "commit": "7ab4ee7baad2d920464cbacfad4f4b07cf111fd2",
+    "license": "MIT"
+  },
+  "model": {
+    "id": "qwen3.5-0.8b-q4_0",
+    "repository": "ggml-org/Qwen3.5-0.8B-GGUF",
+    "filename": "Qwen3.5-0.8B-Q4_0.gguf",
+    "sha256": "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf",
+    "size_bytes": 563036064,
+    "license": "Apache-2.0",
+    "upstream_revision": "9447f74"
+  }
+}
+`)
+}
+
+func TestBuildPortableAIManifestV4PinsRuntimeAndSourceLock(t *testing.T) {
+	root := t.TempDir()
+	systemPath := filepath.Join(root, "system.erofs")
+	runtimePath := filepath.Join(root, "native-surface-runtime.erofs")
+	aiPath := filepath.Join(root, "local-ai-runtime.erofs")
+	lockPath := filepath.Join(root, "source-lock.json")
+	systemPayload := []byte("system-v4\n")
+	runtimePayload := []byte("surface-v4\n")
+	aiPayload := []byte("local-ai-v4\n")
+	for path, payload := range map[string][]byte{
+		systemPath: systemPayload,
+		runtimePath: runtimePayload,
+		aiPath: aiPayload,
+		lockPath: validLocalAISourceLockFixture(),
+	} {
+		if err := os.WriteFile(path, payload, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	manifest, err := buildPortableAIManifest(
+		systemPath,
+		runtimePath,
+		aiPath,
+		lockPath,
+		testCommit,
+		"https://example.invalid/system.erofs",
+		"https://example.invalid/native-surface-runtime.erofs",
+		"https://example.invalid/local-ai-runtime.erofs",
+		defaultRepo,
+		defaultPortableAIRuntimeRecipe,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.Schema != manifestSchemaV4 || len(manifest.Artifacts) != 3 {
+		t.Fatalf("unexpected v4 manifest identity: %#v", manifest)
+	}
+	if got := manifest.Artifacts[2]; got.Name != "local-ai-runtime.erofs" || got.Role != "local-ai-runtime" {
+		t.Fatalf("unexpected v4 local AI artifact: %#v", got)
+	}
+	aiDigest := sha256.Sum256(aiPayload)
+	if manifest.Artifacts[2].SHA256 != hex.EncodeToString(aiDigest[:]) ||
+		manifest.Artifacts[2].Size != int64(len(aiPayload)) {
+		t.Fatalf("local AI artifact identity drifted: %#v", manifest.Artifacts[2])
+	}
+	if manifest.LocalAI == nil {
+		t.Fatal("v4 manifest lost local_ai binding")
+	}
+	lockDigest := sha256.Sum256(validLocalAISourceLockFixture())
+	if manifest.LocalAI.SourceLockSHA256 != hex.EncodeToString(lockDigest[:]) {
+		t.Fatalf("source lock digest mismatch: %#v", manifest.LocalAI)
+	}
+	if manifest.LocalAI.Contract != "ordax.local-ai/1" ||
+		manifest.LocalAI.EngineID != "llama.cpp" ||
+		manifest.LocalAI.EngineSourceCommit != "7ab4ee7baad2d920464cbacfad4f4b07cf111fd2" ||
+		manifest.LocalAI.ModelID != "qwen3.5-0.8b-q4_0" ||
+		manifest.LocalAI.ModelSHA256 != "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf" ||
+		manifest.LocalAI.ModelSize != 563036064 {
+		t.Fatalf("local AI source/model binding drifted: %#v", manifest.LocalAI)
+	}
+}
+
+func TestPortableAIManifestV4RejectsInvalidSourceLock(t *testing.T) {
+	root := t.TempDir()
+	systemPath := filepath.Join(root, "system.erofs")
+	runtimePath := filepath.Join(root, "native-surface-runtime.erofs")
+	aiPath := filepath.Join(root, "local-ai-runtime.erofs")
+	lockPath := filepath.Join(root, "source-lock.json")
+	for path, payload := range map[string][]byte{
+		systemPath: []byte("system"),
+		runtimePath: []byte("surface"),
+		aiPath: []byte("ai"),
+	} {
+		if err := os.WriteFile(path, payload, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(lockPath, []byte(`{"$schema":"prototype-ordax.local-ai-source-lock/1","engine":{"id":"llama.cpp","repository":"https://github.com/ggml-org/llama.cpp","commit":"bad","license":"MIT"},"model":{"id":"m","repository":"r","filename":"m.gguf","sha256":"bad","size_bytes":1,"license":"Apache-2.0","upstream_revision":"9447f74"}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := buildPortableAIManifest(
+		systemPath,
+		runtimePath,
+		aiPath,
+		lockPath,
+		testCommit,
+		"https://example.invalid/system.erofs",
+		"https://example.invalid/native-surface-runtime.erofs",
+		"https://example.invalid/local-ai-runtime.erofs",
+		defaultRepo,
+		defaultPortableAIRuntimeRecipe,
+	); err == nil {
+		t.Fatal("v4 accepted invalid local AI source lock")
+	}
+}

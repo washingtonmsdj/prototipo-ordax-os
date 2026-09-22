@@ -629,3 +629,143 @@ func TestSignAndVerifyPortableV3UsesExistingTrustEnvelopeBoundary(t *testing.T) 
 		t.Fatalf("portable v3 signed envelope lost identity: %#v", verified)
 	}
 }
+
+
+func validManifestV4Bytes() []byte {
+	return []byte(`{
+  "$schema": "prototype-ordax.release-manifest/4",
+  "source_repository": "washingtonmsdj/prototipo-ordax-os",
+  "source_commit": "0123456789abcdef0123456789abcdef01234567",
+  "release_id": "0123456789abcdef0123456789abcdef01234567",
+  "created_from_ci_recipe": "release/portable-usb-v2-local-ai/1",
+  "product_mode": "usb",
+  "storage_profile": "portable-usb-v2",
+  "runtime_format": "erofs",
+  "artifacts": [
+    {
+      "name": "system.erofs",
+      "role": "system-image",
+      "url": "https://example.invalid/releases/system.erofs",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "size": 4096
+    },
+    {
+      "name": "native-surface-runtime.erofs",
+      "role": "surface-runtime",
+      "url": "https://example.invalid/runtime/native-surface-runtime.erofs",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "size": 8192
+    },
+    {
+      "name": "local-ai-runtime.erofs",
+      "role": "local-ai-runtime",
+      "url": "https://example.invalid/runtime/local-ai-runtime.erofs",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "size": 12288
+    }
+  ],
+  "local_ai": {
+    "contract": "ordax.local-ai/1",
+    "source_lock_schema": "prototype-ordax.local-ai-source-lock/1",
+    "source_lock_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "engine_id": "llama.cpp",
+    "engine_repository": "https://github.com/ggml-org/llama.cpp",
+    "engine_source_commit": "7ab4ee7baad2d920464cbacfad4f4b07cf111fd2",
+    "engine_license": "MIT",
+    "model_id": "qwen3.5-0.8b-q4_0",
+    "model_repository": "ggml-org/Qwen3.5-0.8B-GGUF",
+    "model_filename": "Qwen3.5-0.8B-Q4_0.gguf",
+    "model_upstream_revision": "9447f74",
+    "model_sha256": "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf",
+    "model_size": 563036064,
+    "model_license": "Apache-2.0"
+  }
+}`)
+}
+
+func TestStrictManifestAcceptsPortableV4WithoutChangingOlderSchemas(t *testing.T) {
+	v4, err := strictManifest(validManifestV4Bytes(), defaultRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v4.Schema != manifestSchemaV4 || len(v4.Artifacts) != 3 || v4.LocalAI == nil {
+		t.Fatalf("unexpected v4 manifest: %#v", v4)
+	}
+	if v4.Artifacts[2].Name != "local-ai-runtime.erofs" ||
+		v4.Artifacts[2].Role != "local-ai-runtime" ||
+		v4.LocalAI.EngineID != "llama.cpp" ||
+		v4.LocalAI.ModelID != "qwen3.5-0.8b-q4_0" {
+		t.Fatalf("v4 local AI identity drifted: %#v", v4)
+	}
+	for _, older := range [][]byte{validManifestBytes(), validManifestV2Bytes(), validManifestV3Bytes()} {
+		if _, err := strictManifest(older, defaultRepo); err != nil {
+			t.Fatalf("older schema rejected after v4 support: %v", err)
+		}
+	}
+}
+
+func TestStrictManifestV4RejectsMissingOrInvalidLocalAIBinding(t *testing.T) {
+	var manifest Manifest
+	if err := json.Unmarshal(validManifestV4Bytes(), &manifest); err != nil {
+		t.Fatal(err)
+	}
+	manifest.LocalAI = nil
+	data, _ := json.Marshal(manifest)
+	if _, err := strictManifest(data, defaultRepo); err == nil {
+		t.Fatal("v4 accepted missing local_ai binding")
+	}
+
+	if err := json.Unmarshal(validManifestV4Bytes(), &manifest); err != nil {
+		t.Fatal(err)
+	}
+	manifest.LocalAI.ModelSHA256 = "bad"
+	data, _ = json.Marshal(manifest)
+	if _, err := strictManifest(data, defaultRepo); err == nil {
+		t.Fatal("v4 accepted invalid model SHA-256")
+	}
+
+	if err := json.Unmarshal(validManifestV4Bytes(), &manifest); err != nil {
+		t.Fatal(err)
+	}
+	manifest.Artifacts[1], manifest.Artifacts[2] = manifest.Artifacts[2], manifest.Artifacts[1]
+	data, _ = json.Marshal(manifest)
+	if _, err := strictManifest(data, defaultRepo); err == nil {
+		t.Fatal("v4 accepted reordered runtime artifacts")
+	}
+}
+
+func TestSignAndVerifyPortableV4PreservesLocalAIBinding(t *testing.T) {
+	root := t.TempDir()
+	privatePath := filepath.Join(root, "private.pem")
+	trustPath := filepath.Join(root, "trust.json")
+	if _, err := generateKeyFiles(privatePath, trustPath, "prototype-1"); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := writeManifestForTest(t, root, validManifestV4Bytes())
+	envelopePath := filepath.Join(root, "portable-v4-envelope.json")
+	commit, err := signManifest(
+		manifestPath,
+		privatePath,
+		trustPath,
+		envelopePath,
+		"prototype-1",
+		defaultRepo,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if commit != "0123456789abcdef0123456789abcdef01234567" {
+		t.Fatalf("unexpected signed v4 commit: %s", commit)
+	}
+	verified, err := verifyEnvelope(envelopePath, trustPath, defaultRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verified.Schema != manifestSchemaV4 ||
+		len(verified.Artifacts) != 3 ||
+		verified.LocalAI == nil ||
+		verified.LocalAI.SourceLockSHA256 != "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" ||
+		verified.LocalAI.ModelSHA256 != "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf" {
+		t.Fatalf("portable v4 signed envelope lost identity: %#v", verified)
+	}
+}

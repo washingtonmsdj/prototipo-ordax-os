@@ -48,7 +48,7 @@ Future features extend the protocol through new schema versions rather than by w
 
 The machine-readable authority for these compatibility rules is `docs/contracts/release-protocol.json`.
 
-The generator, signer and acquisition agent remain independent fail-closed owners, while CI prevents their schema assumptions from drifting. V1, v2 and v3 stay explicit compatibility boundaries; shared protocol code should only be extracted when it reduces real duplication without weakening those versioned contracts.
+The generator, signer and acquisition agent remain independent fail-closed owners, while CI prevents their schema assumptions from drifting. V1, v2, v3 and v4 stay explicit compatibility boundaries; shared protocol code should only be extracted when it reduces real duplication without weakening those versioned contracts.
 
 ## Portable USB v2 manifest
 
@@ -96,6 +96,44 @@ The acquisition agent materializes the release system image under the source com
 
 A later system release that references the same already verified runtime hash reuses those exact bytes instead of downloading the runtime again. This is content-addressed reuse, not a mutable shared runtime. The v3 materializer still creates no `current` pointer, performs no boot handoff and does not authorize physical USB publication.
 
+
+## Portable USB v4 manifest with native local AI runtime
+
+Schema `prototype-ordax.release-manifest/4` extends v3 without changing its
+existing meaning. It adds a third canonical artifact:
+
+```text
+artifacts[0] = system.erofs                  role=system-image
+artifacts[1] = native-surface-runtime.erofs  role=surface-runtime
+artifacts[2] = local-ai-runtime.erofs        role=local-ai-runtime
+```
+
+The manifest also requires a signed `local_ai` binding derived from
+`system/services/local-ai/source-lock.json`. That binding pins the source-lock
+SHA-256, llama.cpp source repository and commit, engine license, model identity,
+upstream revision, exact model SHA-256/size and model license. The signer and
+acquisition agent independently validate this v4 shape and fail closed on a
+missing, malformed or reordered AI payload.
+
+The local AI runtime is stored separately from the Surface runtime:
+
+```text
+/ordax-data/.ordax/releases/<source_commit>/
+├─ system.erofs
+├─ surface-runtime.sha256
+├─ local-ai-runtime.sha256
+├─ release-manifest.json
+└─ release-envelope.json
+
+/ordax-data/.ordax/ai-runtimes/sha256/<runtime_sha256>/
+└─ local-ai-runtime.erofs
+```
+
+The v4 source protocol and verification path are implemented, but the real
+llama.cpp + Qwen runtime EROFS is still a separate reproducible-build/promotion
+gate. V4 support does not itself claim that those bytes have been built,
+published or written to physical Stable/MVP media.
+
 ## Canonical pipeline
 
 ```text
@@ -123,7 +161,12 @@ RELEASE_MANIFEST_V1_SEMANTICS_IMMUTABLE=YES
 RELEASE_MANIFEST_V2_SEMANTICS_IMMUTABLE=YES
 RELEASE_MANIFEST_V3_MULTI_ARTIFACT_RUNTIME=YES
 V3_RUNTIME_CONTENT_ADDRESSED_REUSE=YES
+RELEASE_MANIFEST_V4_LOCAL_AI_RUNTIME=YES_SOURCE
+V4_LOCAL_AI_SOURCE_LOCK_BINDING=YES
+V4_LOCAL_AI_CONTENT_ADDRESSED_REUSE=YES_SOURCE
+V4_REAL_LOCAL_AI_RUNTIME_BUILT=NO
 V3_ACTIVATION_ENABLED=NO
+V4_ACTIVATION_ENABLED=NO
 DELTA_REQUIRES_NEW_MANIFEST_SCHEMA=YES
 MULTI_ARTIFACT_REQUIRES_NEW_MANIFEST_SCHEMA=YES
 CANONICAL_RELEASE_TRUST_RESOLVED=NO

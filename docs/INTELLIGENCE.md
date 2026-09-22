@@ -39,6 +39,15 @@ The initial source lock targets a small Qwen3.5 GGUF profile served by
 update may replace the model, quantization or inference engine without changing
 the stable Intelligence API.
 
+
+The release layer has a dedicated v4 source contract for this payload.
+`prototype-ordax.release-manifest/4` keeps the system image and Surface runtime
+semantics from v3, adds `local-ai-runtime.erofs`, and signs a binding to the
+canonical engine/model source lock. Surface and AI runtimes are independently
+content-addressed and verified. This closes the protocol boundary only: the real
+engine/model EROFS still has to be reproducibly built and promoted before
+Stable/MVP media can claim local inference is installed.
+
 ## Authority boundary
 
 The MVP Intelligence runtime is consultative:

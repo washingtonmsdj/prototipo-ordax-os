@@ -262,3 +262,35 @@ ordax-release-agent verify-portable-v3-exact \
 ```
 
 Both v3 release-agent commands are non-activating. They do not create or mutate Portable activation slots and do not authorize physical USB writing or publication. The Stable supervisor may subsequently arm an exact verified v3 release through `ordax-portable-state prepare`; PID1 grants that candidate one boot attempt, and the supervisor commits it only after cold Surface health. Failure persists the rejected SHA and falls back to the previous release without Git or network.
+
+
+## Portable USB v4 local AI materialization
+
+`release-manifest/4` extends the signed portable release with a third artifact while preserving v3 semantics:
+
+```text
+1. system.erofs                  role=system-image
+2. native-surface-runtime.erofs  role=surface-runtime
+3. local-ai-runtime.erofs        role=local-ai-runtime
+```
+
+The signed manifest also carries a bounded `local_ai` binding derived from the canonical source lock: engine repository/commit/license, model repository/revision/file/hash/size/license, and the SHA-256 of the source-lock document itself.
+
+Acquire and revalidate one exact v4 release with:
+
+```text
+ordax-release-agent materialize-portable-v4 \
+  --envelope-url <https-url> \
+  --trust <release-trust.json> \
+  --expected-commit <40-hex> \
+  --root /ordax-data/.ordax
+
+ordax-release-agent verify-portable-v4-exact \
+  --trust <release-trust.json> \
+  --expected-commit <40-hex> \
+  --root /ordax-data/.ordax
+```
+
+The Surface runtime remains under `.ordax/runtimes/sha256/`; the local inference payload uses a separate `.ordax/ai-runtimes/sha256/` store. Both are revalidated by signed hash, exact size and EROFS superblock before reuse. The release directory stores digest references, not mutable runtime copies.
+
+This protocol support does **not** mean the real llama.cpp/model EROFS has already been built or placed on a physical Stable USB. v4 materialization remains non-activating and does not grant physical-write authority.

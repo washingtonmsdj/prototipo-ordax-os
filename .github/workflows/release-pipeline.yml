@@ -262,6 +262,108 @@ jobs:
           echo 'PORTABLE_V3_ACTIVATION_ALLOWED=NO'
           echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
 
+      - name: Prove portable v4 signed local AI protocol compatibility
+        run: |
+          set -euo pipefail
+          manifest_tool="$PWD/out/release-pipeline/ordax-release-manifest"
+          signer="$PWD/out/release-pipeline/ordax-release-signing"
+          agent="$PWD/out/release-pipeline/ordax-release-agent"
+          work="$RUNNER_TEMP/release-v4-pipeline-proof"
+          commit="0123456789abcdef0123456789abcdef01234567"
+          mkdir -p "$work"
+
+          python - "$work/system.erofs" "$work/native-surface-runtime.erofs" "$work/local-ai-runtime.erofs" <<'PY'
+          import pathlib, sys
+          for index, raw in enumerate(sys.argv[1:], start=1):
+              data = bytearray(4096)
+              data[1024:1028] = bytes([0xE2, 0xE1, 0xF5, 0xE0])
+              data[-1] = index
+              pathlib.Path(raw).write_bytes(data)
+          PY
+
+          cat > "$work/source-lock.json" <<'JSON'
+          {
+            "$schema": "prototype-ordax.local-ai-source-lock/1",
+            "engine": {
+              "id": "llama.cpp",
+              "repository": "https://github.com/ggml-org/llama.cpp",
+              "commit": "7ab4ee7baad2d920464cbacfad4f4b07cf111fd2",
+              "license": "MIT"
+            },
+            "model": {
+              "id": "qwen3.5-0.8b-q4_0",
+              "repository": "ggml-org/Qwen3.5-0.8B-GGUF",
+              "filename": "Qwen3.5-0.8B-Q4_0.gguf",
+              "sha256": "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf",
+              "size_bytes": 563036064,
+              "license": "Apache-2.0",
+              "upstream_revision": "9447f74"
+            }
+          }
+          JSON
+
+          "$manifest_tool" \
+            --manifest-schema 4 \
+            --artifact "$work/system.erofs" \
+            --runtime-artifact "$work/native-surface-runtime.erofs" \
+            --local-ai-artifact "$work/local-ai-runtime.erofs" \
+            --local-ai-source-lock "$work/source-lock.json" \
+            --source-commit "$commit" \
+            --artifact-url "https://example.invalid/releases/system.erofs" \
+            --runtime-artifact-url "https://example.invalid/runtime/native-surface-runtime.erofs" \
+            --local-ai-artifact-url "https://example.invalid/runtime/local-ai-runtime.erofs" \
+            --out "$work/release-manifest-v4.json"
+
+          "$signer" generate-key \
+            --private-key "$work/private-v4.pem" \
+            --trust "$work/trust-v4.json" \
+            --key-id ci-v4-1
+          "$signer" sign \
+            --manifest "$work/release-manifest-v4.json" \
+            --private-key "$work/private-v4.pem" \
+            --trust "$work/trust-v4.json" \
+            --key-id ci-v4-1 \
+            --out "$work/release-envelope-v4.json"
+
+          signer_verify="$("$signer" verify-envelope \
+            --envelope "$work/release-envelope-v4.json" \
+            --trust "$work/trust-v4.json")"
+          printf '%s\n' "$signer_verify"
+          grep -q 'RELEASE_ENVELOPE_VERIFIED=YES' <<<"$signer_verify"
+
+          agent_verify="$("$agent" verify-envelope \
+            --envelope "$work/release-envelope-v4.json" \
+            --trust "$work/trust-v4.json")"
+          printf '%s\n' "$agent_verify"
+          grep -q '"status": "verified"' <<<"$agent_verify"
+          grep -q '"artifact_count": 3' <<<"$agent_verify"
+
+          python - "$work/release-manifest-v4.json" "$work/source-lock.json" <<'PY'
+          import hashlib, json, pathlib, sys
+          manifest = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          source_lock = pathlib.Path(sys.argv[2]).read_bytes()
+          assert manifest['$schema'] == 'prototype-ordax.release-manifest/4'
+          assert [a['role'] for a in manifest['artifacts']] == [
+              'system-image',
+              'surface-runtime',
+              'local-ai-runtime',
+          ]
+          binding = manifest['local_ai']
+          assert binding['contract'] == 'ordax.local-ai/1'
+          assert binding['source_lock_sha256'] == hashlib.sha256(source_lock).hexdigest()
+          assert binding['engine_source_commit'] == '7ab4ee7baad2d920464cbacfad4f4b07cf111fd2'
+          assert binding['model_sha256'] == '57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf'
+          assert binding['model_size'] == 563036064
+          print('PORTABLE_V4_SIGNED_LOCAL_AI_IDENTITY=PASS')
+          PY
+
+          rm -f "$work/private-v4.pem"
+          test ! -e "$work/private-v4.pem"
+          echo 'PORTABLE_V4_SIGNED_PROTOCOL=PASS'
+          echo 'PORTABLE_V4_LOCAL_AI_RUNTIME_REAL_BYTES=NO'
+          echo 'PORTABLE_V4_ACTIVATION_ALLOWED=NO'
+          echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
+
       - name: Prove public trust promotion check and isolated apply with ephemeral recovery proof
         run: |
           set -euo pipefail

@@ -132,6 +132,62 @@ class ReleaseProtocolContractTests(unittest.TestCase):
         self.assertIn('filepath.Join(root, "runtimes", "sha256"', acquisition)
         self.assertIn("surface-runtime.sha256", acquisition)
 
+    def test_portable_v4_local_ai_contract_is_explicit_and_fail_closed(self):
+        contract = self.load_contract()
+        portable = contract["portable_v4"]
+        self.assertEqual(
+            portable["manifest_schema"],
+            "prototype-ordax.release-manifest/4",
+        )
+        self.assertEqual(portable["artifact_count"], 3)
+        self.assertEqual(
+            portable["artifacts"],
+            [
+                {"name": "system.erofs", "role": "system-image"},
+                {
+                    "name": "native-surface-runtime.erofs",
+                    "role": "surface-runtime",
+                },
+                {
+                    "name": "local-ai-runtime.erofs",
+                    "role": "local-ai-runtime",
+                },
+            ],
+        )
+        self.assertTrue(portable["canonical_artifact_order"])
+        self.assertTrue(portable["local_ai_binding_required"])
+        self.assertEqual(portable["local_ai_contract"], "ordax.local-ai/1")
+        self.assertEqual(
+            portable["local_ai_source_lock_schema"],
+            "prototype-ordax.local-ai-source-lock/1",
+        )
+        self.assertTrue(portable["generator_support"])
+        self.assertTrue(portable["signer_support"])
+        self.assertTrue(portable["envelope_verifier_support"])
+        self.assertTrue(portable["acquisition_agent_support"])
+        self.assertTrue(portable["materialization_support"])
+        self.assertTrue(portable["verified_runtime_reuse"])
+        self.assertTrue(portable["offline_exact_verification_support"])
+        self.assertFalse(portable["activation_support"])
+        self.assertFalse(portable["boot_handoff_support"])
+        self.assertFalse(portable["production_publication_allowed"])
+        self.assertFalse(portable["physical_write_authority_granted"])
+        self.assertFalse(portable["real_local_ai_runtime_artifact_built"])
+
+        acquisition = self.read_source(ACQUISITION)
+        signing = self.read_source(SIGNING)
+        generator = self.read_source(MANIFEST_TOOL)
+        for source in (acquisition, signing, generator):
+            self.assertIn("prototype-ordax.release-manifest/4", source)
+            self.assertIn("local-ai-runtime.erofs", source)
+            self.assertIn("ordax.local-ai/1", source)
+            self.assertIn("source_lock_sha256", source)
+            self.assertIn("model_sha256", source)
+        self.assertIn("materializePortableV4(", acquisition)
+        self.assertIn("verifyPortableV4Exact(", acquisition)
+        self.assertIn('filepath.Join(root, "ai-runtimes", "sha256"', acquisition)
+        self.assertIn("local-ai-runtime.sha256", acquisition)
+
     def test_trust_transition_v1_is_separate_fail_closed_protocol(self):
         contract = self.load_contract()["trust_transition_v1"]
         self.assertEqual(
