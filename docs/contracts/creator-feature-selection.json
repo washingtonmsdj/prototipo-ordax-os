@@ -1,0 +1,31 @@
+{
+  "$schema": "prototype-ordax.creator-feature-selection/1",
+  "status": "selection-contract-implemented-physical-writer-binding-pending-next-authorized-revision",
+  "profile": "stable-mvp",
+  "features": [
+    {
+      "id": "local-ai",
+      "title": "IA local",
+      "default_selected": true,
+      "user_toggleable": true,
+      "required": false,
+      "description": "Inclui o assistente local e um modelo leve verificado para uso offline.",
+      "omission_effect": "OrdaX funciona normalmente sem o componente de IA.",
+      "package_contract": "docs/contracts/local-ai.json"
+    }
+  ],
+  "rules": {
+    "unchecked_optional_feature_must_not_block_usb_creation": true,
+    "checked_feature_requires_verified_signed_package": true,
+    "checked_feature_may_not_silently_fall_back_to_cloud": true,
+    "feature_selection_may_not_change_boot_trust": true,
+    "feature_selection_may_not_enable_internal_disk_write": true,
+    "feature_selection_may_not_bypass_physical_confirmation": true
+  },
+  "physical_writer": {
+    "current_first_proof_context_is_preserved": true,
+    "current_authorized_writer_is_not_modified_by_this_contract": true,
+    "binding_required_before_public_creator_exposure": true,
+    "binding_requires_new_authorization_context": true
+  }
+}
