@@ -6,6 +6,7 @@ import {
   assertFileSpacePort,
   validateFileListing,
   validateTextFile,
+  validateTrashListing,
 } from "../../contracts/file-space.mjs";
 import { assertNotesFileImporter } from "../../contracts/notes-file-importer.mjs";
 import {
@@ -127,6 +128,9 @@ export function mountFileSpaceControls(
   let recentSnapshot = recentPort?.getSnapshot() ?? null;
   let recentMode = false;
   let selectedRecentPath = null;
+  let trashListing = null;
+  let trashMode = false;
+  let selectedTrashId = null;
   let recentSearchQuery = "";
   let projectSnapshot = projectPort?.getSnapshot() ?? null;
   let creatingProject = false;
@@ -140,7 +144,7 @@ export function mountFileSpaceControls(
     root.querySelector(`${FILE_WINDOW_SELECTOR} ${FILE_EXTENSION_SELECTOR}`);
 
   const interactionContext = () =>
-    recentMode ? "recent" : `path:${listing?.path ?? ""}`;
+    trashMode ? "trash" : recentMode ? "recent" : `path:${listing?.path ?? ""}`;
 
   const focusIdentity = (element) => {
     if (!element || !element.dataset) return null;
@@ -287,19 +291,27 @@ export function mountFileSpaceControls(
       button.type = "button";
       button.dataset.fileOpenPath = location.path;
       const active = Boolean(
-        !recentMode && listing && locationIsActive(listing.path, location.path),
+        !recentMode && !trashMode && listing && locationIsActive(listing.path, location.path),
       );
       button.dataset.active = String(active);
       button.setAttribute("aria-current", active ? "page" : "false");
       container.append(button);
 
-      if (index === 0 && recentPort) {
-        const recent = node(documentObject, "button", "ordax-files-location", "Recentes");
-        recent.type = "button";
-        recent.dataset.fileOpenRecent = "";
-        recent.dataset.active = String(recentMode);
-        recent.setAttribute("aria-current", recentMode ? "page" : "false");
-        container.append(recent);
+      if (index === 0) {
+        if (recentPort) {
+          const recent = node(documentObject, "button", "ordax-files-location", "Recentes");
+          recent.type = "button";
+          recent.dataset.fileOpenRecent = "";
+          recent.dataset.active = String(recentMode);
+          recent.setAttribute("aria-current", recentMode ? "page" : "false");
+          container.append(recent);
+        }
+        const trash = node(documentObject, "button", "ordax-files-location", "Lixeira");
+        trash.type = "button";
+        trash.dataset.fileOpenTrash = "";
+        trash.dataset.active = String(trashMode);
+        trash.setAttribute("aria-current", trashMode ? "page" : "false");
+        container.append(trash);
       }
     });
 
@@ -310,7 +322,7 @@ export function mountFileSpaceControls(
         button.type = "button";
         button.dataset.fileOpenProject = project.id;
         button.title = project.path;
-        const active = Boolean(!recentMode && listing?.path === project.path);
+        const active = Boolean(!recentMode && !trashMode && listing?.path === project.path);
         button.dataset.active = String(active);
         button.setAttribute("aria-current", active ? "page" : "false");
         container.append(button);
