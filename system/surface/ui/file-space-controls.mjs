@@ -701,13 +701,13 @@ export function mountFileSpaceControls(
 
   const renderEntries = (container) => {
     const list = node(documentObject, "div", "ordax-files-list");
-    list.setAttribute("aria-label", "Itens da pasta");
+    list.setAttribute("aria-label", t("files.folder.items.aria"));
     const header = node(documentObject, "div", "ordax-files-list-header");
     header.append(
-      sortButton("Nome", "name"),
-      sortButton("Tipo", "type"),
-      sortButton("Tamanho", "size"),
-      sortButton("Modificado", "modified"),
+      sortButton(t("files.column.name"), "name"),
+      sortButton(t("files.column.type"), "type"),
+      sortButton(t("files.column.size"), "size"),
+      sortButton(t("files.column.modified"), "modified"),
     );
     list.append(header);
 
@@ -716,7 +716,7 @@ export function mountFileSpaceControls(
         documentObject,
         "div",
         "ordax-files-empty",
-        pending ? "Abrindo espaço do usuário…" : "Espaço do usuário indisponível.",
+        pending ? t("files.empty.opening") : t("files.empty.unavailable"),
       );
       list.append(empty);
       container.append(list);
@@ -724,7 +724,7 @@ export function mountFileSpaceControls(
     }
 
     if (listing.entries.length === 0) {
-      list.append(node(documentObject, "div", "ordax-files-empty", "Esta pasta está vazia."));
+      list.append(node(documentObject, "div", "ordax-files-empty", t("files.empty.folder")));
       container.append(list);
       return;
     }
@@ -736,7 +736,7 @@ export function mountFileSpaceControls(
           documentObject,
           "div",
           "ordax-files-empty",
-          "Nenhum item corresponde à busca nesta pasta.",
+          t("files.empty.search"),
         ),
       );
       container.append(list);
@@ -752,11 +752,15 @@ export function mountFileSpaceControls(
       row.dataset.kind = entry.kind;
       row.dataset.selected = String(selected);
       row.setAttribute("aria-pressed", String(selected));
+      const localizedKind = entry.kind === "directory"
+        ? t("files.kind.folderLower")
+        : t("files.kind.fileLower");
       row.setAttribute(
         "aria-label",
-        selected
-          ? `${entry.name}, ${entry.kind === "directory" ? "pasta" : "arquivo"}, selecionado`
-          : `${entry.name}, ${entry.kind === "directory" ? "pasta" : "arquivo"}`,
+        t(selected ? "files.row.ariaSelected" : "files.row.aria", {
+          name: entry.name,
+          kind: localizedKind,
+        }),
       );
 
       const nameCell = node(documentObject, "span", "ordax-file-name");
@@ -767,7 +771,12 @@ export function mountFileSpaceControls(
 
       row.append(
         nameCell,
-        node(documentObject, "span", "ordax-file-meta", entry.kind === "directory" ? "Pasta" : "Arquivo"),
+        node(
+          documentObject,
+          "span",
+          "ordax-file-meta",
+          entry.kind === "directory" ? t("files.kind.folder") : t("files.kind.file"),
+        ),
         node(documentObject, "span", "ordax-file-meta", entry.kind === "directory" ? "—" : formatSize(entry.size)),
         node(documentObject, "span", "ordax-file-meta", formatModifiedAt(entry.modifiedAt, locale())),
       );
@@ -782,7 +791,7 @@ export function mountFileSpaceControls(
     if (!selected) return;
 
     const details = node(documentObject, "section", "ordax-files-details");
-    details.setAttribute("aria-label", "Detalhes do item selecionado");
+    details.setAttribute("aria-label", t("files.details.aria"));
 
     const summary = node(documentObject, "div", "ordax-files-details-summary");
     summary.append(
@@ -791,14 +800,16 @@ export function mountFileSpaceControls(
         documentObject,
         "span",
         "ordax-files-details-meta",
-        selected.kind === "directory" ? "Pasta" : `Arquivo · ${formatSize(selected.size)}`,
+        selected.kind === "directory"
+          ? t("files.kind.folder")
+          : `${t("files.kind.file")} · ${formatSize(selected.size)}`,
       ),
       node(documentObject, "span", "ordax-files-details-path", selected.path),
       node(
         documentObject,
         "span",
         "ordax-files-details-path",
-        `Modificado: ${formatModifiedAt(selected.modifiedAt, locale())}`,
+        t("files.details.modifiedAt", { date: formatModifiedAt(selected.modifiedAt, locale()) }),
       ),
     );
 
@@ -809,11 +820,11 @@ export function mountFileSpaceControls(
     let exportFile = null;
     let createNote = null;
     if (selected.kind === "file") {
-      duplicate = node(documentObject, "button", "ordax-files-action", "Duplicar");
+      duplicate = node(documentObject, "button", "ordax-files-action", t("files.action.duplicate"));
       duplicate.type = "button";
       duplicate.dataset.fileCopyToggle = "";
       duplicate.disabled = itemBusy;
-      copyTo = node(documentObject, "button", "ordax-files-action", "Copiar para…");
+      copyTo = node(documentObject, "button", "ordax-files-action", t("files.action.copyTo"));
       copyTo.type = "button";
       copyTo.dataset.fileCopyToToggle = "";
       copyTo.disabled = itemBusy || selected.size > MAX_FILE_COPY_BYTES;
@@ -840,15 +851,15 @@ export function mountFileSpaceControls(
         createNote.title = notesAction.title;
       }
     }
-    const move = node(documentObject, "button", "ordax-files-action", "Mover");
+    const move = node(documentObject, "button", "ordax-files-action", t("files.action.move"));
     move.type = "button";
     move.dataset.fileMoveToggle = "";
     move.disabled = itemBusy;
-    const rename = node(documentObject, "button", "ordax-files-action", "Renomear");
+    const rename = node(documentObject, "button", "ordax-files-action", t("files.action.rename"));
     rename.type = "button";
     rename.dataset.fileRenameToggle = "";
     rename.disabled = itemBusy;
-    const trash = node(documentObject, "button", "ordax-files-action", "Mover para Lixeira");
+    const trash = node(documentObject, "button", "ordax-files-action", t("files.action.moveToTrash"));
     trash.type = "button";
     trash.dataset.fileTrashSelected = "";
     trash.disabled = itemBusy;
@@ -856,7 +867,7 @@ export function mountFileSpaceControls(
       documentObject,
       "button",
       "ordax-files-action ordax-files-action-primary",
-      selected.kind === "directory" ? "Abrir pasta" : "Visualizar texto",
+      selected.kind === "directory" ? t("files.action.openFolder") : t("files.action.previewText"),
     );
     open.type = "button";
     open.dataset.fileActivateSelected = "";
