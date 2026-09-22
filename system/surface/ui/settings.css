@@ -212,6 +212,91 @@
   text-align: right;
 }
 
+.ordax-settings-keyboard-message,
+.ordax-settings-keyboard-state {
+  margin: 12px 0 0;
+  padding: 9px 11px;
+  border-left: 3px solid var(--ordax-border);
+  background: var(--ordax-subtle-bg);
+  color: var(--ordax-muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.ordax-settings-keyboard-state[data-restart-required="true"],
+.ordax-settings-keyboard-message {
+  border-left-color: var(--ordax-accent);
+}
+
+.ordax-settings-keyboard-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.ordax-settings-keyboard-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  min-height: 86px;
+  padding: 12px 14px;
+  border: 1px solid var(--ordax-border-soft);
+  border-radius: var(--ordax-radius-sm);
+  background: transparent;
+  color: var(--ordax-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ordax-settings-keyboard-option:hover,
+.ordax-settings-keyboard-option:focus-visible {
+  border-color: var(--ordax-border);
+  background: var(--ordax-hover-bg);
+  outline: 2px solid var(--ordax-focus);
+  outline-offset: 1px;
+}
+
+.ordax-settings-keyboard-option[data-selected="true"] {
+  border-color: var(--ordax-text);
+}
+
+.ordax-settings-keyboard-option:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ordax-settings-keyboard-copy {
+  min-width: 0;
+}
+
+.ordax-settings-keyboard-copy strong,
+.ordax-settings-keyboard-copy small {
+  display: block;
+}
+
+.ordax-settings-keyboard-copy strong {
+  font-size: 0.84rem;
+}
+
+.ordax-settings-keyboard-copy small {
+  margin-top: 4px;
+  color: var(--ordax-muted);
+  font-size: 0.69rem;
+  line-height: 1.4;
+}
+
+.ordax-settings-keyboard-marker {
+  min-width: 72px;
+  color: var(--ordax-accent);
+  font-size: 0.67rem;
+  font-weight: 700;
+  text-align: right;
+}
+
 
 .ordax-settings-notification-row {
   display: grid;
@@ -538,6 +623,7 @@
   }
 
   .ordax-settings-options,
+  .ordax-settings-keyboard-options,
   .ordax-settings-network-list,
   .ordax-settings-wifi-list {
     grid-template-columns: 1fr;
