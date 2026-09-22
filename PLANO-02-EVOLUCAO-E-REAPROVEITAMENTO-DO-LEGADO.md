@@ -6,6 +6,8 @@
 
 **Data da análise:** 18/09/2026.
 
+> **Revalidação pré-USB — 22/09/2026:** para decidir o que precisa ser fechado antes da primeira mídia Stable/MVP, leia `PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md`. O Plano 03 reclassifica a `main@8405feed` depois dos avanços de Arquivos, rede, OOBE, notificações, Internet/Notas e IA local. Em particular, C16/F12 não deve mais ser lido como “IA inteira pós-MVP”: o backend local e a fundação `ordax.intelligence/1` já existem, e a integração consultiva real da Intelligence com o produto virou gate pré-USB; tools/agentes mutáveis continuam futuros.
+
 | Repositório | Referência inspecionada | Papel nesta análise |
 |---|---|---|
 | `washingtonmsdj/novo-ordax-os` | `main` — `49fe41fa67d9032f2e349e86592304e64d6c2d88` | Origem de funcionalidades, experiências, invariantes e ideias a avaliar. |
