@@ -1,0 +1,57 @@
+{
+  "$schema": "prototype-ordax.keyboard-layout/1",
+  "status": "native-persistent-next-surface-start",
+  "product_scope": "stable-mvp-usb-only",
+  "owners": {
+    "contract": "system/contracts/keyboard-layout.mjs",
+    "presentation": "system/services/input/keyboard-layout.mjs",
+    "native_adapter": "system/adapters/native/keyboard-layout.mjs",
+    "native_host": "system/surface/runtime/native_host_server.py",
+    "surface_launcher": "system/surface/bin/ordax-surface",
+    "settings_ui": "system/surface/ui/settings-overview-controls.mjs"
+  },
+  "default_layout_id": "br-abnt2",
+  "supported_layouts": {
+    "br-abnt2": {
+      "xkb_model": "abnt2",
+      "xkb_layout": "br",
+      "xkb_variant": ""
+    },
+    "us": {
+      "xkb_model": "pc105",
+      "xkb_layout": "us",
+      "xkb_variant": ""
+    }
+  },
+  "persistence": {
+    "path": "/var/lib/ordax/keyboard-layout",
+    "format": "validated-layout-id-token",
+    "mode": "0600",
+    "persistent_usb_state": true,
+    "web_storage_used": false
+  },
+  "application": {
+    "compositor": "cage",
+    "mechanism": "XKB_DEFAULT_environment_before_compositor_start",
+    "environment": [
+      "XKB_DEFAULT_RULES",
+      "XKB_DEFAULT_MODEL",
+      "XKB_DEFAULT_LAYOUT",
+      "XKB_DEFAULT_VARIANT",
+      "XKB_DEFAULT_OPTIONS"
+    ],
+    "live_reconfigure_supported": false,
+    "restart_required_when_configured_differs_from_applied": true,
+    "settings_visible_only_when_native_capability_present": true
+  },
+  "first_run": {
+    "selector_exposed": false,
+    "reason": "The current Cage session reads XKB settings at compositor startup. The OOBE must not imply immediate keyboard reconfiguration until a safe live/session-restart handoff exists."
+  },
+  "safety": {
+    "arbitrary_xkb_values_accepted": false,
+    "shell_input_from_http": false,
+    "invalid_persistent_state_falls_back_to_default": true,
+    "internal_disk_write_required": false
+  }
+}
