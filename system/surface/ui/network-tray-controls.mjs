@@ -84,7 +84,7 @@ function networkKindLabel(summary, t) {
   return t("network.kind.generic");
 }
 
-function networkSummaryCopy(summary, t) {
+export function localizeNetworkSummary(summary, t) {
   if (summary.kind === "unknown") {
     return Object.freeze({
       label: t("network.status.unavailable"),
@@ -158,7 +158,7 @@ export function mountNetworkTrayControls(
 
   const render = (snapshot, { stale = false } = {}) => {
     const next = summarizeNetworkStatus(snapshot);
-    const copy = networkSummaryCopy(next, t);
+    const copy = localizeNetworkSummary(next, t);
     tray.dataset.networkKind = next.kind;
     tray.dataset.networkState = next.state;
     tray.dataset.networkObservation = stale ? "stale" : "current";
