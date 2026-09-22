@@ -106,6 +106,8 @@ test("canonical component catalog has one unique owner identity per app and serv
     "update-service",
     "network-service",
     "power-service",
+    "local-ai-service",
+    "intelligence-service",
     "clock-service",
     "files",
     "notes",
@@ -124,6 +126,14 @@ test("canonical component catalog has one unique owner identity per app and serv
   assert.equal(notes.version, "0.4.0");
   assert.equal(notes.releaseMode, "git-app");
   assert.equal(notes.owner, "system/apps/notes");
+  const localAi = components.find((component) => component.id === "local-ai-service");
+  assert.equal(localAi.releaseMode, "bundled");
+  assert.equal(localAi.criticality, "system");
+  assert.deepEqual(localAi.dependencies, ["ordax-base"]);
+  const intelligence = components.find((component) => component.id === "intelligence-service");
+  assert.equal(intelligence.releaseMode, "bundled");
+  assert.equal(intelligence.criticality, "system");
+  assert.deepEqual(intelligence.dependencies, ["ordax-base", "local-ai-service"]);
   const shell = components.find((component) => component.id === "surface-shell");
   assert.equal(shell.version, "0.3.0");
   const base = components.find((component) => component.id === "ordax-base");
