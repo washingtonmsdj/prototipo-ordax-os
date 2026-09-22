@@ -81,7 +81,8 @@ def load_source_lock(path=SOURCE_LOCK):
     model = lock.get("model")
     distribution = lock.get("distribution")
     runtime = lock.get("runtime_security")
-    if not all(isinstance(v, dict) for v in (engine, model, distribution, runtime)):
+    defaults = lock.get("runtime_defaults")
+    if not all(isinstance(v, dict) for v in (engine, model, distribution, runtime, defaults)):
         raise RuntimeBuildError("local AI source lock is missing required sections")
 
     if engine.get("id") != "llama.cpp":
@@ -149,6 +150,8 @@ def load_source_lock(path=SOURCE_LOCK):
     }
     if runtime != required_security:
         raise RuntimeBuildError("local AI runtime security policy drifted")
+    if defaults != {"reasoning": "off"}:
+        raise RuntimeBuildError("initial local AI runtime defaults drifted")
 
     contract = load_json(CONTRACT, "local AI contract")
     if contract.get("$schema") != "prototype-ordax.local-ai/1":
@@ -409,6 +412,7 @@ exec "$runtime_root/bin/llama-server" \
   --port {DEFAULT_PORT} \
   --model "$runtime_root/models/{model['filename']}" \
   --alias "{model['id']}" \
+  --reasoning off \
   --no-ui \
   --no-slots
 """
@@ -547,6 +551,7 @@ def build(out_dir, cache_dir):
             "$schema": "prototype-ordax.local-ai-runtime-policy/1",
             "contract": "ordax.local-ai/1",
             **lock["runtime_security"],
+            "runtime_defaults": lock["runtime_defaults"],
             "model_id": model["id"],
             "model_filename": model["filename"],
         }
@@ -614,6 +619,7 @@ def build(out_dir, cache_dir):
                 "model_sha256": sha256_file(model_license),
             },
             "runtime_security": lock["runtime_security"],
+            "runtime_defaults": lock["runtime_defaults"],
             "tree_manifest_sha256": tree_sha,
             "normalized_tar_sha256": tar_sha,
             "image": {
@@ -679,6 +685,8 @@ def verify(out_dir):
         raise RuntimeBuildError("engine is not recorded as static")
     if provenance.get("runtime_security") != lock["runtime_security"]:
         raise RuntimeBuildError("runtime security policy drifted")
+    if provenance.get("runtime_defaults") != lock["runtime_defaults"]:
+        raise RuntimeBuildError("runtime default policy drifted")
     if provenance.get("tree_manifest_sha256") != sha256_file(tree_path):
         raise RuntimeBuildError("tree manifest differs from provenance")
     if provenance.get("image", {}).get("sha256") != sha256_file(image):
