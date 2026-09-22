@@ -6,6 +6,7 @@ CONTRACT = ROOT / "system" / "contracts" / "notes-file-importer.mjs"
 ACTION = ROOT / "system" / "surface" / "ui" / "file-notes-action.mjs"
 FILES_OWNER = ROOT / "system" / "surface" / "ui" / "file-space-controls.mjs"
 WORKFLOW = ROOT / ".github" / "workflows" / "surface-web-candidate.yml"
+FILES_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "files-operational.mjs"
 
 
 class FileNotesActionContractTests(unittest.TestCase):
@@ -48,12 +49,19 @@ class FileNotesActionContractTests(unittest.TestCase):
         self.assertNotIn("services/notes", source)
         self.assertNotIn("services/files/notes-import", source)
 
-    def test_source_file_semantics_are_explicit_in_user_messages(self):
+    def test_source_file_semantics_are_explicit_in_localized_user_messages(self):
         source = ACTION.read_text(encoding="utf-8")
-        self.assertIn("preserva o arquivo original", source)
-        self.assertIn("arquivo original não foi alterado", source)
-        self.assertIn("persistência no dispositivo está degradada", source)
-        self.assertIn("somente nesta sessão", source)
+        catalog = FILES_I18N.read_text(encoding="utf-8")
+        self.assertIn('files.notes.action.title', source)
+        self.assertIn('files.notes.createdDevice', source)
+        self.assertIn('files.notes.createdDegraded', source)
+        self.assertIn('files.notes.createdSession', source)
+        self.assertIn("preserva o arquivo original", catalog)
+        self.assertIn("arquivo original não foi alterado", catalog)
+        self.assertIn("persistência no dispositivo está degradada", catalog)
+        self.assertIn("somente nesta sessão", catalog)
+        self.assertIn("preserves the original file", catalog)
+        self.assertIn("device persistence is degraded", catalog)
         self.assertNotIn("Abrir com Notas", source)
 
     def test_surface_candidate_owns_contract_action_and_regressions(self):
