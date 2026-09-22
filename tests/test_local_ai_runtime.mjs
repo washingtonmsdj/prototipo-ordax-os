@@ -3,11 +3,40 @@ import test from "node:test";
 
 import { createLocalAiRuntime } from "../system/services/local-ai/runtime.mjs";
 
-test("local AI stays unavailable without an installed model", async () => {
+test("local AI discovers the active loopback model without Surface model coupling", async () => {
+  const requests = [];
   const runtime = createLocalAiRuntime({
-    fetchImpl: async () => { throw new Error("must not fetch"); },
+    fetchImpl: async (url) => {
+      requests.push(url);
+      if (url.endsWith("/v1/models")) {
+        return {
+          ok: true,
+          async json() {
+            return { data: [{ id: "ordax-discovered-model" }] };
+          },
+        };
+      }
+      if (url.endsWith("/health")) return { ok: true };
+      throw new Error("unexpected request");
+    },
     modelId: null,
   });
+  assert.equal(runtime.getSnapshot().state, "unavailable");
+  await runtime.probe();
+  assert.equal(runtime.getSnapshot().state, "ready");
+  assert.equal(runtime.getSnapshot().modelId, "ordax-discovered-model");
+  assert.deepEqual(
+    requests.map((url) => new URL(url).pathname),
+    ["/v1/models", "/health"],
+  );
+});
+
+test("local AI remains unavailable when no loopback backend can be discovered", async () => {
+  const runtime = createLocalAiRuntime({
+    fetchImpl: async () => { throw new Error("backend absent"); },
+    modelId: null,
+  });
+  await runtime.probe();
   assert.equal(runtime.getSnapshot().state, "unavailable");
   assert.equal(runtime.getSnapshot().offline, true);
   assert.equal(runtime.getSnapshot().migratable, true);
