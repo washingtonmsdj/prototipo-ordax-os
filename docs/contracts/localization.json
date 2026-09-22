@@ -1,0 +1,20 @@
+{
+  "$schema": "prototype-ordax.localization/1",
+  "status": "central-catalog-implemented-ui-migration-in-progress",
+  "default_locale": "pt-BR",
+  "fallback_locale": "pt-BR",
+  "complete_locales": ["pt-BR"],
+  "preview_locales": ["en-US", "es-419"],
+  "supported_catalog_locales": ["pt-BR", "en-US", "es-419"],
+  "locale_preference_id": "regional.locale",
+  "rules": {
+    "no_per_app_translation_forks": true,
+    "missing_key_falls_back_to_pt_BR": true,
+    "preview_locale_must_not_be_presented_as_complete": true,
+    "all_new_mvp_surface_copy_must_use_catalog": true
+  },
+  "rollout": {
+    "first_priority": ["boot", "first-run", "surface-shell", "creator", "assistant"],
+    "second_priority": ["settings", "account", "files", "system", "notes", "internet"]
+  }
+}
