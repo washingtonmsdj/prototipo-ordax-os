@@ -14,6 +14,7 @@ ADAPTER = ROOT / "system" / "adapters" / "native" / "file-space.mjs"
 NATIVE_RUNTIME = ROOT / "system" / "adapters" / "native" / "runtime.mjs"
 COMPOSITION = ROOT / "system" / "composition" / "native" / "main.mjs"
 CONTROLS = ROOT / "system" / "surface" / "ui" / "file-space-controls.mjs"
+FILES_LOCALIZATION = ROOT / "system" / "services" / "i18n" / "catalog" / "files.mjs"
 APP_ACTIVATION_CONTRACT = ROOT / "system" / "contracts" / "app-activation.mjs"
 APP_ACTIVATION_SERVICE = ROOT / "system" / "services" / "apps" / "activation.mjs"
 DESKTOP_SHELL = ROOT / "system" / "surface" / "ui" / "desktop-shell.mjs"
@@ -411,7 +412,9 @@ class NativeUserFilesTests(unittest.TestCase):
         self.assertIn("activateSelectedPath()", controls)
         self.assertIn('selectPath(selected.dataset.fileSelectPath, { focus: true })', controls)
         self.assertIn("ordax-files-preview-content", controls)
-        self.assertIn("Visualização segura de texto UTF-8", controls)
+        catalog = FILES_LOCALIZATION.read_text(encoding="utf-8")
+        self.assertIn('t("files.preview.boundary")', controls)
+        self.assertIn('"files.preview.boundary": "Visualização segura de texto UTF-8', catalog)
         self.assertNotIn("innerHTML", controls)
         self.assertNotIn("📁", controls)
         self.assertNotIn("📄", controls)
