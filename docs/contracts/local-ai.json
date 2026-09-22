@@ -15,7 +15,7 @@
   "component": {
     "id": "assistant",
     "version": "0.1.0",
-    "release_mode": "component-slot",
+    "release_mode": "bundled",
     "criticality": "optional",
     "failure_domain": "app"
   },
@@ -54,7 +54,9 @@
     "future_provider_may_be_local_or_cloud": true,
     "changing_provider_must_not_change_app_identity": true,
     "model_bytes_are_not_repository_source": true,
-    "signed_package_required_for_stable_mvp": true
+    "signed_package_required_for_stable_mvp": true,
+    "future_component_release_mode": "component-slot",
+    "component_slot_requires_signed_activation_promotion": true
   },
   "mvp_scope": {
     "text_chat": true,
