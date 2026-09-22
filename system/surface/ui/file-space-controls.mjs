@@ -1168,13 +1168,13 @@ export function mountFileSpaceControls(
 
   const renderTrashEntries = (container) => {
     const list = node(documentObject, "div", "ordax-files-list");
-    list.setAttribute("aria-label", "Itens recuperáveis da Lixeira");
+    list.setAttribute("aria-label", t("files.trash.aria"));
     const header = node(documentObject, "div", "ordax-files-list-header");
     header.append(
-      node(documentObject, "span", "", "Nome"),
-      node(documentObject, "span", "", "Tipo"),
-      node(documentObject, "span", "", "Origem"),
-      node(documentObject, "span", "", "Removido"),
+      node(documentObject, "span", "", t("files.column.name")),
+      node(documentObject, "span", "", t("files.column.type")),
+      node(documentObject, "span", "", t("files.column.origin")),
+      node(documentObject, "span", "", t("files.column.removed")),
     );
     list.append(header);
 
@@ -1185,7 +1185,7 @@ export function mountFileSpaceControls(
           documentObject,
           "div",
           "ordax-files-empty",
-          pending ? "Lendo a Lixeira…" : "A Lixeira está vazia.",
+          pending ? t("files.trash.reading") : t("files.trash.empty"),
         ),
       );
       container.append(list);
@@ -1200,11 +1200,15 @@ export function mountFileSpaceControls(
       row.dataset.kind = entry.kind;
       row.dataset.selected = String(selected);
       row.setAttribute("aria-pressed", String(selected));
+      const localizedKind = entry.kind === "directory"
+        ? t("files.kind.folderLower")
+        : t("files.kind.fileLower");
       row.setAttribute(
         "aria-label",
-        selected
-          ? `${entry.name}, ${entry.kind === "directory" ? "pasta" : "arquivo"} na Lixeira, selecionado`
-          : `${entry.name}, ${entry.kind === "directory" ? "pasta" : "arquivo"} na Lixeira`,
+        t(selected ? "files.trash.rowSelected" : "files.trash.row", {
+          name: entry.name,
+          kind: localizedKind,
+        }),
       );
 
       const nameCell = node(documentObject, "span", "ordax-file-name");
@@ -1218,7 +1222,7 @@ export function mountFileSpaceControls(
           documentObject,
           "span",
           "ordax-file-meta",
-          entry.kind === "directory" ? "Pasta" : formatSize(entry.size),
+          entry.kind === "directory" ? t("files.kind.folder") : formatSize(entry.size),
         ),
         node(documentObject, "span", "ordax-file-meta", parentPath(entry.originalPath)),
         node(documentObject, "span", "ordax-file-meta", formatModifiedAt(entry.trashedAt, locale())),
@@ -1232,7 +1236,7 @@ export function mountFileSpaceControls(
     const selected = selectedTrashEntry();
     if (!selected) return;
     const details = node(documentObject, "section", "ordax-files-details");
-    details.setAttribute("aria-label", "Detalhes do item selecionado na Lixeira");
+    details.setAttribute("aria-label", t("files.trash.detailsAria"));
     const summary = node(documentObject, "div", "ordax-files-details-summary");
     summary.append(
       node(documentObject, "strong", "ordax-files-details-title", selected.name),
@@ -1240,14 +1244,21 @@ export function mountFileSpaceControls(
         documentObject,
         "span",
         "ordax-files-details-meta",
-        selected.kind === "directory" ? "Pasta recuperável" : `Arquivo recuperável · ${formatSize(selected.size)}`,
+        selected.kind === "directory"
+          ? t("files.trash.folderRecoverable")
+          : t("files.trash.fileRecoverable", { size: formatSize(selected.size) }),
       ),
-      node(documentObject, "span", "ordax-files-details-path", `Origem: ${selected.originalPath}`),
       node(
         documentObject,
         "span",
         "ordax-files-details-path",
-        `Movido para a Lixeira: ${formatModifiedAt(selected.trashedAt, locale())}`,
+        t("files.trash.origin", { path: selected.originalPath }),
+      ),
+      node(
+        documentObject,
+        "span",
+        "ordax-files-details-path",
+        t("files.trash.movedAt", { date: formatModifiedAt(selected.trashedAt, locale()) }),
       ),
     );
     const actions = node(documentObject, "div", "ordax-files-details-actions");
@@ -1255,7 +1266,7 @@ export function mountFileSpaceControls(
       documentObject,
       "button",
       "ordax-files-action ordax-files-action-primary",
-      pending ? "Restaurando…" : "Restaurar",
+      pending ? t("files.trash.restoring") : t("files.trash.restore"),
     );
     restore.type = "button";
     restore.dataset.fileTrashRestore = "";
@@ -1268,13 +1279,13 @@ export function mountFileSpaceControls(
   const renderTrashContent = (content) => {
     const toolbar = node(documentObject, "header", "ordax-files-toolbar");
     const title = node(documentObject, "div", "ordax-files-breadcrumb");
-    title.append(node(documentObject, "strong", "", "Lixeira"));
+    title.append(node(documentObject, "strong", "", t("files.location.trash")));
     const actions = node(documentObject, "div", "ordax-files-actions");
     const refresh = node(
       documentObject,
       "button",
       "ordax-files-action",
-      pending ? "Atualizando…" : "Atualizar",
+      pending ? t("files.action.refreshing") : t("files.action.refresh"),
     );
     refresh.type = "button";
     refresh.dataset.fileTrashRefresh = "";
@@ -1289,8 +1300,11 @@ export function mountFileSpaceControls(
       "div",
       "ordax-files-status",
       pending
-        ? "Atualizando Lixeira…"
-        : `${count} ${count === 1 ? "item recuperável" : "itens recuperáveis"}`,
+        ? t("files.trash.statusUpdating")
+        : t("files.trash.status", {
+            count,
+            unit: count === 1 ? t("files.trash.item") : t("files.trash.items"),
+          }),
     );
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
@@ -1303,7 +1317,7 @@ export function mountFileSpaceControls(
         documentObject,
         "p",
         "ordax-files-boundary",
-        "Mover para a Lixeira é recuperável. Restaurar nunca substitui um item existente no caminho original. Exclusão permanente não faz parte deste fluxo.",
+        t("files.trash.boundary"),
       ),
     );
   };
