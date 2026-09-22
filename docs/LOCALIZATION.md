@@ -42,17 +42,23 @@ preference. PT-BR remains the source catalog. The shared desktop shell, launcher
 window chrome, workspace labels, connectivity copy, first-party app titles and
 fallback panel metadata have explicit English catalog entries.
 
-This does **not** make `en-US` a complete Surface locale yet. App-owned controls
-such as Files, Settings, System, Account, Notes, Internet and several quick panels
-still contain PT-BR copy and are being migrated to the same owner. Spanish,
-German and French continue to use explicit source-language fallback outside the
-already translated OOBE until their shared catalogs are implemented.
+This does **not** make `en-US` a complete Surface locale yet. Files now uses the
+shared owner for its primary navigation, listing, selection, Recents, Trash,
+locale-sensitive search/date formatting, sorting and common forms/actions.
+Settings and System use the same owner for their app headers and canonical section
+navigation. Operational messages and deeper controls in those apps, plus Account,
+Notes, Internet and several quick panels, still contain PT-BR copy and remain in
+migration. Spanish, German and French continue to use explicit source-language
+fallback outside the already translated OOBE until their shared catalogs are
+implemented.
 
 ```text
 SURFACE_LOCALIZATION_OWNER=PASS_SOURCE
 SURFACE_SOURCE_LOCALE=pt-BR
 SURFACE_SHARED_SHELL_EN_US=PASS_SOURCE
 SURFACE_COMPLETE_LOCALES=pt-BR
+SURFACE_EN_US_FILES_CORE=PASS_SOURCE
+SURFACE_EN_US_SETTINGS_SYSTEM_NAV=PASS_SOURCE
 SURFACE_EN_US_APP_CONTROLS=MIGRATING
 SURFACE_ES_ES=MIGRATING
 SURFACE_DE_DE=MIGRATING
