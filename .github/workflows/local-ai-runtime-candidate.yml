@@ -202,24 +202,20 @@ jobs:
 
           mkdir -p "$alpine_root"
           python - "$alpine_archive" "$alpine_root" <<'PY'
+          import importlib.util
           import pathlib
-          import tarfile
           import sys
 
-          archive = pathlib.Path(sys.argv[1])
+          archive = pathlib.Path(sys.argv[1]).resolve()
           root = pathlib.Path(sys.argv[2]).resolve()
-          with tarfile.open(archive, "r:gz") as tar:
-              members = []
-              for member in tar.getmembers():
-                  name = member.name
-                  while name.startswith("./"):
-                      name = name[2:]
-                  if not name or name.startswith("/") or ".." in pathlib.Path(name).parts:
-                      raise SystemExit(f"unsafe Alpine archive path: {member.name}")
-                  if member.isdev() or member.isfifo():
-                      continue
-                  members.append(member)
-              tar.extractall(root, members=members, filter="data")
+          module_path = pathlib.Path("bootstrap/base/alpine_core.py").resolve()
+          spec = importlib.util.spec_from_file_location("ordax_alpine_core", module_path)
+          if spec is None or spec.loader is None:
+              raise SystemExit("cannot load OrdaX Alpine extraction policy")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          module.safe_extract(archive, root)
+          print("LOCAL_AI_ALPINE_EXTRACTION_POLICY=ORDAX_STABLE_BASE")
           PY
 
           mkdir -p "$alpine_root/opt/ordax-local-ai"
@@ -241,7 +237,7 @@ jobs:
           trap 'cleanup_alpine; cleanup' EXIT
 
           sudo chroot "$alpine_root" /bin/sh -c \
-            'echo $ >/tmp/ordax-local-ai.pid; ORDAX_LOCAL_AI_RUNTIME_ROOT=/opt/ordax-local-ai exec /opt/ordax-local-ai/bin/ordax-local-ai' \
+            'printf "%s\n" "$" >/tmp/ordax-local-ai.pid; ORDAX_LOCAL_AI_RUNTIME_ROOT=/opt/ordax-local-ai exec /opt/ordax-local-ai/bin/ordax-local-ai' \
             >"$work/llama-server-alpine.log" 2>&1 &
           alpine_chroot_job=$!
 
