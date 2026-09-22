@@ -28,6 +28,7 @@ const SETTINGS_EXTENSION_SELECTOR = '[data-app-extension="settings-overview"]';
 const SETTINGS_SECTIONS = Object.freeze([
   Object.freeze({ id: "appearance", label: "Aparência" }),
   Object.freeze({ id: "accessibility", label: "Acessibilidade" }),
+  Object.freeze({ id: "regional", label: "Idioma e região" }),
   Object.freeze({ id: "network", label: "Rede" }),
   Object.freeze({ id: "notifications", label: "Notificações" }),
 ]);
@@ -40,6 +41,10 @@ const SECTION_COPY = Object.freeze({
   accessibility: Object.freeze({
     title: "Acessibilidade",
     subtitle: "Contraste, tamanho do texto e movimento da Surface, aplicados imediatamente e persistidos por perfil local.",
+  }),
+  regional: Object.freeze({
+    title: "Idioma e região",
+    subtitle: "Idioma e fuso horário usados pela Surface. As mesmas preferências escolhidas no primeiro uso continuam editáveis aqui.",
   }),
   network: Object.freeze({
     title: "Rede",
@@ -93,6 +98,14 @@ function optionDescription(preferenceId, value) {
     if (value === "large") return "Aumenta a tipografia da Surface mantendo o layout responsivo.";
     if (value === "extra-large") return "Amplia ainda mais a tipografia e preserva rolagem nas áreas de conteúdo.";
     return "Mantém a escala tipográfica padrão e respeita o zoom do navegador.";
+  }
+  if (preferenceId === "regional.locale") {
+    return value === "pt-BR"
+      ? "Português (Brasil) é o idioma completo desta versão."
+      : String(value);
+  }
+  if (preferenceId === "regional.time-zone") {
+    return `Usa ${value} para relógio e datas da Surface.`;
   }
   return String(value);
 }
