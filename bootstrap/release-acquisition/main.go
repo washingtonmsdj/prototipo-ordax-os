@@ -986,6 +986,169 @@ func materializeRuntimeBlob(client *http.Client, root string, artifact Artifact)
 	return path, false, nil
 }
 
+func verifyAIRuntimeStoreFile(root string, artifact Artifact) (string, error) {
+	if artifact.Name != "local-ai-runtime.erofs" || artifact.Role != "local-ai-runtime" {
+		return "", errors.New("invalid local AI runtime artifact identity")
+	}
+	runtimeDir := filepath.Join(root, "ai-runtimes", "sha256", artifact.SHA256)
+	info, err := os.Lstat(runtimeDir)
+	if err != nil {
+		return "", err
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return "", errors.New("local AI runtime store entry is not a safe directory")
+	}
+	entries, err := os.ReadDir(runtimeDir)
+	if err != nil {
+		return "", err
+	}
+	if len(entries) != 1 || entries[0].Name() != "local-ai-runtime.erofs" {
+		return "", errors.New("local AI runtime store entry contains unexpected files")
+	}
+	runtimePath := filepath.Join(runtimeDir, "local-ai-runtime.erofs")
+	actualHash, actualSize, err := hashFile(runtimePath)
+	if err != nil || actualSize != artifact.Size {
+		return "", errors.New("local AI runtime stored size is invalid")
+	}
+	if actualHash != artifact.SHA256 {
+		return "", errors.New("local AI runtime stored digest mismatch")
+	}
+	if err := verifyPortableEROFS(runtimePath); err != nil {
+		return "", fmt.Errorf("verify local AI runtime EROFS: %w", err)
+	}
+	return runtimePath, nil
+}
+
+func materializeAIRuntimeBlob(client *http.Client, root string, artifact Artifact) (string, bool, error) {
+	if artifact.Name != "local-ai-runtime.erofs" || artifact.Role != "local-ai-runtime" {
+		return "", false, errors.New("invalid local AI runtime artifact identity")
+	}
+	digestRoot := filepath.Join(root, "ai-runtimes", "sha256")
+	if err := ensureDir(digestRoot, 0o755); err != nil {
+		return "", false, err
+	}
+	targetDir := filepath.Join(digestRoot, artifact.SHA256)
+	if info, err := os.Lstat(targetDir); err == nil {
+		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return "", false, errors.New("local AI runtime digest target exists but is not a safe directory")
+		}
+		path, err := verifyAIRuntimeStoreFile(root, artifact)
+		return path, true, err
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", false, err
+	}
+
+	stage, err := os.MkdirTemp(digestRoot, ".ai-runtime-staging-"+artifact.SHA256[:12]+"-")
+	if err != nil {
+		return "", false, err
+	}
+	keepStage := false
+	defer func() {
+		if !keepStage {
+			_ = os.RemoveAll(stage)
+		}
+	}()
+
+	stagePath := filepath.Join(stage, "local-ai-runtime.erofs")
+	if err := downloadArtifact(client, artifact, stagePath); err != nil {
+		return "", false, err
+	}
+	if err := verifyPortableEROFS(stagePath); err != nil {
+		return "", false, fmt.Errorf("verify local AI runtime image: %w", err)
+	}
+	if err := syncDir(stage); err != nil {
+		return "", false, err
+	}
+	if err := os.Rename(stage, targetDir); err != nil {
+		return "", false, err
+	}
+	keepStage = true
+	if err := syncDir(digestRoot); err != nil {
+		return "", false, err
+	}
+	path, err := verifyAIRuntimeStoreFile(root, artifact)
+	if err != nil {
+		return "", false, err
+	}
+	return path, false, nil
+}
+
+func verifyExistingPortableV4Release(path, root string, m Manifest, payload, envelope []byte) error {
+	if m.Schema != manifestSchemaV4 {
+		return errors.New("portable v4 materialized release requires release-manifest/4")
+	}
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	allowed := map[string]bool{
+		"system.erofs": true,
+		"surface-runtime.sha256": true,
+		"local-ai-runtime.sha256": true,
+		"release-envelope.json": true,
+		"release-manifest.json": true,
+	}
+	if len(entries) != len(allowed) {
+		return errors.New("portable v4 release contains unexpected top-level entry count")
+	}
+	for _, entry := range entries {
+		if !allowed[entry.Name()] {
+			return fmt.Errorf("portable v4 release contains unexpected top-level entry: %s", entry.Name())
+		}
+	}
+
+	manifestPath := filepath.Join(path, "release-manifest.json")
+	data, err := readBoundedRegularFile(manifestPath, maxPayload, "stored portable v4 release manifest")
+	if err != nil || !bytes.Equal(data, payload) {
+		return errors.New("portable v4 release manifest differs from signed payload")
+	}
+	envelopePath := filepath.Join(path, "release-envelope.json")
+	storedEnvelope, err := readBoundedRegularFile(envelopePath, maxEnvelope, "stored portable v4 release envelope")
+	if err != nil || !bytes.Equal(storedEnvelope, envelope) {
+		return errors.New("portable v4 release envelope differs from verified signed envelope")
+	}
+
+	systemArtifact := m.Artifacts[0]
+	systemPath := filepath.Join(path, "system.erofs")
+	actualHash, actualSize, err := hashFile(systemPath)
+	if err != nil || actualSize != systemArtifact.Size {
+		return errors.New("portable v4 system image size is invalid")
+	}
+	if actualHash != systemArtifact.SHA256 {
+		return errors.New("portable v4 system image digest mismatch")
+	}
+	if err := verifyPortableEROFS(systemPath); err != nil {
+		return err
+	}
+
+	runtimeArtifact := m.Artifacts[1]
+	runtimeRefPath := filepath.Join(path, "surface-runtime.sha256")
+	runtimeRef, err := readBoundedRegularFile(runtimeRefPath, 128, "stored Surface runtime reference")
+	if err != nil {
+		return err
+	}
+	if string(runtimeRef) != runtimeArtifact.SHA256+"\n" {
+		return errors.New("portable v4 Surface runtime reference differs from signed manifest")
+	}
+	if _, err := verifyRuntimeStoreFile(root, runtimeArtifact); err != nil {
+		return fmt.Errorf("verify portable v4 Surface runtime store: %w", err)
+	}
+
+	aiArtifact := m.Artifacts[2]
+	aiRefPath := filepath.Join(path, "local-ai-runtime.sha256")
+	aiRef, err := readBoundedRegularFile(aiRefPath, 128, "stored local AI runtime reference")
+	if err != nil {
+		return err
+	}
+	if string(aiRef) != aiArtifact.SHA256+"\n" {
+		return errors.New("portable v4 local AI runtime reference differs from signed manifest")
+	}
+	if _, err := verifyAIRuntimeStoreFile(root, aiArtifact); err != nil {
+		return fmt.Errorf("verify portable v4 local AI runtime store: %w", err)
+	}
+	return nil
+}
+
 func verifyExistingPortableV3Release(path, root string, m Manifest, payload, envelope []byte) error {
 	if m.Schema != manifestSchemaV3 {
 		return errors.New("portable v3 materialized release requires release-manifest/3")
