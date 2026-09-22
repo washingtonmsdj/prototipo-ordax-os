@@ -65,7 +65,19 @@ const TABLES = Object.freeze({
     "Somente local": "Local only",
     "Execução": "Run mode",
     "Pendrive USB": "USB drive",
-    "Digite a senha da rede Wi-Fi.": "Enter the Wi-Fi password."
+    "Digite a senha da rede Wi-Fi.": "Enter the Wi-Fi password.",
+    "Fuso": "Time zone",
+    "Voltar": "Back",
+    "Salvando…": "Saving…",
+    "Entrar no OrdaX": "Enter OrdaX",
+    "Continuar offline ou conectado": "Continue offline or connected",
+    "Continuar": "Continue",
+    "Lendo estado do Wi-Fi…": "Reading Wi-Fi status…",
+    "O Wi-Fi não pôde ser lido. Você pode continuar offline.": "Wi-Fi status could not be read. You can continue offline.",
+    "Conta autenticada. Você pode usá-la neste pendrive.": "Account authenticated. You can use it on this USB drive.",
+    "A autenticação foi iniciada. O uso local continua disponível.": "Authentication was started. Local use remains available.",
+    "A ação de conta não pôde ser concluída. O uso local continua disponível.": "The account action could not be completed. Local use remains available.",
+    "Não foi possível confirmar a gravação do primeiro uso no pendrive. O assistente continua aberto para não perder a configuração.": "First-use state could not be confirmed on the USB drive. The assistant remains open so the configuration is not lost."
   }),
   "es-ES": Object.freeze({
     "Primeiro uso": "Primer uso",
@@ -133,7 +145,19 @@ const TABLES = Object.freeze({
     "Somente local": "Solo local",
     "Execução": "Modo de ejecución",
     "Pendrive USB": "Memoria USB",
-    "Digite a senha da rede Wi-Fi.": "Introduce la contraseña de la red Wi-Fi."
+    "Digite a senha da rede Wi-Fi.": "Introduce la contraseña de la red Wi-Fi.",
+    "Fuso": "Zona horaria",
+    "Voltar": "Atrás",
+    "Salvando…": "Guardando…",
+    "Entrar no OrdaX": "Entrar en OrdaX",
+    "Continuar offline ou conectado": "Continuar sin conexión o conectado",
+    "Continuar": "Continuar",
+    "Lendo estado do Wi-Fi…": "Leyendo estado del Wi-Fi…",
+    "O Wi-Fi não pôde ser lido. Você pode continuar offline.": "No se pudo leer el estado del Wi-Fi. Puedes continuar sin conexión.",
+    "Conta autenticada. Você pode usá-la neste pendrive.": "Cuenta autenticada. Puedes usarla en esta memoria USB.",
+    "A autenticação foi iniciada. O uso local continua disponível.": "La autenticación se inició. El uso local sigue disponible.",
+    "A ação de conta não pôde ser concluída. O uso local continua disponível.": "No se pudo completar la acción de cuenta. El uso local sigue disponible.",
+    "Não foi possível confirmar a gravação do primeiro uso no pendrive. O assistente continua aberto para não perder a configuração.": "No se pudo confirmar el guardado del primer uso en la memoria USB. El asistente permanece abierto para no perder la configuración."
   })
 });
 
