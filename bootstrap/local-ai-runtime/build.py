@@ -257,8 +257,12 @@ def prepare_engine_mirror(lock, cache_dir):
 
 def checkout_engine(lock, mirror, destination):
     commit = lock["engine"]["commit"]
-    run(["git", "clone", "--no-checkout", "--shared", str(mirror), str(destination)])
-    run(["git", "-C", str(destination), "checkout", "--detach", commit])
+    destination = Path(destination)
+    destination.mkdir(parents=True, exist_ok=False)
+    run(["git", "init", str(destination)])
+    run(["git", "-C", str(destination), "remote", "add", "origin", str(mirror)])
+    run(["git", "-C", str(destination), "fetch", "--no-tags", "origin", "refs/ordax/pinned"])
+    run(["git", "-C", str(destination), "checkout", "--detach", "FETCH_HEAD"])
     actual = run(["git", "-C", str(destination), "rev-parse", "HEAD"], capture=True).stdout.strip().lower()
     if actual != commit:
         raise RuntimeBuildError("llama.cpp checkout differs from pin")
