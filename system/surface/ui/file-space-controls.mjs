@@ -26,13 +26,12 @@ import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lif
 
 const FILE_WINDOW_SELECTOR = '[data-window-id="files"]';
 const FILE_EXTENSION_SELECTOR = '[data-app-extension="file-space"]';
-const FILE_SEARCH_LOCALE = "pt-BR";
 const MAX_NAVIGATION_HISTORY = 64;
 const LOCATIONS = Object.freeze([
-  Object.freeze({ label: "Meu espaço", path: "/" }),
-  Object.freeze({ label: "Documentos", path: "/Documentos" }),
-  Object.freeze({ label: "Imagens", path: "/Imagens" }),
-  Object.freeze({ label: "Downloads", path: "/Downloads" }),
+  Object.freeze({ messageId: "files.location.mySpace", path: "/" }),
+  Object.freeze({ messageId: "files.location.documents", path: "/Documentos" }),
+  Object.freeze({ messageId: "files.location.pictures", path: "/Imagens" }),
+  Object.freeze({ messageId: "files.location.downloads", path: "/Downloads" }),
 ]);
 
 function node(documentObject, tag, className, text) {
@@ -61,8 +60,8 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-function formatModifiedAt(epochMilliseconds) {
-  return new Intl.DateTimeFormat(FILE_SEARCH_LOCALE, {
+function formatModifiedAt(epochMilliseconds, locale = "pt-BR") {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(epochMilliseconds));
@@ -100,6 +99,9 @@ export function mountFileSpaceControls(
   const projectPort = projects === null ? null : assertProjectCatalogPort(projects);
   const notesImporterPort = notesFileImporter === null ? null : assertNotesFileImporter(notesFileImporter);
   const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
+  const locale = () => localization.getLocale();
   const documentObject = root.ownerDocument;
 
   let listing = null;
