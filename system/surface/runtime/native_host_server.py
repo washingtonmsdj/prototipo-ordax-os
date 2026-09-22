@@ -2900,20 +2900,10 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             self._write_json(200, read_first_run_state())
             return
         if parsed_path == LOCAL_SESSION_PATH:
-            try:
-                with self.server.local_session_lock:
-                    credential = read_local_session_credential()
-                    if credential is None:
-                        self.server.local_session_locked = False
-                    snapshot = local_session_snapshot(self.server)
-            except (OSError, ValueError) as exc:
-                print(
-                    f"ordax-native-host: local session credential unavailable: {exc}",
-                    file=sys.stderr,
-                    flush=True,
-                )
-                self._empty(503)
-                return
+            with self.server.local_session_lock:
+                if not os.path.isfile(LOCAL_SESSION_CREDENTIAL_FILE):
+                    self.server.local_session_locked = False
+                snapshot = local_session_snapshot(self.server)
             self._write_json(200, snapshot)
             return
         if self.path == NOTES_PATH:
