@@ -9,7 +9,7 @@ import {
   SURFACE_ENGLISH_TARGET_LOCALE,
   SURFACE_SOURCE_LOCALE,
   createSurfaceLocalization,
-  surfaceLocaleCoverage,
+  surfaceCatalogCoverage,
 } from "../system/services/i18n/surface.mjs";
 
 function preferenceRuntime(initialLocale = "pt-BR") {
@@ -85,9 +85,9 @@ test("catalog coverage is explicit and does not claim full Surface completion", 
   assert.equal(SURFACE_SOURCE_LOCALE, "pt-BR");
   assert.equal(SURFACE_ENGLISH_TARGET_LOCALE, "en-US");
   assert.deepEqual(SURFACE_COMPLETE_LOCALES, ["pt-BR"]);
-  assert.equal(surfaceLocaleCoverage("pt-BR").complete, true);
-  assert.equal(surfaceLocaleCoverage("en-US").complete, true);
-  assert.equal(surfaceLocaleCoverage("es-ES").complete, false);
+  assert.equal(surfaceCatalogCoverage("pt-BR").complete, true);
+  assert.equal(surfaceCatalogCoverage("en-US").complete, true);
+  assert.equal(surfaceCatalogCoverage("es-ES").complete, false);
 });
 
 test("desktop shell is born in English when regional locale is English", () => {
