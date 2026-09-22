@@ -1,15 +1,21 @@
 #!/bin/sh
 set -eu
 
-STATE_ROOT=${ORDAX_STATE_DIR:-/state/ordax}
-RUNTIME_ID=alpine-v3.22-cage-webkitgtk-v1
-RUNTIME_ROOT=$STATE_ROOT/runtime/native-surface/$RUNTIME_ID/rootfs
+BIN_DIR=${0%/*}
+RUNTIME_RESOLVER=$BIN_DIR/ordax-proof-runtime.sh
 SCRIPT=/srv/ordax-system/diagnostics/internet_native_physical_proof.py
 
 [ -x /bin/busybox ] || {
     echo "ordax-internet-proof: /bin/busybox unavailable" >&2
     exit 2
 }
+[ -r "$RUNTIME_RESOLVER" ] || {
+    echo "ordax-internet-proof: runtime resolver unavailable: $RUNTIME_RESOLVER" >&2
+    exit 2
+}
+. "$RUNTIME_RESOLVER"
+resolve_ordax_proof_runtime_root || exit 2
+
 [ -x "$RUNTIME_ROOT/usr/bin/python3" ] || {
     echo "ordax-internet-proof: active WebKit runtime Python unavailable: $RUNTIME_ROOT/usr/bin/python3" >&2
     exit 2
@@ -23,4 +29,5 @@ SCRIPT=/srv/ordax-system/diagnostics/internet_native_physical_proof.py
     exit 2
 }
 
+echo "ordax-internet-proof: proof profile=$ORDAX_PROOF_PROFILE runtime=$RUNTIME_ROOT" >&2
 exec /bin/busybox chroot "$RUNTIME_ROOT" /usr/bin/python3 "$SCRIPT" "$@"
