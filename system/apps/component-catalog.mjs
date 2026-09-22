@@ -2,6 +2,7 @@ import { validateComponentManifests } from "../contracts/component-manifest.mjs"
 import { appComponentManifests } from "../services/components/manifests/apps.mjs";
 import { coreComponentManifests } from "../services/components/manifests/core.mjs";
 import { internetComponent } from "./internet/component.mjs";
+import { assistantComponent } from "./assistant/component.mjs";
 import { notesComponent } from "./notes/component.mjs";
 
 const COMPONENTS = validateComponentManifests([
@@ -9,6 +10,7 @@ const COMPONENTS = validateComponentManifests([
   ...appComponentManifests,
   internetComponent,
   notesComponent,
+  assistantComponent,
 ]);
 
 const COMPONENT_BY_ID = new Map(
