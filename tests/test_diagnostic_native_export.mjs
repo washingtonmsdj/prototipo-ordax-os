@@ -38,6 +38,15 @@ function createFileSpace({ importFile } = {}) {
     async moveEntry() {
       throw new Error("unused");
     },
+    async trashEntry() {
+      throw new Error("unused");
+    },
+    async listTrash() {
+      return { entries: [] };
+    },
+    async restoreTrashEntry() {
+      return { entries: [] };
+    },
     async exportFile() {
       throw new Error("unused");
     },
