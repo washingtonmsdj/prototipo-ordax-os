@@ -856,8 +856,23 @@ configure_graphics_host() {
 }
 
 bind_runtime_mounts() {
-    repo_root=${SYSTEM_ROOT%/system}
-    [ -n "$repo_root" ] && [ "$repo_root" != "$SYSTEM_ROOT" ] && [ -d "$repo_root" ] || return 1
+    repo_root=""
+    case "$DISTRIBUTION_PROFILE" in
+        owner-development)
+            repo_root=${SYSTEM_ROOT%/system}
+            [ -n "$repo_root" ] &&
+                [ "$repo_root" != "$SYSTEM_ROOT" ] &&
+                [ -d "$repo_root" ] || return 1
+            ;;
+        stable-mvp)
+            # Stable/MVP owns a verified system tree, not a Git checkout.
+            # The graphical runtime must never require a repository parent.
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
     [ -d /ordax ] || return 1
     mkdir -p \
         "$RUNTIME_ROOT/srv/ordax-system" \
@@ -870,8 +885,10 @@ bind_runtime_mounts() {
     chmod 700 "$PERSISTENT_NATIVE_STATE" "$PERSISTENT_USER_HOME" || return 1
     /bin/busybox mount -o bind "$SYSTEM_ROOT" "$RUNTIME_ROOT/srv/ordax-system" >>"$HOST_LOG" 2>&1 || return 1
     SYSTEM_BOUND=1
-    /bin/busybox mount -o bind "$repo_root" "$RUNTIME_ROOT/srv/ordax-repo" >>"$HOST_LOG" 2>&1 || return 1
-    REPO_BOUND=1
+    if [ "$DISTRIBUTION_PROFILE" = "owner-development" ]; then
+        /bin/busybox mount -o bind "$repo_root" "$RUNTIME_ROOT/srv/ordax-repo" >>"$HOST_LOG" 2>&1 || return 1
+        REPO_BOUND=1
+    fi
     /bin/busybox mount -o bind /ordax "$RUNTIME_ROOT/ordax" >>"$HOST_LOG" 2>&1 || return 1
     ORDAX_BOUND=1
     /bin/busybox mount -o bind "$PERSISTENT_NATIVE_STATE" "$RUNTIME_ROOT/var/lib/ordax" >>"$HOST_LOG" 2>&1 || return 1
