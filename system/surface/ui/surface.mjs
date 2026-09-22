@@ -14,7 +14,12 @@ import {
   ACCESSIBILITY_TEXT_SCALE_PREFERENCE_ID,
 } from "../../services/preferences/accessibility.mjs";
 import { APPEARANCE_PREFERENCE_ID } from "../../services/preferences/appearance.mjs";
-import { createDesktopShellMarkup, mountDesktopClock } from "./desktop-shell.mjs";
+import {
+  createDesktopShellMarkup,
+  mountDesktopClock,
+  syncDesktopShellLocalization,
+} from "./desktop-shell.mjs";
+import { createSurfaceLocalization } from "../../services/i18n/surface.mjs";
 import { SURFACE_RENDER_LIFECYCLE_SCHEMA } from "../../contracts/surface-render-lifecycle.mjs";
 import {
   createSurfaceState,
@@ -38,11 +43,23 @@ const WORKSPACE_PERSIST_ACTIONS = new Set([
   "workspace.show-desktop",
 ]);
 
-const CONNECTIVITY_LABELS = {
-  online: "Online",
-  offline: "Offline",
-  unknown: "Conectividade desconhecida",
-};
+const CONNECTIVITY_MESSAGE_IDS = Object.freeze({
+  online: "surface.connectivity.online",
+  offline: "surface.connectivity.offline",
+  unknown: "surface.connectivity.unknown",
+});
+
+function appTitle(localization, app) {
+  return localization.translate(`app.${app.id}.title`);
+}
+
+function appDescription(localization, app) {
+  return localization.translate(`app.${app.id}.description`);
+}
+
+function panelCopy(localization, app, index, field) {
+  return localization.translate(`app.${app.id}.panel.${index}.${field}`);
+}
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -61,12 +78,16 @@ function placeChildAt(container, child, index) {
   container.insertBefore(child, current);
 }
 
-function areaLabel(area) {
-  return `Área ${String(area.ordinal).padStart(2, "0")}`;
+function areaLabel(area, localization) {
+  return localization.translate("surface.area.label", {
+    ordinal: String(area.ordinal).padStart(2, "0"),
+  });
 }
 
-function capabilityState(capabilityIds, capabilityId) {
-  return capabilityIds.includes(capabilityId) ? "Disponível" : "Indisponível neste host";
+function capabilityState(capabilityIds, capabilityId, localization) {
+  return capabilityIds.includes(capabilityId)
+    ? localization.translate("surface.capability.available")
+    : localization.translate("surface.capability.unavailable");
 }
 
 function panelKey(panel, index) {
@@ -112,11 +133,15 @@ function syncPreferenceChoice(choices, panel, state) {
   }
 }
 
-function renderCapabilitiesPanel(section, state) {
+function renderCapabilitiesPanel(section, state, localization) {
   section.querySelector("[data-surface-capabilities]")?.remove();
   let content;
   if (state.capabilityIds.length === 0) {
-    content = element("p", "ordax-empty", "Nenhuma capacidade adicional foi declarada.");
+    content = element(
+      "p",
+      "ordax-empty",
+      localization.translate("surface.capability.none"),
+    );
   } else {
     content = element("ul", "ordax-capability-list");
     for (const capabilityId of state.capabilityIds) {
@@ -129,19 +154,22 @@ function renderCapabilitiesPanel(section, state) {
   else section.append(content);
 }
 
-function renderPanel(panel, state, index) {
+function renderPanel(panel, state, index, app, localization) {
   const section = element(
     "section",
     panel.kind === "extension" ? "ordax-app-extension" : "ordax-app-panel",
   );
   section.dataset.surfacePanelKey = panelKey(panel, index);
   section.dataset.surfacePanelKind = panel.kind;
-  section.append(element("span", "ordax-app-panel-label", panel.label));
-  section.append(element("h3", "ordax-app-panel-title", panel.title));
+  const label = panelCopy(localization, app, index, "label");
+  const title = panelCopy(localization, app, index, "title");
+  const bodyCopy = panel.body ? panelCopy(localization, app, index, "body") : "";
+  section.append(element("span", "ordax-app-panel-label", label));
+  section.append(element("h3", "ordax-app-panel-title", title));
 
   if (panel.kind === "extension") {
     section.dataset.appExtension = panel.extensionId;
-    section.setAttribute("aria-label", panel.title);
+    section.setAttribute("aria-label", title);
   } else if (panel.kind === "connectivity") {
     const label = CONNECTIVITY_LABELS[state.connectivity] ?? CONNECTIVITY_LABELS.unknown;
     const badge = element("span", "ordax-inline-status", label);
@@ -149,57 +177,69 @@ function renderPanel(panel, state, index) {
     section.append(badge);
   } else if (panel.kind === "capability") {
     const available = state.capabilityIds.includes(panel.capabilityId);
-    const badge = element("span", "ordax-inline-status", capabilityState(state.capabilityIds, panel.capabilityId));
+    const badge = element(
+      "span",
+      "ordax-inline-status",
+      capabilityState(state.capabilityIds, panel.capabilityId, localization),
+    );
     badge.dataset.state = available ? "available" : "unavailable";
     section.append(badge);
   } else if (panel.kind === "capabilities") {
-    renderCapabilitiesPanel(section, state);
+    renderCapabilitiesPanel(section, state, localization);
   } else if (panel.kind === "preference-choice") {
     section.append(createPreferenceChoice(panel, state));
   }
 
-  if (panel.body) section.append(element("p", "ordax-app-panel-body", panel.body));
+  if (panel.body) section.append(element("p", "ordax-app-panel-body", bodyCopy));
   return section;
 }
 
-function syncPanel(section, panel, state) {
+function syncPanel(section, panel, state, index, app, localization) {
   section.dataset.surfacePanelKind = panel.kind;
   if (panel.kind === "extension") {
     section.dataset.appExtension = panel.extensionId;
-    section.setAttribute("aria-label", panel.title);
+    section.setAttribute("aria-label", panelCopy(localization, app, index, "title"));
     return;
   }
 
   const label = section.querySelector(".ordax-app-panel-label");
   const title = section.querySelector(".ordax-app-panel-title");
-  if (label) label.textContent = panel.label;
-  if (title) title.textContent = panel.title;
+  if (label) label.textContent = panelCopy(localization, app, index, "label");
+  if (title) title.textContent = panelCopy(localization, app, index, "title");
 
   if (panel.kind === "connectivity") {
     const badge = section.querySelector(".ordax-inline-status");
     if (badge) {
-      badge.textContent = CONNECTIVITY_LABELS[state.connectivity] ?? CONNECTIVITY_LABELS.unknown;
+      const messageId =
+        CONNECTIVITY_MESSAGE_IDS[state.connectivity] ?? CONNECTIVITY_MESSAGE_IDS.unknown;
+      badge.textContent = localization.translate(messageId);
       badge.dataset.state = state.connectivity;
     }
   } else if (panel.kind === "capability") {
     const available = state.capabilityIds.includes(panel.capabilityId);
     const badge = section.querySelector(".ordax-inline-status");
     if (badge) {
-      badge.textContent = capabilityState(state.capabilityIds, panel.capabilityId);
+      badge.textContent = capabilityState(
+        state.capabilityIds,
+        panel.capabilityId,
+        localization,
+      );
       badge.dataset.state = available ? "available" : "unavailable";
     }
   } else if (panel.kind === "capabilities") {
-    renderCapabilitiesPanel(section, state);
+    renderCapabilitiesPanel(section, state, localization);
   } else if (panel.kind === "preference-choice") {
     const choices = section.querySelector(".ordax-preference-choices");
     if (choices) syncPreferenceChoice(choices, panel, state);
   }
 
   const body = section.querySelector(".ordax-app-panel-body");
-  if (body && panel.body) body.textContent = panel.body;
+  if (body && panel.body) {
+    body.textContent = panelCopy(localization, app, index, "body");
+  }
 }
 
-function syncWindowPanels(body, app, state) {
+function syncWindowPanels(body, app, state, localization) {
   const existing = new Map(
     Array.from(body.children)
       .filter((child) => child.dataset?.surfacePanelKey)
@@ -212,9 +252,9 @@ function syncWindowPanels(body, app, state) {
     let section = existing.get(key) ?? null;
     if (!section || section.dataset.surfacePanelKind !== panel.kind) {
       section?.remove();
-      section = renderPanel(panel, state, index);
+      section = renderPanel(panel, state, index, app, localization);
     } else {
-      syncPanel(section, panel, state);
+      syncPanel(section, panel, state, index, app, localization);
     }
     placeChildAt(body, section, index);
     retained.add(section);
@@ -225,7 +265,7 @@ function syncWindowPanels(body, app, state) {
   }
 }
 
-function syncWindowNode(windowNode, app, windowState, state, index, area) {
+function syncWindowNode(windowNode, app, windowState, state, index, area, localization) {
   windowNode.dataset.windowId = windowState.id;
   windowNode.dataset.appId = app.id;
   windowNode.dataset.windowAreaId = area.id;
@@ -253,32 +293,52 @@ function syncWindowNode(windowNode, app, windowState, state, index, area) {
     delete windowNode.dataset.positioned;
   }
 
+  const localizedTitle = appTitle(localization, app);
+  const localizedDescription = appDescription(localization, app);
   windowNode.setAttribute("role", "region");
-  windowNode.setAttribute("aria-label", app.title);
+  windowNode.setAttribute("aria-label", localizedTitle);
+  const titleGroup = windowNode.querySelector(".ordax-window-title-group");
+  const titleNode = titleGroup?.querySelector("strong");
+  const descriptionNode = titleGroup?.querySelector("small");
+  if (titleNode) titleNode.textContent = localizedTitle;
+  if (descriptionNode) descriptionNode.textContent = localizedDescription;
   const titlebar = windowNode.querySelector("[data-window-titlebar]");
   titlebar?.setAttribute(
     "aria-label",
-    `Mover ${app.title}. Use Alt mais setas ou arraste quando houver espaço.`,
+    localization.translate("surface.window.move", { app: localizedTitle }),
   );
 
   for (const control of windowNode.querySelectorAll("[data-window-action]")) {
     control.dataset.windowId = windowState.id;
     const action = control.dataset.windowAction;
-    if (action === "minimize") control.setAttribute("aria-label", `Minimizar ${app.title}`);
+    if (action === "minimize") {
+      control.setAttribute(
+        "aria-label",
+        localization.translate("surface.window.minimize", { app: localizedTitle }),
+      );
+    }
     if (action === "maximize") {
       control.setAttribute(
         "aria-label",
-        windowState.maximized ? `Restaurar ${app.title}` : `Maximizar ${app.title}`,
+        localization.translate(
+          windowState.maximized ? "surface.window.restore" : "surface.window.maximize",
+          { app: localizedTitle },
+        ),
       );
     }
-    if (action === "close") control.setAttribute("aria-label", `Fechar ${app.title}`);
+    if (action === "close") {
+      control.setAttribute(
+        "aria-label",
+        localization.translate("surface.window.close", { app: localizedTitle }),
+      );
+    }
   }
 
   const body = windowNode.querySelector(".ordax-window-body");
-  if (body) syncWindowPanels(body, app, state);
+  if (body) syncWindowPanels(body, app, state, localization);
 }
 
-function createWindow(app, windowState, state, index, area) {
+function createWindow(app, windowState, state, index, area, localization) {
   const windowNode = element("article", "ordax-window");
   const titlebar = element("header", "ordax-window-titlebar");
   titlebar.dataset.windowTitlebar = "";
@@ -287,8 +347,8 @@ function createWindow(app, windowState, state, index, area) {
   const identity = element("div", "ordax-window-identity");
   identity.append(element("span", "ordax-app-mark", app.monogram));
   const titleGroup = element("div", "ordax-window-title-group");
-  titleGroup.append(element("strong", "", app.title));
-  titleGroup.append(element("small", "", app.description));
+  titleGroup.append(element("strong", "", appTitle(localization, app)));
+  titleGroup.append(element("small", "", appDescription(localization, app)));
   identity.append(titleGroup);
 
   const controls = element("div", "ordax-window-controls");
@@ -306,7 +366,7 @@ function createWindow(app, windowState, state, index, area) {
 
   const body = element("div", "ordax-window-body");
   windowNode.append(titlebar, body);
-  syncWindowNode(windowNode, app, windowState, state, index, area);
+  syncWindowNode(windowNode, app, windowState, state, index, area, localization);
   return windowNode;
 }
 
@@ -325,13 +385,13 @@ export function mountSurface(
   const workspacePort = workspaceStore === null ? null : assertWorkspaceStore(workspaceStore);
   const activationPort = appActivation === null ? null : assertAppActivationPort(appActivation);
   const documentElement = root.ownerDocument.documentElement;
+  const originalDocumentLanguage = documentElement.getAttribute("lang");
   const preferenceSeed = store ? validatePreferenceRecord(store.load()) : {};
   const workspaceSeed = workspacePort ? validateWorkspaceRecord(workspacePort.load()) : null;
   let dragSession = null;
   const renderListeners = new Set();
   const preferenceListeners = new Set();
 
-  root.innerHTML = createDesktopShellMarkup();
   let state = createSurfaceState(host.getSnapshot(), preferenceSeed, workspaceSeed);
   const preferences = Object.freeze({
     schema: PREFERENCE_RUNTIME_SCHEMA,
@@ -351,8 +411,10 @@ export function mountSurface(
       return () => preferenceListeners.delete(listener);
     },
   });
+  const localization = createSurfaceLocalization(preferences);
+  root.innerHTML = createDesktopShellMarkup(localization);
 
-  const desktopClock = mountDesktopClock(root, preferences);
+  const desktopClock = mountDesktopClock(root, preferences, localization);
 
   const workspace = root.querySelector("[data-workspace]");
   const launcher = root.querySelector("[data-launcher]");
@@ -394,14 +456,17 @@ export function mountSurface(
   };
 
   const renderLauncher = () => {
-    const query = launcherQuery.value.trim().toLocaleLowerCase("pt-BR");
+    const locale = localization.getLocale();
+    const query = launcherQuery.value.trim().toLocaleLowerCase(locale);
     const focusedLauncherApp = root.ownerDocument.activeElement?.dataset?.launchApp ?? null;
     const retained = new Set();
     let visible = 0;
 
     for (const [index, app] of listFirstPartyApps().entries()) {
       const available = isAppAvailable(app, state.capabilityIds);
-      const searchable = `${app.title} ${app.description} ${app.id}`.toLocaleLowerCase("pt-BR");
+      const localizedTitle = appTitle(localization, app);
+      const localizedDescription = appDescription(localization, app);
+      const searchable = `${localizedTitle} ${localizedDescription} ${app.id}`.toLocaleLowerCase(locale);
       const matches = !query || searchable.includes(query);
       let button = Array.from(appLauncher.children).find(
         (child) => child.dataset?.launchApp === app.id,
@@ -419,14 +484,21 @@ export function mountSurface(
 
       button.hidden = !matches;
       button.disabled = !available;
-      button.setAttribute("aria-label", available ? `Abrir ${app.title}` : `${app.title} indisponível`);
+      button.setAttribute(
+        "aria-label",
+        available
+          ? localization.translate("surface.launcher.open", { app: localizedTitle })
+          : localization.translate("surface.launcher.unavailable", { app: localizedTitle }),
+      );
       const copy = button.querySelector(".ordax-launcher-app-copy");
       if (copy) {
         const title = copy.querySelector("strong");
         const description = copy.querySelector("small");
-        if (title) title.textContent = app.title;
+        if (title) title.textContent = localizedTitle;
         if (description) {
-          description.textContent = available ? app.description : "Capacidades necessárias indisponíveis";
+          description.textContent = available
+            ? localizedDescription
+            : localization.translate("surface.launcher.requirementsUnavailable");
         }
       }
       placeChildAt(appLauncher, button, index);
@@ -441,7 +513,11 @@ export function mountSurface(
     let empty = appLauncher.querySelector("[data-launcher-empty]");
     if (visible === 0) {
       if (!empty) {
-        empty = element("p", "ordax-launcher-empty", "Nenhum aplicativo encontrado.");
+        empty = element(
+          "p",
+          "ordax-launcher-empty",
+          localization.translate("surface.launcher.empty"),
+        );
         empty.dataset.launcherEmpty = "";
       }
       placeChildAt(appLauncher, empty, retained.size);
@@ -478,9 +554,9 @@ export function mountSurface(
           && node.dataset.appId === app.id,
       ) ?? null;
       if (!windowNode) {
-        windowNode = createWindow(app, windowState, state, index, area);
+        windowNode = createWindow(app, windowState, state, index, area, localization);
       } else {
-        syncWindowNode(windowNode, app, windowState, state, index, area);
+        syncWindowNode(windowNode, app, windowState, state, index, area, localization);
       }
       placeChildAt(windowLayer, windowNode, renderedIndex);
       renderedIndex += 1;
@@ -509,8 +585,15 @@ export function mountSurface(
       }
       button.textContent = app.monogram;
       button.dataset.active = String(area.activeWindowId === windowState.id && !windowState.minimized);
-      button.setAttribute("aria-label", `${windowState.minimized ? "Restaurar" : "Focar"} ${app.title}`);
-      button.title = app.title;
+      const localizedTitle = appTitle(localization, app);
+      button.setAttribute(
+        "aria-label",
+        localization.translate(
+          windowState.minimized ? "surface.dock.restore" : "surface.dock.focus",
+          { app: localizedTitle },
+        ),
+      );
+      button.title = localizedTitle;
       placeChildAt(runningApps, button, index);
       index += 1;
       retained.add(button);
@@ -545,10 +628,15 @@ export function mountSurface(
         button.type = "button";
         button.dataset.areaId = area.id;
       }
-      button.textContent = areaLabel(area);
+      button.textContent = areaLabel(area, localization);
       button.dataset.active = String(active);
       button.setAttribute("aria-current", active ? "true" : "false");
-      button.setAttribute("aria-label", `Mudar para ${areaLabel(area)}`);
+      button.setAttribute(
+        "aria-label",
+        localization.translate("surface.area.switch", {
+          area: areaLabel(area, localization),
+        }),
+      );
       if (active) {
         const dot = element("span", "ordax-area-dot");
         dot.setAttribute("aria-hidden", "true");
@@ -565,7 +653,10 @@ export function mountSurface(
         add = element("button", "ordax-area-button ordax-area-add", "+");
         add.type = "button";
         add.dataset.areaCreate = "";
-        add.setAttribute("aria-label", "Criar nova área de trabalho");
+        add.setAttribute(
+          "aria-label",
+          localization.translate("surface.area.create"),
+        );
       }
       placeChildAt(areaSwitcher, add, index);
       retained.add(add);
@@ -580,6 +671,8 @@ export function mountSurface(
   };
 
   const render = () => {
+    documentElement.lang = localization.getLocale();
+    syncDesktopShellLocalization(root, localization);
     root.dataset.ordaxTheme = state.preferences[APPEARANCE_PREFERENCE_ID];
     root.dataset.ordaxContrast = state.preferences[ACCESSIBILITY_CONTRAST_PREFERENCE_ID];
     root.dataset.ordaxMotion = state.preferences[ACCESSIBILITY_MOTION_PREFERENCE_ID];
@@ -588,7 +681,9 @@ export function mountSurface(
     launcher.hidden = !state.launcherOpen;
     launcherToggle.setAttribute("aria-expanded", String(state.launcherOpen));
 
-    const connectivityLabel = CONNECTIVITY_LABELS[state.connectivity] ?? CONNECTIVITY_LABELS.unknown;
+    const connectivityMessage =
+      CONNECTIVITY_MESSAGE_IDS[state.connectivity] ?? CONNECTIVITY_MESSAGE_IDS.unknown;
+    const connectivityLabel = localization.translate(connectivityMessage);
     const connectivityTray = root.querySelector("[data-connectivity-tray]");
     if (connectivityTray.dataset.networkDetailOwner !== "true") {
       root.querySelector("[data-connectivity-label]").textContent = connectivityLabel;
@@ -596,7 +691,9 @@ export function mountSurface(
       connectivityIcon.dataset.state = state.connectivity;
       connectivityIcon.dataset.networkKind = "unknown";
       connectivityIcon.dataset.signalLevel = "0";
-      connectivityTray.title = `Rede: ${connectivityLabel}`;
+      connectivityTray.title = localization.translate("surface.network.label", {
+        status: connectivityLabel,
+      });
     }
 
     for (const targetButton of root.querySelectorAll("[data-requires-capability]")) {
@@ -604,7 +701,9 @@ export function mountSurface(
       const available = state.capabilityIds.includes(capabilityId);
       targetButton.disabled = !available;
       targetButton.setAttribute("aria-disabled", String(!available));
-      targetButton.title = available ? "" : "Este destino requer o espaço local do usuário.";
+      targetButton.title = available
+        ? ""
+        : localization.translate("surface.capability.destinationRequired");
     }
 
     renderLauncher();
@@ -899,6 +998,7 @@ export function mountSurface(
   return Object.freeze({
     schema: SURFACE_RENDER_LIFECYCLE_SCHEMA,
     preferences,
+    localization,
     getAppTarget(appId) {
       const area = getActiveArea(state);
       const windowState = area.windows.find((item) => item.appId === appId);
@@ -921,6 +1021,7 @@ export function mountSurface(
     destroy() {
       if (workspacePort) workspacePort.save(createWorkspaceSnapshot(state));
       desktopClock.destroy();
+      localization.dispose();
       if (dragSession) {
         dragSession.titlebar.releasePointerCapture?.(dragSession.pointerId);
         dragSession = null;
@@ -942,6 +1043,11 @@ export function mountSurface(
       delete root.dataset.ordaxContrast;
       delete root.dataset.ordaxMotion;
       delete documentElement.dataset.ordaxTextScale;
+      if (originalDocumentLanguage === null) {
+        documentElement.removeAttribute("lang");
+      } else {
+        documentElement.setAttribute("lang", originalDocumentLanguage);
+      }
       root.replaceChildren();
     },
   });
