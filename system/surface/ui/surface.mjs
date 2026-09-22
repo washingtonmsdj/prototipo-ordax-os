@@ -171,8 +171,13 @@ function renderPanel(panel, state, index, app, localization) {
     section.dataset.appExtension = panel.extensionId;
     section.setAttribute("aria-label", title);
   } else if (panel.kind === "connectivity") {
-    const label = CONNECTIVITY_LABELS[state.connectivity] ?? CONNECTIVITY_LABELS.unknown;
-    const badge = element("span", "ordax-inline-status", label);
+    const messageId =
+      CONNECTIVITY_MESSAGE_IDS[state.connectivity] ?? CONNECTIVITY_MESSAGE_IDS.unknown;
+    const badge = element(
+      "span",
+      "ordax-inline-status",
+      localization.translate(messageId),
+    );
     badge.dataset.state = state.connectivity;
     section.append(badge);
   } else if (panel.kind === "capability") {
@@ -196,16 +201,20 @@ function renderPanel(panel, state, index, app, localization) {
 
 function syncPanel(section, panel, state, index, app, localization) {
   section.dataset.surfacePanelKind = panel.kind;
-  if (panel.kind === "extension") {
-    section.dataset.appExtension = panel.extensionId;
-    section.setAttribute("aria-label", panelCopy(localization, app, index, "title"));
-    return;
-  }
-
   const label = section.querySelector(".ordax-app-panel-label");
   const title = section.querySelector(".ordax-app-panel-title");
   if (label) label.textContent = panelCopy(localization, app, index, "label");
   if (title) title.textContent = panelCopy(localization, app, index, "title");
+
+  if (panel.kind === "extension") {
+    section.dataset.appExtension = panel.extensionId;
+    section.setAttribute("aria-label", panelCopy(localization, app, index, "title"));
+    const body = section.querySelector(".ordax-app-panel-body");
+    if (body && panel.body) {
+      body.textContent = panelCopy(localization, app, index, "body");
+    }
+    return;
+  }
 
   if (panel.kind === "connectivity") {
     const badge = section.querySelector(".ordax-inline-status");
@@ -653,11 +662,11 @@ export function mountSurface(
         add = element("button", "ordax-area-button ordax-area-add", "+");
         add.type = "button";
         add.dataset.areaCreate = "";
-        add.setAttribute(
-          "aria-label",
-          localization.translate("surface.area.create"),
-        );
       }
+      add.setAttribute(
+        "aria-label",
+        localization.translate("surface.area.create"),
+      );
       placeChildAt(areaSwitcher, add, index);
       retained.add(add);
     } else {
@@ -667,7 +676,7 @@ export function mountSurface(
     for (const child of Array.from(areaSwitcher.children)) {
       if (!retained.has(child)) child.remove();
     }
-    areaKicker.textContent = areaLabel(activeArea);
+    areaKicker.textContent = areaLabel(activeArea, localization);
   };
 
   const render = () => {
