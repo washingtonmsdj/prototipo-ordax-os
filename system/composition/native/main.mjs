@@ -13,6 +13,7 @@ import { createNativeProjectStore } from "../../adapters/native/projects.mjs";
 import { createNativeProjectWebReferenceStore } from "../../adapters/native/project-web-references.mjs";
 import { createNativeNetworkManagement } from "../../adapters/native/network-management.mjs";
 import { createNativeKeyboardLayout } from "../../adapters/native/keyboard-layout.mjs";
+import { createNativeLocalAi } from "../../adapters/native/local-ai.mjs";
 import { createNativeNotificationStore } from "../../adapters/native/notifications.mjs";
 import { createNativeNotesStore } from "../../adapters/native/notes.mjs";
 import { createNativeNetworkStatus } from "../../adapters/native/network-status.mjs";
@@ -137,6 +138,10 @@ async function start() {
       "OrdaX native power status unavailable",
       () => createNativePowerStatus(window),
     ),
+    optionalNativeProbe(
+      "OrdaX native local AI unavailable",
+      () => createNativeLocalAi(window),
+    ),
   ]);
 
   const [preferenceStore, firstRunStateStore] = await Promise.all([
@@ -164,6 +169,7 @@ async function start() {
     keyboardLayout,
     systemMetrics,
     powerStatus,
+    localAi,
   ] = await optionalPortsPromise;
 
   const componentManager = createComponentManager({
@@ -223,6 +229,7 @@ async function start() {
   const networkManagementAvailable = networkManagement !== null;
   const keyboardLayoutAvailable = keyboardLayout !== null;
   const browserWebContentAvailable = browserSession.getSnapshot().supported;
+  const localAiAvailable = localAi !== null;
   const host = createNativeSurfaceHost(window, {
     bootControlAvailable,
     userFileSpaceAvailable,
@@ -232,6 +239,7 @@ async function start() {
     networkManagementAvailable,
     keyboardLayoutAvailable,
     browserWebContentAvailable,
+    localAiAvailable,
   });
 
   validateAccountRuntime(
@@ -403,6 +411,20 @@ async function start() {
     },
   });
 
+  const assistantComponent = await loadOptionalComponentRuntime({
+    componentId: "assistant",
+    importer: () => import("../../apps/assistant/runtime.mjs"),
+    componentManager,
+    context: {
+      root,
+      localAi,
+      surfaceLifecycle: surface,
+    },
+    onError(error) {
+      reportClientDiagnostic("assistant-runtime", error);
+    },
+  });
+
   bootScreen.setStage("Preparando primeiro uso…");
   let firstRun = null;
   try {
@@ -440,6 +462,7 @@ async function start() {
       fileSpaceControls.destroy();
       notesComponent?.destroy();
       internetComponent?.destroy();
+      assistantComponent?.destroy();
       projectReferences?.destroy();
       accountOverviewControls.destroy();
       preferenceSync.destroy();
