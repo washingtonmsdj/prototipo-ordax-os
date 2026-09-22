@@ -3,6 +3,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTROLS = ROOT / "system" / "surface" / "ui" / "file-space-controls.mjs"
+FILES_LOCALIZATION = ROOT / "system" / "services" / "i18n" / "catalog" / "files.mjs"
 CSS = ROOT / "system" / "surface" / "ui" / "files.css"
 ADAPTER = ROOT / "system" / "adapters" / "native" / "file-space.mjs"
 CONTRACT = ROOT / "system" / "contracts" / "file-space.mjs"
@@ -28,8 +29,10 @@ class FilesMoveControlsTests(unittest.TestCase):
         self.assertIn("data-file-copy-to-toggle", controls)
         self.assertIn("data-file-transfer-confirm", controls)
         self.assertIn("data-file-transfer-cancel", controls)
-        self.assertIn("Mover para esta pasta", controls)
-        self.assertIn("Copiar para esta pasta", controls)
+        catalog = FILES_LOCALIZATION.read_text(encoding="utf-8")
+        self.assertIn('t(isCopy ? "files.transfer.copyConfirm" : "files.transfer.moveConfirm")', controls)
+        self.assertIn('"files.transfer.moveConfirm": "Mover para esta pasta"', catalog)
+        self.assertIn('"files.transfer.copyConfirm": "Copiar para esta pasta"', catalog)
         self.assertIn("Navegue até a pasta de destino", controls)
 
     def test_move_rejects_same_folder_and_directory_descendants(self):
