@@ -196,7 +196,7 @@ export function mountFirstRunExperience(
     body.append(heading(
       "Idioma e região",
       "Ajuste idioma e horário.",
-      "Português (Brasil) é o idioma completo desta versão. O relógio passa a usar o fuso escolhido aqui, não uma constante fixa da Surface.",
+      "Este assistente de primeiro uso já está disponível nos idiomas listados. A tradução do restante da Surface é expandida separadamente.",
     ));
     const form = el(documentObject, "div", "ordax-first-run-form");
     const localeField = el(documentObject, "label", "ordax-first-run-field");
@@ -278,7 +278,7 @@ export function mountFirstRunExperience(
         documentObject,
         "small",
         "",
-        `${entry.connected ? "Conectada" : entry.saved ? "Salva" : "Disponível"} · ${signalLabel(entry.signalDbm)}`,
+        `${translateFirstRunText(draft.locale, entry.connected ? "Conectada" : entry.saved ? "Salva" : "Disponível")} · ${translateFirstRunText(draft.locale, signalLabel(entry.signalDbm))}`,
       ));
       list.append(button);
     });
