@@ -302,58 +302,78 @@ export function mountAccountOverviewControls(
     appendStateCard(
       documentObject,
       grid,
-      "Alterações locais",
+      t("account.card.changes"),
       syncSnapshot
         ? pendingMutationCount > 0
-          ? `${pendingMutationCount} pendente${pendingMutationCount === 1 ? "" : "s"}`
-          : "Nenhuma pendência"
-        : "Estado indisponível",
+          ? t(
+              pendingMutationCount === 1
+                ? "account.card.pending.one"
+                : "account.card.pending.other",
+              { count: pendingMutationCount },
+            )
+          : t("account.card.noPending")
+        : t("account.card.stateUnavailable"),
       syncSnapshot
         ? pendingMutationCount > 0
-          ? "As alterações aguardam um transporte autenticado; nada foi anunciado como enviado à nuvem."
-          : "A fila local está vazia; isso não prova que exista uma conta ou nuvem sincronizada."
-        : "Esta composição não expõe o runtime local de sincronização.",
+          ? t("account.card.pending.detail")
+          : t("account.card.empty.detail")
+        : t("account.card.syncUnavailable.detail"),
       syncSnapshot ? (pendingMutationCount > 0 ? "neutral" : "available") : "unavailable",
     );
 
     appendStateCard(
       documentObject,
       grid,
-      "Aparência",
-      appearanceTracked ? "Acompanhada localmente" : "Não acompanhada",
+      t("account.card.appearance"),
       appearanceTracked
-        ? "Mudanças de aparência entram no núcleo local de continuidade, sem ativar transporte por conta própria."
-        : "A aparência continua funcional localmente sem depender de sincronização.",
+        ? t("account.card.appearanceTracked")
+        : t("account.card.appearanceUntracked"),
+      appearanceTracked
+        ? t("account.card.appearanceTracked.detail")
+        : t("account.card.appearanceUntracked.detail"),
       appearanceTracked ? "available" : "neutral",
     );
 
     appendStateCard(
       documentObject,
       grid,
-      "Áreas e apps",
+      t("account.card.workspace"),
       workspaceMetadataSnapshot
-        ? `${workspaceAreaCount} área${workspaceAreaCount === 1 ? "" : "s"} · ${workspaceAppCount} app${workspaceAppCount === 1 ? "" : "s"}`
-        : "Metadata indisponível",
+        ? t("account.card.workspace.count", {
+            areas: t(
+              workspaceAreaCount === 1
+                ? "account.card.workspace.area.one"
+                : "account.card.workspace.area.other",
+              { count: workspaceAreaCount },
+            ),
+            apps: t(
+              workspaceAppCount === 1
+                ? "account.card.workspace.app.one"
+                : "account.card.workspace.app.other",
+              { count: workspaceAppCount },
+            ),
+          })
+        : t("account.card.metadataUnavailable"),
       workspaceMetadataSnapshot
-        ? "Somente áreas e apps abertos entram no metadata portátil; posição, tamanho, maximização e minimização continuam locais."
-        : "A composição atual ainda não expõe metadata portátil do workspace.",
+        ? t("account.card.workspace.detail")
+        : t("account.card.workspaceUnavailable.detail"),
       workspaceMetadataSnapshot ? "available" : "neutral",
     );
 
     appendStateCard(
       documentObject,
       grid,
-      "Fila offline",
+      t("account.card.offlineQueue"),
       syncSnapshot
         ? queueIsDurable
-          ? "Persistente neste dispositivo"
-          : "Somente nesta sessão"
-        : "Indisponível",
+          ? t("account.card.queuePersistent")
+          : t("account.card.queueSession")
+        : t("account.card.unavailable"),
       syncSnapshot
         ? queueIsDurable
-          ? "A fila sobrevive a reload/reinício neste dispositivo e continua local até existir transporte autorizado."
-          : "Pendências podem ser perdidas ao encerrar a sessão desta composição; nenhum dado foi enviado."
-        : "Nenhuma fila local foi exposta por esta composição.",
+          ? t("account.card.queuePersistent.detail")
+          : t("account.card.queueSession.detail")
+        : t("account.card.queueUnavailable.detail"),
       syncSnapshot ? (queueIsDurable ? "available" : "neutral") : "unavailable",
     );
 
@@ -409,7 +429,7 @@ export function mountAccountOverviewControls(
       if (destroyed || ordinal !== actionOrdinal) return;
     } catch {
       if (destroyed || ordinal !== actionOrdinal) return;
-      actionMessage = "A ação de conta não pôde ser concluída por este host.";
+      actionMessage = t("account.action.failed");
     } finally {
       if (!destroyed && ordinal === actionOrdinal) {
         pendingAction = null;
