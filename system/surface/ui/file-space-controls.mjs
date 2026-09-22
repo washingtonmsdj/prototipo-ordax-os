@@ -442,7 +442,7 @@ export function mountFileSpaceControls(
     const confirm = node(documentObject, "button", "ordax-files-action ordax-files-action-primary", t("files.form.add"));
     confirm.type = "button";
     confirm.dataset.fileProjectCreate = "";
-    const cancel = node(documentObject, "button", "ordax-files-action", "Cancelar");
+    const cancel = node(documentObject, "button", "ordax-files-action", t("files.form.cancel"));
     cancel.type = "button";
     cancel.dataset.fileProjectCreateCancel = "";
     form.append(input, confirm, cancel);
@@ -468,12 +468,12 @@ export function mountFileSpaceControls(
       documentObject,
       "button",
       "ordax-files-action ordax-files-action-primary",
-      "Salvar nome",
+      t("files.form.saveName"),
     );
     confirm.type = "button";
     confirm.dataset.fileProjectRenameConfirm = "";
 
-    const cancel = node(documentObject, "button", "ordax-files-action", "Cancelar");
+    const cancel = node(documentObject, "button", "ordax-files-action", t("files.form.cancel"));
     cancel.type = "button";
     cancel.dataset.fileProjectRenameCancel = "";
 
@@ -658,18 +658,24 @@ export function mountFileSpaceControls(
     if (!transferEntry) return;
     const destination = transferDestinationState();
     const isCopy = transferEntry.mode === "copy";
-    const verb = isCopy ? "Copiando" : "Movendo";
     const panel = node(documentObject, "section", "ordax-files-transfer");
-    panel.setAttribute("aria-label", isCopy ? "Copiar arquivo" : "Mover item");
+    panel.setAttribute("aria-label", t(isCopy ? "files.transfer.copyTitle" : "files.transfer.moveTitle"));
 
     const summary = node(documentObject, "div", "ordax-files-transfer-copy");
     summary.append(
-      node(documentObject, "strong", "ordax-files-transfer-title", `${verb} “${transferEntry.name}”`),
+      node(
+        documentObject,
+        "strong",
+        "ordax-files-transfer-title",
+        t(isCopy ? "files.transfer.copying" : "files.transfer.moving", { name: transferEntry.name }),
+      ),
       node(
         documentObject,
         "span",
         "ordax-files-transfer-meta",
-        listing ? `Destino atual: ${listing.path}` : "Abrindo destino…",
+        listing
+          ? t("files.transfer.currentDestination", { path: listing.path })
+          : t("files.transfer.openingDestination"),
       ),
       node(
         documentObject,
@@ -677,8 +683,8 @@ export function mountFileSpaceControls(
         "ordax-files-transfer-guidance",
         destination.allowed
           ? isCopy
-            ? "Confirme para copiar sem substituir itens existentes."
-            : "Confirme para mover sem substituir itens existentes."
+            ? t("files.transfer.copyHint")
+            : t("files.transfer.moveHint")
           : destination.reason,
       ),
     );
@@ -688,13 +694,13 @@ export function mountFileSpaceControls(
       documentObject,
       "button",
       "ordax-files-action ordax-files-action-primary",
-      isCopy ? "Copiar para esta pasta" : "Mover para esta pasta",
+      t(isCopy ? "files.transfer.copyConfirm" : "files.transfer.moveConfirm"),
     );
     confirm.type = "button";
     confirm.dataset.fileTransferConfirm = "";
     confirm.disabled = pending || !destination.allowed;
 
-    const cancel = node(documentObject, "button", "ordax-files-action", "Cancelar");
+    const cancel = node(documentObject, "button", "ordax-files-action", t("files.form.cancel"));
     cancel.type = "button";
     cancel.dataset.fileTransferCancel = "";
     cancel.disabled = pending;
@@ -906,7 +912,7 @@ export function mountFileSpaceControls(
       confirm.dataset.fileCopyConfirm = "";
       confirm.disabled = pending;
 
-      const cancel = node(documentObject, "button", "ordax-files-action", "Cancelar");
+      const cancel = node(documentObject, "button", "ordax-files-action", t("files.form.cancel"));
       cancel.type = "button";
       cancel.dataset.fileCopyCancel = "";
       cancel.disabled = pending;
@@ -929,13 +935,13 @@ export function mountFileSpaceControls(
         documentObject,
         "button",
         "ordax-files-action ordax-files-action-primary",
-        "Salvar nome",
+        t("files.form.saveName"),
       );
       confirm.type = "button";
       confirm.dataset.fileRenameConfirm = "";
       confirm.disabled = pending;
 
-      const cancel = node(documentObject, "button", "ordax-files-action", "Cancelar");
+      const cancel = node(documentObject, "button", "ordax-files-action", t("files.form.cancel"));
       cancel.type = "button";
       cancel.dataset.fileRenameCancel = "";
       cancel.disabled = pending;
@@ -951,7 +957,7 @@ export function mountFileSpaceControls(
     preview.setAttribute("aria-label", t("files.preview.aria"));
 
     if (previewPending) {
-      const loading = node(documentObject, "div", "ordax-files-preview-loading", "Abrindo arquivo…");
+      const loading = node(documentObject, "div", "ordax-files-preview-loading", t("files.preview.opening"));
       loading.setAttribute("role", "status");
       loading.setAttribute("aria-live", "polite");
       preview.append(loading);
@@ -965,7 +971,7 @@ export function mountFileSpaceControls(
     const name = parts[parts.length - 1] || textPreview.path;
     identity.append(
       node(documentObject, "strong", "ordax-files-preview-title", name),
-      node(documentObject, "span", "ordax-files-preview-meta", `${formatSize(textPreview.size)} · somente leitura`),
+      node(documentObject, "span", "ordax-files-preview-meta", `${formatSize(textPreview.size)} · ${t("files.preview.readOnly")}`),
     );
     const close = node(documentObject, "button", "ordax-files-action", "Fechar");
     close.type = "button";
