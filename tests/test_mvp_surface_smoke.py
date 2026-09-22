@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import stat
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -12,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROOF = ROOT / "system" / "diagnostics" / "mvp_surface_smoke.py"
 WRAPPER = ROOT / "system" / "surface" / "bin" / "ordax-mvp-smoke"
 PROOF_RUNTIME_HELPER = ROOT / "system" / "surface" / "lib" / "physical-proof-runtime.sh"
+SURFACE_LAUNCHER = ROOT / "system" / "surface" / "bin" / "ordax-surface"
 
 spec = importlib.util.spec_from_file_location("ordax_mvp_surface_smoke", PROOF)
 proof = importlib.util.module_from_spec(spec)
@@ -479,6 +481,23 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
         self.assertNotIn("apk add", text + helper)
         self.assertNotIn("curl ", text + helper)
         self.assertEqual(stat.S_IMODE(WRAPPER.stat().st_mode), 0o755)
+        subprocess.run(["sh", "-n", str(WRAPPER)], check=True)
+        subprocess.run(["sh", "-n", str(PROOF_RUNTIME_HELPER)], check=True)
+
+    def test_surface_launcher_publishes_and_cleans_authoritative_runtime_context(self):
+        launcher = SURFACE_LAUNCHER.read_text(encoding="utf-8")
+        self.assertIn("RUNTIME_PROOF_CONTEXT=$SESSION_DIR/runtime-proof-context", launcher)
+        self.assertIn("publish_runtime_proof_context()", launcher)
+        self.assertIn("distribution_profile=%s", launcher)
+        self.assertIn("runtime_mode=%s", launcher)
+        self.assertIn("evidence_scope=%s", launcher)
+        self.assertIn("runtime_sha256=%s", launcher)
+        self.assertIn('chmod 600 "$temporary"', launcher)
+        self.assertIn('rm -f "$RUNTIME_PROOF_CONTEXT"', launcher)
+        self.assertLess(
+            launcher.index("configure_keyboard_layout\npublish_runtime_proof_context"),
+            launcher.index("native_host_server.py"),
+        )
 
     def test_collector_has_no_mutating_http_methods(self):
         text = PROOF.read_text(encoding="utf-8")
