@@ -8,6 +8,8 @@ export const REGIONAL_TIME_ZONE_PREFERENCE_ID = "regional.time-zone";
 
 const LOCALE_LABELS = Object.freeze({
   "pt-BR": "Português (Brasil)",
+  "en-US": "English (United States) · prévia",
+  "es-419": "Español (Latinoamérica) · prévia",
 });
 
 const TIME_ZONE_LABELS = Object.freeze({
@@ -53,7 +55,7 @@ export const regionalLocalePreference = choicePreference({
   id: REGIONAL_LOCALE_PREFERENCE_ID,
   title: "Idioma",
   description:
-    "Português (Brasil) é o idioma completo desta versão do OrdaX. Outros idiomas só serão oferecidos quando a tradução estiver completa.",
+    "Português (Brasil) é completo. Inglês e espanhol latino-americano estão em prévia enquanto as telas antigas migram para o catálogo central.",
   defaultValue: "pt-BR",
   options: REGIONAL_LOCALE_OPTIONS,
   values: LOCALES,
