@@ -12,7 +12,10 @@
     "user_may_disable": true,
     "must_not_change_core_os_layout": true,
     "activation_after_first_physical_proof": true,
-    "reason": "the first Stable/MVP physical authorization is bound to the frozen Creator source context"
+    "reason": "the first Stable/MVP physical authorization is bound to the frozen Creator source context",
+    "label_es_419": "Incluir IA local",
+    "label_fr_FR": "Inclure l’IA locale",
+    "label_de_DE": "Lokale KI einschließen"
   },
   "runtime": {
     "engine_boundary": "OpenAI-compatible loopback HTTP",
@@ -63,5 +66,13 @@
     "small_model_first": true,
     "hardware_probe_before_start": true,
     "failure_must_not_block_surface": true
+  },
+  "role": "replaceable-local-inference-provider",
+  "platform_runtime": {
+    "contract": "ordax.ai-runtime/1",
+    "owner": "system/services/ai",
+    "local_provider_contract": "ordax.local-ai/1",
+    "assistant_is_only_one_client": true,
+    "provider_is_not_platform_authority": true
   }
 }
