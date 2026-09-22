@@ -116,6 +116,31 @@ The first formal human product version is **OrdaX Prototype v0.1.0**. Product ve
 
 The shared graphical source remains under `system/surface/ui/` with platform-neutral contracts, workspace/window lifecycle and capability-driven app availability. Notes is a first-party **application** with stable app id `notes`, version `0.4.0 Beta` and `git-app` delivery in Owner/Development. Native/USB may enrich it through the optional `filesystem.user-space` capability, and a future signed `component-slot`/app-package flow can target that same app identity instead of creating a Native-only fork. A general Store/package manager and production-independent app updater are not implemented yet. Notes provides local projects, a visual structured-text editor, editable checklists, real local-file/web references, autosave and device-local Native persistence through a bounded loopback state endpoint; Web uses local browser persistence with an explicit session fallback. Notes stores rich formatting as bounded blocks/marks rather than raw HTML or visible Markdown, keeps a plain-text body for search/import continuity, and migrates existing local snapshot schema v1 state to schema v2 on validation/save. Project organization now has a complete local lifecycle: projects can be renamed, non-base projects can be removed without deleting their notes, selected notes can move between projects, and checklist items can be removed. The stable `Meu espaço` project remains the non-destructive fallback for notes from removed projects. Internet is the first-party browser app with stable id `internet`, version `0.3.0 Beta` and `git-app` delivery in Owner/Development; this version identity does not claim a production Store/updater. Its shared Surface owns the approved concept structure (navigation toolbar, workspace/tab rail, central web viewport and project-context panel), while Native/USB provide `browser.web-content` through a separate unprivileged WebKit context and one external WebView per tab. The native slice supports up to 16 tabs, back/forward/reload, tab search, keyboard accelerators, persisted public tab URLs/order/active tab, project-context selection, explicit saved web references with bounded per-reference notes, automatic reference cleanup after project removal, public-network filtering and an exact loopback Host/browser-provenance boundary. Saved project references are owned by a neutral project-domain runtime and persist in the Native privileged profile with honest session fallback; the external page never receives project storage capability. Web intentionally exposes an unavailable browser-session port rather than pretending arbitrary sites can be safely embedded. Notes web references activate this same `internet` app. Internet also owns bounded device-local favorites through a neutral `ordax.browser-favorites/1` port; the Native privileged profile persists them while external website WebViews receive no access to that store. Native hardware proof for the new WebKit host remains pending, so the browser slice is implemented in source but not yet marked physically proven. Ajustes now owns persisted Surface-level contrast, motion and text-scale preferences; text scale changes the shared typographic base without claiming host-level accessibility control. Platform-specific behavior belongs in adapters/compositions, not in forks of the shared Surface. The normal Home now keeps technical delivery/recovery markers out of the area label; real delivery identity and update details live in Sistema. The visible settings identity is standardized as **Ajustes** while preserving the stable internal app id `settings`.
 
+### First run, regional preferences and physical keyboard
+
+The Native/USB first-use flow is now implemented as a persistent device-owned OOBE rather than a presentation-only screen. It follows `welcome -> regional -> network -> account -> privacy -> ready`, stores completion separately from preferences and identity, and does not dismiss until durable state has been written. The MVP always offers a local-only route: account creation/sign-in is optional and capability-driven, provider unavailability does not block first use, and cloud sync is not an MVP requirement. Network setup is skippable and reuses the existing Native network-management port; Wi-Fi credentials remain transient and do not enter first-run state.
+
+Regional choices are real persisted preferences. The complete locale in this prototype is `pt-BR`; the default time zone is `America/Bahia`, and both remain editable later under **Ajustes -> Idioma e região**. Physical keyboard layout is a separate Native device capability, not a Web preference: `br-abnt2` is the Stable/MVP default and `us` is the alternative. The selected layout is stored privately on the USB and mapped to fixed `XKB_DEFAULT_*` values before Cage starts. Arbitrary XKB values and shell input from HTTP are rejected. When the configured layout differs from the layout already applied to the running compositor, Ajustes reports that a new Surface start is required; no fake live-switch behavior is claimed. The OOBE keyboard selector intentionally remains hidden until a safe current-session application or pre-Surface handoff exists.
+
+```text
+FIRST_RUN_OOBE=PASS_SOURCE_NATIVE_USB
+FIRST_RUN_PERSISTENT=YES
+FIRST_RUN_ACCOUNT_OPTIONAL=YES
+FIRST_RUN_LOCAL_ONLY_ALWAYS_AVAILABLE=YES
+FIRST_RUN_NETWORK_SKIPPABLE=YES
+FIRST_RUN_COMPLETE_LOCALE=pt-BR
+FIRST_RUN_DEFAULT_TIME_ZONE=America/Bahia
+FIRST_RUN_WEB_DEVICE_OOBE=NO
+KEYBOARD_LAYOUT_NATIVE=PASS_SOURCE
+KEYBOARD_LAYOUT_DEFAULT=br-abnt2
+KEYBOARD_LAYOUT_ALTERNATIVE=us
+KEYBOARD_LAYOUT_WEB_CAPABILITY=NO
+KEYBOARD_LAYOUT_LIVE_RECONFIGURE=NO
+KEYBOARD_LAYOUT_FIRST_RUN_SELECTOR=NO_GATED_ON_SAFE_APPLY
+KEYBOARD_LAYOUT_PHYSICAL_STABLE_MVP_PROOF=PENDING
+EARLY_BOOT_GRAPHICAL_SPLASH=NO_CONSOLE_TEXT
+```
+
 On the target notebook, the owner/development USB has physically proven the Git-first native host: Cage/Wayland + Barkery/WebKitGTK renders the shared Surface fullscreen; keyboard and mouse/touchpad work; authenticated native restart and shutdown work; and Git changes can be pulled and applied with a Surface reload while the notebook remains running. The temporary live-update marker appeared and then disappeared automatically in the same running session, proving the rebootless update round trip.
 
 The Git-first update path is now split between a stable `system/entrypoint` guardian and a child `system/supervisor`. Ordinary Surface changes reload the browser, native-host changes restart only the Surface, supervisor/guardian changes use a controlled supervisor restart, and boot/bootstrap changes are marked as requiring a later reboot instead of rebooting automatically. The guardian monitors the supervisor's state-file heartbeat and can restart a stalled supervisor child without returning to the Development Base maintenance shell. The controlled `exit 75 -> guardian refresh -> supervisor restart` path has been physically exercised on the target notebook.
@@ -403,10 +428,12 @@ PHYSICAL_LIVE_UPDATE=PASS_DEVELOPMENT_USB
 PHYSICAL_GUARDIAN_SUPERVISOR=PASS_DEVELOPMENT_USB
 PHYSICAL_RESCUE_CHANNEL=PASS_DEVELOPMENT_USB
 PHYSICAL_TELEMETRY_RELAY=PASS_DEVELOPMENT_USB
-CANONICAL_SIGNED_RELEASE_BOOT_PROVEN=NO
-CANONICAL_NATIVE_DISK_INSTALL_PROVEN=NO
+CANONICAL_SIGNED_RELEASE_BOOT_PROVEN=NO_PHYSICAL_STABLE_MVP_PENDING
+CANONICAL_NATIVE_DISK_INSTALL_PROVEN=NO_POST_MVP
 CREATOR_PUBLIC_PHYSICAL_APPLY_IMPLEMENTED=NO
-RELEASE_TRUST=UNRESOLVED
+RELEASE_TRUST=PASS_CANONICAL_PUBLIC_ANCHOR_PINNED
+PHYSICAL_AUTHORIZATION_ELIGIBLE=YES
+PHYSICAL_WRITE_AUTHORIZED=NO
 DESTRUCTIVE_AUTHORIZATION=NO
 ```
 
@@ -428,14 +455,14 @@ BROADER_HARDWARE_COVERAGE=PENDING_FINAL
 
 ## Current priorities
 
-1. prioritize the Stable/MVP **USB system path**: finish Portable v2 boot, canonical trust, offline graphical runtime, official non-Git acquisition, signed verification, staging, controlled activation, health, promotion and rollback without coupling ordinary app changes to a full system reboot;
+1. prioritize the Stable/MVP **USB system path**: preserve the green Portable v3/QEMU/UEFI source path and close the remaining real-hardware gates for first canonical USB boot, cold health, known-good promotion and rollback without coupling ordinary app changes to a full system reboot;
 2. keep the current first-party apps useful and coherent as Beta components, focusing app work on correctness, regression coverage and genuine MVP gaps; move an app toward production-independent packaging only when the signed `component-slot` path is actually ready to prove it;
 3. continue hardening staged/transactional Owner/Development Git-first activation while keeping it explicitly separate from the Stable/MVP public update channel;
-4. complete integrated Surface physical validation only after the source-controlled Portable v2/runtime path is ready; do not convert CI or an unexecuted runbook into physical PASS;
-5. continue account/cloud preference and workspace continuity through neutral contracts without claiming remote transport before an authenticated provider exists;
-6. complete the canonical Ed25519 release-trust ceremony only with the provenance-bound toolkit from a canonical `main` push, keeping private signing material outside Git/CI/chat;
-7. keep all physical writers fail-closed until canonical trust, byte-complete media proof, exact target authorization and physical USB validation close;
-8. leave suspend/resume, audio, acceleration-quality, long-run and broader-hardware exercises for final physical validation unless an MVP gate depends on them sooner.
+4. execute the integrated Surface smoke only on the eventual Stable/MVP physical USB for canonical promotion; Owner/Development evidence remains development-only and CI or an unexecuted runbook must never become physical PASS;
+5. continue account/cloud preference and workspace continuity through neutral contracts without making an authenticated provider or cloud sync an MVP boot dependency;
+6. keep the already-pinned canonical Ed25519 public trust stable, keep private signing material outside Git/CI/chat, and treat independent off-device custody plus managed non-exportable signing as broad-distribution hardening rather than an unfinished first-prototype trust ceremony;
+7. keep all physical writers fail-closed until the separate owner authorization, non-published candidate review, exact target confirmation/UAC and post-write verification are deliberately completed; source/CI readiness alone never authorizes a USB mutation;
+8. continue product experience work that does not weaken boot safety, including the early graphical OrdaX splash with mandatory text fallback; leave suspend/resume, audio, acceleration-quality, long-run and broader-hardware exercises for final physical validation unless an MVP gate depends on them sooner.
 
 ## Autonomous recovery and observation boundary
 
