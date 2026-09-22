@@ -303,6 +303,7 @@ def build_engine(lock, source, work):
             "-DLLAMA_OPENSSL=OFF",
             "-DLLAMA_SUBPROCESS=OFF",
             "-DGGML_NATIVE=OFF",
+            "-DGGML_CCACHE=OFF",
             "-DGGML_OPENMP=OFF",
             "-DGGML_BLAS=OFF",
             "-DGGML_LLAMAFILE=OFF",
