@@ -1,3 +1,4 @@
+import { assertLocalizationPort } from "../../contracts/localization.mjs";
 import { assertPreferenceRuntimePort } from "../../contracts/preference-runtime.mjs";
 import {
   REGIONAL_LOCALE_PREFERENCE_ID,
@@ -24,15 +25,16 @@ const ICONS = Object.freeze({
   clock: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/></svg>`,
 });
 
-function railButton(appId, label, icon) {
+function railButton(appId, label, icon, t) {
   return `
-    <button type="button" class="ordax-rail-button" data-sidebar-app="${appId}" data-launch-app="${appId}" aria-label="Abrir ${label}">
+    <button type="button" class="ordax-rail-button" data-sidebar-app="${appId}" data-launch-app="${appId}" aria-label="${t("surface.launcher.open", { app: label })}">
       <span class="ordax-rail-icon">${icon}</span>
       <span>${label}</span>
     </button>`;
 }
 
-function spaceLink(label, target) {
+function spaceLink(messageId, target, t) {
+  const label = t(messageId);
   return `
     <button
       type="button"
@@ -40,7 +42,7 @@ function spaceLink(label, target) {
       data-launch-app="files"
       data-app-target="${target}"
       data-requires-capability="filesystem.user-space"
-      aria-label="Abrir ${label} em Arquivos"
+      aria-label="${t("surface.launcher.open", { app: label })}"
     >
       <span class="ordax-space-icon">${ICONS.folder}</span>
       <span>${label}</span>
@@ -48,17 +50,19 @@ function spaceLink(label, target) {
     </button>`;
 }
 
-export function createDesktopShellMarkup() {
+export function createDesktopShellMarkup(localization) {
+  const localizationPort = assertLocalizationPort(localization);
+  const t = localizationPort.translate;
   return `
     <div class="ordax-shell" data-ordax-shell>
-      <aside class="ordax-rail" aria-label="Aplicativos principais">
+      <aside class="ordax-rail" aria-label="${t("shell.rail.aria")}">
         <nav class="ordax-rail-nav">
-          ${railButton("files", "Arquivos", ICONS.files)}
-          ${railButton("notes", "Notas", ICONS.notes)}
-          ${railButton("internet", "Internet", ICONS.internet)}
-          ${railButton("settings", "Ajustes", ICONS.settings)}
-          ${railButton("account", "Conta", ICONS.account)}
-          ${railButton("system", "Sistema", ICONS.system)}
+          ${railButton("files", t("app.files.title"), ICONS.files, t)}
+          ${railButton("notes", t("app.notes.title"), ICONS.notes, t)}
+          ${railButton("internet", t("app.internet.title"), ICONS.internet, t)}
+          ${railButton("settings", t("app.settings.title"), ICONS.settings, t)}
+          ${railButton("account", t("app.account.title"), ICONS.account, t)}
+          ${railButton("system", t("app.system.title"), ICONS.system, t)}
         </nav>
         <div class="ordax-power-slot" data-power-slot></div>
       </aside>
@@ -77,21 +81,21 @@ export function createDesktopShellMarkup() {
 
         <section class="ordax-desktop" aria-labelledby="surface-home-title">
           <div class="ordax-home-panel">
-            <p class="ordax-area-kicker" data-area-kicker>Área 01</p>
+            <p class="ordax-area-kicker" data-area-kicker>${t("surface.area.label", { ordinal: "01" })}</p>
             <h1 id="surface-home-title" class="ordax-clock"><time data-ordax-clock>--:--</time></h1>
-            <p class="ordax-date" data-ordax-date>Carregando data…</p>
+            <p class="ordax-date" data-ordax-date>${t("shell.home.loadingDate")}</p>
 
             <button type="button" class="ordax-command" data-launcher-toggle aria-expanded="false" aria-controls="ordax-launcher">
               <span class="ordax-command-icon">${ICONS.search}</span>
-              <span class="ordax-command-copy">Abrir aplicativo…</span>
+              <span class="ordax-command-copy">${t("shell.launcher.command")}</span>
               <kbd>Ctrl + K</kbd>
             </button>
 
             <section class="ordax-space" aria-labelledby="ordax-space-title">
-              <p id="ordax-space-title" class="ordax-section-kicker">Seu espaço</p>
-              ${spaceLink("Documentos", "/Documentos")}
-              ${spaceLink("Imagens", "/Imagens")}
-              ${spaceLink("Downloads", "/Downloads")}
+              <p id="ordax-space-title" class="ordax-section-kicker">${t("shell.space.title")}</p>
+              ${spaceLink("shell.space.documents", "/Documentos", t)}
+              ${spaceLink("shell.space.images", "/Imagens", t)}
+              ${spaceLink("shell.space.downloads", "/Downloads", t)}
             </section>
           </div>
 
@@ -102,7 +106,7 @@ export function createDesktopShellMarkup() {
             <span class="ordax-art-slab ordax-art-slab-b"></span>
             <span class="ordax-art-slab ordax-art-slab-c"></span>
             <span class="ordax-art-vertical"></span>
-            <span class="ordax-art-caption">IDEIAS<br>ORGANIZAM<br>REALIDADES</span>
+            <span class="ordax-art-caption">${t("shell.slogan").split("\n").join("<br>")}</span>
           </div>
         </section>
 
@@ -110,30 +114,30 @@ export function createDesktopShellMarkup() {
       </main>
 
       <div id="ordax-launcher" class="ordax-launcher" data-launcher hidden>
-        <div class="ordax-launcher-panel" role="dialog" aria-modal="false" aria-label="Abrir aplicativo">
+        <div class="ordax-launcher-panel" role="dialog" aria-modal="false" aria-label="${t("shell.launcher.dialog")}">
           <label class="ordax-launcher-search">
             <span class="ordax-command-icon">${ICONS.search}</span>
-            <input type="search" data-launcher-query autocomplete="off" spellcheck="false" placeholder="Pesquisar aplicativos" aria-label="Pesquisar aplicativos">
+            <input type="search" data-launcher-query autocomplete="off" spellcheck="false" placeholder="${t("shell.launcher.search")}" aria-label="${t("shell.launcher.search")}">
             <kbd>Esc</kbd>
           </label>
           <div class="ordax-launcher-grid" data-app-launcher></div>
         </div>
       </div>
 
-      <footer class="ordax-dock ordax-statusbar" aria-label="Estado e áreas da Surface">
-        <div class="ordax-area-switcher" data-area-switcher aria-label="Áreas de trabalho"></div>
-        <div class="ordax-running-apps" data-running-apps aria-label="Aplicações abertas"></div>
+      <footer class="ordax-dock ordax-statusbar" aria-label="${t("shell.statusbar.aria")}">
+        <div class="ordax-area-switcher" data-area-switcher aria-label="${t("shell.areas.aria")}"></div>
+        <div class="ordax-running-apps" data-running-apps aria-label="${t("shell.runningApps.aria")}"></div>
         <div class="ordax-status-actions" data-update-slot></div>
-        <div class="ordax-system-tray" aria-label="Estado do sistema">
-          <button type="button" class="ordax-tray-item ordax-tray-network" data-connectivity-tray data-quick-panel-toggle="network" aria-expanded="false" aria-controls="ordax-quick-network" aria-label="Abrir acesso rápido de Wi-Fi">
+        <div class="ordax-system-tray" aria-label="${t("shell.systemStatus.aria")}">
+          <button type="button" class="ordax-tray-item ordax-tray-network" data-connectivity-tray data-quick-panel-toggle="network" aria-expanded="false" aria-controls="ordax-quick-network" aria-label="${t("shell.network.quickOpen")}">
             <span class="ordax-tray-icon ordax-tray-network-icon" data-connectivity-icon data-state="unknown" data-network-kind="unknown" data-signal-level="0" aria-hidden="true">${ICONS.networkWifi}${ICONS.networkEthernet}${ICONS.networkOther}</span>
             <span class="ordax-tray-label" data-connectivity-label>Conectividade desconhecida</span>
           </button>
-          <button type="button" class="ordax-tray-item ordax-tray-battery" data-battery-tray data-quick-panel-toggle="battery" aria-expanded="false" aria-controls="ordax-quick-battery" aria-label="Abrir estado da bateria" hidden>
+          <button type="button" class="ordax-tray-item ordax-tray-battery" data-battery-tray data-quick-panel-toggle="battery" aria-expanded="false" aria-controls="ordax-quick-battery" aria-label="${t("shell.battery.quickOpen")}" hidden>
             <span class="ordax-tray-icon ordax-tray-battery-icon" data-battery-icon data-battery-level="0" data-charging="false" aria-hidden="true">${ICONS.battery}</span>
             <span class="ordax-tray-label" data-battery-label>--%</span>
           </button>
-          <button type="button" class="ordax-tray-item ordax-tray-clock" data-quick-panel-toggle="datetime" aria-expanded="false" aria-controls="ordax-quick-datetime" title="Horário de Salvador/Bahia" aria-label="Abrir data e hora">
+          <button type="button" class="ordax-tray-item ordax-tray-clock" data-quick-panel-toggle="datetime" aria-expanded="false" aria-controls="ordax-quick-datetime" aria-label="${t("shell.datetime.quickOpen")}">
             <span class="ordax-tray-icon" aria-hidden="true">${ICONS.clock}</span>
             <time data-ordax-tray-clock>--:--</time>
           </button>
@@ -144,51 +148,112 @@ export function createDesktopShellMarkup() {
         <section id="ordax-quick-network" class="ordax-quick-panel" data-quick-panel="network" role="dialog" aria-modal="false" aria-labelledby="ordax-quick-network-title" hidden>
           <header class="ordax-quick-panel-header">
             <div>
-              <span class="ordax-quick-kicker">Acesso rápido</span>
+              <span class="ordax-quick-kicker">${t("shell.quick.access")}</span>
               <h2 id="ordax-quick-network-title">Wi-Fi</h2>
             </div>
-            <button type="button" class="ordax-quick-close" data-quick-panel-close aria-label="Fechar acesso rápido de Wi-Fi">×</button>
+            <button type="button" class="ordax-quick-close" data-quick-panel-close aria-label="${t("shell.quick.wifiClose")}">×</button>
           </header>
           <div class="ordax-quick-panel-content" data-quick-network-content>
-            <p class="ordax-quick-empty">Lendo estado do Wi-Fi…</p>
+            <p class="ordax-quick-empty">${t("shell.quick.wifiReading")}</p>
           </div>
         </section>
 
         <section id="ordax-quick-battery" class="ordax-quick-panel ordax-quick-panel-battery" data-quick-panel="battery" role="dialog" aria-modal="false" aria-labelledby="ordax-quick-battery-title" hidden>
           <header class="ordax-quick-panel-header">
             <div>
-              <span class="ordax-quick-kicker">Energia</span>
-              <h2 id="ordax-quick-battery-title">Bateria</h2>
+              <span class="ordax-quick-kicker">${t("shell.quick.energy")}</span>
+              <h2 id="ordax-quick-battery-title">${t("shell.quick.battery")}</h2>
             </div>
-            <button type="button" class="ordax-quick-close" data-quick-panel-close aria-label="Fechar estado da bateria">×</button>
+            <button type="button" class="ordax-quick-close" data-quick-panel-close aria-label="${t("shell.quick.batteryClose")}">×</button>
           </header>
           <div class="ordax-quick-battery-status" data-quick-battery-content>
             <strong data-quick-battery-percent>--%</strong>
-            <span data-quick-battery-state>Lendo estado da bateria…</span>
+            <span data-quick-battery-state>${t("shell.quick.batteryReading")}</span>
           </div>
           <div class="ordax-quick-battery-power">
-            <span>Fonte de energia</span>
-            <strong data-quick-battery-power>Verificando…</strong>
+            <span data-ordax-power-source-label>${t("shell.quick.powerSource")}</span>
+            <strong data-quick-battery-power>${t("shell.quick.checking")}</strong>
           </div>
         </section>
 
         <section id="ordax-quick-datetime" class="ordax-quick-panel ordax-quick-panel-datetime" data-quick-panel="datetime" role="dialog" aria-modal="false" aria-labelledby="ordax-quick-datetime-title" hidden>
           <header class="ordax-quick-panel-header">
             <div>
-              <span class="ordax-quick-kicker">Data e hora</span>
+              <span class="ordax-quick-kicker">${t("shell.quick.dateTime")}</span>
               <h2 id="ordax-quick-datetime-title"><time data-ordax-quick-clock>--:--</time></h2>
             </div>
-            <button type="button" class="ordax-quick-close" data-quick-panel-close aria-label="Fechar data e hora">×</button>
+            <button type="button" class="ordax-quick-close" data-quick-panel-close aria-label="${t("shell.quick.dateTimeClose")}">×</button>
           </header>
-          <p class="ordax-quick-date" data-ordax-quick-date>Carregando data…</p>
+          <p class="ordax-quick-date" data-ordax-quick-date>${t("shell.home.loadingDate")}</p>
           <div class="ordax-quick-timezone">
-            <span>Fuso horário</span>
+            <span data-ordax-timezone-label>${t("shell.quick.timeZone")}</span>
             <strong data-ordax-timezone>${SURFACE_TIME_ZONE}</strong>
           </div>
         </section>
       </div>
     </div>
   `;
+}
+
+export function syncDesktopShellLocalization(root, localization) {
+  const localizationPort = assertLocalizationPort(localization);
+  const t = localizationPort.translate;
+  const text = (selector, messageId) => {
+    const node = root.querySelector(selector);
+    if (node) node.textContent = t(messageId);
+  };
+  const aria = (selector, messageId) => {
+    const node = root.querySelector(selector);
+    if (node) node.setAttribute("aria-label", t(messageId));
+  };
+
+  aria(".ordax-rail", "shell.rail.aria");
+  for (const appId of ["files", "notes", "internet", "settings", "account", "system"]) {
+    const button = root.querySelector(`[data-sidebar-app="${appId}"]`);
+    const label = t(`app.${appId}.title`);
+    const labelNode = button?.querySelector("span:last-child");
+    if (labelNode) labelNode.textContent = label;
+    button?.setAttribute("aria-label", t("surface.launcher.open", { app: label }));
+  }
+  text(".ordax-command-copy", "shell.launcher.command");
+  text("#ordax-space-title", "shell.space.title");
+  const spaceMessages = new Map([
+    ["/Documentos", "shell.space.documents"],
+    ["/Imagens", "shell.space.images"],
+    ["/Downloads", "shell.space.downloads"],
+  ]);
+  for (const [target, messageId] of spaceMessages) {
+    const button = root.querySelector(`[data-app-target="${target}"]`);
+    const label = t(messageId);
+    const labelNode = button?.querySelector("span:nth-child(2)");
+    if (labelNode) labelNode.textContent = label;
+    button?.setAttribute("aria-label", t("surface.launcher.open", { app: label }));
+  }
+  const slogan = root.querySelector(".ordax-art-caption");
+  if (slogan) slogan.innerHTML = t("shell.slogan").split("\n").join("<br>");
+
+  aria("[data-launcher] .ordax-launcher-panel", "shell.launcher.dialog");
+  const launcherQuery = root.querySelector("[data-launcher-query]");
+  if (launcherQuery) {
+    launcherQuery.placeholder = t("shell.launcher.search");
+    launcherQuery.setAttribute("aria-label", t("shell.launcher.search"));
+  }
+  aria(".ordax-statusbar", "shell.statusbar.aria");
+  aria("[data-area-switcher]", "shell.areas.aria");
+  aria("[data-running-apps]", "shell.runningApps.aria");
+  aria(".ordax-system-tray", "shell.systemStatus.aria");
+  aria("[data-connectivity-tray]", "shell.network.quickOpen");
+  aria("[data-battery-tray]", "shell.battery.quickOpen");
+  aria('[data-quick-panel-toggle="datetime"]', "shell.datetime.quickOpen");
+  text('[data-quick-panel="network"] .ordax-quick-kicker', "shell.quick.access");
+  aria('[data-quick-panel="network"] [data-quick-panel-close]', "shell.quick.wifiClose");
+  text('[data-quick-panel="battery"] .ordax-quick-kicker', "shell.quick.energy");
+  text("#ordax-quick-battery-title", "shell.quick.battery");
+  aria('[data-quick-panel="battery"] [data-quick-panel-close]', "shell.quick.batteryClose");
+  text("[data-ordax-power-source-label]", "shell.quick.powerSource");
+  text('[data-quick-panel="datetime"] .ordax-quick-kicker', "shell.quick.dateTime");
+  aria('[data-quick-panel="datetime"] [data-quick-panel-close]', "shell.quick.dateTimeClose");
+  text("[data-ordax-timezone-label]", "shell.quick.timeZone");
 }
 
 function regionalSettings(snapshot = {}) {
@@ -209,10 +274,16 @@ function formatDate(date, locale, timeZone) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-export function mountDesktopClock(root, preferenceRuntime = null, clock = globalThis) {
+export function mountDesktopClock(
+  root,
+  preferenceRuntime = null,
+  localization = null,
+  clock = globalThis,
+) {
   const preferencePort = preferenceRuntime === null
     ? null
     : assertPreferenceRuntimePort(preferenceRuntime);
+  const localizationPort = localization === null ? null : assertLocalizationPort(localization);
   const timeNode = root.querySelector("[data-ordax-clock]");
   const trayTimeNode = root.querySelector("[data-ordax-tray-clock]");
   const quickTimeNode = root.querySelector("[data-ordax-quick-clock]");
@@ -248,8 +319,11 @@ export function mountDesktopClock(root, preferenceRuntime = null, clock = global
     timeNode.setAttribute("datetime", isoNow);
     trayTimeNode.setAttribute("datetime", isoNow);
     quickTimeNode.setAttribute("datetime", isoNow);
-    timeNode.title = `Fuso horário: ${timeZone}`;
-    trayTimeNode.title = `Fuso horário: ${timeZone}`;
+    const timeZoneTitle = localizationPort
+      ? localizationPort.translate("shell.clock.timeZone", { timeZone })
+      : `Fuso horário: ${timeZone}`;
+    timeNode.title = timeZoneTitle;
+    trayTimeNode.title = timeZoneTitle;
   };
 
   const unsubscribe = preferencePort?.subscribe(render) ?? null;

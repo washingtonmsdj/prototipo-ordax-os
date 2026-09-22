@@ -38,7 +38,11 @@ class FirstRunContractTests(unittest.TestCase):
         self.assertEqual(contract["regional"]["complete_locales"], ["pt-BR", "en-US", "es-ES", "de-DE", "fr-FR"])
         self.assertEqual(contract["regional"]["completeness_scope"], "first-run-oobe-only")
         self.assertEqual(contract["regional"]["surface_complete_locales"], ["pt-BR"])
-        for locale in ("en-US", "es-ES", "de-DE", "fr-FR"):
+        self.assertEqual(
+            contract["regional"]["surface_translation_status"]["en-US"],
+            "shared-shell-implemented-app-controls-migrating",
+        )
+        for locale in ("es-ES", "de-DE", "fr-FR"):
             self.assertEqual(
                 contract["regional"]["surface_translation_status"][locale],
                 "migration-in-progress",

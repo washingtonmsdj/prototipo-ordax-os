@@ -14,8 +14,8 @@ class SurfaceProductCopyTests(unittest.TestCase):
         for text in (shell, surface):
             self.assertNotIn("recuperação ao vivo", text)
             self.assertNotIn("entrega 68", text)
-        self.assertIn(">Área 01</p>", shell)
-        self.assertIn("areaKicker.textContent = areaLabel(activeArea);", surface)
+        self.assertIn('t("surface.area.label", { ordinal: "01" })', shell)
+        self.assertIn("areaKicker.textContent = areaLabel(activeArea, localization);", surface)
         self.assertNotIn("Surface compartilhada", shell)
         self.assertNotIn("Surface compartilhada", surface)
 

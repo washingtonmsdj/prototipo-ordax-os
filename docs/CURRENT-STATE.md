@@ -144,6 +144,27 @@ FIRST_STABLE_MVP_USB_WRITE=HOLD_FUNCTIONAL_CLOSURE
 PHYSICAL_WRITE_AUTHORITY=UNCHANGED
 ```
 
+### Shared Surface localization
+
+The Surface now owns `ordax.localization/1`, derived from the existing persisted
+`regional.locale` preference rather than a second locale state. The shell is
+created in the selected locale on its first frame and re-renders localized shell
+copy without rebuilding windows or losing interaction state. English entries now
+cover the shared shell, launcher, workspace/window chrome, connectivity labels and
+first-party app metadata. Unsupported message IDs fail closed; locales without a
+shared translation fall back to PT-BR source copy explicitly.
+
+English is **not** yet marked as a complete Surface locale because app-owned
+controls still require migration. Spanish, German and French remain OOBE-complete
+but Surface-incomplete.
+
+```text
+SURFACE_LOCALIZATION_OWNER=PASS_SOURCE
+SURFACE_SHARED_SHELL_EN_US=PASS_SOURCE
+SURFACE_COMPLETE_LOCALES=pt-BR
+SURFACE_EN_US_APP_CONTROLS=MIGRATING
+```
+
 ### Files safe removal
 
 The Native Files owner now exposes `ordax.file-space/11` with recoverable
@@ -201,7 +222,9 @@ FIRST_RUN_LOCAL_ONLY_ALWAYS_AVAILABLE=YES
 FIRST_RUN_NETWORK_SKIPPABLE=YES
 FIRST_RUN_SOURCE_LOCALE=pt-BR
 FIRST_RUN_OOBE_COMPLETE_LOCALES=pt-BR,en-US,es-ES,de-DE,fr-FR
-FIRST_RUN_FULL_SURFACE_TRANSLATIONS=PT_BR_SOURCE_ONLY_OTHERS_MIGRATING
+SURFACE_LOCALIZATION_OWNER=PASS_SOURCE
+SURFACE_SHARED_SHELL_EN_US=PASS_SOURCE
+FIRST_RUN_FULL_SURFACE_TRANSLATIONS=PT_BR_SOURCE_EN_APP_CONTROLS_MIGRATING_OTHERS_MIGRATING
 FIRST_RUN_DEFAULT_TIME_ZONE=America/Bahia
 FIRST_RUN_WEB_DEVICE_OOBE=NO
 KEYBOARD_LAYOUT_NATIVE=PASS_SOURCE

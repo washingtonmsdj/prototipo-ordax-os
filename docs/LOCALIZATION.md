@@ -34,6 +34,31 @@ starts at the first-use flow and expands through shared Surface catalogs.
 This order is about engineering sequence, not the importance of a language or
 its speakers. PT-BR remains fully supported as the source language throughout.
 
+## Current implementation status
+
+The shared Surface now owns a provider-neutral localization runtime
+(`ordax.localization/1`) driven directly by the persisted `regional.locale`
+preference. PT-BR remains the source catalog. The shared desktop shell, launcher,
+window chrome, workspace labels, connectivity copy, first-party app titles and
+fallback panel metadata have explicit English catalog entries.
+
+This does **not** make `en-US` a complete Surface locale yet. App-owned controls
+such as Files, Settings, System, Account, Notes, Internet and several quick panels
+still contain PT-BR copy and are being migrated to the same owner. Spanish,
+German and French continue to use explicit source-language fallback outside the
+already translated OOBE until their shared catalogs are implemented.
+
+```text
+SURFACE_LOCALIZATION_OWNER=PASS_SOURCE
+SURFACE_SOURCE_LOCALE=pt-BR
+SURFACE_SHARED_SHELL_EN_US=PASS_SOURCE
+SURFACE_COMPLETE_LOCALES=pt-BR
+SURFACE_EN_US_APP_CONTROLS=MIGRATING
+SURFACE_ES_ES=MIGRATING
+SURFACE_DE_DE=MIGRATING
+SURFACE_FR_FR=MIGRATING
+```
+
 ## Architecture
 
 Translations belong to shared product owners, never platform forks:

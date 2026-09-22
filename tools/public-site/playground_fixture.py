@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 APPS_ROOT = ROOT / "system" / "apps"
 APP_CATALOG = APPS_ROOT / "catalog.mjs"
 DESKTOP_SHELL = ROOT / "system" / "surface" / "ui" / "desktop-shell.mjs"
+SURFACE_LOCALIZATION = ROOT / "system" / "services" / "i18n" / "surface.mjs"
 PUBLIC_ROOT = ROOT / "sites" / "public"
 FIXTURE_PATH = PUBLIC_ROOT / "assets" / "playground-fixture.json"
 INDEX_PATH = PUBLIC_ROOT / "index.html"
@@ -23,11 +24,17 @@ FIELD_RE = re.compile(
     re.MULTILINE,
 )
 CATALOG_RE = re.compile(r"\b([a-z][a-z0-9-]*)App\b")
-RAIL_RE = re.compile(r'railButton\("([a-z][a-z0-9-]*)",\s*"([^"]+)"')
-SPACE_RE = re.compile(r'spaceLink\("([^"]+)",\s*"([^"]+)"\)')
-AREA_RE = re.compile(r'data-area-kicker>\s*([^<]+?)\s*</p>')
-COMMAND_RE = re.compile(r'ordax-command-copy">([^<]+)</span>')
-SPACE_LABEL_RE = re.compile(r'ordax-section-kicker">([^<]+)</p>')
+MESSAGE_RE = re.compile(
+    r'^\s*"([^"]+)":\s*"((?:\\.|[^"\\])*)",?\s*$',
+    re.MULTILINE,
+)
+RAIL_RE = re.compile(
+    r'railButton\("([a-z][a-z0-9-]*)",\s*t\("([^"]+)"\),\s*ICONS\.[a-zA-Z0-9]+,\s*t\)'
+)
+SPACE_RE = re.compile(r'spaceLink\("([^"]+)",\s*"([^"]+)",\s*t\)')
+AREA_RE = re.compile(r't\("surface\.area\.label",\s*\{\s*ordinal:\s*"([^"]+)"\s*\}\)')
+COMMAND_RE = re.compile(r't\("shell\.launcher\.command"\)')
+SPACE_LABEL_RE = re.compile(r't\("shell\.space\.title"\)')
 
 
 class PlaygroundFixtureError(RuntimeError):
@@ -55,19 +62,55 @@ def _catalog_order() -> list[str]:
     return CATALOG_RE.findall(match.group(1))
 
 
+def _surface_source_messages() -> dict[str, str]:
+    text = SURFACE_LOCALIZATION.read_text(encoding="utf-8")
+    match = re.search(
+        r"const SOURCE = Object\.freeze\(\{(.*?)\n\}\);",
+        text,
+        re.DOTALL,
+    )
+    if not match:
+        raise PlaygroundFixtureError("shared Surface localization has no readable source catalog")
+    messages = {message_id: _decode(value) for message_id, value in MESSAGE_RE.findall(match.group(1))}
+    if not messages:
+        raise PlaygroundFixtureError("shared Surface localization source catalog is empty")
+    return messages
+
+
+def _message(messages: dict[str, str], message_id: str, **values: str) -> str:
+    if message_id not in messages:
+        raise PlaygroundFixtureError(f"missing Surface source message: {message_id}")
+    value = messages[message_id]
+    for key, replacement in values.items():
+        value = value.replace("{" + key + "}", replacement)
+    if re.search(r"\{[A-Za-z][A-Za-z0-9]*\}", value):
+        raise PlaygroundFixtureError(f"unresolved Surface source message values: {message_id}")
+    return value
+
+
 def _surface_home() -> dict[str, object]:
     text = DESKTOP_SHELL.read_text(encoding="utf-8")
-    rail = [{"id": app_id, "label": label} for app_id, label in RAIL_RE.findall(text)]
-    spaces = [{"label": label, "target": target} for label, target in SPACE_RE.findall(text)]
+    messages = _surface_source_messages()
+    rail_matches = RAIL_RE.findall(text)
+    space_matches = SPACE_RE.findall(text)
     area = AREA_RE.search(text)
     command = COMMAND_RE.search(text)
     space_label = SPACE_LABEL_RE.search(text)
-    if not area or not command or not space_label or not rail or not spaces:
+    if not area or not command or not space_label or not rail_matches or not space_matches:
         raise PlaygroundFixtureError("desktop shell is missing Home metadata required by the playground")
+
+    rail = [
+        {"id": app_id, "label": _message(messages, message_id)}
+        for app_id, message_id in rail_matches
+    ]
+    spaces = [
+        {"label": _message(messages, message_id), "target": target}
+        for message_id, target in space_matches
+    ]
     return {
-        "area_label": area.group(1),
-        "command_label": command.group(1),
-        "space_label": space_label.group(1).strip(),
+        "area_label": _message(messages, "surface.area.label", ordinal=area.group(1)),
+        "command_label": _message(messages, "shell.launcher.command"),
+        "space_label": _message(messages, "shell.space.title"),
         "spaces": spaces,
         "rail_apps": [item["id"] for item in rail],
         "rail_labels": rail,
