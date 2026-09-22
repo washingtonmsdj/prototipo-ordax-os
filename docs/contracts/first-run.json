@@ -29,7 +29,8 @@
       "pt-BR",
       "en-US",
       "es-419",
-      "fr-FR"
+      "fr-FR",
+      "de-DE"
     ],
     "default_locale": "pt-BR",
     "default_time_zone": "America/Bahia",
@@ -41,7 +42,8 @@
     "keyboard_layout_selector_exposed": false,
     "keyboard_layout_selector_gate": "safe-current-session-apply-or-pre-surface-handoff",
     "fallback_locale": "en-US",
-    "localization_scope": "first-run-oobe"
+    "localization_scope": "first-run-oobe",
+    "launch_locale_policy": "pt-BR-en-US-es-419-fr-FR-de-DE-complete-before-public-mvp"
   },
   "network": {
     "skippable": true,
