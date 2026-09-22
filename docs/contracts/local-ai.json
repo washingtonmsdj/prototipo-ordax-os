@@ -1,18 +1,21 @@
 {
-  "$schema": "prototype-ordax.local-ai/1",
-  "status": "mvp-optional-component-foundation",
+  "$schema": "prototype-ordax.local-ai/2",
+  "status": "mvp-default-inference-backend-foundation",
   "product_scope": "stable-mvp-usb",
+  "system_role": "ai-runtime-inference-backend",
+  "intelligence_contract": "ordax.intelligence/1",
+  "required_for_public_mvp_distribution": true,
   "required_for_boot": false,
-  "required_for_offline_use": false,
-  "default_creator_selection": "include-when-bundle-available",
-  "creator_toggle": {
-    "label_pt_BR": "Incluir IA local",
-    "label_en_US": "Include local AI",
-    "label_es_ES": "Incluir IA local",
-    "user_may_disable": true,
+  "required_for_surface": false,
+  "required_for_general_offline_os_use": false,
+  "creator_policy": {
+    "included_by_default": true,
+    "user_may_omit": false,
+    "user_may_remove_core_backend": false,
     "must_not_change_core_os_layout": true,
-    "activation_after_first_physical_proof": true,
-    "reason": "the first Stable/MVP physical authorization is bound to the frozen Creator source context"
+    "current_physical_candidate_includes_bundle": false,
+    "next_media_context_must_bind_signed_ai_bundle": true,
+    "reason": "Ordax Intelligence is an MVP system capability; the inference backend ships by default but remains non-boot-critical"
   },
   "runtime": {
     "engine_boundary": "OpenAI-compatible loopback HTTP",
@@ -26,20 +29,23 @@
     "model_default_candidate": "Qwen3.5-0.8B-Q4_0",
     "model_license_candidate": "Apache-2.0",
     "exact_model_artifact_pinned": true,
-    "exact_engine_artifact_pinned": false,
+    "exact_engine_source_pinned": true,
+    "exact_engine_binary_pinned": false,
     "source_lock": "system/services/local-ai/source-lock.json",
-    "artifact_activation_gate": "signed-component-manifest-with-sha256-size-license-and-source"
+    "artifact_activation_gate": "signed-ai-bundle-with-sha256-size-license-source-and-runtime-health"
   },
   "storage": {
-    "component_root": "/.ordax/components/local-ai",
-    "engine_root": "/.ordax/components/local-ai/runtime",
-    "model_root": "/.ordax/components/local-ai/models",
+    "component_root": "/var/lib/ordax/components/local-ai-service",
+    "engine_root": "/var/lib/ordax/components/local-ai-service/runtime",
+    "model_root": "/var/lib/ordax/components/local-ai-service/models",
     "user_data_root": "/var/lib/ordax/local-ai",
     "model_must_not_live_in_system_erofs": true,
-    "removal_preserves_user_files": true
+    "model_and_engine_separate_from_user_data": true,
+    "replacement_preserves_user_files": true
   },
   "migration": {
-    "stable_service_contract": "ordax.local-ai/1",
+    "stable_inference_contract": "ordax.local-ai/1",
+    "stable_intelligence_contract": "ordax.intelligence/1",
     "provider_specific_ui_allowed": false,
     "model_id_persisted_separately_from_engine_id": true,
     "engine_swap_requires_surface_changes": false,
@@ -48,7 +54,8 @@
       "llama.cpp",
       "OpenVINO",
       "other-local-provider"
-    ]
+    ],
+    "future_distribution_mode": "signed-component-slot-after-independent-activation-is-proven"
   },
   "privacy": {
     "prompts_local_by_default": true,
@@ -58,10 +65,12 @@
     "telemetry_prompt_content_allowed": false
   },
   "mvp_policy": {
-    "recommended": true,
-    "mandatory": false,
+    "installed_by_default": true,
+    "mandatory_in_public_mvp_media": true,
     "small_model_first": true,
     "hardware_probe_before_start": true,
-    "failure_must_not_block_surface": true
+    "failure_must_not_block_boot": true,
+    "failure_must_not_block_surface": true,
+    "assistant_application_required": false
   }
 }
