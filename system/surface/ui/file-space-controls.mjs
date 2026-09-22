@@ -853,6 +853,7 @@ export function mountFileSpaceControls(
         importerAvailable: Boolean(notesImporterPort),
         busy: notesImportPending,
         selected,
+        translate: t,
       });
       if (notesAction.visible) {
         createNote = node(documentObject, "button", "ordax-files-action", notesAction.label);
@@ -1897,7 +1898,7 @@ export function mountFileSpaceControls(
     message = null;
     replaceView();
     try {
-      const outcome = await importSelectedFileToNotes(notesImporterPort, source);
+      const outcome = await importSelectedFileToNotes(notesImporterPort, source, t);
       if (destroyed) return;
       message = outcome.presentation.text;
       if (outcome.presentation.openNotes && activationPort) {
