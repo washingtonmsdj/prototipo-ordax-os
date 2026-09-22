@@ -1,0 +1,75 @@
+.ordax-local-session-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: color-mix(in srgb, var(--ordax-surface, #efede6) 92%, #000 8%);
+}
+
+.ordax-local-session-lock-card {
+  width: min(440px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 30px;
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  border-radius: 24px;
+  background: var(--ordax-panel, #f8f6ef);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.16);
+}
+
+.ordax-local-session-lock-brand {
+  font-size: 0.86rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.68;
+}
+
+.ordax-local-session-lock-card h1,
+.ordax-local-session-lock-card p {
+  margin: 0;
+}
+
+.ordax-local-session-lock-card > p {
+  line-height: 1.55;
+  opacity: 0.78;
+}
+
+.ordax-local-session-lock-form {
+  display: grid;
+  gap: 12px;
+}
+
+.ordax-local-session-lock-form label {
+  display: grid;
+  gap: 8px;
+  font-weight: 650;
+}
+
+.ordax-local-session-lock-form input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.ordax-local-session-lock-form button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 16px;
+  background: currentColor;
+  color: var(--ordax-panel, #f8f6ef);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ordax-local-session-lock-status {
+  min-height: 1.3em;
+  font-size: 0.86rem;
+}
