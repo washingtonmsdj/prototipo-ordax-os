@@ -38,14 +38,14 @@ test("first-run completion supports local-only and identity modes", () => {
 });
 
 test("first-run accepts MVP locales and rejects unsupported locale, timezone and incomplete account persistence", () => {
-  for (const locale of ["pt-BR", "en-US", "es-419", "fr-FR"]) {
+  for (const locale of ["pt-BR", "en-US", "es-419", "fr-FR", "de-DE"]) {
     assert.equal(
       completeFirstRunState({ locale, timeZone: "America/Bahia", accountMode: "local-only" }).locale,
       locale,
     );
   }
   assert.throws(
-    () => completeFirstRunState({ locale: "de-DE", timeZone: "America/Bahia", accountMode: "local-only" }),
+    () => completeFirstRunState({ locale: "ja-JP", timeZone: "America/Bahia", accountMode: "local-only" }),
     TypeError,
   );
   assert.throws(
@@ -70,6 +70,7 @@ test("regional preferences are canonical preference definitions", () => {
   assert.equal(regionalLocalePreference.validate("en-US"), "en-US");
   assert.equal(regionalLocalePreference.validate("es-419"), "es-419");
   assert.equal(regionalLocalePreference.validate("fr-FR"), "fr-FR");
+  assert.equal(regionalLocalePreference.validate("ja-JP"), "de-DE");
   assert.equal(regionalTimeZonePreference.id, REGIONAL_TIME_ZONE_PREFERENCE_ID);
   assert.equal(regionalTimeZonePreference.validate("America/Bahia"), "America/Bahia");
   assert.throws(() => regionalLocalePreference.validate("de-DE"), TypeError);
