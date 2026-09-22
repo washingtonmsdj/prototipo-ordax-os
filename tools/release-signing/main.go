@@ -26,6 +26,7 @@ const (
 	manifestSchema   = "prototype-ordax.release-manifest/1"
 	manifestSchemaV2 = "prototype-ordax.release-manifest/2"
 	manifestSchemaV3 = "prototype-ordax.release-manifest/3"
+	manifestSchemaV4 = "prototype-ordax.release-manifest/4"
 	trustSchema      = "prototype-ordax.release-trust/1"
 	defaultRepo    = "washingtonmsdj/prototipo-ordax-os"
 	maxManifest    = 512 << 10
@@ -339,6 +340,22 @@ func strictManifest(data []byte, expectedRepository string) (Manifest, error) {
 		}
 		if manifest.Artifacts[1].Name != "native-surface-runtime.erofs" || manifest.Artifacts[1].Role != "surface-runtime" {
 			return Manifest{}, errors.New("release-manifest/3 second artifact must be native-surface-runtime.erofs with role=surface-runtime")
+		}
+	case manifestSchemaV4:
+		if len(manifest.Artifacts) != 3 {
+			return Manifest{}, errors.New("release-manifest/4 requires exactly system.erofs, native-surface-runtime.erofs and local-ai-runtime.erofs")
+		}
+		if manifest.ProductMode != "usb" || manifest.StorageProfile != "portable-usb-v2" || manifest.RuntimeFormat != "erofs" {
+			return Manifest{}, errors.New("release-manifest/4 requires usb portable-usb-v2 erofs identity")
+		}
+		if manifest.Artifacts[0].Name != "system.erofs" || manifest.Artifacts[0].Role != "system-image" {
+			return Manifest{}, errors.New("release-manifest/4 first artifact must be system.erofs with role=system-image")
+		}
+		if manifest.Artifacts[1].Name != "native-surface-runtime.erofs" || manifest.Artifacts[1].Role != "surface-runtime" {
+			return Manifest{}, errors.New("release-manifest/4 second artifact must be native-surface-runtime.erofs with role=surface-runtime")
+		}
+		if manifest.Artifacts[2].Name != "local-ai-runtime.erofs" || manifest.Artifacts[2].Role != "local-ai-runtime" {
+			return Manifest{}, errors.New("release-manifest/4 third artifact must be local-ai-runtime.erofs with role=local-ai-runtime")
 		}
 	default:
 		return Manifest{}, errors.New("unsupported release manifest schema")
