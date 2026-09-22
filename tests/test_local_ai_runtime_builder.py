@@ -21,6 +21,7 @@ class LocalAiRuntimeBuilderTests(unittest.TestCase):
         self.assertEqual(lock["engine"]["build_targets"], ["llama-server"])
         self.assertEqual(lock["model"]["sha256"], "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf")
         self.assertEqual(lock["model"]["size_bytes"], 563036064)
+        self.assertEqual(lock["model"]["license_text_path"], "third_party/licenses/Apache-2.0.txt")
         self.assertEqual(
             lock["runtime_security"],
             {
