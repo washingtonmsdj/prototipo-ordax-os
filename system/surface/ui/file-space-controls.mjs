@@ -994,13 +994,13 @@ export function mountFileSpaceControls(
 
   const renderRecentEntries = (container) => {
     const list = node(documentObject, "div", "ordax-files-list");
-    list.setAttribute("aria-label", "Arquivos recentes");
+    list.setAttribute("aria-label", t("files.recents.aria"));
     const header = node(documentObject, "div", "ordax-files-list-header");
     header.append(
-      node(documentObject, "span", "", "Nome"),
-      node(documentObject, "span", "", "Tipo"),
-      node(documentObject, "span", "", "Local"),
-      node(documentObject, "span", "", "Aberto"),
+      node(documentObject, "span", "", t("files.column.name")),
+      node(documentObject, "span", "", t("files.column.type")),
+      node(documentObject, "span", "", t("files.column.location")),
+      node(documentObject, "span", "", t("files.column.opened")),
     );
     list.append(header);
 
@@ -1012,7 +1012,7 @@ export function mountFileSpaceControls(
           documentObject,
           "div",
           "ordax-files-empty",
-          "Nenhum arquivo foi aberto recentemente pelo OrdaX.",
+          t("files.recents.empty"),
         ),
       );
       container.append(list);
@@ -1024,7 +1024,7 @@ export function mountFileSpaceControls(
           documentObject,
           "div",
           "ordax-files-empty",
-          "Nenhum arquivo recente corresponde à busca.",
+          t("files.recents.emptySearch"),
         ),
       );
       container.append(list);
@@ -1041,7 +1041,7 @@ export function mountFileSpaceControls(
       row.setAttribute("aria-pressed", String(selected));
       row.setAttribute(
         "aria-label",
-        selected ? `${entry.name}, arquivo recente, selecionado` : `${entry.name}, arquivo recente`,
+        t(selected ? "files.recents.rowSelected" : "files.recents.row", { name: entry.name }),
       );
 
       const nameCell = node(documentObject, "span", "ordax-file-name");
@@ -1051,7 +1051,7 @@ export function mountFileSpaceControls(
       nameCell.append(icon, node(documentObject, "span", "", entry.name));
       row.append(
         nameCell,
-        node(documentObject, "span", "ordax-file-meta", "Arquivo"),
+        node(documentObject, "span", "ordax-file-meta", t("files.kind.file")),
         node(documentObject, "span", "ordax-file-meta", parentPath(entry.path)),
         node(documentObject, "span", "ordax-file-meta", formatModifiedAt(entry.openedAt, locale())),
       );
@@ -1064,17 +1064,17 @@ export function mountFileSpaceControls(
     const selected = selectedRecentEntry();
     if (!selected) return;
     const details = node(documentObject, "section", "ordax-files-details");
-    details.setAttribute("aria-label", "Detalhes do arquivo recente selecionado");
+    details.setAttribute("aria-label", t("files.recents.detailsAria"));
     const summary = node(documentObject, "div", "ordax-files-details-summary");
     summary.append(
       node(documentObject, "strong", "ordax-files-details-title", selected.name),
-      node(documentObject, "span", "ordax-files-details-meta", "Arquivo aberto pelo OrdaX"),
+      node(documentObject, "span", "ordax-files-details-meta", t("files.recents.openedBy")),
       node(documentObject, "span", "ordax-files-details-path", selected.path),
       node(
         documentObject,
         "span",
         "ordax-files-details-path",
-        `Aberto: ${formatModifiedAt(selected.openedAt, locale())}`,
+        t("files.recents.openedAt", { date: formatModifiedAt(selected.openedAt, locale()) }),
       ),
     );
     const actions = node(documentObject, "div", "ordax-files-details-actions");
@@ -1082,16 +1082,16 @@ export function mountFileSpaceControls(
       documentObject,
       "button",
       "ordax-files-action ordax-files-action-primary",
-      "Abrir",
+      t("files.recents.open"),
     );
     open.type = "button";
     open.dataset.fileRecentOpen = "";
     open.disabled = previewPending;
-    const reveal = node(documentObject, "button", "ordax-files-action", "Mostrar na pasta");
+    const reveal = node(documentObject, "button", "ordax-files-action", t("files.recents.reveal"));
     reveal.type = "button";
     reveal.dataset.fileRecentReveal = "";
     reveal.disabled = pending || previewPending;
-    const remove = node(documentObject, "button", "ordax-files-action", "Remover da lista");
+    const remove = node(documentObject, "button", "ordax-files-action", t("files.recents.remove"));
     remove.type = "button";
     remove.dataset.fileRecentRemove = "";
     remove.disabled = previewPending;
@@ -1103,7 +1103,7 @@ export function mountFileSpaceControls(
   const renderRecentContent = (content) => {
     const toolbar = node(documentObject, "header", "ordax-files-toolbar");
     const title = node(documentObject, "div", "ordax-files-breadcrumb");
-    title.append(node(documentObject, "strong", "", "Recentes"));
+    title.append(node(documentObject, "strong", "", t("files.location.recents")));
 
     const search = node(documentObject, "div", "ordax-files-search");
     const searchInput = node(documentObject, "input", "ordax-files-search-input");
@@ -1111,20 +1111,20 @@ export function mountFileSpaceControls(
     searchInput.maxLength = 120;
     searchInput.autocomplete = "off";
     searchInput.spellcheck = false;
-    searchInput.placeholder = "Buscar nos recentes";
+    searchInput.placeholder = t("files.search.recents.placeholder");
     searchInput.value = recentSearchQuery;
     searchInput.dataset.fileRecentSearch = "";
-    searchInput.setAttribute("aria-label", "Buscar nos arquivos recentes");
+    searchInput.setAttribute("aria-label", t("files.search.recents.aria"));
     search.append(searchInput);
     if (recentSearchQuery) {
-      const clearSearch = node(documentObject, "button", "ordax-files-search-clear", "Limpar");
+      const clearSearch = node(documentObject, "button", "ordax-files-search-clear", t("files.action.clear"));
       clearSearch.type = "button";
       clearSearch.dataset.fileRecentSearchClear = "";
       search.append(clearSearch);
     }
 
     const actions = node(documentObject, "div", "ordax-files-actions");
-    const clearHistory = node(documentObject, "button", "ordax-files-action", "Limpar histórico");
+    const clearHistory = node(documentObject, "button", "ordax-files-action", t("files.recents.clearHistory"));
     clearHistory.type = "button";
     clearHistory.dataset.fileRecentClear = "";
     clearHistory.disabled = (recentSnapshot?.entries.length ?? 0) === 0 || previewPending;
@@ -1137,7 +1137,14 @@ export function mountFileSpaceControls(
       documentObject,
       "div",
       "ordax-files-status",
-      `${recentSearchQuery ? `${visibleRecentEntries().length} de ` : ""}${allEntries.length} ${allEntries.length === 1 ? "arquivo" : "arquivos"} · ${recentSnapshot?.persistence === "device" ? "histórico salvo neste dispositivo" : "histórico somente nesta sessão"}`,
+      t("files.recents.status", {
+        prefix: recentSearchQuery ? `${visibleRecentEntries().length} / ` : "",
+        count: allEntries.length,
+        unit: allEntries.length === 1 ? t("files.recents.file") : t("files.recents.files"),
+        persistence: recentSnapshot?.persistence === "device"
+          ? t("files.recents.persisted")
+          : t("files.recents.session"),
+      }),
     );
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
@@ -1151,7 +1158,7 @@ export function mountFileSpaceControls(
         documentObject,
         "p",
         "ordax-files-boundary",
-        "Recentes registra somente arquivos abertos pelo OrdaX. Remover ou limpar este histórico não apaga arquivos.",
+        t("files.recents.boundary"),
       ),
     );
   };
