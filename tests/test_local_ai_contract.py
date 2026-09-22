@@ -36,7 +36,11 @@ class LocalAiContractTests(unittest.TestCase):
         self.assertEqual(lock["model"]["sha256"], "57d1997790d1744fba5b40a7317df71ea5e2acee28c47e78f0cce39c0703f8cf")
         self.assertEqual(lock["model"]["size_bytes"], 563036064)
         self.assertFalse(lock["distribution"]["model_committed_to_git"])
-        self.assertTrue(lock["distribution"]["signed_component_required"])
+        self.assertTrue(lock["distribution"]["signed_release_artifact_required"])
+        self.assertEqual(
+            lock["distribution"]["initial_release_schema_target"],
+            "prototype-ordax.release-manifest/4",
+        )
 
     def test_surface_boundary_is_provider_neutral(self):
         port = PORT.read_text(encoding="utf-8")
