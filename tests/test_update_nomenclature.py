@@ -90,8 +90,8 @@ class UpdateNomenclatureTests(unittest.TestCase):
         self.assertIn('"Versão do produto"', overview)
         self.assertIn("assertComponentManager", overview)
         self.assertIn('"Versões e isolamento"', overview)
-        self.assertIn('"Distribuição conjunta"', overview)
-        self.assertIn('"Slot independente"', overview)
+        self.assertIn('"system.updates.component.release.bundled"', overview)
+        self.assertIn('"system.updates.component.release.componentSlot"', overview)
         self.assertIn("v1.0 permanece reservado para o produto estável", overview)
 
     def test_surface_uses_delivery_language_not_fake_component_versions(self):
@@ -103,8 +103,8 @@ class UpdateNomenclatureTests(unittest.TestCase):
         self.assertIn('t("system.overview.card.delivery")', overview)
         self.assertIn("Identidade da entrega", overview)
         self.assertIn("não é número de PR nem versão comercial do OrdaX", overview)
-        self.assertIn('"Distribuição conjunta"', overview)
-        self.assertIn('"Base A/B"', overview)
+        self.assertIn('"system.updates.component.release.bundled"', overview)
+        self.assertIn('"system.updates.component.release.baseAb"', overview)
         self.assertIn("rollback individual permanece bloqueado", overview)
         self.assertNotIn("Versão global", overview)
         self.assertNotIn("Incluído nesta entrega", overview)
