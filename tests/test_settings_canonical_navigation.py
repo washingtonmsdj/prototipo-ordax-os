@@ -9,6 +9,7 @@ NATIVE = ROOT / "system" / "composition" / "native" / "main.mjs"
 WEB = ROOT / "system" / "composition" / "web" / "main.mjs"
 APP = ROOT / "system" / "apps" / "settings" / "app.mjs"
 SETTINGS_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "settings.mjs"
+NOTIFICATIONS_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "notifications.mjs"
 NETWORK_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "network.mjs"
 
 
@@ -55,12 +56,23 @@ class SettingsCanonicalNavigationTests(unittest.TestCase):
     def test_notifications_section_reuses_notification_owner(self):
         controls = SETTINGS.read_text(encoding="utf-8")
         css = SETTINGS_CSS.read_text(encoding="utf-8")
+        settings_i18n = SETTINGS_I18N.read_text(encoding="utf-8")
+        notifications_i18n = NOTIFICATIONS_I18N.read_text(encoding="utf-8")
         self.assertIn("assertNotificationsPort", controls)
         self.assertIn("listNotificationSources", controls)
         self.assertIn("notificationPort.setDoNotDisturb", controls)
         self.assertIn("notificationPort.setSourceEnabled", controls)
         self.assertIn("notificationPort?.subscribe", controls)
         self.assertIn("data-settings-notification-source", controls)
+        self.assertIn("notificationSourceLabel(source.id, t)", controls)
+        self.assertIn("notificationSourceDescription(source.id, t)", controls)
+        self.assertIn('t("settings.notifications.dnd.title")', controls)
+        self.assertIn('t("settings.notifications.sources.title")', controls)
+        self.assertIn('"settings.notifications.dnd.title": "Do Not Disturb"', settings_i18n)
+        self.assertIn('"notifications.source.systemUpdates.description": "Notices for applied updates', notifications_i18n)
+        self.assertNotIn('"Não perturbe"', controls)
+        self.assertNotIn('"Fontes que realmente notificam"', controls)
+        self.assertNotIn('"Preferências de notificações salvas neste dispositivo."', controls)
         self.assertIn(".ordax-settings-notification-row", css)
         self.assertNotIn("localStorage", controls)
 
