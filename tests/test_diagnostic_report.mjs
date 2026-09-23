@@ -87,6 +87,32 @@ test("reviewable report v2 includes validated journal state and incident correla
   assert.ok(Object.isFrozen(report.journal.events));
 });
 
+test("diagnostic report preserves bounded recovery evidence from the update owner", () => {
+  const knownGood = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const candidate = "cccccccccccccccccccccccccccccccccccccccc";
+  const rejected = "dddddddddddddddddddddddddddddddddddddddd";
+  const report = createDiagnosticReport(reviewInput({
+    update: updateSnapshot({
+      recoveryState: "available",
+      recoverySource: "portable-state",
+      currentReleaseSha: SOURCE_SHA,
+      knownGoodReleaseSha: knownGood,
+      candidateReleaseSha: candidate,
+      recoveryRejectedSha: rejected,
+      rollbackEligible: true,
+    }),
+  }));
+
+  assert.equal(report.update.recoveryState, "available");
+  assert.equal(report.update.recoverySource, "portable-state");
+  assert.equal(report.update.currentReleaseSha, SOURCE_SHA);
+  assert.equal(report.update.knownGoodReleaseSha, knownGood);
+  assert.equal(report.update.candidateReleaseSha, candidate);
+  assert.equal(report.update.recoveryRejectedSha, rejected);
+  assert.equal(report.update.rollbackEligible, true);
+  assert.equal("rollbackAction" in report.update, false);
+});
+
 test("document is rebuilt from redacted allowlisted data and never serializes raw secrets", () => {
   const document = createDiagnosticReportDocument(reviewInput());
 
