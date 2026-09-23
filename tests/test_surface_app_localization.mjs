@@ -122,6 +122,8 @@ test("English catalog contains primary Files, Settings and System entries", asyn
   assert.match(filesCatalog, /"files\.recents\.clearHistory": "Clear history"/);
   assert.match(filesCatalog, /"files\.trash\.restore": "Restore"/);
   assert.match(settingsCatalog, /"settings\.section\.regional": "Language and region"/);
+  assert.match(settingsCatalog, /"settings\.notifications\.dnd\.title": "Do Not Disturb"/);
+  assert.match(settingsCatalog, /"settings\.notifications\.sources\.title": "Sources that actually notify"/);
   assert.match(systemCatalog, /"system\.section\.diagnostics": "Diagnostics"/);
 });
 
