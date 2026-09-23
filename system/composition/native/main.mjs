@@ -317,7 +317,7 @@ async function start() {
   let batteryTrayControls = null;
   if (powerStatus) {
     try {
-      batteryTrayControls = mountBatteryTrayControls(root, powerStatus);
+      batteryTrayControls = mountBatteryTrayControls(root, powerStatus, surface);
     } catch (error) {
       reportClientDiagnostic("battery-tray-status", error);
     }
@@ -325,7 +325,7 @@ async function start() {
   let batteryQuickPanel = null;
   if (powerStatus) {
     try {
-      batteryQuickPanel = mountBatteryQuickPanel(root, powerStatus);
+      batteryQuickPanel = mountBatteryQuickPanel(root, powerStatus, surface);
     } catch (error) {
       reportClientDiagnostic("battery-quick-panel", error);
     }
