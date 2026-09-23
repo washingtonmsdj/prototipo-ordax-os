@@ -22,8 +22,8 @@ import {
   validateSurfaceSnapshot,
 } from "../../contracts/surface-host.mjs";
 import {
-  networkManagementActionMessage,
-  networkManagementFailureMessage,
+  networkManagementActionMessageId,
+  networkManagementFailureMessageId,
   runNetworkManagementAction,
 } from "../../services/network/management-runtime.mjs";
 import {
@@ -58,9 +58,9 @@ function node(documentObject, tag, className, text) {
   return element;
 }
 
-function formatReceivedAt(value) {
-  if (!Number.isFinite(value)) return "horário desconhecido";
-  return new Intl.DateTimeFormat("pt-BR", {
+function formatReceivedAt(value, locale) {
+  if (!Number.isFinite(value)) return null;
+  return new Intl.DateTimeFormat(locale, {
     timeZone: "America/Bahia",
     hour: "2-digit",
     minute: "2-digit",
@@ -69,37 +69,105 @@ function formatReceivedAt(value) {
   }).format(new Date(value));
 }
 
-function optionDescription(preferenceId, value) {
-  if (preferenceId === "appearance.theme") {
-    return value === "dark"
-      ? "Contraste escuro para ambientes de pouca luz."
-      : "Superfície clara e neutra como padrão do OrdaX.";
-  }
-  if (preferenceId === "accessibility.contrast") {
-    return value === "high"
-      ? "Reforça separadores, texto secundário e foco da Surface."
-      : "Usa o contraste padrão do tema escolhido.";
-  }
-  if (preferenceId === "accessibility.motion") {
-    return value === "reduced"
-      ? "Remove animações e transições não essenciais."
-      : "Mantém movimento quando a preferência do ambiente também permite.";
-  }
-  if (preferenceId === "accessibility.text-scale") {
-    if (value === "large") return "Aumenta a tipografia da Surface mantendo o layout responsivo.";
-    if (value === "extra-large") return "Amplia ainda mais a tipografia e preserva rolagem nas áreas de conteúdo.";
-    return "Mantém a escala tipográfica padrão e respeita o zoom do navegador.";
-  }
-  if (preferenceId === "regional.locale") {
-    return value === "pt-BR"
-      ? "Português (Brasil) é o idioma completo desta versão."
-      : String(value);
-  }
-  if (preferenceId === "regional.time-zone") {
-    return `Usa ${value} para relógio e datas da Surface.`;
-  }
-  return String(value);
-}
+const PREFERENCE_PRESENTATION_IDS = Object.freeze({
+  "appearance.theme": Object.freeze({
+    label: "settings.preference.appearance.label",
+    title: "settings.preference.appearance.title",
+    description: "settings.preference.appearance.description",
+    options: Object.freeze({
+      light: Object.freeze({
+        label: "settings.preference.appearance.option.light",
+        description: "settings.preference.appearance.option.light.description",
+      }),
+      dark: Object.freeze({
+        label: "settings.preference.appearance.option.dark",
+        description: "settings.preference.appearance.option.dark.description",
+      }),
+    }),
+  }),
+  "accessibility.contrast": Object.freeze({
+    label: "settings.preference.accessibility.label",
+    title: "settings.preference.contrast.title",
+    description: "settings.preference.contrast.description",
+    options: Object.freeze({
+      standard: Object.freeze({
+        label: "settings.preference.contrast.option.standard",
+        description: "settings.preference.contrast.option.standard.description",
+      }),
+      high: Object.freeze({
+        label: "settings.preference.contrast.option.high",
+        description: "settings.preference.contrast.option.high.description",
+      }),
+    }),
+  }),
+  "accessibility.motion": Object.freeze({
+    label: "settings.preference.accessibility.label",
+    title: "settings.preference.motion.title",
+    description: "settings.preference.motion.description",
+    options: Object.freeze({
+      standard: Object.freeze({
+        label: "settings.preference.motion.option.standard",
+        description: "settings.preference.motion.option.standard.description",
+      }),
+      reduced: Object.freeze({
+        label: "settings.preference.motion.option.reduced",
+        description: "settings.preference.motion.option.reduced.description",
+      }),
+    }),
+  }),
+  "accessibility.text-scale": Object.freeze({
+    label: "settings.preference.accessibility.label",
+    title: "settings.preference.textScale.title",
+    description: "settings.preference.textScale.description",
+    options: Object.freeze({
+      standard: Object.freeze({
+        label: "settings.preference.textScale.option.standard",
+        description: "settings.preference.textScale.option.standard.description",
+      }),
+      large: Object.freeze({
+        label: "settings.preference.textScale.option.large",
+        description: "settings.preference.textScale.option.large.description",
+      }),
+      "extra-large": Object.freeze({
+        label: "settings.preference.textScale.option.extraLarge",
+        description: "settings.preference.textScale.option.extraLarge.description",
+      }),
+    }),
+  }),
+  "regional.locale": Object.freeze({
+    label: "settings.preference.regional.label",
+    title: "settings.preference.locale.title",
+    description: "settings.preference.locale.description",
+  }),
+  "regional.time-zone": Object.freeze({
+    label: "settings.preference.regional.label",
+    title: "settings.preference.timeZone.title",
+    description: "settings.preference.timeZone.description",
+  }),
+});
+
+const KEYBOARD_LAYOUT_PRESENTATION_IDS = Object.freeze({
+  "br-abnt2": Object.freeze({
+    label: "settings.keyboard.option.brAbnt2.label",
+    description: "settings.keyboard.option.brAbnt2.description",
+  }),
+  us: Object.freeze({
+    label: "settings.keyboard.option.us.label",
+    description: "settings.keyboard.option.us.description",
+  }),
+});
+
+const NETWORK_CONNECTIVITY_MESSAGE_IDS = Object.freeze({
+  online: "settings.network.connectivity.online",
+  offline: "settings.network.connectivity.offline",
+  unknown: "settings.network.connectivity.unknown",
+});
+
+const NETWORK_INTERFACE_STATE_MESSAGE_IDS = Object.freeze({
+  connected: "settings.network.interface.state.connected",
+  disconnected: "settings.network.interface.state.disconnected",
+  unknown: "settings.network.interface.state.unknown",
+});
 
 export function mountSettingsOverviewControls(
   root,
@@ -142,7 +210,7 @@ export function mountSettingsOverviewControls(
   let keyboardLayoutSnapshot = null;
   let keyboardLayoutReadFailed = false;
   let keyboardLayoutPending = false;
-  let keyboardLayoutMessage = "";
+  let keyboardLayoutMessageId = null;
   let keyboardLayoutOrdinal = 0;
   let localSessionSnapshot = localSessionPort === null
     ? null
@@ -152,7 +220,7 @@ export function mountSettingsOverviewControls(
   let networkManagementReadFailed = false;
   let networkManagementLastSuccessAt = null;
   let networkManagementPending = false;
-  let networkManagementMessage = "";
+  let networkManagementMessageId = null;
   let networkReadOrdinal = 0;
   let networkManagementReadOrdinal = 0;
   let networkActionOrdinal = 0;
