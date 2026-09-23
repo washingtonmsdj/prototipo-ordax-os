@@ -50,6 +50,10 @@ activate a release or authorize physical media. The canonical private key is int
 only when the operator later runs `4-Sign-Initial-OrdaXRelease.ps1` from that reviewed
 handoff directory.
 
+After signing, the same handoff directory also carries the official Windows release-acquisition agent and `5-Verify-PortableV4-SignedHandoff.ps1`. That step calls `ordax-release-agent verify-envelope` against the canonical public trust, proves that the envelope payload is byte-identical to `release-manifest.json`, and re-hashes/re-sizes `system.erofs`, `native-surface-runtime.erofs` and `local-ai-runtime.erofs` against the signed manifest.
+
+This post-sign check is deliberately **verify-only**: it does not publish the release, contact an artifact channel, call `materialize-portable-v4`, activate a release, select a USB target or authorize/write physical media. Canonical Portable materialization remains a later release-agent step against the reviewed HTTPS artifact channel.
+
 ## Private-key boundary
 
 The private key:
