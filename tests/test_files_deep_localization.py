@@ -55,6 +55,14 @@ class FilesDeepLocalizationTests(unittest.TestCase):
             'setMessage("files.project.renameFailed")',
             'setMessage("files.project.folderUnavailable")',
             "setMessage(destination.reasonMessageId)",
+            'setMessage("files.trash.openFailed")',
+            'setMessage("files.import.imported"',
+            'setMessage("files.trash.moved"',
+            'setMessage("files.export.started"',
+            'setMessage("files.copy.created"',
+            'setMessage("files.rename.renamed"',
+            'setMessage("files.directory.created"',
+            "setMessage(outcome.presentation.messageId, outcome.presentation.messageParams)",
         ):
             self.assertIn(marker, controls)
 
@@ -66,6 +74,10 @@ class FilesDeepLocalizationTests(unittest.TestCase):
             ('"files.preview.close": "Fechar"', '"files.preview.close": "Close"'),
             ('"files.project.added": "Projeto adicionado.', '"files.project.added": "Project added.'),
             ('"files.project.lastFileForgetFailed": "Não foi possível esquecer a referência do último arquivo."', '"files.project.lastFileForgetFailed": "The last-file reference could not be forgotten."'),
+            ('"files.trash.moved": "“{name}” foi movido para a Lixeira e pode ser restaurado."', '"files.trash.moved": "“{name}” was moved to Trash and can be restored."'),
+            ('"files.import.failed": "Não foi possível importar este arquivo. Nenhum arquivo parcial foi mantido."', '"files.import.failed": "This file could not be imported. No partial file was kept."'),
+            ('"files.copy.suffix": "cópia"', '"files.copy.suffix": "copy"'),
+            ('"files.notes.action.create": "Criar nota"', '"files.notes.action.create": "Create note"'),
         )
         for source, english in pairs:
             self.assertIn(source, catalog)
