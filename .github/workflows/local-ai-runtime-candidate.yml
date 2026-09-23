@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'bootstrap/local-ai-runtime/**'
+      - 'bootstrap/release-acquisition/main_test.go'
       - 'system/services/local-ai/source-lock.json'
       - 'docs/contracts/local-ai.json'
       - 'tests/test_local_ai_contract.py'
