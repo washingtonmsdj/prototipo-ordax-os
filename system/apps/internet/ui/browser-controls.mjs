@@ -74,16 +74,16 @@ function tabMatchesQuery(tab, query, locale = "pt-BR") {
 
 function createSidebar(documentObject, t) {
   const sidebar = node(documentObject, "aside", "ordax-internet-sidebar");
-  sidebar.setAttribute("aria-label", "Organização da navegação");
+  sidebar.setAttribute("aria-label", t("internet.sidebar.aria"));
   const workspace = node(documentObject, "button", "ordax-internet-workspace");
   workspace.type = "button";
   workspace.disabled = true;
-  workspace.title = "A vinculação ao espaço ativo será conectada por um contrato próprio.";
+  workspace.title = t("internet.workspace.pending");
   workspace.append(node(documentObject, "span", "ordax-internet-workspace-mark", ""));
-  workspace.append(node(documentObject, "strong", "", "Espaço atual"));
+  workspace.append(node(documentObject, "strong", "", t("internet.workspace.current")));
   workspace.append(node(documentObject, "span", "", "⌄"));
 
-  const newTab = node(documentObject, "button", "ordax-internet-new-tab", "+  Nova aba");
+  const newTab = node(documentObject, "button", "ordax-internet-new-tab", `+  ${t("internet.action.newTab")}`);
   newTab.type = "button";
   newTab.dataset.browserNewTab = "";
 
@@ -93,12 +93,12 @@ function createSidebar(documentObject, t) {
   searchInput.type = "search";
   searchInput.autocomplete = "off";
   searchInput.spellcheck = false;
-  searchInput.placeholder = "Buscar abas…";
-  searchInput.setAttribute("aria-label", "Buscar abas abertas");
+  searchInput.placeholder = t("internet.search.tabs.placeholder");
+  searchInput.setAttribute("aria-label", t("internet.search.tabs.aria"));
   searchInput.dataset.browserTabSearch = "";
   search.append(searchInput);
 
-  const label = node(documentObject, "span", "ordax-internet-section-label", "ABAS DO ESPAÇO");
+  const label = node(documentObject, "span", "ordax-internet-section-label", t("internet.tabs.heading"));
   label.id = "ordax-internet-tabs-label";
   const tabs = node(documentObject, "div", "ordax-internet-tabs");
   tabs.dataset.browserTabs = "";
@@ -107,12 +107,12 @@ function createSidebar(documentObject, t) {
   tabs.setAttribute("aria-orientation", "vertical");
 
   const collections = node(documentObject, "div", "ordax-internet-collections");
-  collections.append(node(documentObject, "span", "ordax-internet-section-label", "COLEÇÕES"));
-  for (const [glyph, title] of [["□", "Coleções do espaço"], ["☆", "Ler depois"]]) {
+  collections.append(node(documentObject, "span", "ordax-internet-section-label", t("internet.collections.heading")));
+  for (const [glyph, title] of [["□", t("internet.collections.space")], ["☆", t("internet.collections.readLater")]]) {
     const row = node(documentObject, "button", "ordax-internet-collection-row");
     row.type = "button";
     row.disabled = true;
-    row.title = "Persistência ainda não conectada.";
+    row.title = t("internet.collections.pending");
     row.append(node(documentObject, "span", "", glyph), node(documentObject, "span", "", title));
     collections.append(row);
   }
@@ -121,7 +121,7 @@ function createSidebar(documentObject, t) {
   favoritesToggle.dataset.browserFavoritesToggle = "";
   favoritesToggle.setAttribute("aria-expanded", "false");
   favoritesToggle.append(node(documentObject, "span", "", "★"));
-  const favoritesLabel = node(documentObject, "span", "", "Favoritos");
+  const favoritesLabel = node(documentObject, "span", "", t("internet.favorites"));
   favoritesLabel.dataset.browserFavoritesLabel = "";
   favoritesToggle.append(favoritesLabel);
   collections.append(favoritesToggle);
@@ -131,13 +131,13 @@ function createSidebar(documentObject, t) {
   collections.append(favoritesList);
 
   const history = node(documentObject, "div", "ordax-internet-history");
-  history.append(node(documentObject, "span", "ordax-internet-section-label", "NAVEGAÇÃO"));
+  history.append(node(documentObject, "span", "ordax-internet-section-label", t("internet.navigation.heading")));
   const historyToggle = node(documentObject, "button", "ordax-internet-collection-row");
   historyToggle.type = "button";
   historyToggle.dataset.browserHistoryToggle = "";
   historyToggle.setAttribute("aria-expanded", "false");
   historyToggle.append(node(documentObject, "span", "", "◷"));
-  const historyLabel = node(documentObject, "span", "", "Histórico");
+  const historyLabel = node(documentObject, "span", "", t("internet.history"));
   historyLabel.dataset.browserHistoryLabel = "";
   historyToggle.append(historyLabel);
   history.append(historyToggle);
@@ -147,7 +147,7 @@ function createSidebar(documentObject, t) {
   history.append(historyList);
 
   const footer = node(documentObject, "div", "ordax-internet-sidebar-footer");
-  footer.append(node(documentObject, "span", "", "◉  Janela privada · em breve"));
+  footer.append(node(documentObject, "span", "", t("internet.privateSoon")));
 
   sidebar.append(workspace, newTab, search, label, tabs, collections, history, footer);
   return sidebar;
@@ -156,11 +156,11 @@ function createSidebar(documentObject, t) {
 function createToolbar(documentObject, t) {
   const toolbar = node(documentObject, "div", "ordax-internet-toolbar");
   toolbar.setAttribute("role", "toolbar");
-  toolbar.setAttribute("aria-label", "Navegação da Internet");
+  toolbar.setAttribute("aria-label", t("internet.toolbar.aria"));
   toolbar.append(
-    iconButton(documentObject, "←", "Voltar", "back"),
-    iconButton(documentObject, "→", "Avançar", "forward"),
-    iconButton(documentObject, "↻", "Recarregar", "reload"),
+    iconButton(documentObject, "←", t("internet.action.back"), "back"),
+    iconButton(documentObject, "→", t("internet.action.forward"), "forward"),
+    iconButton(documentObject, "↻", t("internet.action.reload"), "reload"),
   );
   const form = node(documentObject, "form", "ordax-internet-address-form");
   form.dataset.browserAddressForm = "";
@@ -168,15 +168,15 @@ function createToolbar(documentObject, t) {
   input.type = "text";
   input.autocomplete = "off";
   input.spellcheck = false;
-  input.placeholder = "Digite um endereço";
-  input.setAttribute("aria-label", "Endereço da página");
+  input.placeholder = t("internet.address.placeholder");
+  input.setAttribute("aria-label", t("internet.address.aria"));
   input.dataset.browserAddress = "";
   form.append(node(documentObject, "span", "ordax-internet-site-control", "◈"), input);
-  toolbar.append(form, iconButton(documentObject, "☆", "Adicionar aos favoritos", "bookmark"));
-  const downloads = iconButton(documentObject, "⇩", "Downloads", "downloads");
+  toolbar.append(form, iconButton(documentObject, "☆", t("internet.action.bookmark"), "bookmark"));
+  const downloads = iconButton(documentObject, "⇩", t("internet.action.downloads"), "downloads");
   downloads.disabled = true;
-  downloads.title = "Downloads serão conectados a um contrato de armazenamento próprio.";
-  const more = iconButton(documentObject, "⋮", "Mostrar ou recolher painel do projeto", "more");
+  downloads.title = t("internet.downloads.pending");
+  const more = iconButton(documentObject, "⋮", t("internet.action.projectPanel"), "more");
   more.setAttribute("aria-controls", PROJECT_PANEL_ID);
   more.setAttribute("aria-expanded", "true");
   toolbar.append(downloads, more);
@@ -187,26 +187,26 @@ function createHome(documentObject, supported, reason, t) {
   const home = node(documentObject, "div", "ordax-internet-home");
   home.dataset.browserHome = "";
   home.append(node(documentObject, "span", "ordax-internet-home-mark", "○"));
-  home.append(node(documentObject, "h2", "", "Internet"));
-  home.append(node(documentObject, "p", "", "Navegue sem separar a pesquisa do trabalho que você está construindo."));
+  home.append(node(documentObject, "h2", "", t("internet.home.title")));
+  home.append(node(documentObject, "p", "", t("internet.home.body")));
   if (!supported) {
     const unavailable = node(documentObject, "div", "ordax-internet-unavailable");
-    unavailable.append(node(documentObject, "strong", "", "Navegação integrada não disponível neste host"));
+    unavailable.append(node(documentObject, "strong", "", t("internet.home.unavailable")));
     unavailable.append(node(documentObject, "span", "", reason));
     home.append(unavailable);
   } else {
-    home.append(node(documentObject, "span", "ordax-internet-home-hint", "Use a barra acima para abrir um endereço web."));
+    home.append(node(documentObject, "span", "ordax-internet-home-hint", t("internet.home.hint")));
   }
   const cards = node(documentObject, "div", "ordax-internet-home-links");
   for (const [key, label] of [
-    ["session", "SESSÃO"],
-    ["projects", "PROJETOS"],
-    ["references", "REFERÊNCIAS"],
-    ["favorites", "FAVORITOS"],
-    ["history", "HISTÓRICO"],
+    ["session", t("internet.home.session")],
+    ["projects", t("internet.home.projects")],
+    ["references", t("internet.home.references")],
+    ["favorites", t("internet.home.favorites")],
+    ["history", t("internet.home.history")],
   ]) {
     const card = node(documentObject, "div", "ordax-internet-home-link");
-    const value = node(documentObject, "strong", "", "Verificando…");
+    const value = node(documentObject, "strong", "", t("internet.home.checking"));
     value.dataset.browserHomeStatus = key;
     card.append(node(documentObject, "span", "", label), value);
     cards.append(card);
@@ -218,35 +218,35 @@ function createHome(documentObject, supported, reason, t) {
 function createProjectPanel(documentObject, t) {
   const panel = node(documentObject, "aside", "ordax-internet-project-panel");
   panel.id = PROJECT_PANEL_ID;
-  panel.setAttribute("aria-label", "Contexto do projeto");
+  panel.setAttribute("aria-label", t("internet.project.aria"));
   const header = node(documentObject, "div", "ordax-internet-project-header");
-  header.append(node(documentObject, "h2", "", "Neste projeto"));
+  header.append(node(documentObject, "h2", "", t("internet.project.title")));
   const close = node(documentObject, "button", "ordax-internet-panel-close", "×");
   close.type = "button";
   close.dataset.browserPanelClose = "";
-  close.setAttribute("aria-label", "Recolher painel do projeto");
+  close.setAttribute("aria-label", t("internet.project.collapse"));
   header.append(close);
 
   const intro = node(documentObject, "div", "ordax-internet-project-intro");
-  intro.append(node(documentObject, "span", "ordax-internet-section-label", "PROJETO DESTA SESSÃO"));
-  const contextName = node(documentObject, "strong", "ordax-internet-project-context-name", "Nenhum projeto selecionado");
+  intro.append(node(documentObject, "span", "ordax-internet-section-label", t("internet.project.sessionHeading")));
+  const contextName = node(documentObject, "strong", "ordax-internet-project-context-name", t("internet.project.none"));
   contextName.dataset.browserProjectContextName = "";
-  const contextDetail = node(documentObject, "p", "", "Escolha um projeto já cadastrado em Arquivos. A escolha vale apenas para esta sessão do navegador.");
+  const contextDetail = node(documentObject, "p", "", t("internet.project.choose"));
   contextDetail.dataset.browserProjectContextDetail = "";
   intro.append(contextName, contextDetail);
 
   const projects = node(documentObject, "section", "ordax-internet-project-section");
-  projects.append(node(documentObject, "h3", "", "Projetos disponíveis"));
+  projects.append(node(documentObject, "h3", "", t("internet.project.available")));
   const projectOptions = node(documentObject, "div", "ordax-internet-project-options");
   projectOptions.dataset.browserProjectOptions = "";
   projects.append(projectOptions);
 
   const current = node(documentObject, "section", "ordax-internet-project-section");
-  current.append(node(documentObject, "h3", "", "Página atual"));
+  current.append(node(documentObject, "h3", "", t("internet.project.currentPage")));
   const page = node(documentObject, "div", "ordax-internet-page-reference");
   page.dataset.browserCurrentPage = "";
   current.append(page);
-  const save = node(documentObject, "button", "ordax-internet-save-button", "▱  Salvar no projeto");
+  const save = node(documentObject, "button", "ordax-internet-save-button", `▱  ${t("internet.project.save")}`);
   save.type = "button";
   save.dataset.browserSaveProject = "";
   save.disabled = true;
@@ -257,10 +257,10 @@ function createProjectPanel(documentObject, t) {
   current.append(savedState);
 
   const note = node(documentObject, "section", "ordax-internet-project-section");
-  note.append(node(documentObject, "h3", "", "Sua nota"));
+  note.append(node(documentObject, "h3", "", t("internet.project.yourNote")));
   const textarea = node(documentObject, "textarea", "ordax-internet-note");
   textarea.rows = 3;
-  textarea.placeholder = "Adicione uma observação sobre esta referência";
+  textarea.placeholder = t("internet.project.notePlaceholder");
   textarea.dataset.browserReferenceNote = "";
   textarea.disabled = true;
   textarea.maxLength = 4096;
@@ -269,17 +269,17 @@ function createProjectPanel(documentObject, t) {
   note.append(textarea, noteHint);
 
   const materials = node(documentObject, "section", "ordax-internet-project-section");
-  materials.append(node(documentObject, "h3", "", "Contexto do projeto"));
+  materials.append(node(documentObject, "h3", "", t("internet.project.context")));
   const projectFolder = node(documentObject, "div", "ordax-internet-material-row");
   projectFolder.dataset.browserProjectFolder = "";
   materials.append(projectFolder);
 
   const assistance = node(documentObject, "section", "ordax-internet-assistance");
-  assistance.append(node(documentObject, "h3", "", "✦  Assistência opcional"));
-  const ask = node(documentObject, "button", "ordax-internet-ask-button", "▢  Perguntar sobre esta página");
+  assistance.append(node(documentObject, "h3", "", t("internet.assistance.title")));
+  const ask = node(documentObject, "button", "ordax-internet-ask-button", `▢  ${t("internet.assistance.ask")}`);
   ask.type = "button";
   ask.disabled = true;
-  assistance.append(ask, node(documentObject, "span", "", "Você escolhe o contexto. A integração de IA permanece separada do engine web."));
+  assistance.append(ask, node(documentObject, "span", "", t("internet.assistance.copy")));
 
   panel.append(header, intro, projects, current, note, materials, assistance);
   return panel;
