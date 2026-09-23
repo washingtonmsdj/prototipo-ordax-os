@@ -524,7 +524,11 @@ def build(out_dir, cache_dir):
             or engine_identity["size"] != engine_pin["size_bytes"]
         ):
             raise RuntimeBuildError(
-                "built llama-server differs from exact pinned engine artifact"
+                "built llama-server differs from exact pinned engine artifact: "
+                f"actual_sha256={engine_identity['sha256']} "
+                f"actual_size={engine_identity['size']} "
+                f"expected_sha256={engine_pin['sha256']} "
+                f"expected_size={engine_pin['size_bytes']}"
             )
 
         engine_license = source / "LICENSE"

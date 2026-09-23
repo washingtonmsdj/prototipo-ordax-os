@@ -9,6 +9,7 @@ on:
       - 'bootstrap/kernel/**'
       - 'bootstrap/stable-base/**'
       - 'bootstrap/surface-runtime/**'
+      - 'bootstrap/local-ai-runtime/**'
       - 'bootstrap/initramfs/**'
       - 'bootstrap/portable-v2/**'
       - 'bootstrap/release-acquisition/**'
@@ -40,6 +41,7 @@ on:
       - 'bootstrap/kernel/**'
       - 'bootstrap/stable-base/**'
       - 'bootstrap/surface-runtime/**'
+      - 'bootstrap/local-ai-runtime/**'
       - 'bootstrap/initramfs/**'
       - 'bootstrap/portable-v2/**'
       - 'bootstrap/release-acquisition/**'
@@ -76,7 +78,7 @@ permissions:
 jobs:
   qemu-portable-v2:
     runs-on: ubuntu-24.04
-    timeout-minutes: 210
+    timeout-minutes: 300
     steps:
       - name: Checkout exact source commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -103,8 +105,8 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            gcc-13 make bc perl bison flex openssl libssl-dev libelf-dev \
-            dwarves kmod xz-utils pkg-config musl-tools binutils bzip2 \
+            gcc-13 g++ make bc perl bison flex openssl libssl-dev libelf-dev \
+            dwarves kmod xz-utils pkg-config musl-tools binutils bzip2 cmake git curl \
             e2fsprogs util-linux proot erofs-utils gdisk dosfstools \
             exfatprogs exfat-fuse qemu-system-x86 ovmf \
             meson ninja-build gperf libcap-dev libmount-dev libblkid-dev \
@@ -170,6 +172,21 @@ jobs:
             > "$work/metadata/surface-runtime-verify.json"
           test -s "$work/surface-runtime/native-surface-runtime.erofs"
 
+      - name: Build and verify exact local AI runtime
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-qemu"
+          python bootstrap/local-ai-runtime/build.py build \
+            --cache-dir "$work/local-ai-runtime-cache" \
+            --out-dir "$work/local-ai-runtime" \
+            > "$work/metadata/local-ai-runtime-build.json"
+          python bootstrap/local-ai-runtime/build.py verify \
+            --out-dir "$work/local-ai-runtime" \
+            > "$work/metadata/local-ai-runtime-verify.json"
+          test -s "$work/local-ai-runtime/local-ai-runtime.erofs"
+
       - name: Build exact release agent and bootstrap capsule
         run: |
           set -euo pipefail
@@ -208,7 +225,7 @@ jobs:
             --out-dir "$work/initramfs" \
             > "$work/metadata/initramfs-verify.json"
 
-      - name: Build candidate and previous signed portable releases v3
+      - name: Build candidate v4 with local AI and previous signed portable release v3
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP/portable-v2-qemu"
@@ -226,7 +243,10 @@ jobs:
           runtime_image="$work/surface-runtime/native-surface-runtime.erofs"
           runtime_sha="$(sha256sum "$runtime_image" | awk '{print $1}')"
           runtime_store="$portable/runtimes/sha256/$runtime_sha"
-          mkdir -p "$release" "$previous_release" "$runtime_store"
+          ai_image="$work/local-ai-runtime/local-ai-runtime.erofs"
+          ai_sha="$(sha256sum "$ai_image" | awk '{print $1}')"
+          ai_store="$portable/ai-runtimes/sha256/$ai_sha"
+          mkdir -p "$release" "$previous_release" "$runtime_store" "$ai_store"
 
           (
             cd tools/release-bundle
@@ -253,35 +273,40 @@ jobs:
             > "$work/metadata/release-image.json"
 
           cp "$runtime_image" "$runtime_store/native-surface-runtime.erofs"
+          cp "$ai_image" "$ai_store/local-ai-runtime.erofs"
           printf '%s\n' "$runtime_sha" > "$release/surface-runtime.sha256"
+          printf '%s\n' "$ai_sha" > "$release/local-ai-runtime.sha256"
 
           "$work/bin/release-manifest" \
-            --manifest-schema 3 \
+            --manifest-schema 4 \
             --artifact "$release/system.erofs" \
             --runtime-artifact "$runtime_image" \
+            --local-ai-artifact "$ai_image" \
+            --local-ai-source-lock system/services/local-ai/source-lock.json \
             --source-commit "$commit" \
             --artifact-url "https://example.invalid/releases/$commit/system.erofs" \
             --runtime-artifact-url "https://example.invalid/runtimes/$runtime_sha/native-surface-runtime.erofs" \
+            --local-ai-artifact-url "https://example.invalid/ai-runtimes/$ai_sha/local-ai-runtime.erofs" \
             --out "$release/release-manifest.json"
 
           "$work/bin/release-signing" generate-key \
             --private-key "$work/private.pem" \
             --trust "$work/release-trust.json" \
-            --key-id ci-portable-v3-qemu
+            --key-id ci-portable-v4-qemu
           "$work/bin/release-signing" sign \
             --manifest "$release/release-manifest.json" \
             --private-key "$work/private.pem" \
             --trust "$work/release-trust.json" \
-            --key-id ci-portable-v3-qemu \
+            --key-id ci-portable-v4-qemu \
             --out "$release/release-envelope.json"
           "$work/bin/release-signing" verify-envelope \
             --envelope "$release/release-envelope.json" \
             --trust "$work/release-trust.json"
-          "$work/bin/ordax-release-agent" verify-portable-v3-exact \
+          "$work/bin/ordax-release-agent" verify-portable-v4-exact \
             --trust "$work/release-trust.json" \
             --root "$portable" \
             --expected-commit "$commit" \
-            > "$work/metadata/release-v3-exact-verify.json"
+            > "$work/metadata/release-v4-exact-verify.json"
 
           previous_source="$work/previous-source"
           rm -rf "$previous_source"
@@ -308,7 +333,7 @@ jobs:
             --manifest "$previous_release/release-manifest.json" \
             --private-key "$work/private.pem" \
             --trust "$work/release-trust.json" \
-            --key-id ci-portable-v3-qemu \
+            --key-id ci-portable-v4-qemu \
             --out "$previous_release/release-envelope.json"
           "$work/bin/release-signing" verify-envelope \
             --envelope "$previous_release/release-envelope.json" \
@@ -320,21 +345,29 @@ jobs:
             > "$work/metadata/previous-release-v3-exact-verify.json"
           git worktree remove --force "$previous_source"
 
-          python - "$release/release-manifest.json" "$previous_release/release-manifest.json" "$runtime_sha" <<'PY'
+          python - "$release/release-manifest.json" "$previous_release/release-manifest.json" "$runtime_sha" "$ai_sha" <<'PY'
           import json, pathlib, sys
           candidate = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
           previous = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding='utf-8'))
           runtime_sha = sys.argv[3]
-          for manifest in (candidate, previous):
-              assert manifest['$schema'] == 'prototype-ordax.release-manifest/3'
-              assert [a['role'] for a in manifest['artifacts']] == ['system-image', 'surface-runtime']
-              assert manifest['artifacts'][1]['sha256'] == runtime_sha
+          ai_sha = sys.argv[4]
+          assert candidate['$schema'] == 'prototype-ordax.release-manifest/4'
+          assert [a['role'] for a in candidate['artifacts']] == [
+              'system-image', 'surface-runtime', 'local-ai-runtime'
+          ]
+          assert candidate['artifacts'][1]['sha256'] == runtime_sha
+          assert candidate['artifacts'][2]['sha256'] == ai_sha
+          assert candidate['local_ai']['contract'] == 'ordax.local-ai/1'
+          assert previous['$schema'] == 'prototype-ordax.release-manifest/3'
+          assert [a['role'] for a in previous['artifacts']] == ['system-image', 'surface-runtime']
+          assert previous['artifacts'][1]['sha256'] == runtime_sha
           assert candidate['source_commit'] != previous['source_commit']
-          print('PORTABLE_V3_CANDIDATE_AND_PREVIOUS_RELEASES=VERIFIED')
+          print('PORTABLE_V4_CANDIDATE_WITH_V3_PREVIOUS=VERIFIED')
           PY
 
           rm -f "$work/private.pem"
           test ! -e "$work/private.pem"
+          echo "PORTABLE_V4_CANDIDATE_SOURCE_COMMIT=$commit"
           echo "PORTABLE_V3_PREVIOUS_SOURCE_COMMIT=$previous"
 
       - name: Build persistent ext4 state with current and known-good
@@ -398,9 +431,9 @@ jobs:
           trap - EXIT
           e2fsck -fn "$state"
 
-          echo 'PORTABLE_V3_ONE_SHOT_STATE_ARMED=YES'
-          echo "PORTABLE_V3_ONE_SHOT_PREVIOUS=$previous"
-          echo "PORTABLE_V3_ONE_SHOT_CANDIDATE=$candidate"
+          echo 'PORTABLE_V4_TO_V3_ONE_SHOT_STATE_ARMED=YES'
+          echo "PORTABLE_V4_ONE_SHOT_PREVIOUS_V3=$previous"
+          echo "PORTABLE_V4_ONE_SHOT_CANDIDATE=$candidate"
 
       - name: Boot portable-v2 candidate PID1 in QEMU
         run: |
@@ -434,8 +467,14 @@ jobs:
           assert proof['candidate_pid1_default_changed'] is False
           assert proof['network_required_for_first_boot'] is False
           assert proof['guest_disk']['retained'] is False
+          assert proof['artifacts']['release_manifest_schema'] == 4
+          assert isinstance(proof['artifacts']['local_ai_runtime_sha256'], str)
+          assert len(proof['artifacts']['local_ai_runtime_sha256']) == 64
+          assert 'ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED' in proof['serial_markers']
+          assert any(marker.startswith('ORDAX_LOCAL_AI_RUNTIME_SHA256=') for marker in proof['serial_markers'])
+          assert 'ORDAX_LOCAL_AI_BACKEND=STARTED' in proof['serial_markers']
           assert all(proof['checks'].values())
-          print('PORTABLE_V2_QEMU_DIRECT_KERNEL_BOOT=PASS')
+          print('PORTABLE_V4_QEMU_DIRECT_KERNEL_BOOT=PASS')
           print('PORTABLE_V2_UEFI_BOOT_PROVEN=NO')
           print('PORTABLE_V2_PHYSICAL_BOOT_PROVEN=NO')
           print('PORTABLE_V2_PUBLIC_PROMOTION=NO')
@@ -481,9 +520,14 @@ jobs:
           assert proof['physical_write_authorized'] is False
           assert proof['public_physical_promotion_allowed'] is False
           assert proof['guest_disk']['retained'] is False
-          print('PORTABLE_V3_QEMU_ONE_SHOT_FALLBACK=PASS')
-          print('PORTABLE_V3_QEMU_COLD_HEALTH_COMMIT_PROVEN=NO')
-          print('PORTABLE_V3_PHYSICAL_BOOT_PROVEN=NO')
+          assert proof['artifacts']['release_manifest_schema'] == 4
+          assert isinstance(proof['artifacts']['local_ai_runtime_sha256'], str)
+          assert 'ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=4' in proof['serial_markers']
+          assert 'ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3' in proof['serial_markers']
+          assert 'ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED' in proof['serial_markers']
+          print('PORTABLE_V4_TO_V3_QEMU_ONE_SHOT_FALLBACK=PASS')
+          print('PORTABLE_V4_QEMU_COLD_HEALTH_COMMIT_PROVEN=NO')
+          print('PORTABLE_V4_PHYSICAL_BOOT_PROVEN=NO')
           PY
 
       - name: Build pinned systemd-boot for portable UEFI proof
@@ -537,8 +581,13 @@ jobs:
           assert proof['physical_write_authorized'] is False
           assert proof['guest_disk']['retained'] is False
           assert proof['ovmf_vars']['retained'] is False
+          assert proof['artifacts']['release_manifest_schema'] == 4
+          assert isinstance(proof['artifacts']['local_ai_runtime_sha256'], str)
+          assert len(proof['artifacts']['local_ai_runtime_sha256']) == 64
+          assert 'ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED' in proof['serial_markers']
+          assert any(marker.startswith('ORDAX_LOCAL_AI_RUNTIME_SHA256=') for marker in proof['serial_markers'])
           assert all(proof['checks'].values())
-          print('PORTABLE_V2_QEMU_UEFI_BOOT=PASS')
+          print('PORTABLE_V4_QEMU_UEFI_BOOT=PASS')
           print('PORTABLE_V2_SECURE_BOOT_PROVEN=NO')
           print('PORTABLE_V2_PHYSICAL_BOOT_PROVEN=NO')
           print('PORTABLE_V2_PUBLIC_PROMOTION=NO')
