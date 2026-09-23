@@ -30,7 +30,8 @@ class FilesMoveControlsTests(unittest.TestCase):
         self.assertIn("data-file-transfer-cancel", controls)
         self.assertIn('"files.transfer.confirmMove"', controls)
         self.assertIn('"files.transfer.confirmCopy"', controls)
-        self.assertIn("Navegue até a pasta de destino", controls)
+        self.assertIn('"files.transfer.navigateCopy"', controls)
+        self.assertIn('"files.transfer.navigateMove"', controls)
 
     def test_move_rejects_same_folder_and_directory_descendants(self):
         controls = CONTROLS.read_text(encoding="utf-8")
@@ -46,7 +47,7 @@ class FilesMoveControlsTests(unittest.TestCase):
         self.assertIn("status === 412", controls)
         self.assertIn("status === 413", controls)
         self.assertIn("status === 422", controls)
-        self.assertIn("Pastas ainda não podem ser movidas entre volumes.", controls)
+        self.assertIn('"files.transfer.folderCrossVolumeUnsupported"', controls)
         self.assertIn("A origem foi preservada.", controls)
 
     def test_transfer_panel_is_responsive(self):
