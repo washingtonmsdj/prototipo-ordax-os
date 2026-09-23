@@ -65,8 +65,8 @@ class PortableV4AiHandoffContractTests(unittest.TestCase):
         direct = (ROOT / "bootstrap/portable-v2/qemu_boot.py").read_text(encoding="utf-8")
         uefi = (ROOT / "bootstrap/portable-v2/uefi_boot.py").read_text(encoding="utf-8")
         workflow = (ROOT / ".github/workflows/portable-v2-qemu-boot-proof.yml").read_text(encoding="utf-8")
+        self.assertIn("prototype-ordax.release-manifest/4", direct)
         for text in (direct, uefi):
-            self.assertIn("prototype-ordax.release-manifest/4", text if text is direct else direct)
             self.assertIn("ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED", text)
             self.assertIn("ORDAX_LOCAL_AI_RUNTIME_SHA256=", text)
         self.assertIn("--manifest-schema 4", workflow)
