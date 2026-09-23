@@ -3,6 +3,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 VIEW = ROOT / "system" / "surface" / "ui" / "system-diagnostics-review.mjs"
+CATALOG = ROOT / "system" / "services" / "i18n" / "catalog" / "system-diagnostics.mjs"
 
 
 class SystemDiagnosticsReviewViewContractTests(unittest.TestCase):
@@ -35,26 +36,38 @@ class SystemDiagnosticsReviewViewContractTests(unittest.TestCase):
         self.assertIn("controller.prepare()", source)
         self.assertIn("controller.copyPreparedSummary()", source)
         self.assertIn("controller.exportPrepared()", source)
-        self.assertIn("Copiar resumo sanitizado", source)
-        self.assertIn("Salvar em Downloads", source)
+        self.assertIn('t("system.diagnostics.review.button.copy"', source)
+        self.assertIn('t("system.diagnostics.review.button.save"', source)
+        self.assertNotIn('"Copiar resumo sanitizado"', source)
+        self.assertNotIn('"Salvar em Downloads"', source)
 
     def test_absence_of_observation_is_not_rendered_as_health(self):
         source = self.source()
-        self.assertIn("esta ausência não é prova de que o sistema esteja sem problemas", source)
-        self.assertIn("Isso não é um atestado geral de saúde", source)
-        self.assertIn("Isso não prova falha do supervisor", source)
+        catalog = CATALOG.read_text(encoding="utf-8")
+        self.assertIn("system.diagnostics.review.events.unavailable", source)
+        self.assertIn("system.diagnostics.review.events.empty", source)
+        self.assertIn("system.diagnostics.review.freshness.staleDetail", source)
+        self.assertIn("esta ausência não é prova de que o sistema esteja sem problemas", catalog)
+        self.assertIn("Isso não é um atestado geral de saúde", catalog)
+        self.assertIn("Isso não prova falha do supervisor", catalog)
         self.assertNotIn("Nenhum problema registrado", source)
         self.assertNotIn("Operando normalmente", source)
         self.assertNotIn("Sistema saudável", source)
 
     def test_partial_and_stale_states_are_first_class(self):
         source = self.source()
-        self.assertIn("Revisão parcial", source)
-        self.assertIn("Observação antiga", source)
-        self.assertIn("Atualidade desconhecida", source)
-        self.assertIn("Persistência degradada", source)
-        self.assertIn("Somente nesta sessão", source)
-        self.assertIn("Falha na leitura", source)
+        catalog = CATALOG.read_text(encoding="utf-8")
+        for message_id in (
+            "system.diagnostics.review.partial",
+            "system.diagnostics.review.freshness.stale",
+            "system.diagnostics.review.freshness.unknown",
+            "system.diagnostics.review.persistence.degraded",
+            "system.diagnostics.review.persistence.session",
+            "system.diagnostics.review.sourceStatus.failed",
+        ):
+            self.assertIn(message_id, source)
+        self.assertIn('"system.diagnostics.review.partial": "Partial review:', catalog)
+        self.assertIn('"system.diagnostics.review.freshness.stale": "Stale observation"', catalog)
 
     def test_view_does_not_hide_administrative_controls_inside_diagnostics(self):
         lowered = self.source().lower()
