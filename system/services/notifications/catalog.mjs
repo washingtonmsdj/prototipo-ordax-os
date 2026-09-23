@@ -27,6 +27,14 @@ const LEGACY_SOURCE_LABELS = Object.freeze({
   internet: "Internet",
 });
 
+const LEGACY_SOURCE_MESSAGE_IDS = Object.freeze({
+  files: "app.files.title",
+  settings: "app.settings.title",
+  account: "app.account.title",
+  system: "app.system.title",
+  internet: "app.internet.title",
+});
+
 for (const source of SOURCES) validateNotificationSourceId(source.id);
 
 export function listNotificationSources() {
@@ -40,5 +48,9 @@ export function notificationSourceLabel(sourceId, translate = null) {
     return `${translate(messageIds.label)} · ${translate(messageIds.topic)}`;
   }
   if (source) return `${source.label} · ${source.topic}`;
+  const legacyMessageId = LEGACY_SOURCE_MESSAGE_IDS[sourceId] ?? null;
+  if (legacyMessageId && typeof translate === "function") {
+    return translate(legacyMessageId);
+  }
   return LEGACY_SOURCE_LABELS[sourceId] ?? sourceId;
 }
