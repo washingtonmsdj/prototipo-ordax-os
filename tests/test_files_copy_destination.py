@@ -63,7 +63,7 @@ class FilesCopyDestinationTests(unittest.TestCase):
         self.assertIn("data.fileCopyToToggle", controls.replace("dataset", "data"))
         self.assertIn('mode: "copy"', controls)
         self.assertIn("transferToCurrentDirectory", controls)
-        self.assertIn('"Copiar para esta pasta"', controls)
+        self.assertIn('"files.transfer.confirmCopy"', controls)
         self.assertIn(
             "port.copyFile(listing.path, selected.name, listing.path, newName)",
             controls,
