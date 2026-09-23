@@ -78,6 +78,7 @@ on:
       - 'tests/test_surface_workspace.mjs'
       - 'tests/test_recent_files.mjs'
       - 'tests/test_recent_files_ui_contract.py'
+      - 'tests/test_files_deep_localization.py'
       - 'tests/test_projects.mjs'
       - 'tests/test_project_web_references.mjs'
       - 'tests/test_browser_favorites.mjs'
@@ -209,6 +210,7 @@ on:
       - 'tests/test_surface_workspace.mjs'
       - 'tests/test_recent_files.mjs'
       - 'tests/test_recent_files_ui_contract.py'
+      - 'tests/test_files_deep_localization.py'
       - 'tests/test_projects.mjs'
       - 'tests/test_project_web_references.mjs'
       - 'tests/test_browser_favorites.mjs'
@@ -364,6 +366,7 @@ jobs:
           python -m unittest tests.test_native_power_status -v
           python -m unittest tests.test_surface_boot_screen -v
           python -m unittest tests.test_surface_web_builder -v
+          python -m unittest tests.test_files_deep_localization -v
           python -m unittest tests.test_recent_files_ui_contract -v
           python -m unittest tests.test_project_files_ui_contract -v
           python -m unittest tests.test_home_continuation_contract -v
