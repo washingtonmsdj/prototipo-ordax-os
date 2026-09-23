@@ -111,22 +111,27 @@ class CurrentStateFirstRunInputTests(unittest.TestCase):
         )
         self.assertNotIn("public anchor is still not pinned", self.current)
 
-    def test_physical_authorization_is_scope_bound_while_target_execution_remains_pending(self):
-        self.assertEqual(self.authorization["status"], "authorized")
-        self.assertTrue(self.authorization["physical_write_allowed"])
-        self.assertTrue(self.authorization["explicit_owner_authorization"])
+    def test_physical_authorization_is_fail_closed_after_v4_writer_scope_change(self):
+        self.assertEqual(
+            self.authorization["status"],
+            "blocked-explicit-physical-authorization-pending",
+        )
+        self.assertFalse(self.authorization["physical_write_allowed"])
+        self.assertFalse(self.authorization["explicit_owner_authorization"])
         self.assertEqual(
             self.authorization["scope"],
             "first-real-stable-mvp-usb-proof",
         )
         self.assertEqual(self.authorization["release_sequence"], 1)
-        self.assertRegex(
-            self.authorization["authorization_context_sha256"],
-            r"^[0-9a-f]{64}$",
+        self.assertIsNone(self.authorization["authorization_context_sha256"])
+        self.assertTrue(
+            self.authorization["requirements"][
+                "writer_requires_exact_17_artifact_readback"
+            ]
         )
         self.assertIn("PHYSICAL_AUTHORIZATION_ELIGIBLE=YES", self.current)
         self.assertIn(
-            "PHYSICAL_WRITE_AUTHORIZED=YES_FIRST_STABLE_MVP_USB_PROOF",
+            "PHYSICAL_WRITE_AUTHORIZED=NO_FRESH_V4_OWNER_AUTHORIZATION_PENDING",
             self.current,
         )
         self.assertIn("PHYSICAL_TARGET_SELECTED=NO", self.current)
