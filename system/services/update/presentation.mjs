@@ -1,3 +1,35 @@
+const UPDATE_STATUS_MESSAGE_IDS = Object.freeze({
+  running: "system.overview.update.status.running",
+  applied: "system.overview.update.status.applied",
+  updating: "system.overview.update.status.updating",
+  "network-error": "system.overview.update.status.networkError",
+  "remote-error": "system.overview.update.status.remoteError",
+  "pull-error": "system.overview.update.status.pullError",
+  "rolled-back": "system.overview.update.status.rolledBack",
+  rejected: "system.overview.update.status.rejected",
+  pinned: "system.overview.update.status.pinned",
+  disabled: "system.overview.update.status.disabled",
+  unavailable: "system.overview.update.status.unavailable",
+});
+
+const BASE_UPDATE_SUMMARY_MESSAGE_IDS = Object.freeze({
+  "candidate-requested": "system.overview.update.summary.candidateRequested",
+  "candidate-fetching": "system.overview.update.summary.candidateFetching",
+  "candidate-ready": "system.overview.update.summary.candidateReady",
+  staged: "system.overview.update.summary.staged",
+  "activation-ready": "system.overview.update.summary.activationReady",
+});
+
+export function updateStatusMessageId(status) {
+  return UPDATE_STATUS_MESSAGE_IDS[status] ?? "system.overview.update.status.unavailable";
+}
+
+export function updateSummaryMessageId(snapshot) {
+  if (!snapshot?.bootRefreshRequired) return updateStatusMessageId(snapshot?.status);
+  return BASE_UPDATE_SUMMARY_MESSAGE_IDS[snapshot?.baseUpdatePhase]
+    ?? "system.overview.update.summary.pending";
+}
+
 const UPDATE_LABELS = Object.freeze({
   running: "Em execução",
   applied: "Atualização aplicada",
