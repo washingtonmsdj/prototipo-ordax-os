@@ -75,8 +75,10 @@ class FirstRunContractTests(unittest.TestCase):
         settings = SETTINGS.read_text(encoding="utf-8")
         self.assertIn('Object.freeze({ id: "regional", messageId: "settings.section.regional" })', settings)
         self.assertIn('t(`settings.section.${activeSection}`)', settings)
-        self.assertIn('if (preferenceId === "regional.locale")', settings)
-        self.assertIn('if (preferenceId === "regional.time-zone")', settings)
+        self.assertIn('"regional.locale": Object.freeze({', settings)
+        self.assertIn('"regional.time-zone": Object.freeze({', settings)
+        self.assertIn('"settings.preference.locale.title"', settings)
+        self.assertIn('"settings.preference.timeZone.title"', settings)
         self.assertIn('["appearance", "accessibility", "regional"].includes(activeSection)', settings)
 
     def test_native_host_first_run_state_is_atomic_private_and_bounded(self):

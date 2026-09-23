@@ -22,8 +22,8 @@ import {
   validateSurfaceSnapshot,
 } from "../../contracts/surface-host.mjs";
 import {
-  networkManagementActionMessage,
-  networkManagementFailureMessage,
+  networkManagementActionMessageId,
+  networkManagementFailureMessageId,
   runNetworkManagementAction,
 } from "../../services/network/management-runtime.mjs";
 import {
@@ -58,9 +58,9 @@ function node(documentObject, tag, className, text) {
   return element;
 }
 
-function formatReceivedAt(value) {
-  if (!Number.isFinite(value)) return "horário desconhecido";
-  return new Intl.DateTimeFormat("pt-BR", {
+function formatReceivedAt(value, locale) {
+  if (!Number.isFinite(value)) return null;
+  return new Intl.DateTimeFormat(locale, {
     timeZone: "America/Bahia",
     hour: "2-digit",
     minute: "2-digit",
@@ -69,37 +69,105 @@ function formatReceivedAt(value) {
   }).format(new Date(value));
 }
 
-function optionDescription(preferenceId, value) {
-  if (preferenceId === "appearance.theme") {
-    return value === "dark"
-      ? "Contraste escuro para ambientes de pouca luz."
-      : "Superfície clara e neutra como padrão do OrdaX.";
-  }
-  if (preferenceId === "accessibility.contrast") {
-    return value === "high"
-      ? "Reforça separadores, texto secundário e foco da Surface."
-      : "Usa o contraste padrão do tema escolhido.";
-  }
-  if (preferenceId === "accessibility.motion") {
-    return value === "reduced"
-      ? "Remove animações e transições não essenciais."
-      : "Mantém movimento quando a preferência do ambiente também permite.";
-  }
-  if (preferenceId === "accessibility.text-scale") {
-    if (value === "large") return "Aumenta a tipografia da Surface mantendo o layout responsivo.";
-    if (value === "extra-large") return "Amplia ainda mais a tipografia e preserva rolagem nas áreas de conteúdo.";
-    return "Mantém a escala tipográfica padrão e respeita o zoom do navegador.";
-  }
-  if (preferenceId === "regional.locale") {
-    return value === "pt-BR"
-      ? "Português (Brasil) é o idioma completo desta versão."
-      : String(value);
-  }
-  if (preferenceId === "regional.time-zone") {
-    return `Usa ${value} para relógio e datas da Surface.`;
-  }
-  return String(value);
-}
+const PREFERENCE_PRESENTATION_IDS = Object.freeze({
+  "appearance.theme": Object.freeze({
+    label: "settings.preference.appearance.label",
+    title: "settings.preference.appearance.title",
+    description: "settings.preference.appearance.description",
+    options: Object.freeze({
+      light: Object.freeze({
+        label: "settings.preference.appearance.option.light",
+        description: "settings.preference.appearance.option.light.description",
+      }),
+      dark: Object.freeze({
+        label: "settings.preference.appearance.option.dark",
+        description: "settings.preference.appearance.option.dark.description",
+      }),
+    }),
+  }),
+  "accessibility.contrast": Object.freeze({
+    label: "settings.preference.accessibility.label",
+    title: "settings.preference.contrast.title",
+    description: "settings.preference.contrast.description",
+    options: Object.freeze({
+      standard: Object.freeze({
+        label: "settings.preference.contrast.option.standard",
+        description: "settings.preference.contrast.option.standard.description",
+      }),
+      high: Object.freeze({
+        label: "settings.preference.contrast.option.high",
+        description: "settings.preference.contrast.option.high.description",
+      }),
+    }),
+  }),
+  "accessibility.motion": Object.freeze({
+    label: "settings.preference.accessibility.label",
+    title: "settings.preference.motion.title",
+    description: "settings.preference.motion.description",
+    options: Object.freeze({
+      standard: Object.freeze({
+        label: "settings.preference.motion.option.standard",
+        description: "settings.preference.motion.option.standard.description",
+      }),
+      reduced: Object.freeze({
+        label: "settings.preference.motion.option.reduced",
+        description: "settings.preference.motion.option.reduced.description",
+      }),
+    }),
+  }),
+  "accessibility.text-scale": Object.freeze({
+    label: "settings.preference.accessibility.label",
+    title: "settings.preference.textScale.title",
+    description: "settings.preference.textScale.description",
+    options: Object.freeze({
+      standard: Object.freeze({
+        label: "settings.preference.textScale.option.standard",
+        description: "settings.preference.textScale.option.standard.description",
+      }),
+      large: Object.freeze({
+        label: "settings.preference.textScale.option.large",
+        description: "settings.preference.textScale.option.large.description",
+      }),
+      "extra-large": Object.freeze({
+        label: "settings.preference.textScale.option.extraLarge",
+        description: "settings.preference.textScale.option.extraLarge.description",
+      }),
+    }),
+  }),
+  "regional.locale": Object.freeze({
+    label: "settings.preference.regional.label",
+    title: "settings.preference.locale.title",
+    description: "settings.preference.locale.description",
+  }),
+  "regional.time-zone": Object.freeze({
+    label: "settings.preference.regional.label",
+    title: "settings.preference.timeZone.title",
+    description: "settings.preference.timeZone.description",
+  }),
+});
+
+const KEYBOARD_LAYOUT_PRESENTATION_IDS = Object.freeze({
+  "br-abnt2": Object.freeze({
+    label: "settings.keyboard.option.brAbnt2.label",
+    description: "settings.keyboard.option.brAbnt2.description",
+  }),
+  us: Object.freeze({
+    label: "settings.keyboard.option.us.label",
+    description: "settings.keyboard.option.us.description",
+  }),
+});
+
+const NETWORK_CONNECTIVITY_MESSAGE_IDS = Object.freeze({
+  online: "settings.network.connectivity.online",
+  offline: "settings.network.connectivity.offline",
+  unknown: "settings.network.connectivity.unknown",
+});
+
+const NETWORK_INTERFACE_STATE_MESSAGE_IDS = Object.freeze({
+  connected: "settings.network.interface.state.connected",
+  disconnected: "settings.network.interface.state.disconnected",
+  unknown: "settings.network.interface.state.unknown",
+});
 
 export function mountSettingsOverviewControls(
   root,
@@ -142,7 +210,7 @@ export function mountSettingsOverviewControls(
   let keyboardLayoutSnapshot = null;
   let keyboardLayoutReadFailed = false;
   let keyboardLayoutPending = false;
-  let keyboardLayoutMessage = "";
+  let keyboardLayoutMessageId = null;
   let keyboardLayoutOrdinal = 0;
   let localSessionSnapshot = localSessionPort === null
     ? null
@@ -152,7 +220,7 @@ export function mountSettingsOverviewControls(
   let networkManagementReadFailed = false;
   let networkManagementLastSuccessAt = null;
   let networkManagementPending = false;
-  let networkManagementMessage = "";
+  let networkManagementMessageId = null;
   let networkReadOrdinal = 0;
   let networkManagementReadOrdinal = 0;
   let networkActionOrdinal = 0;
@@ -355,22 +423,38 @@ export function mountSettingsOverviewControls(
   const renderPreferences = (view, sectionId) => {
     for (const definition of listPreferenceDefinitions()) {
       if (definition.sectionId !== sectionId) continue;
+      const presentation = PREFERENCE_PRESENTATION_IDS[definition.id] ?? null;
       const section = node(documentObject, "section", "ordax-settings-section");
       section.append(
         node(
           documentObject,
           "span",
           "ordax-settings-section-kicker",
-          definition.label ?? t("settings.preference.fallbackLabel"),
+          presentation?.label
+            ? t(presentation.label)
+            : (definition.label ?? t("settings.preference.fallbackLabel")),
         ),
-        node(documentObject, "h4", "ordax-settings-section-title", definition.title ?? definition.id),
-        node(documentObject, "p", "ordax-settings-section-copy", definition.description ?? definition.id),
+        node(
+          documentObject,
+          "h4",
+          "ordax-settings-section-title",
+          presentation?.title ? t(presentation.title) : (definition.title ?? definition.id),
+        ),
+        node(
+          documentObject,
+          "p",
+          "ordax-settings-section-copy",
+          presentation?.description
+            ? t(presentation.description)
+            : (definition.description ?? definition.id),
+        ),
       );
 
       if (Array.isArray(definition.options) && definition.options.length > 0) {
         const options = node(documentObject, "div", "ordax-settings-options");
         for (const option of definition.options) {
           const selected = preferenceSnapshot[definition.id] === option.value;
+          const optionPresentation = presentation?.options?.[option.value] ?? null;
           const button = node(documentObject, "button", "ordax-settings-option");
           button.type = "button";
           button.dataset.settingsPreferenceId = definition.id;
@@ -386,11 +470,28 @@ export function mountSettingsOverviewControls(
           preview.append(previewRail, previewBody);
 
           const copy = node(documentObject, "span", "ordax-settings-option-copy");
+          const optionDescription = optionPresentation?.description
+            ? t(optionPresentation.description)
+            : definition.id === "regional.time-zone"
+              ? t("settings.preference.timeZone.option.description", { value: option.value })
+              : definition.id === "regional.locale" && option.value === "pt-BR"
+                ? t("settings.preference.locale.option.ptBr.description")
+                : String(option.value);
           copy.append(
-            node(documentObject, "strong", "", option.label),
-            node(documentObject, "small", "", optionDescription(definition.id, option.value)),
+            node(
+              documentObject,
+              "strong",
+              "",
+              optionPresentation?.label ? t(optionPresentation.label) : option.label,
+            ),
+            node(documentObject, "small", "", optionDescription),
           );
-          const marker = node(documentObject, "span", "ordax-settings-option-marker", selected ? "Ativo" : "");
+          const marker = node(
+            documentObject,
+            "span",
+            "ordax-settings-option-marker",
+            selected ? t("settings.preference.active") : "",
+          );
           button.append(preview, copy, marker);
           options.append(button);
         }
@@ -406,22 +507,22 @@ export function mountSettingsOverviewControls(
     const section = node(documentObject, "section", "ordax-settings-section");
     section.dataset.settingsKeyboardLayoutSection = "";
     section.append(
-      node(documentObject, "span", "ordax-settings-section-kicker", "Teclado físico"),
-      node(documentObject, "h4", "ordax-settings-section-title", "Layout do teclado"),
+      node(documentObject, "span", "ordax-settings-section-kicker", t("settings.keyboard.kicker")),
+      node(documentObject, "h4", "ordax-settings-section-title", t("settings.keyboard.title")),
       node(
         documentObject,
         "p",
         "ordax-settings-section-copy",
-        "O layout é aplicado pelo Cage antes da Surface iniciar. A escolha fica salva no USB e, quando diferente do layout atual, entra em vigor no próximo início da Surface.",
+        t("settings.keyboard.description"),
       ),
     );
 
-    if (keyboardLayoutMessage) {
+    if (keyboardLayoutMessageId) {
       const status = node(
         documentObject,
         "p",
         "ordax-settings-keyboard-message",
-        keyboardLayoutMessage,
+        t(keyboardLayoutMessageId),
       );
       status.setAttribute("role", "status");
       status.setAttribute("aria-live", "polite");
@@ -434,7 +535,7 @@ export function mountSettingsOverviewControls(
           documentObject,
           "p",
           "ordax-settings-empty",
-          "O layout do teclado físico está temporariamente indisponível neste host.",
+          t("settings.keyboard.unavailable"),
         ),
       );
       view.append(section);
@@ -442,14 +543,16 @@ export function mountSettingsOverviewControls(
     }
 
     if (keyboardLayoutSnapshot === null) {
-      section.append(node(documentObject, "p", "ordax-settings-empty", "Lendo layout do teclado…"));
+      section.append(
+        node(documentObject, "p", "ordax-settings-empty", t("settings.keyboard.reading")),
+      );
       view.append(section);
       return;
     }
 
     const stateCopy = keyboardLayoutSnapshot.restartRequired
-      ? "Alteração salva · será aplicada no próximo início da Surface."
-      : "O layout configurado já está em uso nesta Surface.";
+      ? t("settings.keyboard.state.restartRequired")
+      : t("settings.keyboard.state.applied");
     const state = node(documentObject, "p", "ordax-settings-keyboard-state", stateCopy);
     state.dataset.restartRequired = String(keyboardLayoutSnapshot.restartRequired);
     section.append(state);
@@ -459,6 +562,7 @@ export function mountSettingsOverviewControls(
       if (!keyboardLayoutSnapshot.supportedLayoutIds.includes(option.id)) continue;
       const selected = keyboardLayoutSnapshot.configuredLayoutId === option.id;
       const applied = keyboardLayoutSnapshot.appliedLayoutId === option.id;
+      const presentation = KEYBOARD_LAYOUT_PRESENTATION_IDS[option.id];
       const button = node(documentObject, "button", "ordax-settings-keyboard-option");
       button.type = "button";
       button.dataset.settingsKeyboardLayout = option.id;
@@ -468,12 +572,26 @@ export function mountSettingsOverviewControls(
 
       const copy = node(documentObject, "span", "ordax-settings-keyboard-copy");
       copy.append(
-        node(documentObject, "strong", "", option.label),
-        node(documentObject, "small", "", option.description),
+        node(
+          documentObject,
+          "strong",
+          "",
+          presentation?.label ? t(presentation.label) : option.label,
+        ),
+        node(
+          documentObject,
+          "small",
+          "",
+          presentation?.description ? t(presentation.description) : option.description,
+        ),
       );
       const markerLabel = selected
-        ? applied ? "Em uso" : "Próximo início"
-        : applied ? "Atual" : "";
+        ? applied
+          ? t("settings.keyboard.marker.inUse")
+          : t("settings.keyboard.marker.nextStart")
+        : applied
+          ? t("settings.keyboard.marker.current")
+          : "";
       button.append(
         copy,
         node(documentObject, "span", "ordax-settings-keyboard-marker", markerLabel),
@@ -745,23 +863,28 @@ export function mountSettingsOverviewControls(
 
     const heading = node(documentObject, "div", "ordax-settings-wifi-heading");
     const headingCopy = node(documentObject, "div", "ordax-settings-wifi-heading-copy");
+    const summary = networkManagementSnapshot?.currentSsid
+      ? t("settings.network.wifi.connectedTo", {
+          ssid: networkManagementSnapshot.currentSsid,
+        })
+      : networkManagementSnapshot?.savedSsid
+        ? t("settings.network.wifi.saved", {
+            ssid: networkManagementSnapshot.savedSsid,
+          })
+        : t("settings.network.wifi.none");
     headingCopy.append(
       node(documentObject, "strong", "", "Wi-Fi"),
-      node(
-        documentObject,
-        "span",
-        "",
-        networkManagementSnapshot?.currentSsid
-          ? `Conectado a ${networkManagementSnapshot.currentSsid}`
-          : networkManagementSnapshot?.savedSsid
-            ? `Rede salva: ${networkManagementSnapshot.savedSsid}`
-            : "Nenhuma rede Wi-Fi conectada",
-      ),
+      node(documentObject, "span", "", summary),
     );
 
     const actions = node(documentObject, "div", "ordax-settings-wifi-actions");
-    const addAction = (action, label) => {
-      const button = node(documentObject, "button", "ordax-settings-network-action", label);
+    const addAction = (action, messageId) => {
+      const button = node(
+        documentObject,
+        "button",
+        "ordax-settings-network-action",
+        t(messageId),
+      );
       button.type = "button";
       button.dataset.settingsNetworkAction = action;
       button.disabled =
@@ -769,24 +892,35 @@ export function mountSettingsOverviewControls(
         || (networkManagementReadFailed && action !== "scan");
       actions.append(button);
     };
-    addAction("scan", networkManagementPending ? "Aguarde…" : "Procurar redes");
-    if (networkManagementSnapshot?.currentSsid) addAction("disconnect", "Desconectar");
+    addAction(
+      "scan",
+      networkManagementPending
+        ? "network.quick.action.wait"
+        : "network.quick.action.scan",
+    );
+    if (networkManagementSnapshot?.currentSsid) {
+      addAction("disconnect", "network.quick.action.disconnect");
+    }
     if (networkManagementSnapshot?.savedSsid) {
-      if (!networkManagementSnapshot.currentSsid) addAction("reconnect", "Reconectar");
-      addAction("forget", "Esquecer");
+      if (!networkManagementSnapshot.currentSsid) {
+        addAction("reconnect", "network.quick.action.reconnect");
+      }
+      addAction("forget", "settings.network.action.forget");
     }
     heading.append(headingCopy, actions);
     panel.append(heading);
 
-    const message = node(
-      documentObject,
-      "p",
-      "ordax-settings-network-message",
-      networkManagementMessage,
-    );
-    message.setAttribute("role", "status");
-    message.setAttribute("aria-live", "polite");
-    if (networkManagementMessage) panel.append(message);
+    if (networkManagementMessageId) {
+      const message = node(
+        documentObject,
+        "p",
+        "ordax-settings-network-message",
+        t(networkManagementMessageId),
+      );
+      message.setAttribute("role", "status");
+      message.setAttribute("aria-live", "polite");
+      panel.append(message);
+    }
 
     if (networkManagementReadFailed && networkManagementSnapshot === null) {
       panel.append(
@@ -794,7 +928,7 @@ export function mountSettingsOverviewControls(
           documentObject,
           "p",
           "ordax-settings-empty",
-          "O gerenciamento de Wi-Fi está temporariamente indisponível e ainda não há uma leitura válida nesta sessão.",
+          t("settings.network.management.unavailable"),
         ),
       );
       section.append(panel);
@@ -802,18 +936,23 @@ export function mountSettingsOverviewControls(
     }
 
     if (networkManagementReadFailed && networkManagementSnapshot !== null) {
+      const receivedAt =
+        formatReceivedAt(networkManagementLastSuccessAt, localization.getLocale())
+        ?? t("network.time.unknown");
       panel.append(
         node(
           documentObject,
           "p",
           "ordax-settings-network-message",
-          `Dados de Wi-Fi antigos · última leitura recebida pela Surface às ${formatReceivedAt(networkManagementLastSuccessAt)}. Uma nova leitura será tentada automaticamente.`,
+          t("settings.network.management.stale", { time: receivedAt }),
         ),
       );
     }
 
     if (networkManagementSnapshot === null) {
-      panel.append(node(documentObject, "p", "ordax-settings-empty", "Lendo estado do Wi-Fi…"));
+      panel.append(
+        node(documentObject, "p", "ordax-settings-empty", t("settings.network.management.reading")),
+      );
       section.append(panel);
       return;
     }
@@ -825,7 +964,7 @@ export function mountSettingsOverviewControls(
           documentObject,
           "p",
           "ordax-settings-empty",
-          "Use “Procurar redes” para listar redes Wi-Fi compatíveis próximas.",
+          t("network.quick.empty"),
         ),
       );
     } else {
@@ -838,15 +977,23 @@ export function mountSettingsOverviewControls(
         button.disabled = networkManagementPending || networkManagementReadFailed;
         button.setAttribute("aria-pressed", String(selectedNetworkSsid === entry.ssid));
 
-        const copy = node(documentObject, "span", "ordax-settings-wifi-network-copy");
-        const state = entry.connected
-          ? "Conectada"
+        const stateMessageId = entry.connected
+          ? "network.quick.state.connected"
           : entry.saved
-            ? "Salva"
-            : "Disponível";
+            ? "network.quick.state.saved"
+            : "network.quick.state.available";
+        const copy = node(documentObject, "span", "ordax-settings-wifi-network-copy");
         copy.append(
           node(documentObject, "strong", "", entry.ssid),
-          node(documentObject, "small", "", `${state} · sinal ${entry.signalDbm} dBm · WPA/WPA2`),
+          node(
+            documentObject,
+            "small",
+            "",
+            t("settings.network.wifi.detail", {
+              state: t(stateMessageId),
+              signal: entry.signalDbm,
+            }),
+          ),
         );
         button.append(
           node(documentObject, "span", "ordax-settings-network-dot"),
@@ -866,7 +1013,7 @@ export function mountSettingsOverviewControls(
         documentObject,
         "label",
         "ordax-settings-wifi-password-label",
-        `Senha de “${selected.ssid}”`,
+        t("network.quick.passwordLabel", { ssid: selected.ssid }),
       );
       const input = node(documentObject, "input", "ordax-settings-wifi-password");
       input.type = "password";
@@ -875,14 +1022,21 @@ export function mountSettingsOverviewControls(
       input.disabled = networkManagementPending || networkManagementReadFailed;
       input.dataset.settingsWifiPassword = "";
       input.dataset.settingsWifiPasswordFor = selected.ssid;
-      input.setAttribute("aria-label", `Senha da rede ${selected.ssid}`);
+      input.setAttribute(
+        "aria-label",
+        t("network.quick.passwordLabel", { ssid: selected.ssid }),
+      );
       label.append(input);
 
       const connect = node(
         documentObject,
         "button",
         "ordax-settings-network-action ordax-settings-network-primary",
-        networkManagementPending ? "Conectando…" : "Conectar",
+        t(
+          networkManagementPending
+            ? "network.management.connect.pending"
+            : "network.quick.action.connect",
+        ),
       );
       connect.type = "button";
       connect.dataset.settingsNetworkAction = "connect";
@@ -899,28 +1053,28 @@ export function mountSettingsOverviewControls(
     const section = node(documentObject, "section", "ordax-settings-section");
     section.dataset.settingsNetwork = "";
     section.append(
-      node(documentObject, "span", "ordax-settings-section-kicker", "Rede"),
-      node(documentObject, "h4", "ordax-settings-section-title", "Rede e conexões"),
+      node(documentObject, "span", "ordax-settings-section-kicker", t("settings.network.kicker")),
+      node(documentObject, "h4", "ordax-settings-section-title", t("settings.network.title")),
       node(
         documentObject,
         "p",
         "ordax-settings-section-copy",
-        networkManagementPort
-          ? "Estado real do host e gerenciamento Wi-Fi pelo owner nativo. Senhas são usadas apenas no instante da conexão e não entram em preferências ou sincronização."
-          : "Estado real observado no host nativo. O gerenciamento de Wi-Fi não está disponível neste ambiente.",
+        t(
+          networkManagementPort
+            ? "settings.network.description.management"
+            : "settings.network.description.observation",
+        ),
       ),
     );
 
     const service = node(documentObject, "div", "ordax-settings-network-service");
     service.dataset.state = hostSnapshot.connectivity;
-    const serviceLabels = {
-      online: "Conectividade do host disponível",
-      offline: "Host sem conectividade",
-      unknown: "Conectividade do host desconhecida",
-    };
+    const connectivityMessageId =
+      NETWORK_CONNECTIVITY_MESSAGE_IDS[hostSnapshot.connectivity]
+      ?? NETWORK_CONNECTIVITY_MESSAGE_IDS.unknown;
     service.append(
       node(documentObject, "span", "ordax-settings-network-dot"),
-      node(documentObject, "strong", "", serviceLabels[hostSnapshot.connectivity] ?? serviceLabels.unknown),
+      node(documentObject, "strong", "", t(connectivityMessageId)),
     );
     section.append(service);
 
@@ -931,53 +1085,70 @@ export function mountSettingsOverviewControls(
             documentObject,
             "p",
             "ordax-settings-empty",
-            "Os detalhes das interfaces estão temporariamente indisponíveis e ainda não há uma leitura válida nesta sessão.",
+            t("settings.network.interfaces.unavailable"),
           ),
         );
       } else {
         if (networkReadFailed && networkSnapshot !== null) {
+          const receivedAt =
+            formatReceivedAt(networkLastSuccessAt, localization.getLocale())
+            ?? t("network.time.unknown");
           section.append(
             node(
               documentObject,
               "p",
               "ordax-settings-network-message",
-              `Dados de interface antigos · última leitura recebida pela Surface às ${formatReceivedAt(networkLastSuccessAt)}.`,
+              t("settings.network.interfaces.stale", { time: receivedAt }),
             ),
           );
         }
         if (networkSnapshot === null) {
-          section.append(node(documentObject, "p", "ordax-settings-empty", "Lendo interfaces de rede…"));
-        } else {
-        const interfaces = node(documentObject, "div", "ordax-settings-network-list");
-        if (networkSnapshot.interfaces.length === 0) {
-          interfaces.append(
-            node(documentObject, "p", "ordax-settings-empty", "Nenhuma interface de rede utilizável foi observada."),
+          section.append(
+            node(documentObject, "p", "ordax-settings-empty", t("settings.network.interfaces.reading")),
           );
         } else {
-          const kindLabels = { wifi: "Wi-Fi", ethernet: "Cabo", other: "Outra interface" };
-          const stateLabels = {
-            connected: "Conectado",
-            disconnected: "Desconectado",
-            unknown: "Estado desconhecido",
-          };
-          for (const entry of networkSnapshot.interfaces) {
-            const item = node(documentObject, "div", "ordax-settings-network-item");
-            item.dataset.state = entry.state;
-            const copy = node(documentObject, "span", "ordax-settings-network-copy");
-            copy.append(
-              node(documentObject, "strong", "", kindLabels[entry.kind] ?? kindLabels.other),
+          const interfaces = node(documentObject, "div", "ordax-settings-network-list");
+          if (networkSnapshot.interfaces.length === 0) {
+            interfaces.append(
               node(
                 documentObject,
-                "small",
-                "",
-                `${entry.name} · ${stateLabels[entry.state] ?? stateLabels.unknown}${entry.signalDbm === null ? "" : ` · sinal ${entry.signalDbm} dBm`}`,
+                "p",
+                "ordax-settings-empty",
+                t("settings.network.interfaces.empty"),
               ),
             );
-            item.append(node(documentObject, "span", "ordax-settings-network-dot"), copy);
-            interfaces.append(item);
+          } else {
+            for (const entry of networkSnapshot.interfaces) {
+              const item = node(documentObject, "div", "ordax-settings-network-item");
+              item.dataset.state = entry.state;
+              const copy = node(documentObject, "span", "ordax-settings-network-copy");
+              const kindMessageId = {
+                wifi: "network.kind.wifi",
+                ethernet: "network.kind.ethernet",
+                other: "network.kind.other",
+              }[entry.kind] ?? "network.kind.other";
+              const stateMessageId =
+                NETWORK_INTERFACE_STATE_MESSAGE_IDS[entry.state]
+                ?? NETWORK_INTERFACE_STATE_MESSAGE_IDS.unknown;
+              const detail = entry.signalDbm === null
+                ? t("settings.network.interface.detail", {
+                    name: entry.name,
+                    state: t(stateMessageId),
+                  })
+                : t("settings.network.interface.detailSignal", {
+                    name: entry.name,
+                    state: t(stateMessageId),
+                    signal: entry.signalDbm,
+                  });
+              copy.append(
+                node(documentObject, "strong", "", t(kindMessageId)),
+                node(documentObject, "small", "", detail),
+              );
+              item.append(node(documentObject, "span", "ordax-settings-network-dot"), copy);
+              interfaces.append(item);
+            }
           }
-        }
-        section.append(interfaces);
+          section.append(interfaces);
         }
       }
     }
@@ -1045,7 +1216,7 @@ export function mountSettingsOverviewControls(
     if (!keyboardLayoutPort || keyboardLayoutPending || destroyed) return;
     const ordinal = ++keyboardLayoutOrdinal;
     keyboardLayoutPending = true;
-    keyboardLayoutMessage = "Salvando layout do teclado…";
+    keyboardLayoutMessageId = "settings.keyboard.message.saving";
     replaceView();
     try {
       keyboardLayoutSnapshot = validateKeyboardLayoutSnapshot(
@@ -1053,13 +1224,12 @@ export function mountSettingsOverviewControls(
       );
       if (destroyed || ordinal !== keyboardLayoutOrdinal) return;
       keyboardLayoutReadFailed = false;
-      keyboardLayoutMessage = keyboardLayoutSnapshot.restartRequired
-        ? "Layout salvo. Ele será aplicado no próximo início da Surface."
-        : "Layout salvo e já ativo nesta Surface.";
+      keyboardLayoutMessageId = keyboardLayoutSnapshot.restartRequired
+        ? "settings.keyboard.message.savedRestart"
+        : "settings.keyboard.message.savedActive";
     } catch {
       if (destroyed || ordinal !== keyboardLayoutOrdinal) return;
-      keyboardLayoutMessage =
-        "Não foi possível salvar o layout do teclado. O layout atualmente aplicado foi preservado.";
+      keyboardLayoutMessageId = "settings.keyboard.message.saveFailed";
     } finally {
       if (!destroyed && ordinal === keyboardLayoutOrdinal) {
         keyboardLayoutPending = false;
@@ -1124,7 +1294,7 @@ export function mountSettingsOverviewControls(
     const ordinal = ++networkActionOrdinal;
     networkManagementReadOrdinal += 1;
     networkManagementPending = true;
-    networkManagementMessage = networkManagementActionMessage(action, 0);
+    networkManagementMessageId = networkManagementActionMessageId(action, 0);
     replaceView();
 
     try {
@@ -1139,12 +1309,12 @@ export function mountSettingsOverviewControls(
       networkManagementSnapshot = nextSnapshot;
       networkManagementReadFailed = false;
       networkManagementLastSuccessAt = Date.now();
-      networkManagementMessage = networkManagementActionMessage(action, 1);
+      networkManagementMessageId = networkManagementActionMessageId(action, 1);
       if (action === "connect" || action === "forget") selectedNetworkSsid = null;
       void refreshNetwork();
     } catch (error) {
       if (destroyed || ordinal !== networkActionOrdinal) return;
-      networkManagementMessage = networkManagementFailureMessage(action, error);
+      networkManagementMessageId = networkManagementFailureMessageId(action, error);
     } finally {
       if (!destroyed && ordinal === networkActionOrdinal) {
         networkManagementPending = false;
@@ -1162,7 +1332,7 @@ export function mountSettingsOverviewControls(
     ) {
       const nextSection = sectionButton.dataset.settingsSection;
       selectedNetworkSsid = null;
-      networkManagementMessage = "";
+      networkManagementMessageId = null;
       if (activationPort) {
         activationPort.publish({ appId: "settings", target: nextSection });
       } else {
@@ -1286,7 +1456,7 @@ export function mountSettingsOverviewControls(
       && !networkButton.matches("[data-settings-network-action]")
     ) {
       selectedNetworkSsid = networkButton.dataset.settingsWifiSsid ?? null;
-      networkManagementMessage = "";
+      networkManagementMessageId = null;
       replaceView();
       return;
     }
@@ -1305,7 +1475,7 @@ export function mountSettingsOverviewControls(
       let password = input.value;
       input.value = "";
       if (!password) {
-        networkManagementMessage = "Digite a senha da rede Wi-Fi.";
+        networkManagementMessageId = "network.quick.passwordRequired";
         password = "";
         replaceView();
         return;
@@ -1334,7 +1504,7 @@ export function mountSettingsOverviewControls(
       event.preventDefault();
       input.value = "";
       selectedNetworkSsid = null;
-      networkManagementMessage = "";
+      networkManagementMessageId = null;
       replaceView();
     }
   };
@@ -1346,7 +1516,7 @@ export function mountSettingsOverviewControls(
     const nextSection = validSettingsSection(persistedTarget) ? persistedTarget : "appearance";
     if (nextSection !== activeSection) {
       selectedNetworkSsid = null;
-      networkManagementMessage = "";
+      networkManagementMessageId = null;
     }
     activeSection = nextSection;
     renderView(false);
@@ -1359,7 +1529,7 @@ export function mountSettingsOverviewControls(
     ) {
       activeSection = activation.target;
       selectedNetworkSsid = null;
-      networkManagementMessage = "";
+      networkManagementMessageId = null;
       replaceView();
     }
   });
