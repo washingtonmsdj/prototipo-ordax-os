@@ -54,6 +54,7 @@ SURFACE_LOCALIZATION = ROOT / "system" / "services" / "i18n" / "surface.mjs"
 SURFACE_LIFECYCLE = ROOT / "system" / "contracts" / "surface-render-lifecycle.mjs"
 FILE_SPACE_CONTROLS = SURFACE / "file-space-controls.mjs"
 NOTES_WORKSPACE_CONTROLS = APPS / "notes" / "ui" / "workspace-controls.mjs"
+NOTES_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "notes.mjs"
 NOTES_RICH_EDITOR = APPS / "notes" / "ui" / "rich-editor.mjs"
 INTERNET_BROWSER_CONTROLS = APPS / "internet" / "ui" / "browser-controls.mjs"
 INTERNET_BROWSER_SHORTCUTS = APPS / "internet" / "ui" / "browser-shortcuts.mjs"
@@ -272,8 +273,11 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn('"remove-project"', controls)
         self.assertIn('"move-note-project"', controls)
         self.assertIn('"remove-task"', controls)
-        self.assertIn("Referências", controls)
-        self.assertIn("Disponível offline", controls)
+        notes_i18n = NOTES_I18N.read_text(encoding="utf-8")
+        self.assertIn('t("notes.references.title")', controls)
+        self.assertIn('t("notes.offline.available")', controls)
+        self.assertIn('"notes.references.title": "References"', notes_i18n)
+        self.assertIn('"notes.offline.available": "Available offline"', notes_i18n)
         self.assertIn("createNotesStatistics", controls)
         self.assertIn('dataset.notesStatistics', controls)
         self.assertIn('"palavra" : "palavras"', controls)
