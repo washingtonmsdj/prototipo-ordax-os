@@ -480,7 +480,7 @@ async function start() {
   let localSessionLock = null;
   if (localSession) {
     try {
-      localSessionLock = mountLocalSessionLock(root, localSession);
+      localSessionLock = mountLocalSessionLock(root, localSession, surface);
     } catch (error) {
       reportClientDiagnostic("local-session-lock", error);
     }
