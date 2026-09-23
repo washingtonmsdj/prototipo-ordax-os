@@ -1152,15 +1152,15 @@ export function mountNotesWorkspaceControls(
   };
 
   const promptEditorLink = (body) => {
-    const input = windowObject.prompt?.("Cole o endereço do link:");
+    const input = windowObject.prompt?.(t("notes.prompt.editorLink"));
     if (!input) return false;
     const parsed = parseNotesWebHref(input);
     if (!parsed) {
-      windowObject.alert?.("Use um endereço da web válido.");
+      windowObject.alert?.(t("notes.prompt.invalidWebAddress"));
       return false;
     }
     if (!applyNotesRichLink(body, parsed.href)) {
-      windowObject.alert?.("Selecione um trecho da nota antes de adicionar o link.");
+      windowObject.alert?.(t("notes.prompt.selectTextForLink"));
       return false;
     }
     return true;
@@ -1217,7 +1217,7 @@ export function mountNotesWorkspaceControls(
     }
     if (action === "new-project") {
       if (state.document.projects.length >= MAX_NOTE_PROJECTS) return;
-      const name = windowObject.prompt?.("Nome do novo projeto:");
+      const name = windowObject.prompt?.(t("notes.prompt.newProjectName"));
       if (name?.trim()) {
         projectMenuId = null;
         flushEditor();
@@ -1236,7 +1236,7 @@ export function mountNotesWorkspaceControls(
       const projectId = actionNode.dataset.projectId;
       const project = state.document.projects.find((candidate) => candidate.id === projectId);
       if (!project) return;
-      const name = windowObject.prompt?.("Novo nome do projeto:", project.name);
+      const name = windowObject.prompt?.(t("notes.prompt.renameProject"), project.name);
       if (name?.trim()) {
         projectMenuId = null;
         runtime.renameProject(projectId, name);
@@ -1250,8 +1250,8 @@ export function mountNotesWorkspaceControls(
       const noteCount = state.document.notes.filter((candidate) => candidate.projectId === projectId).length;
       const confirmed = windowObject.confirm?.(
         noteCount > 0
-          ? `Excluir “${project.name}”? As ${noteCount} ${noteCount === 1 ? "nota será movida" : "notas serão movidas"} para Meu espaço.`
-          : `Excluir o projeto “${project.name}”?`,
+          ? t(noteCount === 1 ? "notes.confirm.removeProjectWithOneNote" : "notes.confirm.removeProjectWithNotes", { name: project.name, count: noteCount, home: t("notes.home") })
+          : t("notes.confirm.removeProjectEmpty", { name: project.name }),
       );
       if (confirmed) {
         projectMenuId = null;
@@ -1299,8 +1299,8 @@ export function mountNotesWorkspaceControls(
       if (deletedCount === 0) return;
       const confirmed = windowObject.confirm?.(
         deletedCount === 1
-          ? "Excluir permanentemente a nota da lixeira? Esta ação não pode ser desfeita."
-          : `Excluir permanentemente as ${deletedCount} notas da lixeira? Esta ação não pode ser desfeita.`,
+          ? t("notes.confirm.emptyTrashOne")
+          : t("notes.confirm.emptyTrashMany", { count: deletedCount }),
       );
       if (confirmed) {
         resetReferenceFlow();
@@ -1356,7 +1356,7 @@ export function mountNotesWorkspaceControls(
     }
     if (action === "delete-note-forever" && note.deletedAt !== null) {
       const confirmed = windowObject.confirm?.(
-        `Excluir “${note.title || "Sem título"}” permanentemente? Esta ação não pode ser desfeita.`,
+        t("notes.confirm.deleteForever", { title: note.title || t("notes.note.untitled") }),
       );
       if (confirmed) {
         resetReferenceFlow();
@@ -1412,14 +1412,14 @@ export function mountNotesWorkspaceControls(
     if (action === "add-link-reference") {
       if (note.references.length >= MAX_NOTE_REFERENCES) return;
       referenceNoteId = note.id;
-      const input = windowObject.prompt?.("Cole o endereço da referência:");
+      const input = windowObject.prompt?.(t("notes.prompt.referenceAddress"));
       if (!input) return;
       const parsed = parseNotesWebHref(input);
       if (!parsed) {
-        windowObject.alert?.("Use um endereço da web válido.");
+        windowObject.alert?.(t("notes.prompt.invalidWebAddress"));
         return;
       }
-      const title = windowObject.prompt?.("Título da referência:", parsed.host) || parsed.host;
+      const title = windowObject.prompt?.(t("notes.prompt.referenceTitle"), parsed.host) || parsed.host;
       resetReferenceFlow();
       runtime.addReference(note.id, createNotesLinkReference(parsed.href, title));
     }
