@@ -19,7 +19,8 @@ class UpdateStatusCopyTests(unittest.TestCase):
             "o OrdaX fará a ativação e solicitará o reinício automaticamente",
             presentation,
         )
-        self.assertIn("updateSummaryLabel(updateSnapshot)", overview)
+        self.assertIn("overviewUpdateSummaryMessageId(updateSnapshot)", overview)
+        self.assertIn('"system.overview.update.detail.activationReady"', overview)
         self.assertIn("updateBootLabel(updateSnapshot)", overview)
         self.assertNotIn('"Reinício necessário"', overview)
         self.assertNotIn("Mudança pendente de reinício físico", overview)
