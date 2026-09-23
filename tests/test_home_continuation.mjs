@@ -118,7 +118,8 @@ test("Home continuation presents two recent projects and two recent files withou
       ["recent-file", "referencia.txt", "/Downloads"],
     ],
   );
-  assert.match(presentation.items[2].actionLabel, /^Mostrar notas\.md em Arquivos$/);
+  assert.equal(presentation.items[2].actionMessageId, "home.continuation.recentAction");
+  assert.deepEqual(presentation.items[2].actionParams, { name: "notas.md" });
   assert.ok(Object.isFrozen(presentation));
   assert.ok(Object.isFrozen(presentation.items));
 });
@@ -142,7 +143,7 @@ test("session-only sources remain explicit in Home metadata", () => {
   });
 
   for (const item of presentation.items) {
-    assert.match(item.detail, /somente nesta sessão/);
+    assert.equal(item.persistence, "session");
   }
 });
 
@@ -172,14 +173,14 @@ test("Home pending summary aggregates only real unread notifications and queued 
 
   assert.equal(presentation.visible, true);
   assert.deepEqual(
-    presentation.items.map((item) => [item.kind, item.title, item.actionKind, item.appId, item.target]),
+    presentation.items.map((item) => [item.kind, item.titleMessageId, item.actionKind, item.appId, item.target]),
     [
-      ["notifications", "1 notificação não lida", "quick-panel", null, null],
-      ["sync", "1 alteração local pendente", "app", "account", "sync"],
+      ["notifications", "home.pending.notifications.title.one", "quick-panel", null, null],
+      ["sync", "home.pending.sync.title.one", "app", "account", "sync"],
     ],
   );
   assert.equal(presentation.items[0].panel, "notifications");
-  assert.match(presentation.items[1].detail, /transporte remoto não está ativo/);
+  assert.ok(presentation.items[1].detailMessageIds.includes("home.pending.sync.transport.unavailable"));
   assert.ok(Object.isFrozen(presentation));
   assert.ok(Object.isFrozen(presentation.items));
 });
@@ -205,10 +206,10 @@ test("Home pending summary is explicit about muted attention and session-only qu
     syncRuntime: syncRuntime({ queuePersistence: "session" }),
   });
 
-  assert.match(presentation.items[0].detail, /Não perturbe ativo/);
-  assert.match(presentation.items[0].detail, /histórico somente nesta sessão/);
-  assert.match(presentation.items[1].detail, /continuidade de conta não está ativa/);
-  assert.match(presentation.items[1].detail, /fila somente nesta sessão/);
+  assert.ok(presentation.items[0].detailMessageIds.includes("home.pending.notifications.detail.dnd"));
+  assert.ok(presentation.items[0].detailMessageIds.includes("home.pending.notifications.detail.session"));
+  assert.ok(presentation.items[1].detailMessageIds.includes("home.pending.sync.account.inactive"));
+  assert.ok(presentation.items[1].detailMessageIds.includes("home.pending.sync.queue.session"));
 });
 
 test("Home pending summary validates canonical owner snapshots", () => {
