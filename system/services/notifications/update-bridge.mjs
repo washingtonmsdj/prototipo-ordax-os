@@ -9,6 +9,13 @@ import { SYSTEM_UPDATES_NOTIFICATION_SOURCE_ID } from "./catalog.mjs";
 
 const DESTINATION = Object.freeze({ appId: "system", target: "updates" });
 
+function presentation(id, values = {}) {
+  return Object.freeze({
+    id: `system-updates.${id}`,
+    values: Object.freeze({ ...values }),
+  });
+}
+
 function eventSignature(snapshot) {
   if (snapshot === null) return "null";
   return JSON.stringify([
@@ -31,6 +38,9 @@ function actionableNotification(previous, current) {
       level: "warning",
       title: "Atualização de base pendente",
       message: updateSummaryDetail(current),
+      presentation: presentation("base-refresh-required", {
+        deliveryNumber: current.deliveryNumber,
+      }),
       destination: DESTINATION,
     };
   }
@@ -42,6 +52,9 @@ function actionableNotification(previous, current) {
         level: "success",
         title: "Atualização aplicada",
         message: `${deliveryLabel(current.deliveryNumber)} foi aplicada e confirmada pelo atualizador.`,
+        presentation: presentation("applied", {
+          deliveryNumber: current.deliveryNumber,
+        }),
         destination: DESTINATION,
       };
     case "network-error":
@@ -50,6 +63,7 @@ function actionableNotification(previous, current) {
         level: "warning",
         title: updateStatusLabel(current.status),
         message: "A origem de atualização não pôde ser consultada. A entrega atual continua em uso.",
+        presentation: presentation("network-error"),
         destination: DESTINATION,
       };
     case "remote-error":
@@ -58,6 +72,7 @@ function actionableNotification(previous, current) {
         level: "warning",
         title: updateStatusLabel(current.status),
         message: "A fonte remota ficou indisponível. A entrega atual continua preservada.",
+        presentation: presentation("remote-error"),
         destination: DESTINATION,
       };
     case "pull-error":
@@ -66,6 +81,7 @@ function actionableNotification(previous, current) {
         level: "error",
         title: updateStatusLabel(current.status),
         message: "A tentativa de atualização falhou antes de substituir a entrega funcional.",
+        presentation: presentation("pull-error"),
         destination: DESTINATION,
       };
     case "rejected":
@@ -74,6 +90,7 @@ function actionableNotification(previous, current) {
         level: "warning",
         title: updateStatusLabel(current.status),
         message: "A entrega candidata foi bloqueada antes da ativação e a versão atual foi preservada.",
+        presentation: presentation("rejected"),
         destination: DESTINATION,
       };
     case "rolled-back":
@@ -82,6 +99,7 @@ function actionableNotification(previous, current) {
         level: "warning",
         title: updateStatusLabel(current.status),
         message: "A tentativa foi revertida e a entrega conhecida foi restaurada.",
+        presentation: presentation("rolled-back"),
         destination: DESTINATION,
       };
     default:
