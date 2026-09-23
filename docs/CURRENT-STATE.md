@@ -202,9 +202,10 @@ locale-aware relative time, image/file-picker/checklist/reference flows, capacit
 prompts/confirmations and consultative Intelligence controls. Its picker/runtime failures retain
 semantic message IDs and newly attached local-file metadata no longer persists translated system
 labels. Internet now covers its primary browser shell,
-locale-aware tab/address search, project panel and key history/favorite states.
-Operational/error messages plus deeper Files/Settings/System/Notes/Internet flows and
-remaining Surface copy still require migration. Network and battery tray/quick-panel
+locale-aware tab/address search, project context, home status, project references,
+favorites/history and first-party operational feedback deeply in PT-BR/en-US. Its own
+feedback is stored as semantic message identity so a live locale change does not preserve
+stale rendered copy. Deeper Files flows and remaining Surface copy still require migration. Network and battery tray/quick-panel
 presentation plus the Notification Center use `ordax.localization/1` and rerender on
 locale changes. `ordax.notifications/3` keeps backward-compatible text fallbacks while
 first-party update events persist bounded semantic presentation identity, allowing stored
@@ -232,6 +233,8 @@ NOTES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 NOTES_DEEP_EN_US=PASS_SOURCE
 NOTES_SEMANTIC_ASYNC_MESSAGES=PASS_SOURCE
 INTERNET_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
+INTERNET_DEEP_EN_US=PASS_SOURCE
+INTERNET_SEMANTIC_FEEDBACK=PASS_SOURCE
 NETWORK_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 BATTERY_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 NOTIFICATION_CENTER_EN_US=PASS_SOURCE
