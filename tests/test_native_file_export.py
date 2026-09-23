@@ -65,7 +65,7 @@ class NativeFileExportTests(unittest.TestCase):
         self.assertIn("anchor.download = fileNameFromPath(path)", adapter)
         self.assertIn("revokeObjectURL", adapter)
         self.assertIn("exportSelected", controls)
-        self.assertIn("limite de exportação de 64 MiB", controls)
+        self.assertIn('"files.export.tooLarge"', controls)
 
     def test_native_server_marks_download_as_attachment_and_nosniff(self):
         server = SERVER.read_text(encoding="utf-8")
