@@ -41,8 +41,6 @@ import {
   updateBootLabel,
   updateIsAlerting,
   updateStatusLabel,
-  updateSummaryDetail,
-  updateSummaryLabel,
 } from "../../services/update/presentation.mjs";
 import { mountSystemDiagnosticsReview } from "./system-diagnostics-review.mjs";
 import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
