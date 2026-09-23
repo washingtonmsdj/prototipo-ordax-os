@@ -174,5 +174,15 @@ class SurfaceAsyncLifecycleTests(unittest.TestCase):
 
 
 
+    def test_battery_locale_rerenders_stop_after_destroy(self):
+        tray = self.read("battery-tray-controls.mjs")
+        quick = self.read("battery-quick-panel.mjs")
+        for controls in (tray, quick):
+            self.assertIn("const unsubscribeLocalization = localization.subscribe", controls)
+            self.assertIn("if (destroyed", controls)
+            self.assertIn("unsubscribeLocalization()", controls)
+
+
+
 if __name__ == "__main__":
     unittest.main()
