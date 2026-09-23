@@ -1,5 +1,9 @@
 import { assertAppActivationPort } from "../../contracts/app-activation.mjs";
-import { updateIsAlerting, updateSummaryLabel } from "../../services/update/presentation.mjs";
+import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
+import {
+  updateIsAlerting,
+  updateSummaryMessageId,
+} from "../../services/update/presentation.mjs";
 
 function node(documentObject, tag, className, text) {
   const element = documentObject.createElement(tag);
@@ -8,7 +12,7 @@ function node(documentObject, tag, className, text) {
   return element;
 }
 
-export function mountUpdateControls(root, updatePort, appActivation) {
+export function mountUpdateControls(root, updatePort, appActivation, surfaceLifecycle) {
   if (!(root instanceof Element)) {
     throw new TypeError("Update controls root must be a DOM Element");
   }
@@ -16,6 +20,9 @@ export function mountUpdateControls(root, updatePort, appActivation) {
     throw new TypeError("Update controls require a native update watcher port");
   }
   const activationPort = assertAppActivationPort(appActivation);
+  const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
 
   const documentObject = root.ownerDocument;
   const slot = root.querySelector("[data-update-slot]");
@@ -23,23 +30,26 @@ export function mountUpdateControls(root, updatePort, appActivation) {
     throw new Error("Surface update controls require the shared shell update slot");
   }
 
-  const button = node(documentObject, "button", "ordax-status-action", "Atualizações");
+  const button = node(documentObject, "button", "ordax-status-action");
   button.type = "button";
   button.dataset.updateOpenSystem = "";
-  button.setAttribute("aria-label", "Abrir Sistema, Atualizações");
   slot.append(button);
 
   let snapshot = updatePort.getSnapshot();
 
   const render = () => {
     const alerting = updateIsAlerting(snapshot);
-    button.textContent = alerting ? "Atualizações •" : "Atualizações";
+    const label = t("system.updateTray.label");
+    button.textContent = alerting ? `${label} •` : label;
     button.dataset.alerting = String(alerting);
+    button.setAttribute("aria-label", t("system.updateTray.aria"));
     button.title = snapshot?.bootRefreshRequired
-      ? `${updateSummaryLabel(snapshot)}. Abrir Sistema > Atualizações.`
+      ? t("system.updateTray.summary", {
+          summary: t(updateSummaryMessageId(snapshot)),
+        })
       : alerting
-        ? "Há uma atualização que requer atenção. Abrir Sistema > Atualizações."
-        : "Abrir Sistema > Atualizações";
+        ? t("system.updateTray.attention")
+        : t("system.updateTray.open");
   };
 
   const onClick = (event) => {
@@ -53,10 +63,12 @@ export function mountUpdateControls(root, updatePort, appActivation) {
     snapshot = nextSnapshot;
     render();
   });
+  const unsubscribeLocalization = localization.subscribe(render);
   render();
 
   return Object.freeze({
     destroy() {
+      unsubscribeLocalization();
       unsubscribe?.();
       root.removeEventListener("click", onClick);
       button.remove();
