@@ -48,6 +48,33 @@ const SOURCE = Object.freeze({
   "shell.quick.dateTimeClose": "Fechar data e hora",
   "shell.quick.timeZone": "Fuso horário",
   "shell.clock.timeZone": "Fuso horário: {timeZone}",
+  "surface.boot.loadingSurface": "Carregando superfície…",
+  "surface.boot.loadingApps": "Carregando aplicativos…",
+  "surface.boot.failed": "Não foi possível iniciar a interface",
+  "home.continuation.heading": "Continuar trabalho",
+  "home.continuation.activityUnknown": "atividade desconhecida",
+  "home.continuation.sessionSuffix": " · somente nesta sessão",
+  "home.continuation.projectDetail": "Projeto · {path} · {activity}{persistence}",
+  "home.continuation.projectAction": "Continuar projeto {name}",
+  "home.continuation.recentDetail": "Arquivo recente · {folder} · {activity}{persistence}",
+  "home.continuation.recentAction": "Mostrar {name} em Arquivos",
+  "home.pending.heading": "Pendências",
+  "home.pending.notifications.title.one": "1 notificação não lida",
+  "home.pending.notifications.title.many": "{count} notificações não lidas",
+  "home.pending.notifications.detail.center": "Central de Notificações",
+  "home.pending.notifications.detail.dnd": "Não perturbe ativo",
+  "home.pending.notifications.detail.session": "histórico somente nesta sessão",
+  "home.pending.notifications.action.one": "Abrir notificações — 1 não lida",
+  "home.pending.notifications.action.many": "Abrir notificações — {count} não lidas",
+  "home.pending.sync.title.one": "1 alteração local pendente",
+  "home.pending.sync.title.many": "{count} alterações locais pendentes",
+  "home.pending.sync.transport.available": "transporte disponível",
+  "home.pending.sync.transport.unavailable": "transporte remoto não está ativo",
+  "home.pending.sync.account.active": "continuidade de conta ativa",
+  "home.pending.sync.account.inactive": "continuidade de conta não está ativa",
+  "home.pending.sync.queue.device": "fila salva neste dispositivo",
+  "home.pending.sync.queue.session": "fila somente nesta sessão",
+  "home.pending.sync.action": "Abrir Conta em Sincronização",
 
   "surface.connectivity.online": "Online",
   "surface.connectivity.offline": "Offline",
@@ -146,6 +173,33 @@ const ENGLISH = Object.freeze({
   "shell.quick.dateTimeClose": "Close date and time",
   "shell.quick.timeZone": "Time zone",
   "shell.clock.timeZone": "Time zone: {timeZone}",
+  "surface.boot.loadingSurface": "Loading Surface…",
+  "surface.boot.loadingApps": "Loading applications…",
+  "surface.boot.failed": "The interface could not be started",
+  "home.continuation.heading": "Continue working",
+  "home.continuation.activityUnknown": "unknown activity",
+  "home.continuation.sessionSuffix": " · this session only",
+  "home.continuation.projectDetail": "Project · {path} · {activity}{persistence}",
+  "home.continuation.projectAction": "Continue project {name}",
+  "home.continuation.recentDetail": "Recent file · {folder} · {activity}{persistence}",
+  "home.continuation.recentAction": "Show {name} in Files",
+  "home.pending.heading": "Pending",
+  "home.pending.notifications.title.one": "1 unread notification",
+  "home.pending.notifications.title.many": "{count} unread notifications",
+  "home.pending.notifications.detail.center": "Notification Center",
+  "home.pending.notifications.detail.dnd": "Do Not Disturb active",
+  "home.pending.notifications.detail.session": "history for this session only",
+  "home.pending.notifications.action.one": "Open notifications — 1 unread",
+  "home.pending.notifications.action.many": "Open notifications — {count} unread",
+  "home.pending.sync.title.one": "1 pending local change",
+  "home.pending.sync.title.many": "{count} pending local changes",
+  "home.pending.sync.transport.available": "transport available",
+  "home.pending.sync.transport.unavailable": "remote transport is not active",
+  "home.pending.sync.account.active": "account continuity active",
+  "home.pending.sync.account.inactive": "account continuity is not active",
+  "home.pending.sync.queue.device": "queue saved on this device",
+  "home.pending.sync.queue.session": "queue for this session only",
+  "home.pending.sync.action": "Open Account in Sync",
 
   "surface.connectivity.online": "Online",
   "surface.connectivity.offline": "Offline",
@@ -225,19 +279,26 @@ function interpolate(text, values = {}) {
   });
 }
 
+export function translateSurfaceMessage(locale, messageId, values = {}) {
+  if (typeof messageId !== "string" || !messageId) {
+    throw new TypeError("Localization message id must be a non-empty string");
+  }
+  const source = SOURCE[messageId];
+  if (typeof source !== "string") {
+    throw new TypeError(`Unknown Surface localization message: ${messageId}`);
+  }
+  const translated = TABLES[locale]?.[messageId] ?? source;
+  return interpolate(translated, values);
+}
+
 export function createSurfaceLocalization(preferenceRuntime) {
   const preferences = assertPreferenceRuntimePort(preferenceRuntime);
   let observedLocale = preferences.getSnapshot()[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_SOURCE_LOCALE;
   const listeners = new Set();
   const currentLocale = () => preferences.getSnapshot()[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_SOURCE_LOCALE;
 
-  const translate = (messageId, values = {}) => {
-    if (typeof messageId !== "string" || !messageId) throw new TypeError("Localization message id must be a non-empty string");
-    const source = SOURCE[messageId];
-    if (typeof source !== "string") throw new TypeError(`Unknown Surface localization message: ${messageId}`);
-    const translated = TABLES[currentLocale()]?.[messageId] ?? source;
-    return interpolate(translated, values);
-  };
+  const translate = (messageId, values = {}) =>
+    translateSurfaceMessage(currentLocale(), messageId, values);
 
   const port = {
     schema: LOCALIZATION_SCHEMA,
