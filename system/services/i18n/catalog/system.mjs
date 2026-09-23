@@ -10,7 +10,23 @@ export const SYSTEM_SOURCE_MESSAGES = Object.freeze({
   "system.section.updates.subtitle": "Entrega observada, aplicação, recuperação e histórico deste dispositivo.",
   "system.section.storage.subtitle": "Espaço do usuário medido pelo host, sem inferir a capacidade de outros volumes.",
   "system.section.diagnostics.subtitle": "Capacidades desta execução e, quando disponível, uma revisão local explícita e sanitizada.",
-  "system.section.about.subtitle": "Identidade da entrega e limites de versionamento dos componentes do OrdaX."
+  "system.section.about.subtitle": "Identidade da entrega e limites de versionamento dos componentes do OrdaX.",
+  "system.recovery.kicker": "Recuperação",
+  "system.recovery.title": "Known-good e rollback",
+  "system.recovery.description": "Estado observado diretamente do owner de atualização/boot. Esta tela não cria nem autoriza ações de rollback.",
+  "system.recovery.unavailable": "Este modo não expõe o estado canônico de recuperação. Nenhum known-good é inferido a partir do SHA em execução.",
+  "system.recovery.partial": "O owner de recuperação foi encontrado, mas current e known-good não puderam ser observados juntos. O OrdaX não anuncia rollback como disponível.",
+  "system.recovery.current": "Release atual",
+  "system.recovery.knownGood": "Known-good",
+  "system.recovery.candidate": "Candidata armada",
+  "system.recovery.rejected": "Candidata rejeitada",
+  "system.recovery.rollback": "Fallback observado",
+  "system.recovery.rollbackAvailable": "Disponível para o owner de recovery",
+  "system.recovery.currentIsKnownGood": "A release atual também é o known-good",
+  "system.recovery.rollbackUnknown": "Não comprovado nesta leitura",
+  "system.recovery.source": "Fonte",
+  "system.recovery.sourcePortable": "Estado Portable do USB",
+  "system.recovery.readOnly": "Somente leitura: Sistema não executa rollback. Seleção, commit e rollback continuam sob autoridade do bootstrap/supervisor."
 });
 
 export const SYSTEM_ENGLISH_MESSAGES = Object.freeze({
@@ -25,5 +41,21 @@ export const SYSTEM_ENGLISH_MESSAGES = Object.freeze({
   "system.section.updates.subtitle": "Observed delivery, apply, recovery, and this device's update history.",
   "system.section.storage.subtitle": "User-space storage measured by the host without inferring capacity of other volumes.",
   "system.section.diagnostics.subtitle": "Capabilities for this run and, when available, an explicit sanitized local review.",
-  "system.section.about.subtitle": "Delivery identity and versioning boundaries for OrdaX components."
+  "system.section.about.subtitle": "Delivery identity and versioning boundaries for OrdaX components.",
+  "system.recovery.kicker": "Recovery",
+  "system.recovery.title": "Known-good and rollback",
+  "system.recovery.description": "State observed directly from the update/boot owner. This screen does not create or authorize rollback actions.",
+  "system.recovery.unavailable": "This mode does not expose canonical recovery state. No known-good release is inferred from the running SHA.",
+  "system.recovery.partial": "The recovery owner was found, but current and known-good could not both be observed. OrdaX does not claim rollback is available.",
+  "system.recovery.current": "Current release",
+  "system.recovery.knownGood": "Known-good",
+  "system.recovery.candidate": "Armed candidate",
+  "system.recovery.rejected": "Rejected candidate",
+  "system.recovery.rollback": "Observed fallback",
+  "system.recovery.rollbackAvailable": "Available to the recovery owner",
+  "system.recovery.currentIsKnownGood": "The current release is also known-good",
+  "system.recovery.rollbackUnknown": "Not proven by this observation",
+  "system.recovery.source": "Source",
+  "system.recovery.sourcePortable": "USB Portable state",
+  "system.recovery.readOnly": "Read-only: System does not execute rollback. Selection, commit, and rollback remain under bootstrap/supervisor authority."
 });
