@@ -44,10 +44,10 @@ class FirstRunContractTests(unittest.TestCase):
             contract["regional"]["launch_locale_policy"],
             "mvp-public-pt-br-en-us-retain-hidden-oobe-translations",
         )
-        self.assertEqual(contract["regional"]["surface_complete_locales"], ["pt-BR"])
+        self.assertEqual(contract["regional"]["surface_complete_locales"], ["pt-BR", "en-US"])
         self.assertEqual(
             contract["regional"]["surface_translation_status"]["en-US"],
-            "shared-shell-files-primary-forms-sort-export-preview-settings-system-navigation-account-notes-primary-internet-primary-implemented-more-controls-migrating",
+            "complete",
         )
         for locale in ("es-ES", "de-DE", "fr-FR"):
             self.assertEqual(
