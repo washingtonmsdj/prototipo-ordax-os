@@ -41,6 +41,27 @@ test("relative time distinguishes minutes from hours", () => {
   assert.equal(formatNotesRelativeTime(now - 30 * 3_600_000, now), "Ontem");
 });
 
+test("relative time accepts active locale and localized day labels", () => {
+  const now = Date.UTC(2026, 8, 19, 2, 0, 0);
+  assert.equal(
+    formatNotesRelativeTime(now - 15_000, now, {
+      locale: "en-US",
+      nowLabel: "Now",
+      yesterdayLabel: "Yesterday",
+    }),
+    "Now",
+  );
+  assert.equal(
+    formatNotesRelativeTime(now - 30 * 3_600_000, now, {
+      locale: "en-US",
+      nowLabel: "Now",
+      yesterdayLabel: "Yesterday",
+    }),
+    "Yesterday",
+  );
+  assert.equal(firstNotesBodyLine("", "Note has no content"), "Note has no content");
+});
+
 test("first body line ignores empty whitespace-only lines", () => {
   assert.equal(firstNotesBodyLine("\n   \nPrimeira ideia\nSegunda"), "Primeira ideia");
   assert.equal(firstNotesBodyLine(""), "Nota sem conteúdo");
