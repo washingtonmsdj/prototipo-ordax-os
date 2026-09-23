@@ -66,7 +66,7 @@ A mismatch fails before output creation. This prevents an operator or CI job fro
 
 ## Signing
 
-Before signing, the tool validates an explicitly supported manifest schema. V1 remains unchanged, and v2 support is narrowly scoped to the portable USB EROFS candidate.
+Before signing, the tool validates an explicitly supported manifest schema. V1 remains immutable for the legacy tar path; v2/v3/v4 extend the portable USB EROFS path without redefining older schemas.
 
 For v1:
 
@@ -83,9 +83,13 @@ For v1:
 
 For v2, the signer requires exactly one `system.erofs` artifact with role `system-image` and exact signed identity `product_mode=usb`, `storage_profile=portable-usb-v2`, `runtime_format=erofs`.
 
+For v3, it additionally requires the exact `native-surface-runtime.erofs` artifact with role `surface-runtime`.
+
+For v4, it additionally requires the exact `local-ai-runtime.erofs` artifact with role `local-ai-runtime` plus the bounded `ordax.local-ai/1` source/model binding: source-lock SHA-256, pinned engine repository/commit/license and pinned model repository/revision/SHA-256/size/license. The signer refuses a v4 manifest whose AI binding or artifact ordering/roles drift from the protocol.
+
 The signature is standard Ed25519 over the **exact manifest file bytes**. Whitespace is preserved in the signed payload. The output envelope remains `prototype-ordax.release-envelope/1`; envelope and manifest versions evolve independently.
 
-Signer support does not authorize publication or activation. Until the acquisition agent and boot handoff support v2, a signed v2 envelope remains a CI/protocol candidate only.
+Signer support does not authorize publication, activation or physical-media writes. The repository already proves v4 signing/materialization with an ephemeral CI-only key. The remaining Stable/MVP gate is an operator-controlled signing/materialization run using the canonical private key outside Git, followed by disposable v4 boot proof before any physical USB write.
 
 ## Signing backends and custody evolution
 
