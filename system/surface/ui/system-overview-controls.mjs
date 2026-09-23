@@ -169,15 +169,71 @@ function validSystemSection(value) {
   return SYSTEM_SECTIONS.some((section) => section.id === value);
 }
 
-const CAPABILITY_LABELS = Object.freeze({
-  "network.https": "Rede HTTPS",
-  "network.status": "Estado local de rede",
-  "network.management": "Gerenciamento de Wi-Fi",
-  "system.boot-control": "Energia do dispositivo",
-  "filesystem.user-space": "Espaço local do usuário",
-  "system.metrics": "Métricas do dispositivo",
-  "power.status": "Estado da bateria",
-  "intelligence.system": "Ordax Intelligence",
+const CAPABILITY_MESSAGE_IDS = Object.freeze({
+  "network.https": "system.capabilities.networkHttps",
+  "network.status": "system.capabilities.networkStatus",
+  "network.management": "system.capabilities.networkManagement",
+  "system.boot-control": "system.capabilities.bootControl",
+  "filesystem.user-space": "system.capabilities.userSpace",
+  "system.metrics": "system.capabilities.metrics",
+  "power.status": "system.capabilities.powerStatus",
+  "intelligence.system": "system.capabilities.intelligence",
+});
+
+const COMPONENT_RELEASE_MODE_MESSAGE_IDS = Object.freeze({
+  "base-ab": "system.components.releaseMode.baseAb",
+  "component-slot": "system.components.releaseMode.componentSlot",
+  "git-app": "system.components.releaseMode.gitApp",
+  bundled: "system.components.releaseMode.bundled",
+});
+
+const COMPONENT_KIND_MESSAGE_IDS = Object.freeze({
+  base: "system.components.kind.base",
+  shell: "system.components.kind.shell",
+  service: "system.components.kind.service",
+  app: "system.components.kind.app",
+});
+
+const COMPONENT_HEALTH_MESSAGE_IDS = Object.freeze({
+  healthy: "system.components.health.healthy",
+  failed: "system.components.health.failed",
+  unknown: "system.components.health.unknown",
+});
+
+const COMPONENT_CHANNEL_MESSAGE_IDS = Object.freeze({
+  "system-base": "system.components.channel.systemBase",
+  "system-bundle": "system.components.channel.systemBundle",
+  "development-git": "system.components.channel.developmentGit",
+  "independent-component": "system.components.channel.independent",
+});
+
+const COMPONENT_TITLE_MESSAGE_IDS = Object.freeze({
+  "ordax-base": "system.components.title.ordaxBase",
+  "surface-shell": "system.components.title.surfaceShell",
+  "update-service": "system.components.title.updateService",
+  "network-service": "system.components.title.networkService",
+  "power-service": "system.components.title.powerService",
+  "local-ai-service": "system.components.title.localAiService",
+  "ordax-intelligence": "system.components.title.intelligence",
+  "clock-service": "system.components.title.clockService",
+  files: "app.files.title",
+  settings: "app.settings.title",
+  account: "app.account.title",
+  system: "app.system.title",
+});
+
+const COMPONENT_FAILURE_DOMAIN_MESSAGE_IDS = Object.freeze({
+  boot: "system.components.failureDomain.boot",
+  surface: "system.components.failureDomain.surface",
+  service: "system.components.failureDomain.service",
+  app: "system.components.failureDomain.app",
+});
+
+const INTELLIGENCE_STATE_MESSAGE_IDS = Object.freeze({
+  ready: "system.intelligence.state.ready",
+  busy: "system.intelligence.state.busy",
+  degraded: "system.intelligence.state.degraded",
+  error: "system.intelligence.state.error",
 });
 
 function node(documentObject, tag, className, text) {
@@ -185,17 +241,6 @@ function node(documentObject, tag, className, text) {
   if (className) element.className = className;
   if (text !== undefined) element.textContent = text;
   return element;
-}
-
-function formatObservationReceivedAt(value) {
-  if (!Number.isFinite(value)) return "horário desconhecido";
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Bahia",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).format(new Date(value));
 }
 
 function formatBytes(bytes) {
