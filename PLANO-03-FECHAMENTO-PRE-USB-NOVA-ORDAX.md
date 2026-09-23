@@ -350,8 +350,35 @@ O gate é de produto/source. Ele **não** substitui:
 
 4. Arquivos: remoção segura/lixeira. — **PASS_SOURCE**
 5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE. — **IN_PROGRESS**: owner + shell inglês `PASS_SOURCE`; Arquivos cobre jornada primária, formulários comuns, ordenação, exportação e preview em inglês `PASS_SOURCE`; navegação de Ajustes/Sistema e Conta completa também `PASS_SOURCE`; mensagens operacionais e demais apps ainda em migração
-6. Diagnóstico/recovery em Sistema. — **PENDING**
+6. Diagnóstico/recovery em Sistema. — **PASS_SOURCE**: revisão diagnóstica sanitizada + projeção read-only de `current/known-good/candidate/rejected` pelo owner de update; rollback físico permanece gate separado
 7. Inventário mínimo/suporte de hardware. — **PENDING**
+
+### Fechamento do item 6 — diagnóstico/recovery
+
+O fechamento é deliberadamente **read-only**:
+
+- o supervisor continua sendo o owner de update/recovery;
+- para Portable, ele consulta o helper canônico de estado e projeta `current`,
+  `known-good`, `candidate` e `rejected`;
+- a projeção entra de forma aditiva em `ordax.update-status/1`;
+- `available` exige `current` e `known-good` válidos;
+- `rollbackEligible` só pode ser verdadeiro quando o known-good observado é
+  diferente do current;
+- Sistema > Atualizações exibe a projeção e deixa explícito que não possui autoridade
+  para executar rollback;
+- a revisão diagnóstica exportável recebe a mesma observação sanitizada;
+- o smoke MVP valida recovery sem serializar os SHAs no resumo de evidência;
+- hosts sem estado canônico mostram `unavailable`, sem inferir known-good a partir do
+  SHA que está rodando.
+
+```text
+DIAGNOSTICS_REVIEW=PASS_SOURCE
+RECOVERY_STATUS_PROJECTION=PASS_SOURCE
+RECOVERY_SYSTEM_PRESENTATION=PASS_SOURCE
+RECOVERY_ROLLBACK_UI_AUTHORITY=NONE
+PHYSICAL_KNOWN_GOOD_PROOF=PENDING
+PHYSICAL_ROLLBACK_PROOF=PENDING
+```
 
 ### P2 — fechar release
 
