@@ -585,6 +585,97 @@ export function mountSystemOverviewControls(
     view.append(section);
   };
 
+  const renderRecovery = (view) => {
+    const section = node(documentObject, "section", "ordax-system-section");
+    section.dataset.systemRecovery = "";
+    const heading = node(documentObject, "div", "ordax-system-section-heading");
+    const headingCopy = node(documentObject, "div");
+    headingCopy.append(
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.recovery.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.recovery.title")),
+    );
+    heading.append(headingCopy);
+    section.append(
+      heading,
+      node(
+        documentObject,
+        "p",
+        "ordax-system-section-copy",
+        t("system.recovery.description"),
+      ),
+    );
+
+    if (!updateSnapshot || updateSnapshot.recoveryState === "unavailable") {
+      section.append(
+        node(
+          documentObject,
+          "p",
+          "ordax-system-placeholder",
+          t("system.recovery.unavailable"),
+        ),
+      );
+      section.append(
+        node(documentObject, "p", "ordax-system-section-copy", t("system.recovery.readOnly")),
+      );
+      view.append(section);
+      return;
+    }
+
+    if (updateSnapshot.recoveryState === "partial") {
+      section.append(
+        node(
+          documentObject,
+          "p",
+          "ordax-system-warning",
+          t("system.recovery.partial"),
+        ),
+      );
+    }
+
+    const facts = node(documentObject, "dl", "ordax-system-facts");
+    const addFact = (label, value) => {
+      const item = node(documentObject, "div", "ordax-system-fact");
+      item.append(
+        node(documentObject, "dt", "", label),
+        node(documentObject, "dd", "", value),
+      );
+      facts.append(item);
+    };
+
+    addFact(
+      t("system.recovery.source"),
+      updateSnapshot.recoverySource === "portable-state"
+        ? t("system.recovery.sourcePortable")
+        : updateSnapshot.recoverySource,
+    );
+    if (updateSnapshot.currentReleaseSha) {
+      addFact(t("system.recovery.current"), shortSha(updateSnapshot.currentReleaseSha));
+    }
+    if (updateSnapshot.knownGoodReleaseSha) {
+      addFact(t("system.recovery.knownGood"), shortSha(updateSnapshot.knownGoodReleaseSha));
+    }
+    if (updateSnapshot.candidateReleaseSha) {
+      addFact(t("system.recovery.candidate"), shortSha(updateSnapshot.candidateReleaseSha));
+    }
+    if (updateSnapshot.recoveryRejectedSha) {
+      addFact(t("system.recovery.rejected"), shortSha(updateSnapshot.recoveryRejectedSha));
+    }
+
+    const rollbackLabel = updateSnapshot.rollbackEligible
+      ? t("system.recovery.rollbackAvailable")
+      : updateSnapshot.currentReleaseSha
+        && updateSnapshot.knownGoodReleaseSha
+        && updateSnapshot.currentReleaseSha === updateSnapshot.knownGoodReleaseSha
+        ? t("system.recovery.currentIsKnownGood")
+        : t("system.recovery.rollbackUnknown");
+    addFact(t("system.recovery.rollback"), rollbackLabel);
+    section.append(
+      facts,
+      node(documentObject, "p", "ordax-system-section-copy", t("system.recovery.readOnly")),
+    );
+    view.append(section);
+  };
+
   const componentReleaseLabel = (mode) => ({
     "base-ab": "Base A/B",
     "component-slot": "Slot independente",
@@ -1057,6 +1148,7 @@ export function mountSystemOverviewControls(
       renderMemory(view);
     } else if (activeSection === "updates") {
       renderUpdateDetails(view);
+      renderRecovery(view);
       renderComponentUpdateScopes(view);
       renderHistory(view);
     } else if (activeSection === "storage") {
