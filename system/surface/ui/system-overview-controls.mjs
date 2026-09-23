@@ -41,8 +41,6 @@ import {
   updateBootLabel,
   updateIsAlerting,
   updateStatusLabel,
-  updateSummaryDetail,
-  updateSummaryLabel,
 } from "../../services/update/presentation.mjs";
 import { mountSystemDiagnosticsReview } from "./system-diagnostics-review.mjs";
 import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
@@ -57,6 +55,93 @@ const SYSTEM_SECTIONS = Object.freeze([
   Object.freeze({ id: "diagnostics", messageId: "system.section.diagnostics" }),
   Object.freeze({ id: "about", messageId: "system.section.about" }),
 ]);
+
+const OVERVIEW_UPDATE_STATUS_MESSAGE_IDS = Object.freeze({
+  running: "system.overview.update.status.running",
+  applied: "system.overview.update.status.applied",
+  updating: "system.overview.update.status.updating",
+  "network-error": "system.overview.update.status.networkError",
+  "remote-error": "system.overview.update.status.remoteError",
+  "pull-error": "system.overview.update.status.pullError",
+  "rolled-back": "system.overview.update.status.rolledBack",
+  rejected: "system.overview.update.status.rejected",
+  pinned: "system.overview.update.status.pinned",
+  disabled: "system.overview.update.status.disabled",
+  unavailable: "system.overview.update.status.unavailable",
+});
+
+const OVERVIEW_UPDATE_MODE_MESSAGE_IDS = Object.freeze({
+  reload: "system.overview.update.mode.reload",
+  "surface-restart": "system.overview.update.mode.surfaceRestart",
+  "supervisor-restart": "system.overview.update.mode.supervisorRestart",
+  initial: "system.overview.update.mode.initial",
+});
+
+const OVERVIEW_BASE_SUMMARY_MESSAGE_IDS = Object.freeze({
+  "candidate-requested": "system.overview.update.summary.candidateRequested",
+  "candidate-fetching": "system.overview.update.summary.candidateFetching",
+  "candidate-ready": "system.overview.update.summary.candidateReady",
+  staged: "system.overview.update.summary.staged",
+  "activation-ready": "system.overview.update.summary.activationReady",
+});
+
+const OVERVIEW_BASE_DETAIL_MESSAGE_IDS = Object.freeze({
+  "candidate-requested": "system.overview.update.detail.candidateRequested",
+  "candidate-fetching": "system.overview.update.detail.candidateFetching",
+  "candidate-ready": "system.overview.update.detail.candidateReady",
+  staged: "system.overview.update.detail.staged",
+  "activation-ready": "system.overview.update.detail.activationReady",
+});
+
+function overviewUpdateStatusMessageId(status) {
+  return OVERVIEW_UPDATE_STATUS_MESSAGE_IDS[status]
+    ?? "system.overview.update.status.unavailable";
+}
+
+function overviewUpdateModeMessageId(mode) {
+  return OVERVIEW_UPDATE_MODE_MESSAGE_IDS[mode]
+    ?? "system.overview.update.mode.none";
+}
+
+function overviewUpdateSummaryMessageId(snapshot) {
+  if (!snapshot?.bootRefreshRequired) {
+    return overviewUpdateStatusMessageId(snapshot?.status);
+  }
+  return OVERVIEW_BASE_SUMMARY_MESSAGE_IDS[snapshot?.baseUpdatePhase]
+    ?? "system.overview.update.summary.pending";
+}
+
+function overviewUpdateDetailMessageId(snapshot) {
+  if (!snapshot?.bootRefreshRequired) return null;
+  return OVERVIEW_BASE_DETAIL_MESSAGE_IDS[snapshot?.baseUpdatePhase]
+    ?? "system.overview.update.detail.pending";
+}
+
+function formatOverviewTimestamp(value, locale) {
+  if (typeof value !== "string" || !value || value === "unknown") return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: "America/Bahia",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function formatOverviewReceivedAt(value, locale) {
+  if (!Number.isFinite(value)) return null;
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: "America/Bahia",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
+}
 
 function validSystemSection(value) {
   return SYSTEM_SECTIONS.some((section) => section.id === value);
@@ -298,14 +383,14 @@ export function mountSystemOverviewControls(
         ? "attention"
         : "observed";
     health.textContent = updateSnapshot?.bootRefreshRequired
-      ? updateSummaryLabel(updateSnapshot)
+      ? t(overviewUpdateSummaryMessageId(updateSnapshot))
       : alerting
-        ? "Atenção na atualização"
+        ? t("system.overview.health.updateAttention")
         : hostSnapshot.connectivity === "offline"
-          ? "Sem conexão"
+          ? t("system.overview.health.offline")
           : updateSnapshot
-            ? updateStatusLabel(updateSnapshot.status)
-            : "Surface ativa";
+            ? t(overviewUpdateStatusMessageId(updateSnapshot.status))
+            : t("system.overview.health.active");
     header.append(copy, health);
     view.append(header);
   };
@@ -332,54 +417,72 @@ export function mountSystemOverviewControls(
 
   const renderSummary = (view) => {
     const grid = node(documentObject, "section", "ordax-system-summary");
-    grid.setAttribute("aria-label", "Resumo do sistema");
+    grid.setAttribute("aria-label", t("system.overview.aria"));
 
     appendMetricCard(documentObject, grid, {
-      label: "Versão do protótipo",
+      label: t("system.overview.card.productVersion"),
       value: productVersionLabel(),
-      detail: "Versão humana do produto · independente da Entrega e do SHA",
+      detail: t("system.overview.card.productVersionDetail"),
     });
 
+    const deliveryNumber = updateSnapshot?.deliveryNumber ?? null;
+    const deliveryValue = Number.isSafeInteger(deliveryNumber) && deliveryNumber > 0
+      ? t("system.overview.delivery.number", { value: deliveryNumber })
+      : t("system.overview.delivery.unnumbered");
     appendMetricCard(documentObject, grid, {
-      label: "Entrega observada",
-      value: updateSnapshot ? deliveryLabel(updateSnapshot.deliveryNumber) : "—",
+      label: t("system.overview.card.delivery"),
+      value: updateSnapshot ? deliveryValue : "—",
       detail: updateSnapshot
-        ? `SHA ${shortSha(updateSnapshot.sourceSha)} · ${readableUpdateMode(updateSnapshot.applyMode)}`
-        : "Gerenciamento de entrega não exposto neste host",
+        ? t("system.overview.card.deliveryDetail", {
+            sha: shortSha(updateSnapshot.sourceSha),
+            mode: t(overviewUpdateModeMessageId(updateSnapshot.applyMode)),
+          })
+        : t("system.overview.card.deliveryUnavailable"),
     });
 
+    const updateDetailMessageId = overviewUpdateDetailMessageId(updateSnapshot);
+    const checkedAt = updateSnapshot?.checkedAt && updateSnapshot.checkedAt !== "unknown"
+      ? formatOverviewTimestamp(updateSnapshot.checkedAt, localization.getLocale())
+      : null;
     appendMetricCard(documentObject, grid, {
-      label: "Atualização",
+      label: t("system.overview.card.update"),
       value: updateSnapshot
-        ? updateSummaryLabel(updateSnapshot)
-        : "Indisponível",
-      detail: updateSnapshot?.bootRefreshRequired
-        ? updateSummaryDetail(updateSnapshot)
-        : updateSnapshot?.checkedAt && updateSnapshot.checkedAt !== "unknown"
-          ? `Verificado: ${updateSnapshot.checkedAt}`
-          : "Sem estado de atualização publicado",
+        ? t(overviewUpdateSummaryMessageId(updateSnapshot))
+        : t("system.overview.card.unavailable"),
+      detail: updateDetailMessageId
+        ? t(updateDetailMessageId)
+        : checkedAt
+          ? t("system.overview.card.updateChecked", { value: checkedAt })
+          : t("system.overview.card.updateUnpublished"),
     });
 
+    const connectivityMessageId = hostSnapshot.connectivity === "online"
+      ? "system.overview.connectivity.online"
+      : hostSnapshot.connectivity === "offline"
+        ? "system.overview.connectivity.offline"
+        : "system.overview.connectivity.unknown";
     appendMetricCard(documentObject, grid, {
-      label: "Conectividade",
-      value: hostSnapshot.connectivity === "online"
-        ? "Online"
-        : hostSnapshot.connectivity === "offline"
-          ? "Offline"
-          : "Desconhecida",
-      detail: `${hostSnapshot.capabilityIds.length} capacidades ativas`,
+      label: t("system.overview.card.connectivity"),
+      value: t(connectivityMessageId),
+      detail: t("system.overview.card.capabilities", {
+        count: hostSnapshot.capabilityIds.length,
+      }),
     });
 
+    const receivedAt = formatOverviewReceivedAt(
+      metricsLastSuccessAt,
+      localization.getLocale(),
+    ) ?? t("system.overview.time.unknown");
     appendMetricCard(documentObject, grid, {
-      label: "Tempo ligado",
+      label: t("system.overview.card.uptime"),
       value: metricsSnapshot ? formatUptime(metricsSnapshot.uptimeSeconds) : "—",
       detail: !metricsPort
-        ? "Métrica local indisponível"
+        ? t("system.overview.card.metricsUnavailable")
         : metricsReadFailed && metricsSnapshot
-          ? `Leitura anterior · recebida pela Surface às ${formatObservationReceivedAt(metricsLastSuccessAt)}`
+          ? t("system.overview.card.metricsPrevious", { time: receivedAt })
           : metricsSnapshot
-            ? `Leitura local · recebida às ${formatObservationReceivedAt(metricsLastSuccessAt)}`
-            : "Aguardando leitura local",
+            ? t("system.overview.card.metricsCurrent", { time: receivedAt })
+            : t("system.overview.card.metricsWaiting"),
     });
 
     view.append(grid);

@@ -10,6 +10,7 @@ SURFACE = ROOT / "system" / "surface" / "ui" / "surface.mjs"
 CSS = ROOT / "system" / "surface" / "ui" / "system.css"
 NATIVE = ROOT / "system" / "composition" / "native" / "main.mjs"
 WEB = ROOT / "system" / "composition" / "web" / "main.mjs"
+SYSTEM_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "system.mjs"
 
 
 class SystemCanonicalNavigationTests(unittest.TestCase):
@@ -24,6 +25,37 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
         self.assertIn("validSystemSection(activation.target)", system)
         self.assertNotIn("sectionId", system)
         self.assertNotIn("detailId", system)
+
+
+    def test_overview_summary_uses_structured_localized_presentation(self):
+        system = SYSTEM.read_text(encoding="utf-8")
+        catalog = SYSTEM_I18N.read_text(encoding="utf-8")
+        self.assertIn('t("system.overview.aria")', system)
+        self.assertIn("overviewUpdateSummaryMessageId", system)
+        self.assertIn("overviewUpdateModeMessageId", system)
+        self.assertIn("localization.getLocale()", system)
+        self.assertIn('"system.overview.card.productVersion": "Prototype version"', catalog)
+        self.assertIn('"system.overview.update.status.rolledBack": "Update rolled back"', catalog)
+        self.assertIn('"system.overview.update.summary.activationReady": "Base ready for activation"', catalog)
+        summary = system.split("const renderSummary = (view) => {", 1)[1].split(
+            "\n  const renderMemory = (view) => {",
+            1,
+        )[0]
+        header = system.split("const renderHeader = (view) => {", 1)[1].split(
+            "\n  const renderSectionNavigation = (view) => {",
+            1,
+        )[0]
+        for forbidden in (
+            '"Resumo do sistema"',
+            '"Versão do protótipo"',
+            '"Entrega observada"',
+            '"Gerenciamento de entrega não exposto neste host"',
+            '"Atenção na atualização"',
+            '"Sem conexão"',
+            '"Surface ativa"',
+        ):
+            self.assertNotIn(forbidden, summary + header)
+
 
     def test_update_footer_is_only_an_accelerator_to_canonical_system_updates(self):
         update = UPDATE.read_text(encoding="utf-8")
