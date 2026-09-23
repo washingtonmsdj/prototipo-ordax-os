@@ -106,7 +106,9 @@ export function mountFileSpaceControls(
 
   let listing = null;
   let pending = false;
-  let message = null;
+  let clearMessage();
+  let messageId = null;
+  let messageParams = Object.freeze({});
   let destroyed = false;
   let requestOrdinal = 0;
   let mountedSlot = null;
@@ -144,6 +146,21 @@ export function mountFileSpaceControls(
 
   const findSlot = () =>
     root.querySelector(`${FILE_WINDOW_SELECTOR} ${FILE_EXTENSION_SELECTOR}`);
+
+  const clearMessage = () => {
+    message = null;
+    messageId = null;
+    messageParams = Object.freeze({});
+  };
+
+  const setMessage = (id, params = {}) => {
+    message = null;
+    messageId = id;
+    messageParams = Object.freeze({ ...params });
+  };
+
+  const renderedMessage = () =>
+    message !== null ? message : (messageId ? t(messageId, messageParams) : null);
 
   const interactionContext = () =>
     trashMode ? "trash" : recentMode ? "recent" : `path:${listing?.path ?? ""}`;
@@ -522,7 +539,7 @@ export function mountFileSpaceControls(
       copyingPath = null;
       copyDraft = "";
     }
-    message = null;
+    clearMessage();
     if (textPreview?.path !== path) {
       previewRequestOrdinal += 1;
       previewPending = false;
@@ -1165,7 +1182,12 @@ export function mountFileSpaceControls(
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
     content.append(status);
-    if (message) content.append(node(documentObject, "p", "ordax-files-message", message));
+    {
+      const currentMessage = renderedMessage();
+      if (currentMessage) {
+        content.append(node(documentObject, "p", "ordax-files-message", currentMessage));
+      }
+    }
     renderRecentEntries(content);
     renderRecentDetails(content);
     renderTextPreview(content);
@@ -1325,7 +1347,12 @@ export function mountFileSpaceControls(
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
     content.append(status);
-    if (message) content.append(node(documentObject, "p", "ordax-files-message", message));
+    {
+      const currentMessage = renderedMessage();
+      if (currentMessage) {
+        content.append(node(documentObject, "p", "ordax-files-message", currentMessage));
+      }
+    }
     renderTrashEntries(content);
     renderTrashDetails(content);
     content.append(
@@ -1437,7 +1464,7 @@ export function mountFileSpaceControls(
     selectedTrashId = null;
     recentMode = true;
     selectedRecentPath = null;
-    message = null;
+    clearMessage();
     transferEntry = null;
     creatingDirectory = false;
     creatingProject = false;
@@ -1460,7 +1487,7 @@ export function mountFileSpaceControls(
     trashMode = true;
     selectedTrashId = null;
     pending = true;
-    message = null;
+    clearMessage();
     transferEntry = null;
     creatingDirectory = false;
     creatingProject = false;
@@ -1719,7 +1746,12 @@ export function mountFileSpaceControls(
     renderCreateDirectory(content);
     renderCreateProject(content);
     renderRenameProject(content);
-    if (message) content.append(node(documentObject, "p", "ordax-files-message", message));
+    {
+      const currentMessage = renderedMessage();
+      if (currentMessage) {
+        content.append(node(documentObject, "p", "ordax-files-message", currentMessage));
+      }
+    }
     renderEntries(content);
     renderSelectionDetails(content);
     renderTextPreview(content);
@@ -1760,7 +1792,7 @@ export function mountFileSpaceControls(
     selectedTrashId = null;
     const ordinal = ++requestOrdinal;
     pending = true;
-    message = null;
+    clearMessage();
     replaceView();
     try {
       const next = validateFileListing(await port.list(path));
@@ -1832,7 +1864,7 @@ export function mountFileSpaceControls(
     failedProjectResume = null;
     previewPending = true;
     textPreview = null;
-    message = null;
+    clearMessage();
     replaceView();
     try {
       const next = validateTextFile(await port.readTextFile(path));
@@ -1894,7 +1926,7 @@ export function mountFileSpaceControls(
     if (!notesImporterPort || !selected || selected.kind !== "file" || notesImportPending) return;
     const source = Object.freeze({ kind: "file", path: selected.path, name: selected.name });
     notesImportPending = true;
-    message = null;
+    clearMessage();
     replaceView();
     try {
       const outcome = await importSelectedFileToNotes(notesImporterPort, source);
@@ -1929,7 +1961,7 @@ export function mountFileSpaceControls(
     const nextPath = joinPath(destinationPath, source.name);
     const ordinal = ++requestOrdinal;
     pending = true;
-    message = null;
+    clearMessage();
     replaceView();
     try {
       const operation =
@@ -2029,7 +2061,7 @@ export function mountFileSpaceControls(
     const targetName = file.name;
     const ordinal = ++requestOrdinal;
     pending = true;
-    message = null;
+    clearMessage();
     replaceView();
     try {
       const buffer = await file.arrayBuffer();
@@ -2081,7 +2113,7 @@ export function mountFileSpaceControls(
     const ordinal = ++requestOrdinal;
     const previousPath = selected.path;
     pending = true;
-    message = null;
+    clearMessage();
     replaceView();
     try {
       const next = validateFileListing(
@@ -2140,7 +2172,7 @@ export function mountFileSpaceControls(
     if (!selected || pending) return;
     const ordinal = ++requestOrdinal;
     pending = true;
-    message = null;
+    clearMessage();
     replaceView();
     try {
       const next = validateTrashListing(await port.restoreTrashEntry(selected.id));
@@ -2187,7 +2219,7 @@ export function mountFileSpaceControls(
 
     const ordinal = ++requestOrdinal;
     pending = true;
-    message = null;
+    clearMessage();
     replaceView();
     try {
       await port.exportFile(selected.path);
@@ -2240,7 +2272,7 @@ export function mountFileSpaceControls(
     const ordinal = ++requestOrdinal;
     const nextPath = joinPath(listing.path, newName);
     pending = true;
-    message = null;
+    clearMessage();
     replaceView();
     try {
       const next = validateFileListing(
@@ -2307,7 +2339,7 @@ export function mountFileSpaceControls(
     const previousPath = selected.path;
     const nextPath = joinPath(listing.path, newName);
     pending = true;
-    message = null;
+    clearMessage();
     replaceView();
     try {
       const next = validateFileListing(
@@ -2358,7 +2390,7 @@ export function mountFileSpaceControls(
     }
     const ordinal = ++requestOrdinal;
     pending = true;
-    message = null;
+    clearMessage();
     replaceView();
     try {
       const next = validateFileListing(await port.createDirectory(listing.path, trimmed));
@@ -2401,7 +2433,7 @@ export function mountFileSpaceControls(
       projectDraft = breadcrumbParts(listing.path).at(-1) ?? "Projeto";
       renamingProjectId = null;
       projectRenameDraft = "";
-      message = null;
+      clearMessage();
       requestFocus("project-name");
       replaceView();
       return;
@@ -2415,7 +2447,7 @@ export function mountFileSpaceControls(
     if (projectCancel && root.contains(projectCancel)) {
       creatingProject = false;
       projectDraft = "";
-      message = null;
+      clearMessage();
       replaceView();
       return;
     }
@@ -2442,7 +2474,7 @@ export function mountFileSpaceControls(
         projectDraft = "";
         renamingProjectId = project.id;
         projectRenameDraft = project.name;
-        message = null;
+        clearMessage();
         requestFocus("project-rename-name", project.id);
         replaceView();
       }
@@ -2457,7 +2489,7 @@ export function mountFileSpaceControls(
     if (projectRenameCancel && root.contains(projectRenameCancel)) {
       renamingProjectId = null;
       projectRenameDraft = "";
-      message = null;
+      clearMessage();
       replaceView();
       return;
     }
@@ -2484,7 +2516,7 @@ export function mountFileSpaceControls(
     const trashRow = event.target.closest("[data-file-trash-id]");
     if (trashRow && root.contains(trashRow) && trashMode) {
       selectedTrashId = trashRow.dataset.fileTrashId ?? null;
-      message = null;
+      clearMessage();
       replaceView();
       return;
     }
@@ -2500,7 +2532,7 @@ export function mountFileSpaceControls(
         if (!previewPending) void openTextFile(path);
       } else {
         selectedRecentPath = path;
-        message = null;
+        clearMessage();
         if (textPreview?.path !== path) {
           previewRequestOrdinal += 1;
           previewPending = false;
@@ -2549,7 +2581,7 @@ export function mountFileSpaceControls(
     const recentSearchClear = event.target.closest("[data-file-recent-search-clear]");
     if (recentSearchClear && root.contains(recentSearchClear)) {
       recentSearchQuery = "";
-      message = null;
+      clearMessage();
       requestFocus("recent-search");
       replaceView();
       return;
@@ -2660,7 +2692,7 @@ export function mountFileSpaceControls(
           copyDraft = suggestedCopyName(selected.name);
           renamingPath = null;
           renameDraft = "";
-          message = null;
+          clearMessage();
           requestFocus("copy-name", selected.path);
           replaceView();
         }
@@ -2671,7 +2703,7 @@ export function mountFileSpaceControls(
     if (copyCancel && root.contains(copyCancel)) {
       copyingPath = null;
       copyDraft = "";
-      message = null;
+      clearMessage();
       replaceView();
       return;
     }
@@ -2688,7 +2720,7 @@ export function mountFileSpaceControls(
         renameDraft = selected.name;
         copyingPath = null;
         copyDraft = "";
-        message = null;
+        clearMessage();
         requestFocus("rename-name", selected.path);
         replaceView();
       }
@@ -2698,7 +2730,7 @@ export function mountFileSpaceControls(
     if (renameCancel && root.contains(renameCancel)) {
       renamingPath = null;
       renameDraft = "";
-      message = null;
+      clearMessage();
       replaceView();
       return;
     }
@@ -2717,7 +2749,7 @@ export function mountFileSpaceControls(
       previewRequestOrdinal += 1;
       previewPending = false;
       textPreview = null;
-      message = null;
+      clearMessage();
       replaceView();
       return;
     }
@@ -2744,7 +2776,7 @@ export function mountFileSpaceControls(
     const clearSearch = event.target.closest("[data-file-search-clear]");
     if (clearSearch && root.contains(clearSearch)) {
       searchQuery = "";
-      message = null;
+      clearMessage();
       requestFocus("search");
       replaceView();
       return;
@@ -2763,7 +2795,7 @@ export function mountFileSpaceControls(
     if (createToggle) {
       creatingDirectory = true;
       directoryDraft = "";
-      message = null;
+      clearMessage();
       requestFocus("directory-name");
       replaceView();
       return;
@@ -2772,7 +2804,7 @@ export function mountFileSpaceControls(
     if (cancel) {
       creatingDirectory = false;
       directoryDraft = "";
-      message = null;
+      clearMessage();
       replaceView();
       return;
     }
@@ -2801,7 +2833,7 @@ export function mountFileSpaceControls(
         previewPending = false;
         textPreview = null;
       }
-      message = null;
+      clearMessage();
       replaceView();
     } else if (event.target.matches?.("[data-file-search]")) {
       searchQuery = String(event.target.value ?? "").slice(0, 120);
@@ -2815,7 +2847,7 @@ export function mountFileSpaceControls(
         previewPending = false;
         textPreview = null;
       }
-      message = null;
+      clearMessage();
       replaceView();
     } else if (event.target.matches?.("[data-file-project-rename-name]")) {
       projectRenameDraft = String(event.target.value ?? "").slice(0, MAX_PROJECT_NAME_LENGTH);
@@ -2835,7 +2867,7 @@ export function mountFileSpaceControls(
       if (event.key === "Escape" && recentSearchQuery) {
         event.preventDefault();
         recentSearchQuery = "";
-        message = null;
+        clearMessage();
         requestFocus("recent-search");
         replaceView();
       }
@@ -2857,7 +2889,7 @@ export function mountFileSpaceControls(
       if (event.key === " ") {
         event.preventDefault();
         selectedRecentPath = recentRow.dataset.fileRecentPath;
-        message = null;
+        clearMessage();
         replaceView();
         return;
       }
@@ -2869,7 +2901,7 @@ export function mountFileSpaceControls(
       if (nextIndex === null || nextIndex === index) return;
       event.preventDefault();
       selectedRecentPath = rows[nextIndex].dataset.fileRecentPath;
-      message = null;
+      clearMessage();
       replaceView();
       return;
     }
@@ -2878,7 +2910,7 @@ export function mountFileSpaceControls(
       if (event.key === "Escape" && searchQuery) {
         event.preventDefault();
         searchQuery = "";
-        message = null;
+        clearMessage();
         requestFocus("search");
         replaceView();
       }
@@ -2892,7 +2924,7 @@ export function mountFileSpaceControls(
       } else if (event.key === "Escape" && !pending) {
         copyingPath = null;
         copyDraft = "";
-        message = null;
+        clearMessage();
         replaceView();
       }
       return;
@@ -2905,7 +2937,7 @@ export function mountFileSpaceControls(
       } else if (event.key === "Escape" && !pending) {
         renamingPath = null;
         renameDraft = "";
-        message = null;
+        clearMessage();
         replaceView();
       }
       return;
@@ -2919,7 +2951,7 @@ export function mountFileSpaceControls(
         event.preventDefault();
         renamingProjectId = null;
         projectRenameDraft = "";
-        message = null;
+        clearMessage();
         replaceView();
       }
       return;
@@ -2933,7 +2965,7 @@ export function mountFileSpaceControls(
         event.preventDefault();
         creatingProject = false;
         projectDraft = "";
-        message = null;
+        clearMessage();
         replaceView();
       }
       return;
@@ -2946,7 +2978,7 @@ export function mountFileSpaceControls(
       } else if (event.key === "Escape" && !pending) {
         creatingDirectory = false;
         directoryDraft = "";
-        message = null;
+        clearMessage();
         replaceView();
       }
       return;
