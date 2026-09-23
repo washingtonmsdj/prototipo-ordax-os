@@ -8,6 +8,8 @@ PORTABLE_INIT = ROOT / "bootstrap/initramfs/portable_init.sh"
 MOUNT_HELPER = ROOT / "bootstrap/initramfs/portable_mount.c"
 STABLE_INIT = ROOT / "bootstrap/stable-base/ordax-stable-init"
 INITRAMFS_SOURCE = ROOT / "bootstrap/initramfs/source.json"
+INTELLIGENCE_CONTRACT = ROOT / "docs/contracts/intelligence.json"
+BOOT_HANDOFF_CONTRACT = ROOT / "docs/contracts/portable-boot-handoff.json"
 
 
 class PortableV4AiHandoffContractTests(unittest.TestCase):
@@ -58,6 +60,26 @@ class PortableV4AiHandoffContractTests(unittest.TestCase):
         self.assertIn("ORDAX_LOCAL_AI_BACKEND=STARTED", text)
         self.assertIn('exec /system/entrypoint', text)
         self.assertLess(text.index("start_local_ai"), text.rindex("exec /system/entrypoint"))
+
+    def test_canonical_contracts_distinguish_source_handoff_from_stable_proof(self):
+        intelligence = json.loads(INTELLIGENCE_CONTRACT.read_text(encoding="utf-8"))
+        handoff = json.loads(BOOT_HANDOFF_CONTRACT.read_text(encoding="utf-8"))
+        self.assertEqual(
+            intelligence["architecture"]["stable_v4_backend_lifecycle"],
+            "source-handoff-implemented-signed-stable-materialization-pending",
+        )
+        self.assertTrue(
+            intelligence["mvp_policy"]["stable_v4_boot_handoff_source_complete"]
+        )
+        self.assertTrue(
+            intelligence["mvp_policy"]["signed_stable_v4_materialization_pending"]
+        )
+        v4 = handoff["v4_source_handoff"]
+        self.assertTrue(v4["implemented"])
+        self.assertFalse(v4["signed_stable_materialization_proven"])
+        self.assertFalse(v4["qemu_boot_proven"])
+        self.assertFalse(v4["physical_boot_proven"])
+        self.assertFalse(v4["backend_failure_boot_critical"])
 
     def test_boot_handoff_does_not_materialize_or_write_physical_media(self):
         combined = "\n".join(
