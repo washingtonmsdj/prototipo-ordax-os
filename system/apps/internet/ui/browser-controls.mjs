@@ -39,8 +39,8 @@ function normalizedAddress(value, t) {
   throw new TypeError(t("internet.address.invalidExample"));
 }
 
-function displayHost(url) {
-  if (!url) return "Nova aba";
+function displayHost(url, emptyLabel = "Nova aba") {
+  if (!url) return emptyLabel;
   try {
     return new URL(url).hostname || url;
   } catch {
@@ -502,22 +502,22 @@ export function mountInternetBrowserControls(
         || (!activeVisible && tab.id === filteredTabs[0]?.id)
       ) ? 0 : -1;
       activate.append(node(documentObject, "span", "ordax-internet-tab-icon", tab.loading ? "◌" : "▤"));
-      activate.append(node(documentObject, "span", "ordax-internet-tab-title", tab.title || displayHost(tab.url)));
+      activate.append(node(documentObject, "span", "ordax-internet-tab-title", tab.title || displayHost(tab.url, t("internet.tab.new"))));
       row.append(activate);
 
       if (snapshot.tabs.length > 1) {
         const close = node(documentObject, "button", "ordax-internet-tab-close", "×");
         close.type = "button";
         close.dataset.browserCloseTab = tab.id;
-        close.setAttribute("aria-label", `Fechar ${tab.title || "aba"}`);
+        close.setAttribute("aria-label", t("internet.tab.close", { title: tab.title || t("internet.search.localeEmptyTitle") }));
         row.append(close);
       }
       tabs.append(row);
     }
     if (query && filteredTabs.length === 0) {
-      tabs.append(node(documentObject, "div", "ordax-internet-tab-placeholder", "Nenhuma aba encontrada."));
+      tabs.append(node(documentObject, "div", "ordax-internet-tab-placeholder", t("internet.tabs.emptySearch")));
     } else if (!snapshot.supported && snapshot.tabs.length === 0) {
-      tabs.append(node(documentObject, "div", "ordax-internet-tab-placeholder", "Navegação local"));
+      tabs.append(node(documentObject, "div", "ordax-internet-tab-placeholder", t("internet.tabs.localNavigation")));
     }
     if (focusedTabId && filteredTabs.some((tab) => tab.id === focusedTabId)) {
       focusTab(focusedTabId);
@@ -655,8 +655,8 @@ export function mountInternetBrowserControls(
       reference.replaceChildren();
       reference.append(node(documentObject, "span", "ordax-internet-page-icon", "▤"));
       const copy = node(documentObject, "span", "ordax-internet-page-copy");
-      copy.append(node(documentObject, "strong", "", tab?.title || (tab?.url ? displayHost(tab.url) : "Nova aba")));
-      copy.append(node(documentObject, "small", "", tab?.url ? displayHost(tab.url) : "Nenhuma página aberta"));
+      copy.append(node(documentObject, "strong", "", tab?.title || (tab?.url ? displayHost(tab.url, t("internet.tab.new")) : t("internet.tab.new"))));
+      copy.append(node(documentObject, "small", "", tab?.url ? displayHost(tab.url, t("internet.tab.new")) : t("internet.page.none")));
       reference.append(copy);
     }
     const address = slot.querySelector("[data-browser-address]");
@@ -872,7 +872,7 @@ export function mountInternetBrowserControls(
           documentObject,
           "small",
           "",
-          `${displayHost(entry.url)} · ${formatHistoryVisit(entry.visitedAt)}`,
+          `${displayHost(entry.url, t("internet.tab.new"))} · ${formatHistoryVisit(entry.visitedAt, locale())}`,
         ),
       );
       open.append(node(documentObject, "span", "", "◷"), copy);
@@ -880,7 +880,7 @@ export function mountInternetBrowserControls(
       const remove = node(documentObject, "button", "ordax-internet-history-remove", "×");
       remove.type = "button";
       remove.dataset.browserRemoveHistory = entry.id;
-      remove.setAttribute("aria-label", `Remover ${entry.title} do histórico`);
+      remove.setAttribute("aria-label", t("internet.history.remove", { title: entry.title }));
       row.append(open, remove);
       list.append(row);
     }
@@ -956,7 +956,7 @@ export function mountInternetBrowserControls(
     if (removeHistoryId) {
       if (!historyPort) return;
       historyPort.remove(removeHistoryId);
-      message = "Item removido do histórico.";
+      message = t("internet.history.removed");
       render();
       return;
     }
@@ -964,7 +964,7 @@ export function mountInternetBrowserControls(
     if (target.dataset.browserClearHistory !== undefined) {
       if (!historyPort) return;
       historyPort.clear();
-      message = "Histórico limpo.";
+      message = t("internet.history.cleared");
       render();
       return;
     }
@@ -994,7 +994,7 @@ export function mountInternetBrowserControls(
     if (removeFavoriteId) {
       if (!favoritePort) return;
       favoritePort.remove(removeFavoriteId);
-      message = "Favorito removido.";
+      message = t("internet.favorite.removed");
       render();
       return;
     }
@@ -1068,7 +1068,7 @@ export function mountInternetBrowserControls(
     }
     if (target.dataset.browserNewTab !== undefined) {
       if (snapshot.tabs.length >= MAX_UI_TABS) {
-        message = "Limite de 16 abas nesta versão do protótipo.";
+        message = t("internet.tab.limit");
         render();
         return;
       }
@@ -1101,7 +1101,7 @@ export function mountInternetBrowserControls(
       try {
         if (existing) {
           favoritePort.remove(existing.id);
-          message = "Favorito removido.";
+          message = t("internet.favorite.removed");
         } else {
           favoritePort.save({
             url,
