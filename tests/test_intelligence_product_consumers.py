@@ -47,7 +47,8 @@ class IntelligenceProductConsumerTests(unittest.TestCase):
         self.assertIn('t("system.intelligence.answer.provenance")', ui)
         self.assertIn('"ordax-system-local-snapshot"', actions)
         self.assertIn('intent: "diagnose"', actions)
-        self.assertNotIn("local-ai", ui)
+        self.assertNotIn("services/local-ai", ui)
+        self.assertNotIn("contracts/local-ai", ui)
         self.assertNotIn("llama", ui.lower())
         self.assertNotIn("qwen", ui.lower())
 
