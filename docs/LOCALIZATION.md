@@ -46,7 +46,8 @@ This does **not** make `en-US` a complete Surface locale yet. Files now localize
 navigation, search, locale-aware sorting, listing, selection, common create/copy/
 rename/project forms, export/preview controls, Recents and recoverable Trash through
 the same owner. Settings and System localize their shared section navigation/header
-copy. Account consumes the shared catalog end to end. Notes now localizes its primary
+copy, and Settings now also localizes its Notifications policy/source section end to
+end. Account consumes the shared catalog end to end. Notes now localizes its primary
 navigation/editor shell, projects/list state, core persistence status and consultative
 Intelligence controls; Internet localizes its primary browser shell, tab navigation,
 address/search locale handling, project panel and key history/favorite states.
@@ -66,6 +67,7 @@ SURFACE_SHARED_SHELL_EN_US=PASS_SOURCE
 FILES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 FILES_FORMS_SORT_EXPORT_PREVIEW_EN_US=PASS_SOURCE
 SETTINGS_SYSTEM_NAV_EN_US=PASS_SOURCE
+SETTINGS_NOTIFICATIONS_EN_US=PASS_SOURCE
 ACCOUNT_EN_US=PASS_SOURCE
 NOTES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 INTERNET_PRIMARY_JOURNEY_EN_US=PASS_SOURCE

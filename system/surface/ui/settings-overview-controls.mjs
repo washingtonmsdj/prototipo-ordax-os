@@ -26,7 +26,11 @@ import {
   networkManagementFailureMessage,
   runNetworkManagementAction,
 } from "../../services/network/management-runtime.mjs";
-import { listNotificationSources } from "../../services/notifications/catalog.mjs";
+import {
+  listNotificationSources,
+  notificationSourceDescription,
+  notificationSourceLabel,
+} from "../../services/notifications/catalog.mjs";
 import { KEYBOARD_LAYOUT_OPTIONS } from "../../services/input/keyboard-layout.mjs";
 import { listPreferenceDefinitions } from "../../services/preferences/catalog.mjs";
 import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
@@ -533,13 +537,23 @@ export function mountSettingsOverviewControls(
     const policySection = node(documentObject, "section", "ordax-settings-section");
     policySection.dataset.settingsNotifications = "";
     policySection.append(
-      node(documentObject, "span", "ordax-settings-section-kicker", "Apresentação"),
-      node(documentObject, "h4", "ordax-settings-section-title", "Não perturbe"),
+      node(
+        documentObject,
+        "span",
+        "ordax-settings-section-kicker",
+        t("settings.notifications.presentation.kicker"),
+      ),
+      node(
+        documentObject,
+        "h4",
+        "ordax-settings-section-title",
+        t("settings.notifications.dnd.title"),
+      ),
       node(
         documentObject,
         "p",
         "ordax-settings-section-copy",
-        "Silencia o sinal de atenção da bandeja sem apagar histórico nem marcar avisos como lidos.",
+        t("settings.notifications.dnd.description"),
       ),
     );
 
@@ -549,7 +563,7 @@ export function mountSettingsOverviewControls(
           documentObject,
           "p",
           "ordax-settings-empty",
-          "O owner de notificações não está disponível neste ambiente.",
+          t("settings.notifications.unavailable"),
         ),
       );
       view.append(policySection);
@@ -563,22 +577,26 @@ export function mountSettingsOverviewControls(
         documentObject,
         "strong",
         "",
-        notificationSnapshot.doNotDisturb ? "Não perturbe ativo" : "Avisos de bandeja ativos",
+        notificationSnapshot.doNotDisturb
+          ? t("settings.notifications.dnd.active")
+          : t("settings.notifications.dnd.inactive"),
       ),
       node(
         documentObject,
         "small",
         "",
         notificationSnapshot.doNotDisturb
-          ? "Novos eventos continuam no histórico, mas badge e cor de atenção ficam ocultos."
-          : "Eventos não lidos podem sinalizar atenção na bandeja.",
+          ? t("settings.notifications.dnd.activeDetail")
+          : t("settings.notifications.dnd.inactiveDetail"),
       ),
     );
     const dndButton = node(
       documentObject,
       "button",
       "ordax-settings-notification-action",
-      notificationSnapshot.doNotDisturb ? "Desativar" : "Ativar",
+      notificationSnapshot.doNotDisturb
+        ? t("settings.notifications.action.disable")
+        : t("settings.notifications.action.enable"),
     );
     dndButton.type = "button";
     dndButton.dataset.settingsNotificationDnd = "";
@@ -588,13 +606,23 @@ export function mountSettingsOverviewControls(
 
     const sourceSection = node(documentObject, "section", "ordax-settings-section");
     sourceSection.append(
-      node(documentObject, "span", "ordax-settings-section-kicker", "Por aplicativo"),
-      node(documentObject, "h4", "ordax-settings-section-title", "Fontes que realmente notificam"),
+      node(
+        documentObject,
+        "span",
+        "ordax-settings-section-kicker",
+        t("settings.notifications.sources.kicker"),
+      ),
+      node(
+        documentObject,
+        "h4",
+        "ordax-settings-section-title",
+        t("settings.notifications.sources.title"),
+      ),
       node(
         documentObject,
         "p",
         "ordax-settings-section-copy",
-        "Só aparecem produtores conectados ao serviço comum de notificações. Desativar uma fonte não interrompe a operação correspondente e não apaga o histórico existente.",
+        t("settings.notifications.sources.description"),
       ),
     );
 
@@ -604,14 +632,16 @@ export function mountSettingsOverviewControls(
       row.dataset.enabled = String(enabled);
       const copy = node(documentObject, "span", "ordax-settings-notification-copy");
       copy.append(
-        node(documentObject, "strong", "", `${source.label} · ${source.topic}`),
-        node(documentObject, "small", "", source.description),
+        node(documentObject, "strong", "", notificationSourceLabel(source.id, t)),
+        node(documentObject, "small", "", notificationSourceDescription(source.id, t)),
       );
       const action = node(
         documentObject,
         "button",
         "ordax-settings-notification-action",
-        enabled ? "Desativar" : "Ativar",
+        enabled
+          ? t("settings.notifications.action.disable")
+          : t("settings.notifications.action.enable"),
       );
       action.type = "button";
       action.dataset.settingsNotificationSource = source.id;
@@ -626,8 +656,8 @@ export function mountSettingsOverviewControls(
         "p",
         "ordax-settings-notification-persistence",
         notificationSnapshot.policyPersistence === "device"
-          ? "Preferências de notificações salvas neste dispositivo."
-          : "Preferências de notificações válidas somente nesta sessão.",
+          ? t("settings.notifications.persistence.device")
+          : t("settings.notifications.persistence.session"),
       ),
     );
     view.append(policySection, sourceSection);

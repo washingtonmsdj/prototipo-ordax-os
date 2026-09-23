@@ -16,6 +16,7 @@ const SOURCE_MESSAGE_IDS = Object.freeze({
   [SYSTEM_UPDATES_NOTIFICATION_SOURCE_ID]: Object.freeze({
     label: "notifications.source.systemUpdates.label",
     topic: "notifications.source.systemUpdates.topic",
+    description: "notifications.source.systemUpdates.description",
   }),
 });
 
@@ -39,6 +40,15 @@ for (const source of SOURCES) validateNotificationSourceId(source.id);
 
 export function listNotificationSources() {
   return SOURCES;
+}
+
+export function notificationSourceDescription(sourceId, translate = null) {
+  const source = SOURCES.find((candidate) => candidate.id === sourceId);
+  const messageIds = SOURCE_MESSAGE_IDS[sourceId] ?? null;
+  if (source && messageIds?.description && typeof translate === "function") {
+    return translate(messageIds.description);
+  }
+  return source?.description ?? "";
 }
 
 export function notificationSourceLabel(sourceId, translate = null) {
