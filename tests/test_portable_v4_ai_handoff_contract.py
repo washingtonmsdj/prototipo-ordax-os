@@ -69,6 +69,7 @@ class PortableV4AiHandoffContractTests(unittest.TestCase):
         for text in (direct, uefi):
             self.assertIn("ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED", text)
             self.assertIn("ORDAX_LOCAL_AI_RUNTIME_SHA256=", text)
+            self.assertIn("ORDAX_LOCAL_AI_BACKEND=STARTED", text)
         self.assertIn("--manifest-schema 4", workflow)
         self.assertIn("--local-ai-artifact", workflow)
         self.assertIn("--local-ai-source-lock", workflow)
