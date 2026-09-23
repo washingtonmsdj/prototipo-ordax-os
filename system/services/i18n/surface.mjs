@@ -4,6 +4,8 @@ import { REGIONAL_LOCALE_PREFERENCE_ID } from "../preferences/regional.mjs";
 import { FILES_SOURCE_MESSAGES, FILES_ENGLISH_MESSAGES } from "./catalog/files.mjs";
 import { SETTINGS_SOURCE_MESSAGES, SETTINGS_ENGLISH_MESSAGES } from "./catalog/settings.mjs";
 import { SYSTEM_SOURCE_MESSAGES, SYSTEM_ENGLISH_MESSAGES } from "./catalog/system.mjs";
+import { NOTES_SOURCE_MESSAGES, NOTES_ENGLISH_MESSAGES } from "./catalog/notes.mjs";
+import { INTERNET_SOURCE_MESSAGES, INTERNET_ENGLISH_MESSAGES } from "./catalog/internet.mjs";
 import { ACCOUNT_SOURCE_MESSAGES, ACCOUNT_ENGLISH_MESSAGES } from "./catalog/account.mjs";
 
 export const SURFACE_SOURCE_LOCALE = "pt-BR";
