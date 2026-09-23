@@ -94,6 +94,7 @@ on:
       - 'tests/test_notes_runtime.mjs'
       - 'tests/test_notes_image_previews.mjs'
       - 'tests/test_notes_list_model.mjs'
+      - 'tests/test_notes_deep_localization.py'
       - 'tests/test_notes_file_picker.mjs'
       - 'tests/test_notes_editor_save.mjs'
       - 'tests/test_notes_reference_links.mjs'
@@ -226,6 +227,7 @@ on:
       - 'tests/test_notes_runtime.mjs'
       - 'tests/test_notes_image_previews.mjs'
       - 'tests/test_notes_list_model.mjs'
+      - 'tests/test_notes_deep_localization.py'
       - 'tests/test_notes_file_picker.mjs'
       - 'tests/test_notes_editor_save.mjs'
       - 'tests/test_notes_reference_links.mjs'
@@ -332,6 +334,7 @@ jobs:
           node --test tests/test_notes_runtime.mjs
           node --test tests/test_notes_image_previews.mjs
           node --test tests/test_notes_list_model.mjs
+          python -m unittest tests.test_notes_deep_localization -v
           node --test tests/test_notes_file_picker.mjs
           node --test tests/test_notes_editor_save.mjs
           node --test tests/test_notes_reference_links.mjs
