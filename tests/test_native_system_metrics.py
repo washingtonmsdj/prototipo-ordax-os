@@ -83,7 +83,7 @@ class NativeSystemMetricsTests(unittest.TestCase):
         self.assertIn("Leitura antiga", catalog)
         self.assertIn("metricsReadFailed", controls)
         self.assertIn("metricsLastSuccessAt", controls)
-        self.assertIn("última leitura válida recebida pela Surface", controls)
+        self.assertIn('"system.resources.readFailedPrevious"', controls)
         self.assertIn("formatObservationReceivedAt", controls)
         self.assertNotIn("adapters/native", controls)
         self.assertNotIn("/__ordax/native/", controls)
