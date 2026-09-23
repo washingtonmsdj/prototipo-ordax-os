@@ -516,7 +516,7 @@ FULL_BOOTSTRAP_CANONICAL_TRUST_PROOF_ARTIFACT_SHA256=079aad05492867000989fa2c276
 
 The canonical release channel resolves `release-envelope.json`; the URL selects bytes and Ed25519 verification decides authenticity. The release acquisition code remains fail-closed with SHA-256 verification, exact source-commit binding, safe materialization, atomic activation and known-good preservation.
 
-### Canonical release trust — public anchor pinned, first Stable/MVP proof authorized
+### Canonical release trust — public anchor pinned, v4 physical consent pending refresh
 
 ```text
 RELEASE_TRUST_POLICY=RESOLVED
@@ -542,14 +542,14 @@ EXTERNAL_OFFLINE_BACKUP_REQUIRED_BEFORE_BROAD_DISTRIBUTION=YES
 PUBLIC_TRUST_PROMOTION=PASS_PUBLIC_HANDOFF_VALIDATED
 MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=YES
 PHYSICAL_AUTHORIZATION_ELIGIBLE=YES
-PHYSICAL_WRITE_ALLOWED=YES_FIRST_STABLE_MVP_USB_PROOF
+PHYSICAL_WRITE_ALLOWED=NO_FRESH_V4_OWNER_AUTHORIZATION_PENDING
 PHYSICAL_WRITE_SCOPE=first-real-stable-mvp-usb-proof
 PHYSICAL_WRITE_RELEASE_SEQUENCE=1
 PHYSICAL_TARGET_SELECTED=NO
 PHYSICAL_TARGET_DESTRUCTIVE_CONFIRMATION=PENDING
 ```
 
-The eligible Windows trust toolkit from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`) completed operator steps 1, 2 and 3 on 2026-09-21. The uploaded `OrdaX-Public-Trust-Handoff.zip` was then independently revalidated: archive shape, exact public hashes and the recovered Ed25519 signing proof all passed. The exact public anchor is now pinned at `bootstrap/trust/release-ed25519.json`, the minimal bootstrap trust group is resolved and the physical-authorization bindings are populated. The private key remains outside Git/USB/Actions artifacts and is not recorded here. A same-host encrypted backup copy was verified byte-for-byte; this is accepted for the first controlled prototype but is not called independent off-device custody, which remains required before broad public distribution. Public trust promotion itself did not authorize destructive media writes. On 2026-09-22 the owner separately provided the exact Stable/MVP authorization phrase for scope `first-real-stable-mvp-usb-proof`, release sequence 1. The source-controlled authorization is now recorded and bound to the proven source context. This does not select a disk, does not identify a physical target and does not replace the later live USB revalidation, Windows UAC or target-specific destructive confirmation.
+The eligible Windows trust toolkit from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`) completed operator steps 1, 2 and 3 on 2026-09-21. The uploaded `OrdaX-Public-Trust-Handoff.zip` was then independently revalidated: archive shape, exact public hashes and the recovered Ed25519 signing proof all passed. The exact public anchor is now pinned at `bootstrap/trust/release-ed25519.json`, the minimal bootstrap trust group is resolved and the physical-authorization bindings are populated. The private key remains outside Git/USB/Actions artifacts and is not recorded here. A same-host encrypted backup copy was verified byte-for-byte; this is accepted for the first controlled prototype but is not called independent off-device custody, which remains required before broad public distribution. Public trust promotion itself did not authorize destructive media writes. On 2026-09-22 the owner provided the exact Stable/MVP authorization phrase for scope `first-real-stable-mvp-usb-proof`, release sequence 1, and that consent was correctly bound to the then-current writer context. The later v4 Creator migration expands the physical payload from 15 to 17 artifacts, so the old context is no longer accepted: the authorization contract has returned to explicit-consent pending with `physical_write_allowed=false`. This revocation does not change canonical trust and does not touch a disk; after all non-destructive v4 gates are green, a fresh owner authorization must bind the new writer context before live USB revalidation, Windows UAC or target-specific destructive confirmation can become reachable.
 
 ## Creator and physical-write boundary
 
