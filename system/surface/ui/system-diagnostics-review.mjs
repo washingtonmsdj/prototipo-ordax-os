@@ -277,6 +277,15 @@ export function createDiagnosticReviewPresentation(snapshotValue) {
         ? formatUpdateTimestamp(report.update.checkedAt)
         : "Não informado",
       lastError: report.update.lastError || "",
+      recovery: freeze({
+        state: report.update.recoveryState,
+        source: report.update.recoverySource,
+        currentReleaseSha: report.update.currentReleaseSha,
+        knownGoodReleaseSha: report.update.knownGoodReleaseSha,
+        candidateReleaseSha: report.update.candidateReleaseSha,
+        rejectedReleaseSha: report.update.recoveryRejectedSha,
+        rollbackEligible: report.update.rollbackEligible === true,
+      }),
     })
     : null;
 
@@ -476,6 +485,35 @@ function renderReview(documentObject, container, presentation) {
     appendFact(documentObject, updateFacts, "Fase observada", review.update.phase);
     appendFact(documentObject, updateFacts, "Verificação publicada", review.update.checkedAt);
     if (review.update.lastError) appendFact(documentObject, updateFacts, "Último diagnóstico", review.update.lastError);
+    const recovery = review.update.recovery;
+    if (recovery.state !== "unavailable") {
+      appendFact(
+        documentObject,
+        updateFacts,
+        "Recovery observado",
+        recovery.state === "available" ? "Disponível" : "Parcial",
+      );
+      if (recovery.currentReleaseSha) {
+        appendFact(documentObject, updateFacts, "Release atual", recovery.currentReleaseSha.slice(0, 8));
+      }
+      if (recovery.knownGoodReleaseSha) {
+        appendFact(documentObject, updateFacts, "Known-good", recovery.knownGoodReleaseSha.slice(0, 8));
+      }
+      if (recovery.candidateReleaseSha) {
+        appendFact(documentObject, updateFacts, "Candidata armada", recovery.candidateReleaseSha.slice(0, 8));
+      }
+      if (recovery.rejectedReleaseSha) {
+        appendFact(documentObject, updateFacts, "Candidata rejeitada", recovery.rejectedReleaseSha.slice(0, 8));
+      }
+      appendFact(
+        documentObject,
+        updateFacts,
+        "Fallback observado",
+        recovery.rollbackEligible
+          ? "Known-good distinto observado"
+          : "Nenhum fallback distinto comprovado nesta leitura",
+      );
+    }
     container.append(updateFacts);
   }
 
