@@ -9,11 +9,40 @@ import { SYSTEM_METRICS_SCHEMA } from "../system/contracts/system-metrics.mjs";
 import { UPDATE_STATUS_SCHEMA } from "../system/contracts/update-status.mjs";
 import { createDiagnosticReviewController } from "../system/services/diagnostics/controller.mjs";
 import { createDiagnosticJournalRuntime } from "../system/services/diagnostics/runtime.mjs";
+import { LOCALIZATION_SCHEMA } from "../system/contracts/localization.mjs";
+import {
+  SYSTEM_DIAGNOSTICS_SOURCE_MESSAGES,
+  SYSTEM_DIAGNOSTICS_ENGLISH_MESSAGES,
+} from "../system/services/i18n/catalog/system-diagnostics.mjs";
 import { createDiagnosticReviewPresentation } from "../system/surface/ui/system-diagnostics-review.mjs";
 
 const SOURCE_SHA = "0123456789abcdef0123456789abcdef01234567";
 const TARGET_SHA = "89abcdef0123456789abcdef0123456789abcdef";
 const GENERATED_AT = "2026-09-18T23:30:00Z";
+
+function localization(locale = "pt-BR") {
+  const table = locale === "en-US"
+    ? SYSTEM_DIAGNOSTICS_ENGLISH_MESSAGES
+    : SYSTEM_DIAGNOSTICS_SOURCE_MESSAGES;
+  return Object.freeze({
+    schema: LOCALIZATION_SCHEMA,
+    getLocale() {
+      return locale;
+    },
+    translate(messageId, values = {}) {
+      const source = SYSTEM_DIAGNOSTICS_SOURCE_MESSAGES[messageId];
+      if (typeof source !== "string") throw new TypeError(`Unknown test message: ${messageId}`);
+      const message = table[messageId] ?? source;
+      return message.replace(/\{([A-Za-z][A-Za-z0-9]*)\}/g, (match, key) => (
+        values[key] === undefined || values[key] === null ? match : String(values[key])
+      ));
+    },
+    subscribe(listener) {
+      listener(locale);
+      return () => {};
+    },
+  });
+}
 
 function host() {
   return Object.freeze({
@@ -107,7 +136,7 @@ test("idle presentation asks for explicit review and never invents review materi
     clock: () => GENERATED_AT,
   });
 
-  const presentation = createDiagnosticReviewPresentation(controller.getSnapshot());
+  const presentation = createDiagnosticReviewPresentation(controller.getSnapshot(), localization());
   assert.equal(presentation.phase, "idle");
   assert.equal(presentation.review, null);
   assert.equal(presentation.copy.visible, false);
@@ -135,7 +164,7 @@ test("ready presentation preserves partial review, stale observation and degrade
 
   const prepared = await controller.prepare();
   assert.equal(prepared.status, "ready");
-  const presentation = createDiagnosticReviewPresentation(controller.getSnapshot());
+  const presentation = createDiagnosticReviewPresentation(controller.getSnapshot(), localization());
 
   assert.equal(presentation.phase, "ready");
   assert.equal(presentation.copy.visible, true);
@@ -174,7 +203,7 @@ test("missing journal stays unavailable instead of becoming an empty-health clai
   });
   await controller.prepare();
 
-  const presentation = createDiagnosticReviewPresentation(controller.getSnapshot());
+  const presentation = createDiagnosticReviewPresentation(controller.getSnapshot(), localization());
   const journalSource = presentation.review.sources.find((source) => source.id === "journal");
   assert.equal(journalSource.status, "unavailable");
   assert.equal(presentation.review.eventCount, null);
@@ -200,7 +229,7 @@ test("copy presentation shows progress, success and stable retryable failure", a
 
   await controller.prepare();
   const copying = controller.copyPreparedSummary();
-  let presentation = createDiagnosticReviewPresentation(controller.getSnapshot());
+  let presentation = createDiagnosticReviewPresentation(controller.getSnapshot(), localization());
   assert.equal(presentation.phase, "copying");
   assert.equal(presentation.action.kind, "progress");
   assert.equal(presentation.action.text, "Copiando resumo sanitizado…");
@@ -210,7 +239,7 @@ test("copy presentation shows progress, success and stable retryable failure", a
 
   gate.resolve();
   assert.equal((await copying).status, "copied");
-  presentation = createDiagnosticReviewPresentation(controller.getSnapshot());
+  presentation = createDiagnosticReviewPresentation(controller.getSnapshot(), localization());
   assert.equal(presentation.phase, "ready");
   assert.equal(presentation.action.kind, "success");
   assert.equal(presentation.action.text, "Resumo sanitizado copiado.");
@@ -226,7 +255,7 @@ test("copy presentation shows progress, success and stable retryable failure", a
   await failingController.prepare();
   fail = true;
   await failingController.copyPreparedSummary();
-  presentation = createDiagnosticReviewPresentation(failingController.getSnapshot());
+  presentation = createDiagnosticReviewPresentation(failingController.getSnapshot(), localization());
   assert.equal(presentation.phase, "ready");
   assert.equal(presentation.action.kind, "warning");
   assert.match(presentation.action.text, /Não foi possível copiar o resumo sanitizado/);
@@ -243,29 +272,56 @@ test("export action distinguishes saved, cancelled and stable failures", async (
   });
 
   await controller.prepare();
-  let presentation = createDiagnosticReviewPresentation(controller.getSnapshot());
+  let presentation = createDiagnosticReviewPresentation(controller.getSnapshot(), localization());
   assert.equal(presentation.action.kind, "success");
   assert.match(presentation.action.text, /Revisão preparada localmente/);
 
   await controller.exportPrepared();
-  presentation = createDiagnosticReviewPresentation(controller.getSnapshot());
+  presentation = createDiagnosticReviewPresentation(controller.getSnapshot(), localization());
   assert.equal(presentation.phase, "ready");
   assert.equal(presentation.action.kind, "neutral");
   assert.match(presentation.action.text, /Salvamento cancelado/);
 
   exportStatus = "invalid";
   await controller.exportPrepared();
-  presentation = createDiagnosticReviewPresentation(controller.getSnapshot());
+  presentation = createDiagnosticReviewPresentation(controller.getSnapshot(), localization());
   assert.equal(presentation.action.kind, "warning");
   assert.match(presentation.action.text, /Não foi possível salvar/);
 
   exportStatus = "saved";
   await controller.exportPrepared();
-  presentation = createDiagnosticReviewPresentation(controller.getSnapshot());
+  presentation = createDiagnosticReviewPresentation(controller.getSnapshot(), localization());
   assert.equal(presentation.phase, "idle");
   assert.equal(presentation.review, null);
   assert.equal(presentation.action.kind, "success");
   assert.equal(presentation.action.text, "Diagnóstico salvo em Downloads.");
+});
+
+
+test("English diagnostic presentation uses the shared semantic catalog", async () => {
+  const controller = createDiagnosticReviewController({
+    host: host(),
+    updateStatus: updatePort(),
+    diagnosticCopy: copyPort(async () => ({ status: "copied" })),
+    diagnosticExport: exportPort(async () => ({ status: "saved" })),
+    clock: () => GENERATED_AT,
+  });
+  await controller.prepare();
+
+  const presentation = createDiagnosticReviewPresentation(
+    controller.getSnapshot(),
+    localization("en-US"),
+  );
+
+  assert.equal(presentation.copy.label, "Copy sanitized summary");
+  assert.equal(presentation.review.freshness.label, "Stale observation");
+  assert.equal(presentation.review.update.delivery, "Delivery 51");
+  assert.equal(presentation.review.update.status, "Running");
+  assert.equal(presentation.review.update.phase, "Idle");
+  const source = presentation.review.sources.find((entry) => entry.id === "update");
+  assert.equal(source.label, "Update");
+  assert.equal(source.statusLabel, "Included");
+  assert.doesNotMatch(JSON.stringify(presentation), /Copiar resumo|Observação antiga|Em execução/);
 });
 
 test("presentation rejects misleading controller state shapes", () => {
@@ -277,7 +333,7 @@ test("presentation rejects misleading controller state shapes", () => {
       copyAvailable: true,
       document: null,
       lastResult: null,
-    }),
+    }, localization()),
     /requires a prepared document/,
   );
   assert.throws(
@@ -288,7 +344,7 @@ test("presentation rejects misleading controller state shapes", () => {
       copyAvailable: true,
       document: null,
       lastResult: null,
-    }),
+    }, localization()),
     /Unsupported diagnostic review controller phase/,
   );
   assert.throws(
@@ -299,7 +355,7 @@ test("presentation rejects misleading controller state shapes", () => {
       copyAvailable: "yes",
       document: null,
       lastResult: null,
-    }),
+    }, localization()),
     /copyAvailable must be boolean/,
   );
 });
