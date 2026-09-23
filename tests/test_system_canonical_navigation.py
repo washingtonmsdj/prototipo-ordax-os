@@ -72,8 +72,11 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
         presentation = PRESENTATION.read_text(encoding="utf-8")
         self.assertIn("services/update/presentation.mjs", update)
         self.assertIn("services/update/presentation.mjs", system)
-        for marker in ("updateIsAlerting", "updateStatusLabel", "readableUpdatePhase", "readableUpdateMode", "America/Bahia"):
+        for marker in ("updateIsAlerting", "updateStatusLabel", "updateSummaryLabel", "updateSummaryDetail"):
             self.assertIn(marker, presentation)
+        self.assertIn("America/Bahia", system)
+        self.assertIn("UPDATE_PHASE_MESSAGE_IDS", system)
+        self.assertIn("overviewUpdateModeMessageId", system)
 
     def test_component_update_scopes_are_visible_in_system_updates(self):
         system = SYSTEM.read_text(encoding="utf-8")
@@ -91,8 +94,10 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
 
     def test_transaction_details_remain_in_system_updates(self):
         system = SYSTEM.read_text(encoding="utf-8")
-        for marker in ("targetSha", "attemptId", "lastError", "lastAppliedAt", "rejectedSha", "runtimeSurfaceSha", '"Tentativa"', '"Diagnóstico"'):
+        for marker in ("targetSha", "attemptId", "lastError", "lastAppliedAt", "rejectedSha", "runtimeSurfaceSha"):
             self.assertIn(marker, system)
+        for message_id in ("system.updates.fact.attempt", "system.updates.fact.diagnostic"):
+            self.assertIn(f't("{message_id}")', system)
 
     def test_system_sections_expose_only_real_existing_data_owners(self):
         system = SYSTEM.read_text(encoding="utf-8")
