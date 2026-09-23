@@ -49,6 +49,7 @@ import { createUpdateDiagnosticRecorder } from "../../services/diagnostics/updat
 import { createPreferenceSyncRuntime } from "../../services/sync/preference-runtime.mjs";
 import { createWorkspaceMetadataBridge } from "../../services/sync/workspace-metadata.mjs";
 import { seedMissingRegionalPreferencesFromFirstRun } from "../../services/state/first-run.mjs";
+import { translateSurfaceMessage } from "../../services/i18n/surface.mjs";
 import { createNativeDiagnosticReviewComposition } from "./diagnostics.mjs";
 import { mountAccountOverviewControls } from "../../surface/ui/account-overview-controls.mjs";
 import { mountFileSpaceControls } from "../../surface/ui/file-space-controls.mjs";
@@ -79,9 +80,10 @@ async function optionalNativeProbe(label, factory) {
 }
 
 const bootScreen = createSurfaceBootScreen(document);
+let bootLocale = "pt-BR";
+const bootText = (messageId) => translateSurfaceMessage(bootLocale, messageId);
 
 async function start() {
-  bootScreen.setStage("Carregando superfície…");
   const root = document.querySelector("#ordax-root");
   if (!root) {
     throw new Error("OrdaX composition root is missing #ordax-root");
@@ -165,6 +167,8 @@ async function start() {
   if (regionalRecovery.changed) {
     preferenceStore.save(regionalRecovery.snapshot);
   }
+  bootLocale = regionalRecovery.snapshot["regional.locale"] ?? "pt-BR";
+  bootScreen.setStage(bootText("surface.boot.loadingSurface"));
   const [
     clientDiagnostics,
     diagnosticJournalStore,
@@ -301,6 +305,7 @@ async function start() {
     workspaceStore,
     appActivation,
   );
+  bootLocale = surface.localization.getLocale();
   const notificationCenter = mountNotificationCenterControls(root, notifications, appActivation, surface);
   let quickPanelControls = null;
   try {
@@ -356,8 +361,8 @@ async function start() {
     workspaceMetadata.source,
     appActivation,
   );
-  const homeContinuation = mountHomeContinuation(root, { projects, recentFiles });
-  const homePending = mountHomePending(root, { notifications, syncRuntime: preferenceSync });
+  const homeContinuation = mountHomeContinuation(root, { projects, recentFiles, surfaceLifecycle: surface });
+  const homePending = mountHomePending(root, { notifications, syncRuntime: preferenceSync, surfaceLifecycle: surface });
   const filesOwnerSpace = fileSpace === null
     ? null
     : createProjectContinuityFileSpace(fileSpace, projects, {
@@ -414,8 +419,8 @@ async function start() {
     intelligence,
     recoveryStatus,
   );
-  const updateControls = mountUpdateControls(root, updateWatcher, appActivation);
-  const powerControls = mountPowerControls(root, powerActions);
+  const updateControls = mountUpdateControls(root, updateWatcher, appActivation, surface);
+  const powerControls = mountPowerControls(root, powerActions, surface);
 
   // Reaching this point proves that the shared Surface composition mounted.
   // Optional app runtimes load only after this acknowledgement so an app-level
@@ -424,7 +429,7 @@ async function start() {
   void updateWatcher.markHealthy();
   const surfaceHeartbeat = createNativeSurfaceHeartbeat(window);
 
-  bootScreen.setStage("Carregando aplicativos…");
+  bootScreen.setStage(surface.localization.translate("surface.boot.loadingApps"));
 
   const notesComponent = await loadOptionalComponentRuntime({
     componentId: "notes",
@@ -463,7 +468,7 @@ async function start() {
     },
   });
 
-  bootScreen.setStage("Preparando primeiro uso…");
+  bootScreen.setStage(surface.localization.translate("surface.boot.preparingFirstRun"));
   let firstRun = null;
   try {
     firstRun = mountFirstRunExperience(root, {
@@ -533,6 +538,6 @@ async function start() {
 }
 
 start().catch((error) => {
-  bootScreen.fail("Não foi possível iniciar a interface");
+  bootScreen.fail(bootText("surface.boot.failed"));
   console.error("OrdaX native composition failed", error);
 });
