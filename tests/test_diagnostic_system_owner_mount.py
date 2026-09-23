@@ -16,6 +16,7 @@ class SystemDiagnosticOwnerMountTests(unittest.TestCase):
         self.assertIn("diagnosticReviewController = null", source)
         self.assertIn("mount.dataset.systemDiagnosticsReviewMount", source)
         self.assertIn("diagnosticReviewController,", source)
+        self.assertIn("lifecycle,", source)
         self.assertNotIn("copyPreparedSummary()", source)
         self.assertNotIn("exportPrepared()", source)
         self.assertNotIn("navigator.clipboard", source)
