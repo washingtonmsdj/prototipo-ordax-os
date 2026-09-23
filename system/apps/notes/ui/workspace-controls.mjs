@@ -424,7 +424,7 @@ export function mountNotesWorkspaceControls(
       const projectButton = button(
         documentObject,
         "ordax-notes-project",
-        `Abrir projeto ${project.name}`,
+        t("notes.project.open", { name: project.name }),
         "select-project",
         "",
       );
@@ -438,7 +438,7 @@ export function mountNotesWorkspaceControls(
       const actions = button(
         documentObject,
         "ordax-notes-project-actions",
-        `Ações do projeto ${project.name}`,
+        t("notes.project.actions", { name: project.name }),
         "project-actions",
         "•••",
       );
@@ -453,18 +453,18 @@ export function mountNotesWorkspaceControls(
           const rename = button(
             documentObject,
             "ordax-notes-project-menu-item",
-            `Renomear projeto ${project.name}`,
+            t("notes.project.rename", { name: project.name }),
             "rename-project",
-            "Renomear",
+            t("notes.project.renameShort"),
           );
           rename.dataset.projectId = project.id;
           projectMenu.append(rename);
           const remove = button(
             documentObject,
             "ordax-notes-project-menu-item ordax-notes-project-menu-danger",
-            `Excluir projeto ${project.name}`,
+            t("notes.project.remove", { name: project.name }),
             "remove-project",
-            "Excluir projeto",
+            t("notes.project.removeShort"),
           );
           remove.dataset.projectId = project.id;
           projectMenu.append(remove);
@@ -474,7 +474,7 @@ export function mountNotesWorkspaceControls(
               documentObject,
               "small",
               "ordax-notes-project-menu-hint",
-              "Meu espaço é o projeto base e não pode ser renomeado nem excluído.",
+              t("notes.project.homeLocked"),
             ),
           );
         }
@@ -484,17 +484,18 @@ export function mountNotesWorkspaceControls(
   };
 
   const modeLabel = () => {
-    if (mode === "all") return "Todas as notas";
-    if (mode === "favorites") return "Favoritas";
-    if (mode === "recent") return "Recentes";
-    if (mode === "trash") return "Lixeira";
-    return state.document.projects.find((project) => project.id === state.document.selectedProjectId)?.name ?? "Meu espaço";
+    if (mode === "all") return t("notes.mode.all");
+    if (mode === "favorites") return t("notes.mode.favorites");
+    if (mode === "recent") return t("notes.mode.recents");
+    if (mode === "trash") return t("notes.mode.trash");
+    return state.document.projects.find((project) => project.id === state.document.selectedProjectId)?.name
+      ?? t("notes.home");
   };
 
   const renderList = (view) => {
     const items = visibleNotes(state.document, mode, query, newestFirst);
     view.querySelector(".ordax-notes-list-title").textContent = modeLabel();
-    view.querySelector(".ordax-notes-list-count").textContent = `${items.length} ${items.length === 1 ? "nota" : "notas"}`;
+    view.querySelector(".ordax-notes-list-count").textContent = `${items.length} ${items.length === 1 ? t("notes.count.note") : t("notes.count.notes")}`;
     const emptyTrash = view.querySelector(".ordax-notes-empty-trash");
     emptyTrash.hidden = mode !== "trash";
     emptyTrash.disabled = mode !== "trash" || items.length === 0;
@@ -515,7 +516,7 @@ export function mountNotesWorkspaceControls(
       list.append(row);
     }
     if (items.length === 0) {
-      list.append(node(documentObject, "p", "ordax-notes-list-empty", query ? "Nenhuma nota corresponde à busca." : "Nenhuma nota aqui ainda."));
+      list.append(node(documentObject, "p", "ordax-notes-list-empty", query ? t("notes.list.emptySearch") : t("notes.list.empty")));
     }
 
     for (const action of ["all", "favorites", "recent", "trash"]) {
