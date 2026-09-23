@@ -687,16 +687,16 @@ export function mountInternetBrowserControls(
     const save = slot.querySelector("[data-browser-save-project]");
     if (save) {
       save.disabled = !available;
-      save.textContent = saved ? "▱  Atualizar no projeto" : "▱  Salvar no projeto";
+      save.textContent = t(saved ? "internet.project.updateReference" : "internet.project.saveReference");
       save.title = !referencePort
-        ? "Referências de projeto não estão disponíveis neste host."
+        ? t("internet.project.referenceUnavailable")
         : !project
-          ? "Selecione um projeto para salvar esta página."
+          ? t("internet.project.selectBeforeSave")
           : !url
-            ? "Abra uma página HTTP ou HTTPS válida antes de salvá-la."
+            ? t("internet.project.openValidBeforeSave")
             : saved
-              ? "Atualizar título e nota desta referência."
-              : "Salvar a página atual como referência explícita deste projeto.";
+              ? t("internet.project.updateReferenceHint")
+              : t("internet.project.saveReferenceHint");
     }
 
     const textarea = slot.querySelector("[data-browser-reference-note]");
@@ -710,14 +710,14 @@ export function mountInternetBrowserControls(
     const hint = slot.querySelector("[data-browser-reference-note-hint]");
     if (hint) {
       hint.textContent = !referencePort
-        ? "Persistência de referências indisponível neste host."
+        ? t("internet.project.referencePersistenceUnavailable")
         : !project
-          ? "Selecione um projeto para relacionar uma nota à página."
+          ? t("internet.project.selectBeforeNote")
           : !url
-            ? "Abra uma página HTTP ou HTTPS válida para adicionar contexto."
+            ? t("internet.project.openValidForContext")
             : saved
-              ? "A nota é salva junto desta referência."
-              : "A nota será salva junto com a página.";
+              ? t("internet.project.noteSavedWithReference")
+              : t("internet.project.noteWillSaveWithPage");
     }
 
     const stateNode = slot.querySelector("[data-browser-reference-state]");
@@ -729,19 +729,21 @@ export function mountInternetBrowserControls(
           documentObject,
           "span",
           "ordax-internet-reference-state-copy",
-          referenceSnapshot?.persistence === "device"
-            ? "Salvo neste dispositivo"
-            : "Salvo somente nesta sessão",
+          t(
+            referenceSnapshot?.persistence === "device"
+              ? "internet.persistence.savedDevice"
+              : "internet.persistence.sessionOnly",
+          ),
         );
         const remove = node(
           documentObject,
           "button",
           "ordax-internet-reference-remove",
-          "Remover",
+          t("internet.action.remove"),
         );
         remove.type = "button";
         remove.dataset.browserRemoveReference = saved.id;
-        remove.setAttribute("aria-label", "Remover página salva do projeto");
+        remove.setAttribute("aria-label", t("internet.project.removeReference"));
         stateNode.append(copy, remove);
       }
     }
@@ -757,30 +759,34 @@ export function mountInternetBrowserControls(
       bookmark.setAttribute("aria-pressed", String(Boolean(favorite)));
       bookmark.setAttribute(
         "aria-label",
-        favorite ? "Remover dos favoritos" : "Adicionar aos favoritos",
+        t(favorite ? "internet.favorite.remove" : "internet.favorite.add"),
       );
       bookmark.title = !favoritePort
-        ? "Favoritos não estão disponíveis neste host."
+        ? t("internet.favorite.unavailable")
         : !url
-          ? "Abra uma página HTTP ou HTTPS válida para adicioná-la aos favoritos."
+          ? t("internet.favorite.openValidBeforeAdd")
           : favorite
-            ? "Remover esta página dos favoritos."
-            : "Salvar esta página nos favoritos deste dispositivo.";
+            ? t("internet.favorite.removeHint")
+            : t("internet.favorite.addHint");
     }
 
     const toggle = slot.querySelector("[data-browser-favorites-toggle]");
     const label = slot.querySelector("[data-browser-favorites-label]");
     const list = slot.querySelector("[data-browser-favorites-list]");
     const count = favoriteSnapshot?.favorites.length ?? 0;
-    if (label) label.textContent = count > 0 ? `Favoritos · ${count}` : "Favoritos";
+    if (label) {
+      label.textContent = count > 0
+        ? t("internet.favorite.headingCount", { count })
+        : t("internet.favorites");
+    }
     if (toggle) {
       toggle.disabled = !favoritePort;
       toggle.setAttribute("aria-expanded", String(Boolean(favoritePort && favoritesExpanded)));
       toggle.title = !favoritePort
-        ? "Favoritos não estão disponíveis neste host."
+        ? t("internet.favorite.unavailable")
         : favoriteSnapshot?.persistence === "device"
-          ? "Favoritos salvos neste dispositivo."
-          : "Favoritos disponíveis somente nesta sessão.";
+          ? t("internet.favorite.savedDevice")
+          : t("internet.favorite.sessionOnly");
     }
     if (!list) return;
     list.hidden = !favoritePort || !favoritesExpanded;
@@ -788,7 +794,7 @@ export function mountInternetBrowserControls(
     if (!favoritePort || !favoritesExpanded) return;
     const favorites = favoriteSnapshot?.favorites ?? [];
     if (favorites.length === 0) {
-      list.append(node(documentObject, "div", "ordax-internet-tab-placeholder", "Nenhum favorito salvo."));
+      list.append(node(documentObject, "div", "ordax-internet-tab-placeholder", t("internet.favorite.empty")));
       return;
     }
     for (const entry of favorites) {
@@ -804,7 +810,7 @@ export function mountInternetBrowserControls(
       const remove = node(documentObject, "button", "ordax-internet-favorite-remove", "×");
       remove.type = "button";
       remove.dataset.browserRemoveFavorite = entry.id;
-      remove.setAttribute("aria-label", `Remover ${entry.title} dos favoritos`);
+      remove.setAttribute("aria-label", t("internet.favorite.removeNamed", { title: entry.title }));
       row.append(open, remove);
       list.append(row);
     }
@@ -817,15 +823,19 @@ export function mountInternetBrowserControls(
     const entries = historySnapshot?.entries ?? [];
     const count = entries.length;
 
-    if (label) label.textContent = count > 0 ? `Histórico · ${count}` : "Histórico";
+    if (label) {
+      label.textContent = count > 0
+        ? t("internet.history.headingCount", { count })
+        : t("internet.history");
+    }
     if (toggle) {
       toggle.disabled = !historyPort;
       toggle.setAttribute("aria-expanded", String(Boolean(historyPort && historyExpanded)));
       toggle.title = !historyPort
-        ? "Histórico não está disponível neste host."
+        ? t("internet.history.unavailable")
         : historySnapshot?.persistence === "device"
-          ? "Histórico salvo neste dispositivo."
-          : "Histórico disponível somente nesta sessão.";
+          ? t("internet.history.savedDevice")
+          : t("internet.history.sessionOnly");
     }
     if (!list) return;
     list.hidden = !historyPort || !historyExpanded;
@@ -837,9 +847,13 @@ export function mountInternetBrowserControls(
       documentObject,
       "span",
       "",
-      historySnapshot?.persistence === "device" ? "Neste dispositivo" : "Nesta sessão",
+      t(
+        historySnapshot?.persistence === "device"
+          ? "internet.persistence.thisDevice"
+          : "internet.persistence.thisSession",
+      ),
     );
-    const clear = node(documentObject, "button", "ordax-internet-history-clear", "Limpar");
+    const clear = node(documentObject, "button", "ordax-internet-history-clear", t("internet.history.clear"));
     clear.type = "button";
     clear.dataset.browserClearHistory = "";
     clear.disabled = entries.length === 0;
@@ -847,7 +861,7 @@ export function mountInternetBrowserControls(
     list.append(header);
 
     if (entries.length === 0) {
-      list.append(node(documentObject, "div", "ordax-internet-tab-placeholder", "Nenhuma visita registrada."));
+      list.append(node(documentObject, "div", "ordax-internet-tab-placeholder", t("internet.history.empty")));
       return;
     }
 
