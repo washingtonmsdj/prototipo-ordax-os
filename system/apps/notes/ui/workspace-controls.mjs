@@ -783,12 +783,12 @@ export function mountNotesWorkspaceControls(
     panel.hidden = !referencesOpen;
     const refs = view.querySelector(".ordax-notes-refs-content");
     refs.replaceChildren();
-    refs.append(node(documentObject, "span", "ordax-notes-refs-kicker", "DESTA NOTA"));
+    refs.append(node(documentObject, "span", "ordax-notes-refs-kicker", t("notes.references.thisNote")));
 
     const links = note.references.filter((reference) => reference.kind === "link");
     const files = note.references.filter((reference) => reference.kind === "file");
     if (note.references.length === 0) {
-      refs.append(node(documentObject, "p", "ordax-notes-refs-empty", "Nenhuma referência adicionada."));
+      refs.append(node(documentObject, "p", "ordax-notes-refs-empty", t("notes.references.none")));
     }
 
     for (const reference of links) {
@@ -798,9 +798,9 @@ export function mountNotesWorkspaceControls(
       copy.append(
         node(documentObject, "strong", "", reference.title),
         node(documentObject, "small", "", notesWebReferenceHost(reference.href)),
-        node(documentObject, "span", "", reference.detail || "Link"),
+        node(documentObject, "span", "", reference.detail || t("notes.reference.link")),
       );
-      const remove = button(documentObject, "ordax-notes-ref-remove", "Remover referência", "remove-reference", "×");
+      const remove = button(documentObject, "ordax-notes-ref-remove", t("notes.references.remove"), "remove-reference", "×");
       remove.dataset.referenceId = reference.id;
       remove.disabled = readOnly;
       card.append(leading, copy, remove);
@@ -813,21 +813,21 @@ export function mountNotesWorkspaceControls(
     }
 
     if (files.length) {
-      refs.append(node(documentObject, "h3", "ordax-notes-refs-subtitle", "Arquivos relacionados"));
+      refs.append(node(documentObject, "h3", "ordax-notes-refs-subtitle", t("notes.references.relatedFiles")));
       for (const reference of files) {
         const card = node(documentObject, "article", "ordax-notes-ref-card ordax-notes-file-ref-card");
         const copy = node(documentObject, "span", "ordax-notes-ref-copy");
         copy.append(
           node(documentObject, "strong", "", reference.title),
-          node(documentObject, "small", "", reference.path || "Arquivo local"),
-          node(documentObject, "span", "", reference.detail || "Arquivo local"),
+          node(documentObject, "small", "", reference.path || t("notes.file.local")),
+          node(documentObject, "span", "", reference.detail || t("notes.file.local")),
         );
         if (reference.path && activationPort) {
-          const open = button(documentObject, "ordax-notes-ref-open", "Abrir localização no Arquivos", "open-file-reference", "Abrir");
+          const open = button(documentObject, "ordax-notes-ref-open", t("notes.references.openLocation"), "open-file-reference", t("notes.action.open"));
           open.dataset.filePath = reference.path;
           copy.append(open);
         }
-        const remove = button(documentObject, "ordax-notes-ref-remove", "Remover referência", "remove-reference", "×");
+        const remove = button(documentObject, "ordax-notes-ref-remove", t("notes.references.remove"), "remove-reference", "×");
         remove.dataset.referenceId = reference.id;
         remove.disabled = readOnly;
         card.append(node(documentObject, "span", "ordax-notes-ref-icon", "▱"), copy, remove);
@@ -903,48 +903,48 @@ export function mountNotesWorkspaceControls(
     if (newNote) {
       newNote.disabled = notesFull;
       newNote.title = notesFull
-        ? `Limite de ${MAX_NOTES} notas atingido`
-        : "Nova nota";
+        ? t("notes.limit.notes", { count: MAX_NOTES })
+        : t("notes.action.newNote");
     }
 
     const newProject = view.querySelector('[data-notes-action="new-project"]');
     if (newProject) {
       newProject.disabled = projectsFull;
       newProject.title = projectsFull
-        ? `Limite de ${MAX_NOTE_PROJECTS} projetos atingido`
-        : "Novo projeto";
+        ? t("notes.limit.projects", { count: MAX_NOTE_PROJECTS })
+        : t("notes.projects.new");
     }
 
     const addTask = view.querySelector('[data-notes-action="add-task"]');
     if (addTask) {
       addTask.disabled = !note || readOnly || tasksFull;
       addTask.title = readOnly
-        ? "Restaure a nota para editar o checklist"
+        ? t("notes.task.restoreToEdit")
         : tasksFull
-          ? `Limite de ${MAX_NOTE_TASKS} itens atingido`
-          : "Adicionar item de checklist";
+          ? t("notes.limit.tasks", { count: MAX_NOTE_TASKS })
+          : t("notes.task.add");
     }
 
     const addReference = view.querySelector('[data-notes-action="add-reference"]');
     if (addReference) {
       addReference.disabled = !note || readOnly || referencesFull;
       addReference.title = readOnly
-        ? "Restaure a nota para adicionar referências"
+        ? t("notes.references.restoreToAdd")
         : referencesFull
-          ? `Limite de ${MAX_NOTE_REFERENCES} referências atingido`
-          : "Adicionar referência";
+          ? t("notes.references.limit", { count: MAX_NOTE_REFERENCES })
+          : t("notes.references.add");
     }
 
     const imageTool = view.querySelector('[data-notes-action="insert-image"]');
     if (imageTool) {
       imageTool.disabled = !note || readOnly || filePort === null || referencesFull;
       imageTool.title = readOnly
-        ? "Restaure a nota para relacionar imagens"
+        ? t("notes.image.restoreToRelate")
         : referencesFull
-          ? `Limite de ${MAX_NOTE_REFERENCES} referências atingido`
+          ? t("notes.references.limit", { count: MAX_NOTE_REFERENCES })
           : filePort === null
-            ? "Imagens locais estão disponíveis no OrdaX Native"
-            : "Relacionar imagem local";
+            ? t("notes.image.nativeOnly")
+            : t("notes.format.image");
     }
   };
 
@@ -958,7 +958,7 @@ export function mountNotesWorkspaceControls(
       const move = button(
         documentObject,
         "ordax-notes-menu-item ordax-notes-move-project",
-        `Mover nota para ${project.name}`,
+        t("notes.moveNoteTo", { name: project.name }),
         "move-note-project",
         project.name,
       );
@@ -971,7 +971,7 @@ export function mountNotesWorkspaceControls(
     const target = view.querySelector("[data-notes-statistics]");
     if (!target) return;
     if (!note) {
-      target.textContent = "Nenhuma nota selecionada";
+      target.textContent = t("notes.empty.title");
       return;
     }
 
@@ -980,12 +980,24 @@ export function mountNotesWorkspaceControls(
       tasks: note.tasks,
       references: note.references,
     });
-    const words = `${statistics.words} ${statistics.words === 1 ? "palavra" : "palavras"}`;
-    const characters = `${statistics.characters} ${statistics.characters === 1 ? "caractere" : "caracteres"}`;
+    const words = `${statistics.words} ${statistics.words === 1
+      ? t("notes.statistics.word.one")
+      : t("notes.statistics.word.many")}`;
+    const characters = `${statistics.characters} ${statistics.characters === 1
+      ? t("notes.statistics.character.one")
+      : t("notes.statistics.character.many")}`;
     const tasks = statistics.tasks === 0
-      ? "sem tarefas"
-      : `${statistics.completedTasks}/${statistics.tasks} tarefas`;
-    const references = `${statistics.references} ${statistics.references === 1 ? "referência" : "referências"}`;
+      ? t("notes.statistics.noTasks")
+      : t("notes.statistics.tasks", {
+          done: statistics.completedTasks,
+          total: statistics.tasks,
+        });
+    const references = t("notes.statistics.references", {
+      count: statistics.references,
+      unit: statistics.references === 1
+        ? t("notes.statistics.reference.one")
+        : t("notes.statistics.reference.many"),
+    });
     target.textContent = `${words} · ${characters} · ${tasks} · ${references}`;
   };
 
