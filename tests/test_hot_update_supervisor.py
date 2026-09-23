@@ -271,7 +271,7 @@ class HotUpdateSupervisorContractTests(unittest.TestCase):
         self.assertIn('UPDATE_HISTORY_PATH = "/__ordax/native/update-history"', host)
         self.assertIn('"deliveryNumber": version', host)
         self.assertIn("export function deliveryLabel", presentation)
-        self.assertIn("deliveryLabel(updateSnapshot.deliveryNumber)", overview)
+        self.assertIn('t("system.overview.delivery.number"', overview)
 
     def test_surface_runs_continuous_fail_soft_ntp_sync(self):
         text = SURFACE_RUNTIME.read_text(encoding="utf-8")
