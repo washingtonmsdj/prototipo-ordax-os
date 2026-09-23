@@ -188,7 +188,7 @@ English is **not** yet marked as a complete Surface locale. Files now covers its
 primary navigation/search/list/selection/Recents/Trash journey plus common forms,
 locale-aware sorting, export and preview controls through the shared catalog.
 Settings/System cover their section navigation/header copy, and System now also derives
-its overview health/summary, memory and user-storage resource views, and the explicit sanitized diagnostic review from structured runtime state through the shared
+its overview health/summary, memory and user-storage resource views, update transaction details/history, and the explicit sanitized diagnostic review from structured runtime state through the shared
 localization owner. Settings covers its Notifications policy/source and local-session
 Security sections end to end, and the Native live session lock rerenders through the same
 localization owner while keeping
@@ -213,6 +213,7 @@ FILES_FORMS_SORT_EXPORT_PREVIEW_EN_US=PASS_SOURCE
 SETTINGS_SYSTEM_NAV_EN_US=PASS_SOURCE
 SYSTEM_OVERVIEW_SUMMARY_EN_US=PASS_SOURCE
 SYSTEM_RESOURCE_VIEWS_EN_US=PASS_SOURCE
+SYSTEM_UPDATE_DETAILS_HISTORY_EN_US=PASS_SOURCE
 SYSTEM_DIAGNOSTIC_REVIEW_EN_US=PASS_SOURCE
 SETTINGS_NOTIFICATIONS_EN_US=PASS_SOURCE
 SETTINGS_SECURITY_EN_US=PASS_SOURCE
@@ -253,7 +254,7 @@ FILES_TRASH_PHYSICAL_PROOF=PENDING
 
 Ordax Intelligence is now a first-class system service with stable contract `ordax.intelligence/1`; an Assistant UI is only a possible client. The Native composition now creates the provider-neutral `ordax.local-ai/1 -> ordax.intelligence/1` chain and exposes real consultative first-party consumers: Notes can request a bounded provenance-bearing summary without rewriting the note, and System can request an explanation using only local Surface capabilities/connectivity plus sanitized metrics. Neither consumer imports llama.cpp/Qwen directly, and both retain `authority=none` with tool execution disabled. The service therefore exists as a real system function in source rather than only a model/runtime test. The Stable v4 source handoff is now implemented: Portable v2 verifies `release-manifest/4`, resolves and mounts the content-addressed `local-ai-runtime.erofs` read-only, and Stable Base starts the loopback backend when the verified runtime is available. Intelligence/model failure remains non-boot-critical and degrades the capability instead of blocking boot, Surface, recovery, files or updates. Signed Stable v4 materialization plus disposable/physical proof remain release gates.
 
-The initial source lock pins Qwen3.5-0.8B-Q4_0 by exact GGUF SHA-256/size and llama.cpp by exact source commit plus the reproducibly observed `llama-server` ELF SHA-256/size. The real `local-ai-runtime.erofs` is now CI-proven: the current source lock produced byte-identical A/B builds in one job, the EROFS was mounted read-only, the exact model loaded, eight real completion tokens were generated on loopback-only HTTP, and the same runtime produced a real `OK` chat completion inside the pinned Alpine 3.22.5 userspace used by Stable Base. The current candidate engine SHA-256 is `4a974691b9905b88cb46d97c85c2b035b33592a16cd0239ae4c6687f68799afe` (17,039,584 bytes); the current EROFS candidate SHA-256 is `b244056dad3609357e8a70433f53f41becacd8f3bd93da3d8b23f9e99d86e11a` (568,061,952 bytes). `prototype-ordax.release-manifest/4` already binds this payload to the canonical source lock and content-addressed AI runtime store. What remains pending is signed Stable/MVP v4 materialization/activation and the real physical Stable USB proof; the CI candidate was explicitly not published, activated or written to physical media.
+The initial source lock pins Qwen3.5-0.8B-Q4_0 by exact GGUF SHA-256/size and llama.cpp by exact source commit plus the reproducibly observed `llama-server` ELF SHA-256/size. The real `local-ai-runtime.erofs` is now CI-proven: the current source lock produced byte-identical A/B builds in one job, the EROFS was mounted read-only, the exact model loaded, eight real completion tokens were generated on loopback-only HTTP, and the same runtime produced a real `OK` chat completion inside the pinned Alpine 3.22.5 userspace used by Stable Base. The current candidate engine SHA-256 is `4a974691b9905b88cb46d97c85c2b035b33592a16cd0239ae4c6687f68799afe` (17,039,584 bytes); the current EROFS candidate SHA-256 is `b244056dad3609357e8a70433f53f41becacd8f3bd93da3d8b23f9e99d86e11a` (568,061,952 bytes). `prototype-ordax.release-manifest/4` already binds this payload to the canonical source lock and content-addressed AI runtime store. The Local AI candidate workflow now also owns a non-promotional integration gate that signs a v4 envelope with an ephemeral CI-only key, serves the three artifacts over loopback HTTPS, materializes them through `materialize-portable-v4`, revalidates them offline, and byte-compares the content-addressed stored AI EROFS with the real built runtime. This proves the real-byte protocol/materialization path without activation or physical media. What remains pending is canonical Stable/MVP v4 signing/materialization with the controlled release key and the real physical Stable USB proof.
 
 ```text
 ORDAX_INTELLIGENCE_CONTRACT=ordax.intelligence/1
@@ -267,7 +268,8 @@ LOCAL_AI_ENGINE_ARTIFACT_PINNED=YES
 LOCAL_AI_RELEASE_MANIFEST_V4=PASS_SOURCE
 LOCAL_AI_CONTENT_ADDRESSED_ACQUISITION=PASS_SOURCE
 LOCAL_AI_REAL_RUNTIME_EROFS=PASS_CI_ALPINE
-LOCAL_AI_SIGNED_STABLE_MATERIALIZATION=PENDING
+LOCAL_AI_REAL_V4_MATERIALIZATION_CI_GATE=IMPLEMENTED_NON_PROMOTIONAL
+LOCAL_AI_CANONICAL_SIGNED_STABLE_MATERIALIZATION=PENDING
 LOCAL_AI_PHYSICAL_STABLE_MVP_PROOF=PENDING
 ```
 
