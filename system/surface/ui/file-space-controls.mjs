@@ -45,12 +45,12 @@ function joinPath(path, name) {
   return path === "/" ? `/${name}` : `${path}/${name}`;
 }
 
-function suggestedCopyName(name) {
+function suggestedCopyName(name, suffix) {
   const dot = name.lastIndexOf(".");
   if (dot > 0 && dot < name.length - 1) {
-    return `${name.slice(0, dot)} - cópia${name.slice(dot)}`;
+    return `${name.slice(0, dot)} - ${suffix}${name.slice(dot)}`;
   }
-  return `${name} - cópia`;
+  return `${name} - ${suffix}`;
 }
 
 function formatSize(bytes) {
@@ -2667,7 +2667,7 @@ export function mountFileSpaceControls(
           replaceView();
         } else {
           copyingPath = selected.path;
-          copyDraft = suggestedCopyName(selected.name);
+          copyDraft = suggestedCopyName(selected.name, t("files.copy.suffix"));
           renamingPath = null;
           renameDraft = "";
           clearMessage();
