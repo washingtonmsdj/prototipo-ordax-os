@@ -386,7 +386,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn("assertUpdateStatusPort", overview)
         self.assertIn("assertUpdateHistoryPort", overview)
         self.assertIn("assertSystemMetricsPort", overview)
-        self.assertIn("Histórico de atualizações", overview)
+        self.assertIn('t("system.history.title")', overview)
         self.assertIn("Identidade da entrega", overview)
         self.assertIn("assertComponentManager", overview)
         self.assertIn("validateComponentManagerSnapshot", overview)
@@ -579,7 +579,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn("updateSnapshot.runtimeSurfaceSha", overview)
         self.assertIn("deliveryLabel(updateSnapshot.deliveryNumber)", overview)
         self.assertIn("America/Bahia", presentation)
-        self.assertIn('"Surface em execução"', overview)
+        self.assertIn('t("system.updates.fact.runtimeSurface")', overview)
         self.assertIn('target: "updates"', controls)
 
     def test_shared_preference_path_has_no_platform_storage_shortcut(self):
