@@ -301,7 +301,7 @@ async function start() {
     workspaceStore,
     appActivation,
   );
-  const notificationCenter = mountNotificationCenterControls(root, notifications, appActivation);
+  const notificationCenter = mountNotificationCenterControls(root, notifications, appActivation, surface);
   let quickPanelControls = null;
   try {
     quickPanelControls = mountSystemTrayQuickPanels(root);
