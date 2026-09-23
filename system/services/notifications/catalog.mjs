@@ -12,6 +12,13 @@ const SOURCES = Object.freeze([
   }),
 ]);
 
+const SOURCE_MESSAGE_IDS = Object.freeze({
+  [SYSTEM_UPDATES_NOTIFICATION_SOURCE_ID]: Object.freeze({
+    label: "notifications.source.systemUpdates.label",
+    topic: "notifications.source.systemUpdates.topic",
+  }),
+});
+
 const LEGACY_SOURCE_LABELS = Object.freeze({
   files: "Arquivos",
   settings: "Ajustes",
@@ -26,8 +33,12 @@ export function listNotificationSources() {
   return SOURCES;
 }
 
-export function notificationSourceLabel(sourceId) {
+export function notificationSourceLabel(sourceId, translate = null) {
   const source = SOURCES.find((candidate) => candidate.id === sourceId);
+  const messageIds = SOURCE_MESSAGE_IDS[sourceId] ?? null;
+  if (source && messageIds && typeof translate === "function") {
+    return `${translate(messageIds.label)} · ${translate(messageIds.topic)}`;
+  }
   if (source) return `${source.label} · ${source.topic}`;
   return LEGACY_SOURCE_LABELS[sourceId] ?? sourceId;
 }
