@@ -1,3 +1,8 @@
+import {
+  SURFACE_SOURCE_LOCALE,
+  translateSurfaceMessage,
+} from "../../services/i18n/surface.mjs";
+
 const BOOT_SCREEN_ID = "ordax-boot-screen";
 const STATUS_SELECTOR = "[data-ordax-boot-status]";
 
@@ -15,18 +20,23 @@ export function createSurfaceBootScreen(documentObject = globalThis.document) {
   }
 
   let finished = false;
+  let locale = SURFACE_SOURCE_LOCALE;
 
-  const setStage = (message) => {
-    if (finished) return false;
-    const text = String(message ?? "").trim();
-    if (!text) return false;
-    status.textContent = text;
-    element.dataset.state = "loading";
-    return true;
-  };
+  const translated = (messageId) => translateSurfaceMessage(locale, messageId);
 
   return Object.freeze({
-    setStage,
+    setLocale(nextLocale) {
+      if (finished || typeof nextLocale !== "string" || !nextLocale) return false;
+      locale = nextLocale;
+      documentObject.documentElement?.setAttribute?.("lang", nextLocale);
+      return true;
+    },
+    setStage(messageId) {
+      if (finished) return false;
+      status.textContent = translated(messageId);
+      element.dataset.state = "loading";
+      return true;
+    },
     ready() {
       if (finished) return false;
       finished = true;
@@ -35,10 +45,9 @@ export function createSurfaceBootScreen(documentObject = globalThis.document) {
       element.hidden = true;
       return true;
     },
-    fail(message = "Não foi possível iniciar a interface") {
+    fail(messageId = "boot.failed") {
       if (finished) return false;
-      const text = String(message ?? "").trim() || "Não foi possível iniciar a interface";
-      status.textContent = text;
+      status.textContent = translated(messageId);
       element.dataset.state = "error";
       element.removeAttribute("aria-hidden");
       return true;
