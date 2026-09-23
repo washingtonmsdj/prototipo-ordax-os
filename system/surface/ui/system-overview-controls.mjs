@@ -1314,21 +1314,29 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Contrato"),
-      node(documentObject, "h4", "ordax-system-section-title", "Capacidades desta execução"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.capabilities.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.capabilities.title")),
     );
     heading.append(headingCopy);
     section.append(heading);
 
     const list = node(documentObject, "div", "ordax-system-capabilities");
     if (hostSnapshot.capabilityIds.length === 0) {
-      list.append(node(documentObject, "p", "ordax-system-placeholder", "Nenhuma capacidade adicional declarada."));
+      list.append(
+        node(
+          documentObject,
+          "p",
+          "ordax-system-placeholder",
+          t("system.capabilities.empty"),
+        ),
+      );
     } else {
       for (const capabilityId of hostSnapshot.capabilityIds) {
+        const messageId = CAPABILITY_MESSAGE_IDS[capabilityId];
         const item = node(documentObject, "div", "ordax-system-capability");
         item.append(
           node(documentObject, "span", "ordax-system-capability-dot"),
-          node(documentObject, "strong", "", CAPABILITY_LABELS[capabilityId] ?? capabilityId),
+          node(documentObject, "strong", "", messageId ? t(messageId) : capabilityId),
           node(documentObject, "small", "", capabilityId),
         );
         list.append(item);
@@ -1343,43 +1351,45 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Intelligence"),
-      node(documentObject, "h4", "ordax-system-section-title", "Explicação local do estado"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.intelligence.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.intelligence.title")),
     );
     const action = node(
       documentObject,
       "button",
       "ordax-system-action",
-      intelligencePending ? "Explicando…" : "Explicar estado",
+      intelligencePending
+        ? t("system.intelligence.action.pending")
+        : t("system.intelligence.action.explain"),
     );
     action.type = "button";
     action.dataset.systemIntelligenceExplain = "";
     const ready = intelligenceSnapshot?.state === "ready";
     action.disabled = !ready || intelligencePending;
     action.title = ready
-      ? "Usar Ordax Intelligence para explicar somente os sinais locais exibidos por Sistema"
-      : "Ordax Intelligence não está pronta nesta execução";
+      ? t("system.intelligence.action.readyTitle")
+      : t("system.intelligence.action.unavailableTitle");
     heading.append(headingCopy, action);
     section.append(heading);
 
     const stateLabel = intelligenceSnapshot === null
-      ? "Não exposta neste modo"
-      : intelligenceSnapshot.state === "ready"
-        ? "Pronta"
-        : intelligenceSnapshot.state === "busy"
-          ? "Ocupada"
-          : intelligenceSnapshot.state === "degraded"
-            ? "Degradada"
-            : "Com erro";
+      ? t("system.intelligence.state.unexposed")
+      : t(
+          INTELLIGENCE_STATE_MESSAGE_IDS[intelligenceSnapshot.state]
+            ?? "system.intelligence.state.error",
+        );
     const detail = intelligenceSnapshot?.modelId
-      ? `${stateLabel} · ${intelligenceSnapshot.modelId}`
+      ? t("system.intelligence.stateWithModel", {
+          state: stateLabel,
+          model: intelligenceSnapshot.modelId,
+        })
       : stateLabel;
     section.append(
       node(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        `Estado: ${detail}. Esta consulta é local, somente leitura e não executa ações no dispositivo.`,
+        t("system.intelligence.description", { state: detail }),
       ),
     );
 
@@ -1398,9 +1408,9 @@ export function mountSystemOverviewControls(
       const answer = node(documentObject, "article", "ordax-system-history-item");
       answer.dataset.state = "info";
       answer.append(
-        node(documentObject, "strong", "", "Explicação da Ordax Intelligence"),
+        node(documentObject, "strong", "", t("system.intelligence.answer.title")),
         node(documentObject, "p", "ordax-system-section-copy", intelligenceAnswer),
-        node(documentObject, "small", "", "Fonte: snapshot local de Sistema · autoridade: nenhuma"),
+        node(documentObject, "small", "", t("system.intelligence.answer.provenance")),
       );
       section.append(answer);
     }
