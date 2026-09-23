@@ -24,7 +24,7 @@ function importer(run) {
 test("action is hidden without an importer or when the selection is not a file", () => {
   assert.deepEqual(
     createFileNotesActionPresentation({ importerAvailable: false, busy: false, selected: FILE }),
-    { visible: false, label: "", disabled: true, title: "" },
+    { visible: false, labelMessageId: null, disabled: true, titleMessageId: null },
   );
   assert.deepEqual(
     createFileNotesActionPresentation({
@@ -32,7 +32,7 @@ test("action is hidden without an importer or when the selection is not a file",
       busy: false,
       selected: { kind: "directory", name: "Projeto", path: "/Projeto" },
     }),
-    { visible: false, label: "", disabled: true, title: "" },
+    { visible: false, labelMessageId: null, disabled: true, titleMessageId: null },
   );
 });
 
@@ -43,10 +43,9 @@ test("file action describes copy semantics and exposes a stable busy state", () 
     selected: FILE,
   });
   assert.equal(ready.visible, true);
-  assert.equal(ready.label, "Criar nota");
+  assert.equal(ready.labelMessageId, "files.notes.action.create");
   assert.equal(ready.disabled, false);
-  assert.match(ready.title, /cópia do texto/i);
-  assert.match(ready.title, /preserva o arquivo original/i);
+  assert.equal(ready.titleMessageId, "files.notes.action.title");
 
   const busy = createFileNotesActionPresentation({
     importerAvailable: true,
@@ -54,7 +53,7 @@ test("file action describes copy semantics and exposes a stable busy state", () 
     selected: FILE,
   });
   assert.equal(busy.visible, true);
-  assert.equal(busy.label, "Criando nota…");
+  assert.equal(busy.labelMessageId, "files.notes.action.creating");
   assert.equal(busy.disabled, true);
 });
 
@@ -69,7 +68,8 @@ test("successful import messages distinguish durable, degraded, and session pers
   }, FILE.name);
   assert.equal(durable.kind, "success");
   assert.equal(durable.openNotes, true);
-  assert.match(durable.text, /arquivo original foi preservado/i);
+  assert.equal(durable.messageId, "files.notes.createdDevice");
+  assert.deepEqual(durable.messageParams, { name: FILE.name });
 
   const degraded = messageForNotesFileImport({
     status: "created",
@@ -81,7 +81,7 @@ test("successful import messages distinguish durable, degraded, and session pers
   }, FILE.name);
   assert.equal(degraded.kind, "warning");
   assert.equal(degraded.openNotes, true);
-  assert.match(degraded.text, /persistência no dispositivo está degradada/i);
+  assert.equal(degraded.messageId, "files.notes.createdDegraded");
 
   const session = messageForNotesFileImport({
     status: "created",
@@ -93,7 +93,7 @@ test("successful import messages distinguish durable, degraded, and session pers
   }, FILE.name);
   assert.equal(session.kind, "neutral");
   assert.equal(session.openNotes, true);
-  assert.match(session.text, /somente nesta sessão/i);
+  assert.equal(session.messageId, "files.notes.createdSession");
 });
 
 test("failed imports remain in Files and never expose host exception detail", async () => {
@@ -108,7 +108,7 @@ test("failed imports remain in Files and never expose host exception detail", as
   assert.deepEqual(outcome.result, { status: "failed", code: "notes-create-failed" });
   assert.equal(outcome.presentation.openNotes, false);
   assert.doesNotMatch(JSON.stringify(outcome), /credential-q7z9|user@example\.com|\/home\/private/);
-  assert.match(outcome.presentation.text, /arquivo original não foi alterado/i);
+  assert.equal(outcome.presentation.messageId, "files.notes.createFailed");
 });
 
 test("the selected file identity is captured and the importer receives only its exact logical path", async () => {

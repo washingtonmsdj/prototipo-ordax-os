@@ -103,6 +103,7 @@ on:
       - 'tests/test_files_to_notes_import_contract.py'
       - 'tests/test_file_notes_action.mjs'
       - 'tests/test_file_notes_action_contract.py'
+      - 'tests/test_files_deep_localization.py'
       - 'tests/test_notes_native.py'
       - 'tests/test_project_files_ui_contract.py'
       - 'tests/test_app_activation.mjs'
@@ -380,6 +381,7 @@ jobs:
           python -m unittest tests.test_notification_center_ui_contract -v
           python -m unittest tests.test_files_to_notes_import_contract -v
           python -m unittest tests.test_file_notes_action_contract -v
+          python -m unittest tests.test_files_deep_localization -v
           python -m unittest tests.test_notes_native -v
           python -m unittest tests.test_native_component_state -v
           python -m unittest tests.test_browser_session_integration_contract -v
