@@ -327,20 +327,20 @@ export function mountSystemOverviewControls(
   let metricsPending = false;
   let metricsReadFailed = false;
   let metricsLastSuccessAt = null;
-  let metricsMessage = "";
+  let metricsMessageId = null;
   let metricsOrdinal = 0;
   let historySnapshot = null;
-  let historyMessage = "";
+  let historyMessageId = null;
   let componentSnapshot = componentPort?.getSnapshot() ?? null;
   let intelligenceSnapshot = intelligencePort === null
     ? null
     : validateIntelligenceSnapshot(intelligencePort.getSnapshot());
   let intelligencePending = false;
   let intelligenceAnswer = "";
-  let intelligenceMessage = "";
+  let intelligenceMessageId = null;
   let recoverySnapshot = null;
   let recoveryPending = false;
-  let recoveryMessage = "";
+  let recoveryMessageId = null;
   let recoveryOrdinal = 0;
   let historyOrdinal = 0;
   let activeSection = validSystemSection(lifecycle.getAppTarget("system"))
@@ -584,7 +584,7 @@ export function mountSystemOverviewControls(
           metricsPort
             ? metricsPending
               ? t("system.resources.memory.reading")
-              : (metricsMessage || t("system.resources.waiting"))
+              : (metricsMessageId ? t(metricsMessageId) : t("system.resources.waiting"))
             : t("system.resources.memory.unavailable"),
         ),
       );
@@ -598,7 +598,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-warning",
-          t("system.resources.stale", { time: formatObservationReceivedAt(metricsLastSuccessAt) }),
+          t("system.resources.stale", { time: formatOverviewReceivedAt(metricsLastSuccessAt, localization.getLocale()) ?? t("system.overview.time.unknown") }),
         ),
       );
     }
@@ -612,7 +612,7 @@ export function mountSystemOverviewControls(
       progress: ratio(memoryUsed, metricsSnapshot.memoryTotalBytes),
     });
     section.append(resourceGrid);
-    if (metricsMessage) section.append(node(documentObject, "p", "ordax-system-message", metricsMessage));
+    if (metricsMessageId) section.append(node(documentObject, "p", "ordax-system-message", t(metricsMessageId)));
     view.append(section);
   };
 
@@ -645,7 +645,7 @@ export function mountSystemOverviewControls(
           metricsPort
             ? metricsPending
               ? t("system.resources.storage.reading")
-              : (metricsMessage || t("system.resources.waiting"))
+              : (metricsMessageId ? t(metricsMessageId) : t("system.resources.waiting"))
             : t("system.resources.storage.unavailable"),
         ),
       );
@@ -659,7 +659,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-warning",
-          t("system.resources.stale", { time: formatObservationReceivedAt(metricsLastSuccessAt) }),
+          t("system.resources.stale", { time: formatOverviewReceivedAt(metricsLastSuccessAt, localization.getLocale()) ?? t("system.overview.time.unknown") }),
         ),
       );
     }
@@ -681,7 +681,7 @@ export function mountSystemOverviewControls(
         t("system.resources.storage.scope"),
       ),
     );
-    if (metricsMessage) section.append(node(documentObject, "p", "ordax-system-message", metricsMessage));
+    if (metricsMessageId) section.append(node(documentObject, "p", "ordax-system-message", t(metricsMessageId)));
     view.append(section);
   };
 
@@ -828,8 +828,8 @@ export function mountSystemOverviewControls(
         node(
           documentObject,
           "p",
-          recoveryMessage ? "ordax-system-warning" : "ordax-system-placeholder",
-          recoveryMessage || t("system.recovery.reading"),
+          recoveryMessageId ? "ordax-system-warning" : "ordax-system-placeholder",
+          recoveryMessageId ? t(recoveryMessageId) : t("system.recovery.reading"),
         ),
       );
       view.append(section);
@@ -883,8 +883,8 @@ export function mountSystemOverviewControls(
         ),
       );
     }
-    if (recoveryMessage) {
-      section.append(node(documentObject, "p", "ordax-system-message", recoveryMessage));
+    if (recoveryMessageId) {
+      section.append(node(documentObject, "p", "ordax-system-message", t(recoveryMessageId)));
     }
     view.append(section);
   };
@@ -1186,7 +1186,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-placeholder",
-          historyMessage || t("system.history.reading"),
+          historyMessageId ? t(historyMessageId) : t("system.history.reading"),
         ),
       );
       view.append(section);
@@ -1257,7 +1257,7 @@ export function mountSystemOverviewControls(
     }
 
     section.append(applications, releases);
-    if (historyMessage) section.append(node(documentObject, "p", "ordax-system-message", historyMessage));
+    if (historyMessageId) section.append(node(documentObject, "p", "ordax-system-message", t(historyMessageId)));
     view.append(section);
   };
 
@@ -1335,12 +1335,12 @@ export function mountSystemOverviewControls(
       ),
     );
 
-    if (intelligenceMessage) {
+    if (intelligenceMessageId) {
       const message = node(
         documentObject,
         "p",
         intelligenceAnswer ? "ordax-system-message" : "ordax-system-warning",
-        intelligenceMessage,
+        t(intelligenceMessageId),
       );
       message.setAttribute("role", "status");
       message.setAttribute("aria-live", "polite");
@@ -1428,7 +1428,7 @@ export function mountSystemOverviewControls(
     if (!metricsPort || metricsPending) return;
     const ordinal = ++metricsOrdinal;
     metricsPending = true;
-    metricsMessage = "";
+    metricsMessageId = null;
     replaceView();
     try {
       const next = validateSystemMetricsSnapshot(await metricsPort.read());
@@ -1439,9 +1439,9 @@ export function mountSystemOverviewControls(
     } catch {
       if (destroyed || ordinal !== metricsOrdinal) return;
       metricsReadFailed = true;
-      metricsMessage = metricsSnapshot
-        ? "A leitura atual falhou; os valores abaixo são a última leitura válida recebida pela Surface."
-        : "Não foi possível obter uma leitura válida dos recursos nesta sessão.";
+      metricsMessageId = metricsSnapshot
+        ? "system.resources.readFailedPrevious"
+        : "system.resources.readFailed";
     } finally {
       if (!destroyed && ordinal === metricsOrdinal) {
         metricsPending = false;
@@ -1454,7 +1454,7 @@ export function mountSystemOverviewControls(
     if (!recoveryPort || recoveryPending) return;
     const ordinal = ++recoveryOrdinal;
     recoveryPending = true;
-    recoveryMessage = "";
+    recoveryMessageId = null;
     replaceView();
     try {
       const next = validateRecoveryStatusSnapshot(await recoveryPort.read());
@@ -1463,7 +1463,7 @@ export function mountSystemOverviewControls(
     } catch {
       if (destroyed || ordinal !== recoveryOrdinal) return;
       recoverySnapshot = null;
-      recoveryMessage = t("system.recovery.readFailed");
+      recoveryMessageId = "system.recovery.readFailed";
     } finally {
       if (!destroyed && ordinal === recoveryOrdinal) {
         recoveryPending = false;
@@ -1475,14 +1475,14 @@ export function mountSystemOverviewControls(
   const refreshHistory = async () => {
     if (!historyPort) return;
     const ordinal = ++historyOrdinal;
-    historyMessage = "";
+    historyMessageId = null;
     try {
       const next = validateUpdateHistorySnapshot(await historyPort.list());
       if (destroyed || ordinal !== historyOrdinal) return;
       historySnapshot = next;
     } catch {
       if (destroyed || ordinal !== historyOrdinal) return;
-      historyMessage = t("system.history.readFailed");
+      historyMessageId = "system.history.readFailed";
     } finally {
       if (!destroyed && ordinal === historyOrdinal) replaceView();
     }
@@ -1527,7 +1527,7 @@ export function mountSystemOverviewControls(
     ) {
       intelligencePending = true;
       intelligenceAnswer = "";
-      intelligenceMessage = "Analisando somente os sinais locais exibidos por Sistema…";
+      intelligenceMessageId = "system.intelligence.message.analyzing";
       replaceView();
       void explainSystemStateWithIntelligence(intelligencePort, {
         surface: hostSnapshot,
@@ -1535,10 +1535,10 @@ export function mountSystemOverviewControls(
       }).then((response) => {
         if (destroyed) return;
         intelligenceAnswer = response.text;
-        intelligenceMessage = "Explicação local concluída. Nenhuma ação foi executada.";
+        intelligenceMessageId = "system.intelligence.message.completed";
       }).catch(() => {
         if (destroyed) return;
-        intelligenceMessage = "Não foi possível obter uma explicação local nesta execução.";
+        intelligenceMessageId = "system.intelligence.message.failed";
       }).finally(() => {
         if (destroyed) return;
         intelligencePending = false;
