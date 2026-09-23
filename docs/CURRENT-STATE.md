@@ -134,7 +134,7 @@ adds a product/source prerequisite before target-specific physical execution.
 ```text
 PRE_USB_NOVA_ORDAX_AUDIT=IN_PROGRESS
 INTELLIGENCE_REAL_SYSTEM_CONSUMER=PASS_SOURCE
-INTELLIGENCE_STABLE_V4_BACKEND_LIFECYCLE=PENDING
+INTELLIGENCE_STABLE_V4_BACKEND_LIFECYCLE=PASS_SOURCE_SIGNED_STABLE_PROOF_PENDING
 LOCAL_SESSION_LOCK_POLICY=PASS_SOURCE
 LOCAL_SESSION_LOCK_IMPLEMENTATION=PASS_SOURCE
 LOCAL_SESSION_LOCK_PHYSICAL_PROOF=PENDING
@@ -251,7 +251,7 @@ FILES_TRASH_PHYSICAL_PROOF=PENDING
 
 ### Ordax Intelligence and local inference
 
-Ordax Intelligence is now a first-class system service with stable contract `ordax.intelligence/1`; an Assistant UI is only a possible client. The Native composition now creates the provider-neutral `ordax.local-ai/1 -> ordax.intelligence/1` chain and exposes real consultative first-party consumers: Notes can request a bounded provenance-bearing summary without rewriting the note, and System can request an explanation using only local Surface capabilities/connectivity plus sanitized metrics. Neither consumer imports llama.cpp/Qwen directly, and both retain `authority=none` with tool execution disabled. The service therefore exists as a real system function in source rather than only a model/runtime test. The remaining backend lifecycle gate is Stable v4: boot still needs to mount the verified `local-ai-runtime.erofs` and start the loopback backend. Intelligence/model failure remains non-boot-critical and degrades the capability instead of blocking boot, Surface, recovery, files or updates.
+Ordax Intelligence is now a first-class system service with stable contract `ordax.intelligence/1`; an Assistant UI is only a possible client. The Native composition now creates the provider-neutral `ordax.local-ai/1 -> ordax.intelligence/1` chain and exposes real consultative first-party consumers: Notes can request a bounded provenance-bearing summary without rewriting the note, and System can request an explanation using only local Surface capabilities/connectivity plus sanitized metrics. Neither consumer imports llama.cpp/Qwen directly, and both retain `authority=none` with tool execution disabled. The service therefore exists as a real system function in source rather than only a model/runtime test. The Stable v4 source handoff is now implemented: Portable v2 verifies `release-manifest/4`, resolves and mounts the content-addressed `local-ai-runtime.erofs` read-only, and Stable Base starts the loopback backend when the verified runtime is available. Intelligence/model failure remains non-boot-critical and degrades the capability instead of blocking boot, Surface, recovery, files or updates. Signed Stable v4 materialization plus disposable/physical proof remain release gates.
 
 The initial source lock pins Qwen3.5-0.8B-Q4_0 by exact GGUF SHA-256/size and llama.cpp by exact source commit plus the reproducibly observed `llama-server` ELF SHA-256/size. The real `local-ai-runtime.erofs` is now CI-proven: the current source lock produced byte-identical A/B builds in one job, the EROFS was mounted read-only, the exact model loaded, eight real completion tokens were generated on loopback-only HTTP, and the same runtime produced a real `OK` chat completion inside the pinned Alpine 3.22.5 userspace used by Stable Base. The current candidate engine SHA-256 is `4a974691b9905b88cb46d97c85c2b035b33592a16cd0239ae4c6687f68799afe` (17,039,584 bytes); the current EROFS candidate SHA-256 is `b244056dad3609357e8a70433f53f41becacd8f3bd93da3d8b23f9e99d86e11a` (568,061,952 bytes). `prototype-ordax.release-manifest/4` already binds this payload to the canonical source lock and content-addressed AI runtime store. What remains pending is signed Stable/MVP v4 materialization/activation and the real physical Stable USB proof; the CI candidate was explicitly not published, activated or written to physical media.
 
@@ -460,10 +460,11 @@ REAL_REPOSITORY_SYSTEM_BUNDLE=PASS
 RELEASE_MANIFEST_TOOLING_IMPLEMENTED=YES
 RELEASE_SIGNING_TOOLING_IMPLEMENTED=YES
 RELEASE_PIPELINE_CI=PASS
-RELEASE_AGENT_CANONICAL_SHA256=721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740
+RELEASE_AGENT_CANONICAL_SHA256=550df685679f1bf15a636729960fe6fc3ffc1afda1a346214ce96716f7170a66
 RELEASE_AGENT_HASH_ADDRESSED_ASSET_PUBLISHED=YES
-RELEASE_AGENT_PUBLICATION_WORKFLOW_RUN_ID=35661774810
-RELEASE_AGENT_PUBLICATION_SOURCE_COMMIT=9e3e7f706540d411293e6ea048dd54457515ad85
+RELEASE_AGENT_PUBLICATION_RELEASE_ID=393818764
+RELEASE_AGENT_PUBLICATION_SOURCE_COMMIT=3db77f679b85f8f62a87ce8aab3414c9c12f688a
+RELEASE_AGENT_LEGACY_SEED_SHA256=721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740
 PRODUCTION_RELEASE_PUBLISHED=NO
 SIGNED_TRUST_TRANSITION_PROTOCOL=PASS_CI_SIGNER_AGENT
 TRUST_TRANSITION_SIGNER_VERIFIER=PASS_CI
