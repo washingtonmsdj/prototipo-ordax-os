@@ -124,7 +124,7 @@ pre-USB closure plan. Physical media work is intentionally held while the remain
 class-A product gaps are closed. Ordax Intelligence consumers, Native local
 session/lock, and a safe Files removal path are now source-complete. The remaining
 pre-USB source gaps are now narrowed to coherent launch-language coverage and the
-signed/materializable v4 release that carries the proven local-AI runtime.
+real signed/materialized v4 Stable release that carries the proven local-AI runtime; the v4 boot handoff itself is source-complete.
 Diagnostics/recovery presentation and the conservative MVP hardware-support matrix
 are source-complete; their target-hardware/physical proofs remain later gates.
 
@@ -134,7 +134,8 @@ adds a product/source prerequisite before target-specific physical execution.
 ```text
 PRE_USB_NOVA_ORDAX_AUDIT=IN_PROGRESS
 INTELLIGENCE_REAL_SYSTEM_CONSUMER=PASS_SOURCE
-INTELLIGENCE_STABLE_V4_BACKEND_LIFECYCLE=PENDING
+INTELLIGENCE_STABLE_V4_BOOT_HANDOFF=PASS_SOURCE
+SIGNED_RELEASE_V4_WITH_LOCAL_AI=PENDING_SIGNED_MATERIALIZATION
 LOCAL_SESSION_LOCK_POLICY=PASS_SOURCE
 LOCAL_SESSION_LOCK_IMPLEMENTATION=PASS_SOURCE
 LOCAL_SESSION_LOCK_PHYSICAL_PROOF=PENDING
@@ -249,7 +250,7 @@ FILES_TRASH_PHYSICAL_PROOF=PENDING
 
 ### Ordax Intelligence and local inference
 
-Ordax Intelligence is now a first-class system service with stable contract `ordax.intelligence/1`; an Assistant UI is only a possible client. The Native composition now creates the provider-neutral `ordax.local-ai/1 -> ordax.intelligence/1` chain and exposes real consultative first-party consumers: Notes can request a bounded provenance-bearing summary without rewriting the note, and System can request an explanation using only local Surface capabilities/connectivity plus sanitized metrics. Neither consumer imports llama.cpp/Qwen directly, and both retain `authority=none` with tool execution disabled. The service therefore exists as a real system function in source rather than only a model/runtime test. The remaining backend lifecycle gate is Stable v4: boot still needs to mount the verified `local-ai-runtime.erofs` and start the loopback backend. Intelligence/model failure remains non-boot-critical and degrades the capability instead of blocking boot, Surface, recovery, files or updates.
+Ordax Intelligence is now a first-class system service with stable contract `ordax.intelligence/1`; an Assistant UI is only a possible client. The Native composition now creates the provider-neutral `ordax.local-ai/1 -> ordax.intelligence/1` chain and exposes real consultative first-party consumers: Notes can request a bounded provenance-bearing summary without rewriting the note, and System can request an explanation using only local Surface capabilities/connectivity plus sanitized metrics. Neither consumer imports llama.cpp/Qwen directly, and both retain `authority=none` with tool execution disabled. The service therefore exists as a real system function in source rather than only a model/runtime test. Stable v4 boot handoff is now implemented in source: Portable v2 verifies `release-manifest/4` exactly, resolves the content-addressed `local-ai-runtime.erofs`, mounts it read-only under `/run/ordax/runtime/local-ai`, and Stable Base starts the loopback backend when that verified mount is available. AI mount/start failure remains non-boot-critical and degrades Intelligence instead of blocking boot, Surface, recovery, files or updates.
 
 The initial source lock pins Qwen3.5-0.8B-Q4_0 by exact GGUF SHA-256/size and llama.cpp by exact source commit plus the reproducibly observed `llama-server` ELF SHA-256/size. The real `local-ai-runtime.erofs` is now CI-proven: the current source lock produced byte-identical A/B builds in one job, the EROFS was mounted read-only, the exact model loaded, eight real completion tokens were generated on loopback-only HTTP, and the same runtime produced a real `OK` chat completion inside the pinned Alpine 3.22.5 userspace used by Stable Base. The current candidate engine SHA-256 is `4a974691b9905b88cb46d97c85c2b035b33592a16cd0239ae4c6687f68799afe` (17,039,584 bytes); the current EROFS candidate SHA-256 is `b244056dad3609357e8a70433f53f41becacd8f3bd93da3d8b23f9e99d86e11a` (568,061,952 bytes). `prototype-ordax.release-manifest/4` already binds this payload to the canonical source lock and content-addressed AI runtime store. What remains pending is signed Stable/MVP v4 materialization/activation and the real physical Stable USB proof; the CI candidate was explicitly not published, activated or written to physical media.
 
