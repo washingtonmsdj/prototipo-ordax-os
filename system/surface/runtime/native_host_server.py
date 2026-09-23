@@ -3209,6 +3209,13 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                     "lastAppliedSha": "",
                     "lastAppliedAt": "unknown",
                     "rejectedSha": "",
+                    "recoveryState": "unavailable",
+                    "recoverySource": "none",
+                    "currentReleaseSha": "",
+                    "knownGoodReleaseSha": "",
+                    "candidateReleaseSha": "",
+                    "recoveryRejectedSha": "",
+                    "rollbackEligible": False,
                     "lastError": "update-state-unavailable",
                 }
                 status = 503
