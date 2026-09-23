@@ -384,7 +384,7 @@ export function mountNotesWorkspaceControls(
       return true;
     } catch {
       const status = mountedSlot?.querySelector(".ordax-notes-save-status");
-      if (status) status.textContent = "Não foi possível salvar esta edição";
+      if (status) status.textContent = t("notes.save.editFailed");
       return false;
     }
   };
@@ -404,10 +404,10 @@ export function mountNotesWorkspaceControls(
     try {
       const payload = captureEditorPayload();
       if (!payload) return false;
-      if (status) status.textContent = "Salvando…";
+      if (status) status.textContent = t("notes.save.saving");
       return editorSave.schedule(note.id, payload);
     } catch {
-      if (status) status.textContent = "Não foi possível preparar esta edição";
+      if (status) status.textContent = t("notes.save.prepareFailed");
       return false;
     }
   };
@@ -993,7 +993,7 @@ export function mountNotesWorkspaceControls(
     const target = view.querySelector("[data-notes-statistics]");
     if (!target) return;
     if (!note) {
-      target.textContent = "Nenhuma nota selecionada";
+      target.textContent = t("notes.empty.title");
       return;
     }
 
@@ -1002,12 +1002,28 @@ export function mountNotesWorkspaceControls(
       tasks: note.tasks,
       references: note.references,
     });
-    const words = `${statistics.words} ${statistics.words === 1 ? "palavra" : "palavras"}`;
-    const characters = `${statistics.characters} ${statistics.characters === 1 ? "caractere" : "caracteres"}`;
+    const words = t(
+      statistics.words === 1 ? "notes.stats.word.one" : "notes.stats.word.many",
+      { count: statistics.words },
+    );
+    const characters = t(
+      statistics.characters === 1
+        ? "notes.stats.character.one"
+        : "notes.stats.character.many",
+      { count: statistics.characters },
+    );
     const tasks = statistics.tasks === 0
-      ? "sem tarefas"
-      : `${statistics.completedTasks}/${statistics.tasks} tarefas`;
-    const references = `${statistics.references} ${statistics.references === 1 ? "referência" : "referências"}`;
+      ? t("notes.stats.tasks.none")
+      : t("notes.stats.tasks", {
+          completed: statistics.completedTasks,
+          count: statistics.tasks,
+        });
+    const references = t(
+      statistics.references === 1
+        ? "notes.stats.reference.one"
+        : "notes.stats.reference.many",
+      { count: statistics.references },
+    );
     target.textContent = `${words} · ${characters} · ${tasks} · ${references}`;
   };
 
@@ -1022,11 +1038,11 @@ export function mountNotesWorkspaceControls(
       const ready = intelligenceSnapshot?.state === "ready";
       intelligenceAction.disabled = !note || note.deletedAt !== null || !ready || intelligencePending;
       intelligenceAction.textContent = intelligencePending && intelligenceNoteId === note?.id
-        ? "✦  Resumindo…"
-        : "✦  Resumir";
+        ? `✦  ${t("notes.intelligence.pending")}`
+        : `✦  ${t("notes.intelligence.short")}`;
       intelligenceAction.title = ready
-        ? "Resumir esta nota localmente com Ordax Intelligence"
-        : "Ordax Intelligence não está pronta nesta execução";
+        ? t("notes.intelligence.readyTitle")
+        : t("notes.intelligence.unavailableTitle");
     }
     const more = view.querySelector(".ordax-notes-more");
     if (more) more.disabled = !note;
@@ -1036,8 +1052,14 @@ export function mountNotesWorkspaceControls(
       imagePreviewCache.releaseExcept(new Set());
       empty.hidden = false;
       documentView.hidden = true;
-      view.querySelector(".ordax-notes-breadcrumb").textContent = `${modeLabel()}  /  Notas`;
-      view.querySelector(".ordax-notes-save-status").textContent = state.persistence.scope === "device" ? "Salvo neste dispositivo" : "Somente nesta sessão";
+      view.querySelector(".ordax-notes-breadcrumb").textContent = t(
+        "notes.breadcrumb",
+        { space: modeLabel() },
+      );
+      view.querySelector(".ordax-notes-save-status").textContent =
+        state.persistence.scope === "device"
+          ? t("notes.saved.device")
+          : t("notes.saved.session");
       view.querySelector(".ordax-notes-references").hidden = true;
       const intelligencePanel = view.querySelector("[data-notes-intelligence]");
       if (intelligencePanel) intelligencePanel.hidden = true;
@@ -1049,7 +1071,11 @@ export function mountNotesWorkspaceControls(
     documentView.hidden = false;
     const project = state.document.projects.find((candidate) => candidate.id === note.projectId);
     const readOnly = note.deletedAt !== null;
-    view.querySelector(".ordax-notes-breadcrumb").textContent = `${project?.name ?? "Meu espaço"}  /  Notas`;
+    const projectLabel = project?.name ?? t("notes.home");
+    view.querySelector(".ordax-notes-breadcrumb").textContent = t(
+      "notes.breadcrumb",
+      { space: projectLabel },
+    );
     documentView.dataset.deleted = String(readOnly);
     const active = documentObject.activeElement;
     const title = view.querySelector("[data-notes-title]");
@@ -1070,12 +1096,16 @@ export function mountNotesWorkspaceControls(
     title.style.height = `${Math.min(150, Math.max(58, title.scrollHeight))}px`;
 
     const meta = view.querySelector(".ordax-notes-meta");
-    meta.textContent = readOnly
-      ? `${project?.name ?? "Meu espaço"}  ·  Na lixeira · somente leitura`
-      : `${project?.name ?? "Meu espaço"}  ·  Nota local`;
+    meta.textContent = t(
+      readOnly ? "notes.meta.trash" : "notes.meta.local",
+      { project: projectLabel },
+    );
     const star = view.querySelector(".ordax-notes-star");
     star.textContent = note.favorite ? "★" : "☆";
-    star.setAttribute("aria-label", note.favorite ? "Remover dos favoritos" : "Adicionar aos favoritos");
+    star.setAttribute(
+      "aria-label",
+      note.favorite ? t("notes.favorite.remove") : t("notes.favorite.add"),
+    );
     const duplicateAction = view.querySelector(".ordax-notes-duplicate");
     const menuAction = view.querySelector(".ordax-notes-trash-action");
     const permanentDeleteAction = view.querySelector(".ordax-notes-delete-forever");
@@ -1084,7 +1114,9 @@ export function mountNotesWorkspaceControls(
     duplicateAction.title = state.document.notes.length >= MAX_NOTES
       ? `Limite de ${MAX_NOTES} notas atingido`
       : "Duplicar nota";
-    menuAction.textContent = note.deletedAt === null ? "Mover para a lixeira" : "Restaurar nota";
+    menuAction.textContent = note.deletedAt === null
+      ? t("notes.action.trash")
+      : t("notes.action.restore");
     menuAction.dataset.notesAction = note.deletedAt === null ? "trash-note" : "restore-note";
     permanentDeleteAction.hidden = note.deletedAt === null;
     renderMoveProjects(view, note);
@@ -1100,10 +1132,10 @@ export function mountNotesWorkspaceControls(
       intelligencePanel.hidden = !belongsToCurrent;
       if (belongsToCurrent) {
         intelligenceStatus.textContent = intelligencePending
-          ? "Analisando esta nota localmente…"
+          ? t("notes.intelligence.analyzing")
           : intelligenceError
             ? intelligenceError
-            : "Resumo local concluído. A resposta abaixo não altera a nota.";
+            : t("notes.intelligence.done");
         intelligenceAnswer.textContent = intelligenceResult;
         intelligenceAnswer.hidden = !intelligenceResult;
       }
@@ -1111,17 +1143,21 @@ export function mountNotesWorkspaceControls(
 
     const saved = view.querySelector(".ordax-notes-save-status");
     saved.textContent = readOnly
-      ? "Na lixeira · restaure para editar"
+      ? t("notes.save.readOnly")
       : state.persistence.ok
-        ? (state.persistence.scope === "device" ? "✓  Salvo neste dispositivo" : "✓  Salvo nesta sessão")
-        : "Falha ao salvar localmente";
+        ? (state.persistence.scope === "device"
+            ? t("notes.save.deviceOk")
+            : t("notes.save.sessionOk"))
+        : t("notes.save.failed");
     view.querySelector(".ordax-notes-offline-status").textContent = readOnly
-      ? "Somente leitura até restaurar"
+      ? t("notes.offline.readOnly")
       : state.persistence.scope === "device"
-        ? "☁  Disponível offline"
-        : "Somente nesta sessão";
+        ? t("notes.offline.device")
+        : t("notes.offline.session");
     view.querySelector(".ordax-notes-device").textContent =
-      state.persistence.scope === "device" ? "▱  Neste dispositivo" : "▱  Sessão temporária";
+      state.persistence.scope === "device"
+        ? t("notes.device.device")
+        : t("notes.device.sessionDecorated");
     syncEditorStatistics(view, note, body.innerText ?? body.textContent ?? note.body);
   };
 
@@ -1146,7 +1182,7 @@ export function mountNotesWorkspaceControls(
   };
 
   const selectFirstVisible = () => {
-    const first = visibleNotes(state.document, mode, query, newestFirst)[0];
+    const first = visibleNotes(state.document, mode, query, newestFirst, locale())[0];
     if (first) runtime.selectNote(first.id);
   };
 
@@ -1225,7 +1261,7 @@ export function mountNotesWorkspaceControls(
       render();
       void summarizeDocumentWithIntelligence(intelligencePort, {
         id: latest.id,
-        title: latest.title || "Sem título",
+        title: latest.title || t("notes.untitled"),
         text: latest.body || "(nota vazia)",
         provenance: `notes:${latest.id}:device-local`,
       }).then((response) => {
@@ -1233,7 +1269,7 @@ export function mountNotesWorkspaceControls(
         intelligenceResult = response.text;
       }).catch(() => {
         if (destroyed || intelligenceNoteId !== latest.id) return;
-        intelligenceError = "Não foi possível resumir esta nota localmente.";
+        intelligenceError = t("notes.intelligence.failed");
       }).finally(() => {
         if (destroyed || intelligenceNoteId !== latest.id) return;
         intelligencePending = false;
