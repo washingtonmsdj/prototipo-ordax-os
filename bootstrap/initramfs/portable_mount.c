@@ -34,7 +34,8 @@ static void usage(void) {
         "  ordax-portable-mount mount-capsule <bootstrap.erofs> <capsule-mount>\n"
         "  ordax-portable-mount mount-base <stable-base.erofs> <state-mount> <base-mount> <root-mount>\n"
         "  ordax-portable-mount mount-system <system.erofs> <release-mount> <system-mount>\n"
-        "  ordax-portable-mount mount-surface-runtime <runtime.erofs> <runtime-lower> <runtime-upper> <runtime-work> <runtime-root>\n",
+        "  ordax-portable-mount mount-surface-runtime <runtime.erofs> <runtime-lower> <runtime-upper> <runtime-work> <runtime-root>\n"
+        "  ordax-portable-mount mount-ai-runtime <local-ai-runtime.erofs> <runtime-root>\n",
         stderr
     );
 }
@@ -594,6 +595,71 @@ static int mount_surface_runtime(
     return 0;
 }
 
+static int mount_ai_runtime(
+    const char *runtime_image,
+    const char *runtime_root
+) {
+    if (!safe_overlay_path(runtime_root) || !real_directory(runtime_root)) {
+        fputs("ordax-portable-mount: local AI runtime mount path is unsafe\n", stderr);
+        return EXIT_UNSAFE;
+    }
+
+    struct loop_binding runtime;
+    if (loop_attach(&runtime, runtime_image, 0, 0, 1) != 0) {
+        fprintf(stderr, "ordax-portable-mount: cannot attach local AI runtime EROFS: %s\n", strerror(errno));
+        return EXIT_LOOP;
+    }
+
+    unsigned long ro_flags = MS_RDONLY | MS_NODEV | MS_NOSUID;
+    if (mount(runtime.device, runtime_root, "erofs", ro_flags, NULL) != 0) {
+        fprintf(stderr, "ordax-portable-mount: cannot mount local AI runtime EROFS: %s\n", strerror(errno));
+        loop_binding_cleanup(&runtime);
+        return EXIT_MOUNT;
+    }
+
+    static const char *required_exec[] = {
+        "bin/llama-server",
+        "bin/ordax-local-ai",
+    };
+    for (size_t i = 0; i < sizeof(required_exec) / sizeof(required_exec[0]); i++) {
+        if (!safe_executable_below(runtime_root, required_exec[i])) {
+            fprintf(stderr, "ordax-portable-mount: local AI runtime lacks executable %s\n", required_exec[i]);
+            (void)umount2(runtime_root, MNT_DETACH);
+            loop_binding_cleanup(&runtime);
+            return EXIT_UNSAFE;
+        }
+    }
+
+    static const char *required_files[] = {
+        "metadata/source-lock.json",
+        "metadata/runtime-policy.json",
+    };
+    for (size_t i = 0; i < sizeof(required_files) / sizeof(required_files[0]); i++) {
+        if (!safe_regular_below(runtime_root, required_files[i])) {
+            fprintf(stderr, "ordax-portable-mount: local AI runtime lacks required file %s\n", required_files[i]);
+            (void)umount2(runtime_root, MNT_DETACH);
+            loop_binding_cleanup(&runtime);
+            return EXIT_UNSAFE;
+        }
+    }
+
+    char model_dir[PATH_MAX];
+    if (!safe_nested_directory(runtime_root, "models", model_dir)) {
+        fputs("ordax-portable-mount: local AI runtime lacks safe models directory\n", stderr);
+        (void)umount2(runtime_root, MNT_DETACH);
+        loop_binding_cleanup(&runtime);
+        return EXIT_UNSAFE;
+    }
+
+    runtime.attached = 0;
+    close(runtime.backing_fd);
+    close(runtime.loop_fd);
+    close(runtime.control_fd);
+    printf("ORDAX_LOCAL_AI_RUNTIME_LOOP=%s\n", runtime.device);
+    printf("ORDAX_LOCAL_AI_RUNTIME_ROOT=%s\n", runtime_root);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     if (argc == 4 && strcmp(argv[1], "mount-state") == 0) {
         return mount_state(argv[2], argv[3]);
@@ -609,6 +675,9 @@ int main(int argc, char **argv) {
     }
     if (argc == 7 && strcmp(argv[1], "mount-surface-runtime") == 0) {
         return mount_surface_runtime(argv[2], argv[3], argv[4], argv[5], argv[6]);
+    }
+    if (argc == 4 && strcmp(argv[1], "mount-ai-runtime") == 0) {
+        return mount_ai_runtime(argv[2], argv[3]);
     }
     usage();
     return EXIT_USAGE;
