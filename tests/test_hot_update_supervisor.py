@@ -538,7 +538,7 @@ class HotUpdateSupervisorContractTests(unittest.TestCase):
         self.assertIn('"Base gravada no slot inativo"', presentation)
         self.assertIn('"Base pronta para ativação"', presentation)
         self.assertIn("overviewUpdateSummaryMessageId", overview)
-        self.assertIn("updateAttentionMessage", overview)
+        self.assertIn("localizedUpdateAttention", overview)
         self.assertNotIn('"Reinício necessário"', overview)
         self.assertIn("lastAppliedAt", overview)
         self.assertIn("rejectedSha", overview)
