@@ -64,6 +64,9 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
         self.assertIn('"surface-runtime.sha256"', text)
         self.assertIn('"runtimes"', text)
         self.assertIn('"native-surface-runtime.erofs"', text)
+        self.assertIn('"local-ai-runtime.sha256"', text)
+        self.assertIn('"ai-runtimes"', text)
+        self.assertIn('"local-ai-runtime.erofs"', text)
 
     def test_loop_partition_wait_requires_stable_identity_before_formatting(self):
         text = SCRIPT.read_text(encoding="utf-8")
@@ -88,12 +91,18 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
         text = SCRIPT.read_text(encoding="utf-8")
         self.assertIn("ORDAX_PORTABLE_V2_HANDOFF=VERIFIED", text)
         self.assertIn("ORDAX_STABLE_INIT_HANDOFF=VERIFIED", text)
-        self.assertIn("ORDAX_PORTABLE_V2_SLOT=current", text)
+        self.assertIn('"ORDAX_PORTABLE_V2_SLOT=" + expected_slot', text)
+        self.assertIn('expected_slot="candidate"', text)
+        self.assertIn('expected_slot="current"', text)
         self.assertIn("ORDAX_PORTABLE_V2_SOURCE_SHA=", text)
         self.assertIn("ORDAX_STABLE_INIT_SOURCE_SHA=", text)
-        self.assertIn("ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3", text)
+        self.assertIn("ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=", text)
+        self.assertIn("prototype-ordax.release-manifest/4", text)
         self.assertIn("ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED", text)
         self.assertIn("ORDAX_SURFACE_RUNTIME_SHA256=", text)
+        self.assertIn("ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED", text)
+        self.assertIn("ORDAX_LOCAL_AI_RUNTIME_SHA256=", text)
+        self.assertIn("ORDAX_LOCAL_AI_BACKEND=STARTED", text)
         self.assertIn('"-net", "none"', text)
         self.assertIn('"qemu_direct_kernel_boot_proven": True', text)
         self.assertIn('"qemu_uefi_boot_proven": False', text)
@@ -143,9 +152,13 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
             "bootstrap/portable-v2/capsule/build.py build",
             "tools/portable-release-image/build.py build",
             "bootstrap/surface-runtime/build.py build",
-            "--manifest-schema 3",
+            "--manifest-schema 4",
             "--runtime-artifact",
             "--runtime-artifact-url",
+            "--local-ai-artifact",
+            "--local-ai-source-lock",
+            "--local-ai-artifact-url",
+            "verify-portable-v4-exact",
             "verify-portable-v3-exact",
             "release-signing",
             "--portable-bootstrap-capsule",
