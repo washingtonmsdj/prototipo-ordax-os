@@ -336,7 +336,9 @@ export function mountInternetBrowserControls(
   let mountedSlot = null;
   let destroyed = false;
   let nextTabOrdinal = 1;
-  let message = "";
+  let messageId = null;
+  let messageParams = Object.freeze({});
+  let externalMessage = "";
   let panelCollapsed = false;
   let favoritesExpanded = false;
   let historyExpanded = false;
@@ -346,6 +348,23 @@ export function mountInternetBrowserControls(
   let resizeObserver = null;
 
   const findSlot = () => root.querySelector(`${INTERNET_WINDOW_SELECTOR} ${INTERNET_EXTENSION_SELECTOR}`);
+  const clearMessage = () => {
+    messageId = null;
+    messageParams = Object.freeze({});
+    externalMessage = "";
+  };
+  const setMessage = (id, params = {}) => {
+    messageId = id;
+    messageParams = Object.freeze({ ...params });
+    externalMessage = "";
+  };
+  const setExternalMessage = (value) => {
+    messageId = null;
+    messageParams = Object.freeze({});
+    externalMessage = String(value ?? "");
+  };
+  const renderedMessage = () =>
+    messageId ? t(messageId, messageParams) : externalMessage;
   const activeTab = () => snapshot.tabs.find((tab) => tab.id === snapshot.activeTabId) ?? null;
   const selectedProject = () => projectSnapshot?.projects.find((project) => project.id === selectedProjectId) ?? null;
   const activeReferenceUrl = () => {
@@ -456,16 +475,14 @@ export function mountInternetBrowserControls(
       const url = normalizedAddress(target, t);
       if (!url) return;
       const tab = activeTab();
-      message = "";
+      clearMessage();
       if (tab) {
         if (tab.url !== url) port.navigate(tab.id, url);
       } else {
         port.openTab(allocateTabId(), url);
       }
-    } catch (error) {
-      message = error instanceof Error
-        ? error.message
-        : t("internet.address.invalid");
+    } catch {
+      setMessage("internet.address.invalid");
     }
   };
 
@@ -663,7 +680,8 @@ export function mountInternetBrowserControls(
     const home = viewport?.querySelector("[data-browser-home]");
     if (home) home.hidden = Boolean(tab?.url);
     let status = slot.querySelector("[data-browser-message]");
-    if (!status && message) {
+    const currentMessage = renderedMessage();
+    if (!status && currentMessage) {
       status = node(documentObject, "div", "ordax-internet-message");
       status.dataset.browserMessage = "";
       status.setAttribute("role", "status");
@@ -671,8 +689,8 @@ export function mountInternetBrowserControls(
       slot.querySelector(".ordax-internet-center")?.append(status);
     }
     if (status) {
-      status.textContent = message;
-      status.hidden = !message;
+      status.textContent = currentMessage;
+      status.hidden = !currentMessage;
     }
   };
 
@@ -954,7 +972,7 @@ export function mountInternetBrowserControls(
       const entry = historySnapshot?.entries.find((item) => item.id === openHistoryId);
       if (!entry || !snapshot.supported) return;
       const tab = activeTab();
-      message = "";
+      clearMessage();
       if (tab) {
         port.navigate(tab.id, entry.url);
       } else {
@@ -967,7 +985,7 @@ export function mountInternetBrowserControls(
     if (removeHistoryId) {
       if (!historyPort) return;
       historyPort.remove(removeHistoryId);
-      message = t("internet.history.removed");
+      setMessage("internet.history.removed");
       render();
       return;
     }
@@ -975,7 +993,7 @@ export function mountInternetBrowserControls(
     if (target.dataset.browserClearHistory !== undefined) {
       if (!historyPort) return;
       historyPort.clear();
-      message = t("internet.history.cleared");
+      setMessage("internet.history.cleared");
       render();
       return;
     }
@@ -992,7 +1010,7 @@ export function mountInternetBrowserControls(
       const favorite = favoriteSnapshot?.favorites.find((entry) => entry.id === openFavoriteId);
       if (!favorite || !snapshot.supported) return;
       const tab = activeTab();
-      message = "";
+      clearMessage();
       if (tab) {
         port.navigate(tab.id, favorite.url);
       } else {
@@ -1005,7 +1023,7 @@ export function mountInternetBrowserControls(
     if (removeFavoriteId) {
       if (!favoritePort) return;
       favoritePort.remove(removeFavoriteId);
-      message = t("internet.favorite.removed");
+      setMessage("internet.favorite.removed");
       render();
       return;
     }
@@ -1016,9 +1034,10 @@ export function mountInternetBrowserControls(
       try {
         projectPort.recordOpened(projectId);
         selectedProjectId = projectId;
-        message = "";
+        clearMessage();
       } catch (error) {
-        message = error instanceof Error ? error.message : "Não foi possível abrir o contexto do projeto.";
+        if (error instanceof Error && error.message) setExternalMessage(error.message);
+        else setMessage("internet.project.openFailed");
       }
       render();
       focusProject(projectId);
@@ -1038,11 +1057,14 @@ export function mountInternetBrowserControls(
           note: noteDraftValue,
         });
         projectPort?.recordOpened(project.id);
-        message = referenceSnapshot?.persistence === "session"
-          ? "Referência salva para esta sessão."
-          : "Referência salva no projeto.";
+        setMessage(
+          referenceSnapshot?.persistence === "session"
+            ? "internet.reference.savedSession"
+            : "internet.reference.savedProject",
+        );
       } catch (error) {
-        message = error instanceof Error ? error.message : "Não foi possível salvar a referência.";
+        if (error instanceof Error && error.message) setExternalMessage(error.message);
+        else setMessage("internet.reference.saveFailed");
       }
       render();
       return;
@@ -1054,9 +1076,10 @@ export function mountInternetBrowserControls(
       try {
         referencePort.remove(removeReferenceId);
         noteDraftValue = "";
-        message = "Referência removida do projeto.";
+        setMessage("internet.reference.removed");
       } catch (error) {
-        message = error instanceof Error ? error.message : "Não foi possível remover a referência.";
+        if (error instanceof Error && error.message) setExternalMessage(error.message);
+        else setMessage("internet.reference.removeFailed");
       }
       render();
       return;
@@ -1079,7 +1102,7 @@ export function mountInternetBrowserControls(
     }
     if (target.dataset.browserNewTab !== undefined) {
       if (snapshot.tabs.length >= MAX_UI_TABS) {
-        message = t("internet.tab.limit");
+        setMessage("internet.tab.limit");
         render();
         return;
       }
@@ -1112,18 +1135,21 @@ export function mountInternetBrowserControls(
       try {
         if (existing) {
           favoritePort.remove(existing.id);
-          message = t("internet.favorite.removed");
+          setMessage("internet.favorite.removed");
         } else {
           favoritePort.save({
             url,
             title: tab.title || displayHost(url, t("internet.tab.new")),
           });
-          message = favoriteSnapshot?.persistence === "session"
-            ? "Favorito salvo para esta sessão."
-            : "Favorito salvo neste dispositivo.";
+          setMessage(
+            favoriteSnapshot?.persistence === "session"
+              ? "internet.favorite.savedSession"
+              : "internet.favorite.savedDeviceMessage",
+          );
         }
       } catch (error) {
-        message = error instanceof Error ? error.message : "Não foi possível atualizar os favoritos.";
+        if (error instanceof Error && error.message) setExternalMessage(error.message);
+        else setMessage("internet.favorite.updateFailed");
       }
       render();
     }
@@ -1196,10 +1222,10 @@ export function mountInternetBrowserControls(
     try {
       const url = normalizedAddress(input.value, t);
       if (!url) return;
-      message = "";
+      clearMessage();
       port.navigate(tab.id, url);
-    } catch (error) {
-      message = error instanceof Error ? error.message : t("internet.address.invalid");
+    } catch {
+      setMessage("internet.address.invalid");
       render();
     }
   };
