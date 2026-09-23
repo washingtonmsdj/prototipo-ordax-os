@@ -48,7 +48,8 @@ class FilesMoveControlsTests(unittest.TestCase):
         self.assertIn("status === 413", controls)
         self.assertIn("status === 422", controls)
         self.assertIn('"files.transfer.folderCrossVolumeUnsupported"', controls)
-        self.assertIn("A origem foi preservada.", controls)
+        self.assertIn('"files.transfer.moveFailed"', controls)
+        self.assertIn('"files.transfer.copyFailed"', controls)
 
     def test_transfer_panel_is_responsive(self):
         css = CSS.read_text(encoding="utf-8")
