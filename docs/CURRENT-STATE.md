@@ -188,8 +188,8 @@ English is **not** yet marked as a complete Surface locale. Files now covers its
 primary navigation/search/list/selection/Recents/Trash journey plus common forms,
 locale-aware sorting, export and preview controls through the shared catalog.
 Settings/System cover their section navigation/header copy, Settings also covers its
-Notifications policy/source section end to end, and Account covers its complete
-first-party overview/sync experience in English. Notes now covers its
+Notifications policy/source and local-session Security sections end to end, and Account
+covers its complete first-party overview/sync experience in English. Notes now covers its
 primary navigation/editor shell, project/list states, core persistence copy and
 consultative Intelligence controls. Internet now covers its primary browser shell,
 locale-aware tab/address search, project panel and key history/favorite states.
@@ -208,6 +208,7 @@ FILES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 FILES_FORMS_SORT_EXPORT_PREVIEW_EN_US=PASS_SOURCE
 SETTINGS_SYSTEM_NAV_EN_US=PASS_SOURCE
 SETTINGS_NOTIFICATIONS_EN_US=PASS_SOURCE
+SETTINGS_SECURITY_EN_US=PASS_SOURCE
 ACCOUNT_EN_US=PASS_SOURCE
 NOTES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 INTERNET_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
