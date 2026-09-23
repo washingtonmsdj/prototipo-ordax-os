@@ -109,6 +109,8 @@ export const SYSTEM_SOURCE_MESSAGES = Object.freeze({
   "system.resources.storage.used": "Espaço usado",
   "system.resources.storage.freeOf": "{free} livre de {total}",
   "system.resources.storage.scope": "Esta leitura cobre somente o espaço persistente do usuário exposto pelo host. Não representa o disco físico inteiro.",
+  "system.resources.readFailedPrevious": "A leitura atual falhou; os valores abaixo são a última leitura válida recebida pela Surface.",
+  "system.resources.readFailedNoData": "Não foi possível obter uma leitura válida dos recursos nesta sessão.",
 });
 
 export const SYSTEM_ENGLISH_MESSAGES = Object.freeze({
@@ -222,4 +224,6 @@ export const SYSTEM_ENGLISH_MESSAGES = Object.freeze({
   "system.resources.storage.used": "Space used",
   "system.resources.storage.freeOf": "{free} free of {total}",
   "system.resources.storage.scope": "This reading covers only persistent user space exposed by the host. It does not represent the entire physical disk.",
+  "system.resources.readFailedPrevious": "The current reading failed; the values below are the last valid reading received by the Surface.",
+  "system.resources.readFailedNoData": "A valid resource reading could not be obtained in this session.",
 });
