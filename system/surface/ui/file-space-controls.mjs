@@ -106,7 +106,7 @@ export function mountFileSpaceControls(
 
   let listing = null;
   let pending = false;
-  let clearMessage();
+  let message = null;
   let messageId = null;
   let messageParams = Object.freeze({});
   let destroyed = false;
