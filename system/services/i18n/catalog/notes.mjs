@@ -166,7 +166,8 @@ export const NOTES_SOURCE_MESSAGES = Object.freeze({
   "notes.statistics.tasks": "{done}/{total} tarefas",
   "notes.intelligence.summarizingShort": "✦ Resumindo…",
   "notes.file.imageShort": "Imagem",
-  "notes.save.devicePlain": "Salvo neste dispositivo"
+  "notes.save.devicePlain": "Salvo neste dispositivo",
+  "notes.file.openFolderFailed": "Não foi possível abrir esta pasta."
 });
 
 export const NOTES_ENGLISH_MESSAGES = Object.freeze({
@@ -337,5 +338,6 @@ export const NOTES_ENGLISH_MESSAGES = Object.freeze({
   "notes.statistics.tasks": "{done}/{total} tasks",
   "notes.intelligence.summarizingShort": "✦ Summarizing…",
   "notes.file.imageShort": "Image",
-  "notes.save.devicePlain": "Saved on this device"
+  "notes.save.devicePlain": "Saved on this device",
+  "notes.file.openFolderFailed": "Could not open this folder."
 });
