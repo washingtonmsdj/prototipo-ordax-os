@@ -1511,7 +1511,7 @@ export function mountFileSpaceControls(
     } catch {
       if (destroyed || ordinal !== requestOrdinal) return false;
       trashListing = null;
-      message = "Não foi possível abrir a Lixeira.";
+      setMessage("files.trash.openFailed");
       return false;
     } finally {
       if (!destroyed && ordinal === requestOrdinal) {
@@ -1540,7 +1540,7 @@ export function mountFileSpaceControls(
       return;
     }
     selectedPath = null;
-    message = "Arquivo não encontrado. A referência pode ser removida de Recentes.";
+    setMessage("files.recents.revealMissing");
     replaceView();
   };
 
@@ -1828,7 +1828,7 @@ export function mountFileSpaceControls(
       return true;
     } catch {
       if (destroyed || ordinal !== requestOrdinal) return false;
-      message = "Não foi possível abrir este local.";
+      setMessage("files.location.openFailed");
       return false;
     } finally {
       if (!destroyed && ordinal === requestOrdinal) {
@@ -1876,7 +1876,7 @@ export function mountFileSpaceControls(
         try {
           projectSnapshot = projectPort.recordFileOpened(project.id, next.path);
         } catch {
-          message = "Arquivo aberto, mas a continuidade do projeto não pôde ser atualizada.";
+          setMessage("files.preview.projectActivityFailed");
         }
       }
     } catch (error) {
@@ -1888,20 +1888,20 @@ export function mountFileSpaceControls(
           failedProjectResume = Object.freeze({ projectId: project.id, path });
         }
         if (status === 404) {
-          message = "O último arquivo deste projeto não está mais disponível. O projeto foi preservado.";
+          setMessage("files.preview.projectResumeMissing");
         } else if (status === 413) {
-          message = "O último arquivo deste projeto ficou grande demais para a visualização rápida. O projeto foi preservado.";
+          setMessage("files.preview.projectResumeTooLarge");
         } else if (status === 415) {
-          message = "O último arquivo deste projeto não é mais texto UTF-8 válido. O projeto foi preservado.";
+          setMessage("files.preview.projectResumeInvalidUtf8");
         } else {
-          message = "Não foi possível retomar o último arquivo deste projeto. O projeto foi preservado.";
+          setMessage("files.preview.projectResumeFailed");
         }
       } else if (status === 413) {
-        message = "Este arquivo é grande demais para a visualização rápida (máximo 256 KB).";
+        setMessage("files.preview.tooLarge");
       } else if (status === 415) {
-        message = "A visualização rápida aceita apenas texto UTF-8 válido.";
+        setMessage("files.preview.invalidUtf8");
       } else {
-        message = "Não foi possível visualizar este arquivo.";
+        setMessage("files.preview.failed");
       }
     } finally {
       if (!destroyed && ordinal === previewRequestOrdinal) {
@@ -1937,7 +1937,7 @@ export function mountFileSpaceControls(
       }
     } catch {
       if (destroyed) return;
-      message = "Não foi possível criar a nota. O arquivo original não foi alterado.";
+      setMessage("files.notes.createFailed");
     } finally {
       if (!destroyed) {
         notesImportPending = false;
@@ -1989,46 +1989,31 @@ export function mountFileSpaceControls(
       previewRequestOrdinal += 1;
       previewPending = false;
       textPreview = null;
-      message =
-        source.mode === "copy"
-          ? `“${source.name}” foi copiado para ${destinationPath}.`
-          : `“${source.name}” foi movido para ${destinationPath}.`;
+      setMessage(
+        source.mode === "copy" ? "files.transfer.copied" : "files.transfer.moved",
+        { name: source.name, path: destinationPath },
+      );
     } catch (error) {
       if (destroyed || ordinal !== requestOrdinal) return;
       const status = operationStatus(error);
       if (status === 409) {
-        message = "Já existe um item com esse nome no destino. Nada foi substituído.";
+        setMessage("files.transfer.conflict");
       } else if (status === 412) {
-        message =
-          source.mode === "copy"
-            ? "O arquivo mudou durante a cópia. Nenhuma cópia parcial foi mantida."
-            : "O arquivo mudou antes da conclusão do movimento. A origem não foi removida.";
+        setMessage(source.mode === "copy" ? "files.transfer.sourceChangedCopy" : "files.transfer.sourceChangedMove");
       } else if (status === 413) {
-        message =
-          source.mode === "copy"
-            ? "Este arquivo ultrapassa o limite de cópia de 64 MiB."
-            : "Mover este arquivo entre volumes ultrapassa o limite seguro de 64 MiB.";
+        setMessage(source.mode === "copy" ? "files.copy.tooLarge" : "files.transfer.moveCrossVolumeTooLarge");
       } else if (status === 422) {
-        message = "Pastas ainda não podem ser movidas entre volumes.";
+        setMessage("files.transfer.folderCrossVolumeUnsupported");
       } else if (status === 507) {
-        message = "Não há espaço suficiente no destino.";
+        setMessage("files.transfer.noSpace");
       } else if (status === 404) {
-        message = "A origem ou o destino não existe mais. Atualize e tente novamente.";
+        setMessage("files.transfer.missing");
       } else if (status === 403) {
-        message =
-          source.mode === "copy"
-            ? "O OrdaX não tem permissão para copiar este arquivo."
-            : "O OrdaX não tem permissão para mover este item.";
+        setMessage(source.mode === "copy" ? "files.copy.forbidden" : "files.transfer.moveForbidden");
       } else if (status === 400) {
-        message =
-          source.mode === "copy"
-            ? "O destino não é válido para esta cópia."
-            : "O destino não é válido para este movimento.";
+        setMessage(source.mode === "copy" ? "files.transfer.invalidCopyDestination" : "files.transfer.invalidMoveDestination");
       } else {
-        message =
-          source.mode === "copy"
-            ? "Não foi possível copiar este arquivo. A origem foi preservada."
-            : "Não foi possível mover este item. A origem foi preservada.";
+        setMessage(source.mode === "copy" ? "files.transfer.copyFailed" : "files.transfer.moveFailed");
       }
     } finally {
       if (!destroyed && ordinal === requestOrdinal) {
@@ -2042,17 +2027,17 @@ export function mountFileSpaceControls(
   const importSelectedFile = async (file) => {
     if (!listing || !file) return;
     if (!Number.isSafeInteger(file.size) || file.size < 0) {
-      message = "O arquivo selecionado tem tamanho inválido.";
+      setMessage("files.import.invalidSize");
       replaceView();
       return;
     }
     if (file.size > MAX_FILE_IMPORT_BYTES) {
-      message = "Este arquivo ultrapassa o limite de importação de 64 MiB.";
+      setMessage("files.import.tooLarge");
       replaceView();
       return;
     }
     if (typeof file.name !== "string" || file.name.length === 0 || file.name.length > 255) {
-      message = "O nome do arquivo selecionado não é válido.";
+      setMessage("files.import.invalidName");
       replaceView();
       return;
     }
@@ -2079,24 +2064,24 @@ export function mountFileSpaceControls(
       previewRequestOrdinal += 1;
       previewPending = false;
       textPreview = null;
-      message = `“${targetName}” foi importado para ${targetPath}.`;
+      setMessage("files.import.imported", { name: targetName, path: targetPath });
     } catch (error) {
       if (destroyed || ordinal !== requestOrdinal) return;
       const status = operationStatus(error);
       if (status === 409) {
-        message = "Já existe um item com esse nome. Nada foi substituído.";
+        setMessage("files.common.conflict");
       } else if (status === 413) {
-        message = "Este arquivo ultrapassa o limite de importação de 64 MiB.";
+        setMessage("files.import.tooLarge");
       } else if (status === 403) {
-        message = "O OrdaX não tem permissão para importar nesta pasta.";
+        setMessage("files.import.forbidden");
       } else if (status === 404) {
-        message = "A pasta de destino não existe mais. Atualize e tente novamente.";
+        setMessage("files.import.destinationMissing");
       } else if (status === 507) {
-        message = "Não há espaço suficiente para importar este arquivo.";
+        setMessage("files.import.noSpace");
       } else if (status === 400) {
-        message = "O arquivo ou o destino não é válido para importação.";
+        setMessage("files.import.invalid");
       } else {
-        message = "Não foi possível importar este arquivo. Nenhum arquivo parcial foi mantido.";
+        setMessage("files.import.failed");
       }
     } finally {
       if (!destroyed && ordinal === requestOrdinal) {
@@ -2141,23 +2126,22 @@ export function mountFileSpaceControls(
       previewRequestOrdinal += 1;
       previewPending = false;
       textPreview = null;
-      message = `“${selected.name}” foi movido para a Lixeira e pode ser restaurado.`;
+      setMessage("files.trash.moved", { name: selected.name });
     } catch (error) {
       if (destroyed || ordinal !== requestOrdinal) return;
       const status = operationStatus(error);
       if (status === 422) {
-        message =
-          "Este item está em outro volume e não pôde ser movido para a Lixeira com segurança. O original foi preservado.";
+        setMessage("files.trash.crossVolume");
       } else if (status === 404) {
-        message = "Este item não existe mais. Atualize a pasta.";
+        setMessage("files.common.missing");
       } else if (status === 403) {
-        message = "O OrdaX não tem permissão para mover este item para a Lixeira.";
+        setMessage("files.trash.forbidden");
       } else if (status === 409) {
-        message = "A Lixeira não pôde reservar uma entrada segura. O original foi preservado.";
+        setMessage("files.trash.reservationFailed");
       } else if (status === 400) {
-        message = "Este item não pode ser movido para a Lixeira.";
+        setMessage("files.trash.invalid");
       } else {
-        message = "Não foi possível mover este item para a Lixeira. O original foi preservado.";
+        setMessage("files.trash.moveFailed");
       }
     } finally {
       if (!destroyed && ordinal === requestOrdinal) {
@@ -2179,26 +2163,22 @@ export function mountFileSpaceControls(
       if (destroyed || ordinal !== requestOrdinal) return;
       trashListing = next;
       selectedTrashId = null;
-      message = `“${selected.name}” foi restaurado para ${selected.originalPath}.`;
+      setMessage("files.trash.restored", { name: selected.name, path: selected.originalPath });
     } catch (error) {
       if (destroyed || ordinal !== requestOrdinal) return;
       const status = operationStatus(error);
       if (status === 409) {
-        message =
-          "Já existe um item no caminho original. Nada foi substituído e o item continua na Lixeira.";
+        setMessage("files.trash.restoreConflict");
       } else if (status === 404) {
-        message =
-          "O local original ou a entrada da Lixeira não está mais disponível. O item não foi sobrescrito.";
+        setMessage("files.trash.restoreMissing");
       } else if (status === 422) {
-        message =
-          "A restauração cruzaria um limite de volume não suportado. O item continua na Lixeira.";
+        setMessage("files.trash.restoreCrossVolume");
       } else if (status === 403) {
-        message =
-          "O OrdaX não tem permissão para restaurar no local original. O item continua na Lixeira.";
+        setMessage("files.trash.restoreForbidden");
       } else if (status === 400) {
-        message = "A entrada da Lixeira não é válida para restauração.";
+        setMessage("files.trash.restoreInvalid");
       } else {
-        message = "Não foi possível restaurar este item. Ele continua na Lixeira.";
+        setMessage("files.trash.restoreFailed");
       }
     } finally {
       if (!destroyed && ordinal === requestOrdinal) {
@@ -2212,7 +2192,7 @@ export function mountFileSpaceControls(
     const selected = selectedEntry();
     if (!selected || selected.kind !== "file") return;
     if (selected.size > MAX_FILE_EXPORT_BYTES) {
-      message = "Este arquivo ultrapassa o limite de exportação de 64 MiB.";
+      setMessage("files.export.tooLarge");
       replaceView();
       return;
     }
@@ -2224,22 +2204,22 @@ export function mountFileSpaceControls(
     try {
       await port.exportFile(selected.path);
       if (destroyed || ordinal !== requestOrdinal) return;
-      message = `Download de “${selected.name}” iniciado.`;
+      setMessage("files.export.started", { name: selected.name });
     } catch (error) {
       if (destroyed || ordinal !== requestOrdinal) return;
       const status = operationStatus(error);
       if (status === 413) {
-        message = "Este arquivo ultrapassa o limite de exportação de 64 MiB.";
+        setMessage("files.export.tooLarge");
       } else if (status === 412) {
-        message = "O arquivo mudou durante a exportação. Tente novamente.";
+        setMessage("files.export.sourceChanged");
       } else if (status === 404) {
-        message = "Este arquivo não existe mais. Atualize a pasta.";
+        setMessage("files.export.missing");
       } else if (status === 403) {
-        message = "O OrdaX não tem permissão para exportar este arquivo.";
+        setMessage("files.export.forbidden");
       } else if (status === 400) {
-        message = "Este item não pode ser exportado.";
+        setMessage("files.export.invalid");
       } else {
-        message = "Não foi possível exportar este arquivo.";
+        setMessage("files.export.failed");
       }
     } finally {
       if (!destroyed && ordinal === requestOrdinal) {
@@ -2255,7 +2235,7 @@ export function mountFileSpaceControls(
     if (!selected || !listing || selected.kind !== "file") return;
 
     if (selected.size > MAX_FILE_COPY_BYTES) {
-      message = "Este arquivo ultrapassa o limite de cópia de 64 MiB.";
+      setMessage("files.copy.tooLarge");
       copyingPath = null;
       copyDraft = "";
       replaceView();
@@ -2264,7 +2244,7 @@ export function mountFileSpaceControls(
 
     const newName = String(copyDraft ?? "");
     if (!newName) {
-      message = "Digite o nome da cópia.";
+      setMessage("files.copy.nameRequired");
       replaceView();
       return;
     }
@@ -2287,26 +2267,26 @@ export function mountFileSpaceControls(
       previewRequestOrdinal += 1;
       previewPending = false;
       textPreview = null;
-      message = `Cópia “${newName}” criada.`;
+      setMessage("files.copy.created", { name: newName });
     } catch (error) {
       if (destroyed || ordinal !== requestOrdinal) return;
       const status = operationStatus(error);
       if (status === 409) {
-        message = "Já existe um item com esse nome. Nada foi substituído.";
+        setMessage("files.common.conflict");
       } else if (status === 412) {
-        message = "O arquivo mudou durante a cópia. Nenhuma cópia parcial foi mantida.";
+        setMessage("files.copy.sourceChanged");
       } else if (status === 413) {
-        message = "Este arquivo ultrapassa o limite de cópia de 64 MiB.";
+        setMessage("files.copy.tooLarge");
       } else if (status === 507) {
-        message = "Não há espaço suficiente para criar a cópia.";
+        setMessage("files.copy.noSpace");
       } else if (status === 403) {
-        message = "O OrdaX não tem permissão para copiar este arquivo.";
+        setMessage("files.copy.forbidden");
       } else if (status === 404) {
-        message = "O arquivo de origem não existe mais.";
+        setMessage("files.copy.sourceMissing");
       } else if (status === 400) {
-        message = "O nome da cópia não é válido.";
+        setMessage("files.copy.invalidName");
       } else {
-        message = "Não foi possível copiar este arquivo.";
+        setMessage("files.copy.failed");
       }
     } finally {
       if (!destroyed && ordinal === requestOrdinal) {
@@ -2323,14 +2303,14 @@ export function mountFileSpaceControls(
 
     const newName = String(renameDraft ?? "");
     if (!newName) {
-      message = "Digite o novo nome.";
+      setMessage("files.rename.nameRequired");
       replaceView();
       return;
     }
     if (newName === selected.name) {
       renamingPath = null;
       renameDraft = "";
-      message = "O nome não foi alterado.";
+      setMessage("files.rename.unchanged");
       replaceView();
       return;
     }
@@ -2357,20 +2337,20 @@ export function mountFileSpaceControls(
         previewPending = false;
         textPreview = null;
       }
-      message = `“${selected.name}” foi renomeado para “${newName}”.`;
+      setMessage("files.rename.renamed", { oldName: selected.name, newName });
     } catch (error) {
       if (destroyed || ordinal !== requestOrdinal) return;
       const status = operationStatus(error);
       if (status === 409) {
-        message = "Já existe um item com esse nome. Nada foi substituído.";
+        setMessage("files.common.conflict");
       } else if (status === 403) {
-        message = "O OrdaX não tem permissão para renomear este item.";
+        setMessage("files.rename.forbidden");
       } else if (status === 404) {
-        message = "Este item não existe mais. Atualize a pasta.";
+        setMessage("files.common.missing");
       } else if (status === 400) {
-        message = "O novo nome não é válido.";
+        setMessage("files.rename.invalidName");
       } else {
-        message = "Não foi possível renomear este item.";
+        setMessage("files.rename.failed");
       }
     } finally {
       if (!destroyed && ordinal === requestOrdinal) {
@@ -2384,7 +2364,7 @@ export function mountFileSpaceControls(
   const createDirectory = async (name) => {
     const trimmed = String(name ?? "").trim();
     if (!listing || !trimmed) {
-      message = "Digite um nome para a nova pasta.";
+      setMessage("files.directory.nameRequired");
       replaceView();
       return;
     }
@@ -2398,20 +2378,20 @@ export function mountFileSpaceControls(
       listing = next;
       creatingDirectory = false;
       directoryDraft = "";
-      message = `Pasta “${trimmed}” criada.`;
+      setMessage("files.directory.created", { name: trimmed });
     } catch (error) {
       if (destroyed || ordinal !== requestOrdinal) return;
       const status = operationStatus(error);
       if (status === 409) {
-        message = "Já existe um item com esse nome. Nada foi substituído.";
+        setMessage("files.common.conflict");
       } else if (status === 403) {
-        message = "O OrdaX não tem permissão para criar uma pasta aqui.";
+        setMessage("files.directory.forbidden");
       } else if (status === 507) {
-        message = "Não há espaço suficiente para criar a pasta.";
+        setMessage("files.directory.noSpace");
       } else if (status === 400) {
-        message = "O nome da pasta não é válido.";
+        setMessage("files.directory.invalidName");
       } else {
-        message = "Não foi possível criar a pasta.";
+        setMessage("files.directory.failed");
       }
     } finally {
       if (!destroyed && ordinal === requestOrdinal) {
@@ -2557,7 +2537,7 @@ export function mountFileSpaceControls(
     if (recentRemove && root.contains(recentRemove) && recentPort) {
       const selected = selectedRecentEntry();
       if (selected) {
-        message = `“${selected.name}” foi removido de Recentes. O arquivo não foi apagado.`;
+        setMessage("files.recents.removedMessage", { name: selected.name });
         selectedRecentPath = null;
         previewRequestOrdinal += 1;
         previewPending = false;
@@ -2569,7 +2549,7 @@ export function mountFileSpaceControls(
     }
     const recentClear = event.target.closest("[data-file-recent-clear]");
     if (recentClear && root.contains(recentClear) && recentPort) {
-      message = "Histórico limpo. Nenhum arquivo foi apagado.";
+      setMessage("files.recents.clearedMessage");
       selectedRecentPath = null;
       previewRequestOrdinal += 1;
       previewPending = false;
@@ -2620,7 +2600,7 @@ export function mountFileSpaceControls(
       const selected = selectedEntry();
       if (selected?.kind === "file" && listing) {
         if (selected.size > MAX_FILE_COPY_BYTES) {
-          message = "Este arquivo ultrapassa o limite de cópia de 64 MiB.";
+          setMessage("files.copy.tooLarge");
         } else {
           transferEntry = Object.freeze({
             mode: "copy",
@@ -2636,7 +2616,7 @@ export function mountFileSpaceControls(
           previewRequestOrdinal += 1;
           previewPending = false;
           textPreview = null;
-          message = "Navegue até a pasta de destino e escolha “Copiar para esta pasta”.";
+          setMessage("files.transfer.navigateCopy");
         }
         replaceView();
       }
@@ -2660,7 +2640,7 @@ export function mountFileSpaceControls(
         previewRequestOrdinal += 1;
         previewPending = false;
         textPreview = null;
-        message = "Navegue até a pasta de destino e escolha “Mover para esta pasta”.";
+        setMessage("files.transfer.navigateMove");
         replaceView();
       }
       return;
@@ -2669,9 +2649,7 @@ export function mountFileSpaceControls(
     if (transferCancel && root.contains(transferCancel)) {
       const wasCopy = transferEntry?.mode === "copy";
       transferEntry = null;
-      message = wasCopy
-        ? "Cópia cancelada. Nenhum item foi alterado."
-        : "Movimento cancelado. Nenhum item foi alterado.";
+      setMessage(wasCopy ? "files.transfer.copyCancelled" : "files.transfer.moveCancelled");
       replaceView();
       return;
     }
@@ -2685,7 +2663,7 @@ export function mountFileSpaceControls(
       const selected = selectedEntry();
       if (selected?.kind === "file") {
         if (selected.size > MAX_FILE_COPY_BYTES) {
-          message = "Este arquivo ultrapassa o limite de cópia de 64 MiB.";
+          setMessage("files.copy.tooLarge");
           replaceView();
         } else {
           copyingPath = selected.path;
