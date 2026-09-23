@@ -41,6 +41,23 @@ test("relative time distinguishes minutes from hours", () => {
   assert.equal(formatNotesRelativeTime(now - 30 * 3_600_000, now), "Ontem");
 });
 
+test("relative time and query accept a live locale without breaking legacy callers", () => {
+  const now = Date.UTC(2026, 8, 19, 2, 0, 0);
+  const translate = (messageId) => ({
+    "notes.time.now": "Now",
+    "notes.time.yesterday": "Yesterday",
+  })[messageId];
+  assert.equal(formatNotesRelativeTime(now - 10_000, "en-US", translate, now), "Now");
+  assert.equal(formatNotesRelativeTime(now - 30 * 3_600_000, "en-US", translate, now), "Yesterday");
+
+  const candidate = note({
+    id: "locale",
+    title: "İstanbul",
+    body: "",
+  });
+  assert.equal(noteMatchesQuery(candidate, "istanbul", "tr-TR"), true);
+});
+
 test("first body line ignores empty whitespace-only lines", () => {
   assert.equal(firstNotesBodyLine("\n   \nPrimeira ideia\nSegunda"), "Primeira ideia");
   assert.equal(firstNotesBodyLine(""), "Nota sem conteúdo");
