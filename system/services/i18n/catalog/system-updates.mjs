@@ -92,7 +92,13 @@ export const SYSTEM_UPDATES_SOURCE_MESSAGES = Object.freeze({
   "system.updates.history.applicationDetail": "SHA {sha} · {mode} · {apply}s (preparação {stage}s)",
   "system.updates.history.releases": "Entregas do OrdaX",
   "system.updates.history.releaseDetail": "SHA {sha}",
-  "system.updates.history.readFailed": "Não foi possível atualizar o histórico local."
+  "system.updates.history.readFailed": "Não foi possível atualizar o histórico local.",
+  "system.updates.accelerator.label": "Atualizações",
+  "system.updates.accelerator.labelAlerting": "Atualizações •",
+  "system.updates.accelerator.aria": "Abrir Sistema, Atualizações",
+  "system.updates.accelerator.title": "Abrir Sistema > Atualizações",
+  "system.updates.accelerator.titleAlerting": "Há uma atualização que requer atenção. Abrir Sistema > Atualizações.",
+  "system.updates.accelerator.titleBoot": "{summary}. Abrir Sistema > Atualizações."
 });
 
 export const SYSTEM_UPDATES_ENGLISH_MESSAGES = Object.freeze({
@@ -189,5 +195,11 @@ export const SYSTEM_UPDATES_ENGLISH_MESSAGES = Object.freeze({
   "system.updates.history.applicationDetail": "SHA {sha} · {mode} · {apply}s (preparation {stage}s)",
   "system.updates.history.releases": "OrdaX deliveries",
   "system.updates.history.releaseDetail": "SHA {sha}",
-  "system.updates.history.readFailed": "The local update history could not be refreshed."
+  "system.updates.history.readFailed": "The local update history could not be refreshed.",
+  "system.updates.accelerator.label": "Updates",
+  "system.updates.accelerator.labelAlerting": "Updates •",
+  "system.updates.accelerator.aria": "Open System, Updates",
+  "system.updates.accelerator.title": "Open System > Updates",
+  "system.updates.accelerator.titleAlerting": "An update needs attention. Open System > Updates.",
+  "system.updates.accelerator.titleBoot": "{summary}. Open System > Updates."
 });
