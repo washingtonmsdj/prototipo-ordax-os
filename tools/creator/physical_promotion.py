@@ -52,7 +52,7 @@ REQUIRED_AUTHORIZATION_REQUIREMENTS = {
     "writer_binds_portable_media_plan_sha256",
     "writer_binds_generated_media_sha256_and_size",
     "writer_binds_public_trust_sha256",
-    "writer_requires_exact_15_artifact_readback",
+    "writer_requires_exact_17_artifact_readback",
     "signed_release_sequence_must_never_decrease",
     "live_usb_reenumeration_required",
     "end_user_destructive_confirmation_required",
@@ -207,11 +207,13 @@ def _portable_contract_ok(portable: dict[str, Any]) -> bool:
 def _creator_portable_contract_ok(contract: dict[str, Any]) -> bool:
     application = contract.get("application_planner")
     runtime = contract.get("surface_runtime_preseed")
+    ai_runtime = contract.get("local_ai_runtime_preseed")
+    writer = contract.get("physical_writer_v2")
     return all(
         [
             contract.get("$schema") == CREATOR_PORTABLE_SCHEMA,
             contract.get("product_scope") == "stable-mvp-usb-only",
-            contract.get("artifact_count") == 15,
+            contract.get("artifact_count") == 17,
             contract.get("partitions") == ["ORDAX-ESP", "ORDAX-DATA"],
             contract.get("physical_write_authorized") is False,
             contract.get("physical_device_paths_allowed") is False,
@@ -232,9 +234,9 @@ def _creator_portable_contract_ok(contract: dict[str, Any]) -> bool:
                 "write-exact-two-partition-gpt",
                 "format-ORDAX-ESP-fat32",
                 "format-ORDAX-DATA-exfat",
-                "materialize-15-exact-artifacts",
+                "materialize-17-exact-artifacts",
                 "flush-and-sync",
-                "readback-sha256-and-size-for-15-artifacts",
+                "readback-sha256-and-size-for-17-artifacts",
                 "verify-gpt-filesystems-labels-and-capacity",
             ],
             isinstance(runtime, dict),
@@ -242,8 +244,22 @@ def _creator_portable_contract_ok(contract: dict[str, Any]) -> bool:
             runtime.get("image_artifact_id") == "surface-runtime-image",
             runtime.get("reference_artifact_id") == "surface-runtime-ref",
             runtime.get("content_addressed") is True,
-            runtime.get("release_manifest_schema") == "prototype-ordax.release-manifest/3",
+            runtime.get("release_manifest_schema") == "prototype-ordax.release-manifest/4",
             runtime.get("physical_write_authorized") is False,
+            isinstance(ai_runtime, dict),
+            ai_runtime.get("implemented") is True,
+            ai_runtime.get("image_artifact_id") == "local-ai-runtime-image",
+            ai_runtime.get("reference_artifact_id") == "local-ai-runtime-ref",
+            ai_runtime.get("image_target") == "/.ordax/ai-runtimes/sha256/<runtime-sha256>/local-ai-runtime.erofs",
+            ai_runtime.get("reference_target") == "/.ordax/releases/<source_commit>/local-ai-runtime.sha256",
+            ai_runtime.get("content_addressed") is True,
+            ai_runtime.get("release_manifest_schema") == "prototype-ordax.release-manifest/4",
+            ai_runtime.get("physical_write_authorized") is False,
+            isinstance(writer, dict),
+            writer.get("exact_operation_count") == 39,
+            writer.get("exact_artifact_count") == 17,
+            writer.get("readback_sha256_and_size_per_artifact") is True,
+            writer.get("physical_write_authorized") is False,
         ]
     )
 
