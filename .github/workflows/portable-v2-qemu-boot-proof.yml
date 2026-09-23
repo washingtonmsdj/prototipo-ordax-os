@@ -31,6 +31,7 @@ on:
       - 'docs/MINIMAL-USB-BOOTSTRAP.md'
       - 'tests/test_portable_v2_qemu_boot_proof_contract.py'
       - 'tests/test_portable_v2_uefi_boot_proof_contract.py'
+      - 'tests/test_portable_v4_ai_handoff_contract.py'
       - '.github/workflows/portable-v2-qemu-boot-proof.yml'
   pull_request:
     paths:
@@ -61,6 +62,7 @@ on:
       - 'docs/MINIMAL-USB-BOOTSTRAP.md'
       - 'tests/test_portable_v2_qemu_boot_proof_contract.py'
       - 'tests/test_portable_v2_uefi_boot_proof_contract.py'
+      - 'tests/test_portable_v4_ai_handoff_contract.py'
       - '.github/workflows/portable-v2-qemu-boot-proof.yml'
   workflow_dispatch:
 
@@ -117,6 +119,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m unittest tests.test_portable_v2_qemu_boot_proof_contract -v
+          python -m unittest tests.test_portable_v4_ai_handoff_contract -v
 
       - name: Build exact kernel and kernel modules
         env:
