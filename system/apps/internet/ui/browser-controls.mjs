@@ -39,7 +39,7 @@ function normalizedAddress(value, t) {
   throw new TypeError(t("internet.address.invalidExample"));
 }
 
-function displayHost(url, emptyLabel = "Nova aba") {
+function displayHost(url, emptyLabel = "") {
   if (!url) return emptyLabel;
   try {
     return new URL(url).hostname || url;
@@ -531,14 +531,14 @@ export function mountInternetBrowserControls(
     const folder = slot.querySelector("[data-browser-project-folder]");
     const selected = selectedProject();
 
-    if (contextName) contextName.textContent = selected?.name ?? "Nenhum projeto selecionado";
+    if (contextName) contextName.textContent = selected?.name ?? t("internet.project.none");
     if (contextDetail) {
       if (selected) {
-        contextDetail.textContent = `Contexto local da sessão · ${selected.path}`;
+        contextDetail.textContent = t("internet.project.localContext", { path: selected.path });
       } else if (projectSnapshot) {
-        contextDetail.textContent = "Escolha um projeto já cadastrado em Arquivos. A escolha vale apenas para esta sessão do navegador.";
+        contextDetail.textContent = t("internet.project.choose");
       } else {
-        contextDetail.textContent = "O catálogo local de projetos não está disponível neste host.";
+        contextDetail.textContent = t("internet.project.catalogUnavailable");
       }
     }
 
@@ -546,8 +546,8 @@ export function mountInternetBrowserControls(
       folder.replaceChildren();
       folder.append(node(documentObject, "span", "", selected ? "□" : "○"));
       const copy = node(documentObject, "span", "ordax-internet-page-copy");
-      copy.append(node(documentObject, "strong", "", selected ? "Pasta do projeto" : "Sem contexto de projeto"));
-      copy.append(node(documentObject, "small", "", selected?.path ?? "Selecione um projeto para relacionar a pesquisa à sessão."));
+      copy.append(node(documentObject, "strong", "", t(selected ? "internet.project.folder" : "internet.project.noContext")));
+      copy.append(node(documentObject, "small", "", selected?.path ?? t("internet.project.selectForResearch")));
       folder.append(copy);
     }
 
@@ -563,11 +563,11 @@ export function mountInternetBrowserControls(
     options.replaceChildren();
 
     if (!projectSnapshot) {
-      options.append(node(documentObject, "div", "ordax-internet-tab-placeholder", "Catálogo de projetos indisponível neste host."));
+      options.append(node(documentObject, "div", "ordax-internet-tab-placeholder", t("internet.project.catalogUnavailable")));
       return;
     }
     if (projectEntries.length === 0) {
-      options.append(node(documentObject, "div", "ordax-internet-tab-placeholder", "Nenhum projeto cadastrado em Arquivos."));
+      options.append(node(documentObject, "div", "ordax-internet-tab-placeholder", t("internet.project.noneRegistered")));
       return;
     }
 
@@ -576,12 +576,12 @@ export function mountInternetBrowserControls(
       row.type = "button";
       row.dataset.browserProjectId = project.id;
       row.setAttribute("aria-pressed", String(project.id === selectedProjectId));
-      row.title = `Usar ${project.name} como contexto desta sessão do navegador`;
+      row.title = t("internet.project.useAsContext", { name: project.name });
       row.append(node(documentObject, "span", "", project.id === selectedProjectId ? "●" : "○"));
       const copy = node(documentObject, "span", "ordax-internet-page-copy");
       copy.append(node(documentObject, "strong", "", project.name));
       copy.append(node(documentObject, "small", "", project.path));
-      row.append(copy, node(documentObject, "span", "", project.id === selectedProjectId ? "ATUAL" : ""));
+      row.append(copy, node(documentObject, "span", "", project.id === selectedProjectId ? t("internet.project.currentMarker") : ""));
       options.append(row);
     }
   };
@@ -595,56 +595,48 @@ export function mountInternetBrowserControls(
     setStatus(
       "session",
       snapshot.supported
-        ? (tabCount === 1 ? "1 aba aberta" : `${tabCount} abas abertas`)
-        : "Navegação indisponível",
+        ? t(tabCount === 1 ? "internet.home.status.tabOne" : "internet.home.status.tabs", { count: tabCount })
+        : t("internet.home.status.navigationUnavailable"),
     );
 
     const projectCount = projectSnapshot?.projects.length ?? 0;
     setStatus(
       "projects",
       !projectSnapshot
-        ? "Indisponível neste host"
+        ? t("internet.home.status.unavailable")
         : projectCount === 0
-          ? "Nenhum projeto cadastrado"
-          : projectCount === 1
-            ? "1 projeto disponível"
-            : `${projectCount} projetos disponíveis`,
+          ? t("internet.home.status.projectsNone")
+          : t(projectCount === 1 ? "internet.home.status.projectOne" : "internet.home.status.projects", { count: projectCount }),
     );
 
     const referenceCount = referenceSnapshot?.references.length ?? 0;
     setStatus(
       "references",
       !referenceSnapshot
-        ? "Indisponível neste host"
+        ? t("internet.home.status.unavailable")
         : referenceCount === 0
-          ? "Nenhuma página salva"
-          : referenceCount === 1
-            ? "1 página salva em projetos"
-            : `${referenceCount} páginas salvas em projetos`,
+          ? t("internet.home.status.referencesNone")
+          : t(referenceCount === 1 ? "internet.home.status.referenceOne" : "internet.home.status.references", { count: referenceCount }),
     );
 
     const favoriteCount = favoriteSnapshot?.favorites.length ?? 0;
     setStatus(
       "favorites",
       !favoriteSnapshot
-        ? "Indisponível neste host"
+        ? t("internet.home.status.unavailable")
         : favoriteCount === 0
-          ? "Nenhum favorito salvo"
-          : favoriteCount === 1
-            ? "1 favorito salvo"
-            : `${favoriteCount} favoritos salvos`,
+          ? t("internet.home.status.favoritesNone")
+          : t(favoriteCount === 1 ? "internet.home.status.favoriteOne" : "internet.home.status.favorites", { count: favoriteCount }),
     );
 
     const historyCount = historySnapshot?.entries.length ?? 0;
     setStatus(
       "history",
       !historySnapshot
-        ? "Indisponível neste host"
+        ? t("internet.home.status.unavailable")
         : historyCount === 0
-          ? "Nenhuma visita registrada"
-          : historyCount === 1
-            ? "1 visita registrada"
-            : `${historyCount} visitas registradas`,
+          ? t("internet.home.status.historyNone")
+          : t(historyCount === 1 ? "internet.home.status.historyOne" : "internet.home.status.history", { count: historyCount }),
     );
   };
 
@@ -807,7 +799,7 @@ export function mountInternetBrowserControls(
       open.title = entry.url;
       const copy = node(documentObject, "span", "ordax-internet-page-copy");
       copy.append(node(documentObject, "strong", "", entry.title));
-      copy.append(node(documentObject, "small", "", displayHost(entry.url)));
+      copy.append(node(documentObject, "small", "", displayHost(entry.url, t("internet.tab.new"))));
       open.append(node(documentObject, "span", "", "★"), copy);
       const remove = node(documentObject, "button", "ordax-internet-favorite-remove", "×");
       remove.type = "button";
@@ -1028,7 +1020,7 @@ export function mountInternetBrowserControls(
         referencePort.save({
           projectId: project.id,
           url,
-          title: tab.title || displayHost(url),
+          title: tab.title || displayHost(url, t("internet.tab.new")),
           note: noteDraftValue,
         });
         projectPort?.recordOpened(project.id);
@@ -1110,7 +1102,7 @@ export function mountInternetBrowserControls(
         } else {
           favoritePort.save({
             url,
-            title: tab.title || displayHost(url),
+            title: tab.title || displayHost(url, t("internet.tab.new")),
           });
           message = favoriteSnapshot?.persistence === "session"
             ? "Favorito salvo para esta sessão."
