@@ -456,7 +456,7 @@ function dispatchEditorInput(editor) {
   editor.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-export function createNotesRichEditor(documentObject) {
+export function createNotesRichEditor(documentObject, ariaLabel = "Conteúdo da nota") {
   const editor = documentObject.createElement("div");
   editor.className = "ordax-notes-body ordax-notes-rich-editor";
   editor.contentEditable = "true";
@@ -465,7 +465,7 @@ export function createNotesRichEditor(documentObject) {
   editor.dataset.notesEmptyState = "true";
   editor.setAttribute("role", "textbox");
   editor.setAttribute("aria-multiline", "true");
-  editor.setAttribute("aria-label", "Conteúdo da nota");
+  editor.setAttribute("aria-label", ariaLabel);
   return editor;
 }
 
