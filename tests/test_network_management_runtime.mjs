@@ -4,7 +4,9 @@ import test from "node:test";
 import { NETWORK_MANAGEMENT_SCHEMA } from "../system/contracts/network-management.mjs";
 import {
   networkManagementActionMessage,
+  networkManagementActionMessageId,
   networkManagementFailureMessage,
+  networkManagementFailureMessageId,
   runNetworkManagementAction,
 } from "../system/services/network/management-runtime.mjs";
 
@@ -47,6 +49,26 @@ test("shared network management runtime owns PT-BR action messages", () => {
   assert.equal(networkManagementActionMessage("connect", 1), "Wi-Fi conectado.");
   assert.equal(networkManagementActionMessage("forget", 1), "Rede Wi-Fi esquecida.");
   assert.throws(() => networkManagementActionMessage("unknown", 0));
+});
+
+test("shared network management runtime exposes locale-neutral presentation ids", () => {
+  assert.equal(
+    networkManagementActionMessageId("scan", 0),
+    "network.management.scan.pending",
+  );
+  assert.equal(
+    networkManagementActionMessageId("reconnect", 1),
+    "network.management.reconnect.success",
+  );
+  const conflict = Object.assign(new Error("must not surface"), { status: 409 });
+  assert.equal(
+    networkManagementFailureMessageId("connect", conflict),
+    "network.management.error.connectConflict",
+  );
+  assert.equal(
+    networkManagementFailureMessageId("disconnect", new TypeError("invalid secret input")),
+    "network.management.error.validation",
+  );
 });
 
 test("shared network management runtime maps bounded failures without secrets", () => {
