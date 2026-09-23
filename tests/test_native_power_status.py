@@ -104,7 +104,7 @@ class NativePowerStatusTests(unittest.TestCase):
         tray = TRAY.read_text(encoding="utf-8")
         self.assertIn('item.dataset.batteryState = "not-detected"', tray)
         self.assertIn('item.dataset.batteryState = "unavailable"', tray)
-        self.assertIn('item.dataset.batteryObservation = "unavailable"', tray)
+        self.assertIn('lastObservation = "unavailable"', tray)
         self.assertIn('lastObservation = stale ? "stale" : "current"', tray)
         self.assertIn("item.dataset.batteryObservation = lastObservation", tray)
         self.assertIn('icon.dataset.batteryLevel = "unknown"', tray)
