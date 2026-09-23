@@ -6,33 +6,29 @@ import {
   assertSyncRuntimePort,
   validateSyncRuntimeSnapshot,
 } from "../../contracts/sync-runtime.mjs";
+import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
 
 const MAX_HOME_PENDING_ITEMS = 2;
 
-function plural(value, singular, pluralValue) {
-  return value === 1 ? singular : pluralValue;
+function notificationDetailMessageIds(snapshot) {
+  const ids = ["home.pending.notifications.detail.center"];
+  if (snapshot.doNotDisturb) ids.push("home.pending.notifications.detail.dnd");
+  if (snapshot.persistence === "session") ids.push("home.pending.notifications.detail.session");
+  return Object.freeze(ids);
 }
 
-function notificationsDetail(snapshot) {
-  const parts = ["Central de Notificações"];
-  if (snapshot.doNotDisturb) parts.push("Não perturbe ativo");
-  if (snapshot.persistence === "session") parts.push("histórico somente nesta sessão");
-  return parts.join(" · ");
-}
-
-function syncDetail(snapshot) {
-  const parts = [
+function syncDetailMessageIds(snapshot) {
+  return Object.freeze([
     snapshot.transport === "available"
-      ? "transporte disponível"
-      : "transporte remoto não está ativo",
+      ? "home.pending.sync.transport.available"
+      : "home.pending.sync.transport.unavailable",
     snapshot.accountContinuity === "active"
-      ? "continuidade de conta ativa"
-      : "continuidade de conta não está ativa",
+      ? "home.pending.sync.account.active"
+      : "home.pending.sync.account.inactive",
     snapshot.queuePersistence === "device"
-      ? "fila salva neste dispositivo"
-      : "fila somente nesta sessão",
-  ];
-  return parts.join(" · ");
+      ? "home.pending.sync.queue.device"
+      : "home.pending.sync.queue.session",
+  ]);
 }
 
 export function createHomePendingPresentation({
@@ -52,9 +48,15 @@ export function createHomePendingPresentation({
     items.push(Object.freeze({
       key: "notifications",
       kind: "notifications",
-      title: `${unread} ${plural(unread, "notificação não lida", "notificações não lidas")}`,
-      detail: notificationsDetail(notificationsSnapshot),
-      actionLabel: `Abrir notificações — ${unread} não ${plural(unread, "lida", "lidas")}`,
+      titleMessageId: unread === 1
+        ? "home.pending.notifications.title.one"
+        : "home.pending.notifications.title.many",
+      titleParams: Object.freeze({ count: unread }),
+      detailMessageIds: notificationDetailMessageIds(notificationsSnapshot),
+      actionMessageId: unread === 1
+        ? "home.pending.notifications.action.one"
+        : "home.pending.notifications.action.many",
+      actionParams: Object.freeze({ count: unread }),
       actionKind: "quick-panel",
       panel: "notifications",
       appId: null,
@@ -67,9 +69,13 @@ export function createHomePendingPresentation({
     items.push(Object.freeze({
       key: "sync",
       kind: "sync",
-      title: `${pending} ${plural(pending, "alteração local pendente", "alterações locais pendentes")}`,
-      detail: syncDetail(syncSnapshot),
-      actionLabel: "Abrir Conta em Sincronização",
+      titleMessageId: pending === 1
+        ? "home.pending.sync.title.one"
+        : "home.pending.sync.title.many",
+      titleParams: Object.freeze({ count: pending }),
+      detailMessageIds: syncDetailMessageIds(syncSnapshot),
+      actionMessageId: "home.pending.sync.action",
+      actionParams: Object.freeze({}),
       actionKind: "app",
       panel: null,
       appId: "account",
@@ -114,8 +120,12 @@ function canonicalHomeSpace(homePanel) {
 export function mountHomePending(
   rootValue,
   { notifications = null, syncRuntime = null } = {},
+  surfaceLifecycle,
 ) {
   const root = assertHomeRoot(rootValue);
+  const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
   const notificationsPort = notifications === null ? null : assertNotificationsPort(notifications);
   const syncPort = syncRuntime === null ? null : assertSyncRuntimePort(syncRuntime);
   const documentObject = root.ownerDocument;
@@ -151,7 +161,7 @@ export function mountHomePending(
       documentObject,
       "p",
       "ordax-section-kicker",
-      "Pendências",
+      t("home.pending.heading"),
     );
     heading.id = "ordax-home-pending-title";
     next.append(heading);
@@ -160,7 +170,7 @@ export function mountHomePending(
       const button = node(documentObject, "button", "ordax-space-link");
       button.type = "button";
       button.dataset.homePendingKey = item.key;
-      button.setAttribute("aria-label", item.actionLabel);
+      button.setAttribute("aria-label", t(item.actionMessageId, item.actionParams));
       if (item.actionKind === "quick-panel") {
         button.dataset.quickPanelToggle = item.panel;
         if (item.panel === "notifications") {
@@ -180,8 +190,13 @@ export function mountHomePending(
       marker.setAttribute("aria-hidden", "true");
       const copy = node(documentObject, "span");
       copy.append(
-        node(documentObject, "strong", "", item.title),
-        node(documentObject, "small", "", item.detail),
+        node(documentObject, "strong", "", t(item.titleMessageId, item.titleParams)),
+        node(
+          documentObject,
+          "small",
+          "",
+          item.detailMessageIds.map((messageId) => t(messageId)).join(" · "),
+        ),
       );
       const arrow = node(documentObject, "span", "ordax-space-arrow", "→");
       arrow.setAttribute("aria-hidden", "true");
@@ -208,6 +223,7 @@ export function mountHomePending(
     syncSnapshot = validateSyncRuntimeSnapshot(snapshot);
     render();
   });
+  const unsubscribeLocalization = localization.subscribe(() => render());
 
   render();
 
@@ -215,6 +231,7 @@ export function mountHomePending(
     dispose() {
       if (destroyed) return;
       destroyed = true;
+      unsubscribeLocalization();
       unsubscribeSync?.();
       unsubscribeNotifications?.();
       section?.remove();
