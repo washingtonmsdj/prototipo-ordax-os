@@ -493,7 +493,7 @@ export function mountNotesWorkspaceControls(
   };
 
   const renderList = (view) => {
-    const items = visibleNotes(state.document, mode, query, newestFirst);
+    const items = visibleNotes(state.document, mode, query, newestFirst, localization.getLocale());
     view.querySelector(".ordax-notes-list-title").textContent = modeLabel();
     view.querySelector(".ordax-notes-list-count").textContent = `${items.length} ${items.length === 1 ? t("notes.count.note") : t("notes.count.notes")}`;
     const emptyTrash = view.querySelector(".ordax-notes-empty-trash");
@@ -1115,7 +1115,7 @@ export function mountNotesWorkspaceControls(
   };
 
   const selectFirstVisible = () => {
-    const first = visibleNotes(state.document, mode, query, newestFirst)[0];
+    const first = visibleNotes(state.document, mode, query, newestFirst, localization.getLocale())[0];
     if (first) runtime.selectNote(first.id);
   };
 
@@ -1283,7 +1283,7 @@ export function mountNotesWorkspaceControls(
       mode = action.replace("view-", "");
       render();
       const selected = currentNote();
-      const visible = visibleNotes(state.document, mode, query, newestFirst);
+      const visible = visibleNotes(state.document, mode, query, newestFirst, localization.getLocale());
       if (!selected || !visible.some((item) => item.id === selected.id)) selectFirstVisible();
       return;
     }
@@ -1345,7 +1345,7 @@ export function mountNotesWorkspaceControls(
       const projectId = note.projectId;
       runtime.restoreNote(note.id);
       if (mode === "trash") {
-        const next = visibleNotes(state.document, "trash", query, newestFirst)[0];
+        const next = visibleNotes(state.document, "trash", query, newestFirst, localization.getLocale())[0];
         if (next) {
           runtime.selectNote(next.id);
         } else {
