@@ -14,7 +14,7 @@ import { NOTIFICATIONS_SOURCE_MESSAGES, NOTIFICATIONS_ENGLISH_MESSAGES } from ".
 import { LOCAL_SESSION_SOURCE_MESSAGES, LOCAL_SESSION_ENGLISH_MESSAGES } from "./catalog/local-session.mjs";
 
 export const SURFACE_SOURCE_LOCALE = "pt-BR";
-export const SURFACE_COMPLETE_LOCALES = Object.freeze(["pt-BR"]);
+export const SURFACE_COMPLETE_LOCALES = Object.freeze(["pt-BR", "en-US"]);
 export const SURFACE_ENGLISH_TARGET_LOCALE = "en-US";
 
 const SOURCE = Object.freeze({
