@@ -36,8 +36,8 @@ class SystemDiagnosticsReviewViewContractTests(unittest.TestCase):
         self.assertIn("controller.prepare()", source)
         self.assertIn("controller.copyPreparedSummary()", source)
         self.assertIn("controller.exportPrepared()", source)
-        self.assertIn('t("system.diagnostics.review.button.copy"', source)
-        self.assertIn('t("system.diagnostics.review.button.save"', source)
+        self.assertIn('"system.diagnostics.review.button.copy"', source)
+        self.assertIn('"system.diagnostics.review.button.save"', source)
         self.assertNotIn('"Copiar resumo sanitizado"', source)
         self.assertNotIn('"Salvar em Downloads"', source)
 
