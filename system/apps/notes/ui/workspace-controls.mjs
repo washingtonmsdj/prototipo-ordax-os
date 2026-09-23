@@ -1455,7 +1455,7 @@ export function mountNotesWorkspaceControls(
       if (!input) return;
       const parsed = parseNotesWebHref(input);
       if (!parsed) {
-        windowObject.alert?.("Use um endereço da web válido.");
+        windowObject.alert?.(t("notes.error.invalidWeb"));
         return;
       }
       const title = windowObject.prompt?.(t("notes.prompt.referenceTitle"), parsed.host) || parsed.host;
