@@ -74,7 +74,7 @@ class NativeSystemMetricsTests(unittest.TestCase):
         self.assertIn("contracts/surface-render-lifecycle.mjs", controls)
         self.assertIn("assertSurfaceRenderLifecycle", controls)
         self.assertNotIn("MutationObserver", controls)
-        self.assertIn("Tempo ligado", controls)
+        self.assertIn('t("system.overview.card.uptime")', controls)
         self.assertIn("Espaço do usuário", controls)
         self.assertIn('"Memória"', controls)
         self.assertIn('"Armazenamento"', controls)
