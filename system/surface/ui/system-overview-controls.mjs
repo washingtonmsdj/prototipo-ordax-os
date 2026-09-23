@@ -1133,10 +1133,10 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Registro"),
-      node(documentObject, "h4", "ordax-system-section-title", "Histórico de atualizações"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.history.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.history.title")),
     );
-    const refresh = node(documentObject, "button", "ordax-system-action", "Atualizar histórico");
+    const refresh = node(documentObject, "button", "ordax-system-action", t("system.history.refresh"));
     refresh.type = "button";
     refresh.dataset.systemHistoryRefresh = "";
     heading.append(headingCopy, refresh);
@@ -1148,36 +1148,53 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-placeholder",
-          historyMessage || "Lendo histórico persistente deste dispositivo…",
+          historyMessage || t("system.history.reading"),
         ),
       );
       view.append(section);
       return;
     }
 
+    const formatHistoryTimestamp = (value) =>
+      formatOverviewTimestamp(value, localization.getLocale()) ?? "—";
+    const deliveryText = (value) =>
+      Number.isSafeInteger(value) && value > 0
+        ? t("system.overview.delivery.number", { value })
+        : t("system.overview.delivery.unnumbered");
+
     const applications = node(documentObject, "div", "ordax-system-history");
-    applications.append(node(documentObject, "h5", "ordax-system-history-title", "Aplicações neste notebook"));
+    applications.append(node(documentObject, "h5", "ordax-system-history-title", t("system.history.applications")));
     if (historySnapshot.applications.length === 0) {
       applications.append(
         node(
           documentObject,
           "p",
           "ordax-system-placeholder",
-          "O registro local começa nesta geração do atualizador. Versões anteriores continuam listadas no histórico de entregas.",
+          t("system.history.applications.empty"),
         ),
       );
     } else {
       for (const entry of historySnapshot.applications.slice(0, 10)) {
         const item = node(documentObject, "article", "ordax-system-history-item");
-        const result = entry.result === "applied" ? "Aplicada" : "Revertida";
+        const result = entry.result === "applied"
+          ? t("system.history.result.applied")
+          : t("system.history.result.rolledBack");
         item.append(
-          node(documentObject, "strong", "", `${deliveryLabel(entry.deliveryNumber)} · ${result}`),
-          node(documentObject, "span", "", formatUpdateTimestamp(entry.appliedAt)),
+          node(documentObject, "strong", "", t("system.history.application.title", {
+            delivery: deliveryText(entry.deliveryNumber),
+            result,
+          })),
+          node(documentObject, "span", "", formatHistoryTimestamp(entry.appliedAt)),
           node(
             documentObject,
             "small",
             "",
-            `SHA ${shortSha(entry.sourceSha)} · ${readableUpdateMode(entry.applyMode)} · ${entry.applyDurationSeconds}s (preparação ${entry.stageDurationSeconds}s)`,
+            t("system.history.application.detail", {
+              sha: shortSha(entry.sourceSha),
+              mode: t(overviewUpdateModeMessageId(entry.applyMode)),
+              apply: entry.applyDurationSeconds,
+              stage: entry.stageDurationSeconds,
+            }),
           ),
         );
         applications.append(item);
@@ -1185,13 +1202,18 @@ export function mountSystemOverviewControls(
     }
 
     const releases = node(documentObject, "div", "ordax-system-history");
-    releases.append(node(documentObject, "h5", "ordax-system-history-title", "Entregas do OrdaX"));
+    releases.append(node(documentObject, "h5", "ordax-system-history-title", t("system.history.releases")));
     for (const entry of historySnapshot.releases.slice(0, 12)) {
       const item = node(documentObject, "article", "ordax-system-history-item");
       item.append(
-        node(documentObject, "strong", "", `${deliveryLabel(entry.deliveryNumber)} · ${entry.title}`),
-        node(documentObject, "span", "", formatUpdateTimestamp(entry.releasedAt)),
-        node(documentObject, "small", "", `SHA ${shortSha(entry.sourceSha)}`),
+        node(documentObject, "strong", "", t("system.history.release.title", {
+          delivery: deliveryText(entry.deliveryNumber),
+          title: entry.title,
+        })),
+        node(documentObject, "span", "", formatHistoryTimestamp(entry.releasedAt)),
+        node(documentObject, "small", "", t("system.history.release.sha", {
+          sha: shortSha(entry.sourceSha),
+        })),
       );
       releases.append(item);
     }
@@ -1422,7 +1444,7 @@ export function mountSystemOverviewControls(
       historySnapshot = next;
     } catch {
       if (destroyed || ordinal !== historyOrdinal) return;
-      historyMessage = "Não foi possível atualizar o histórico local.";
+      historyMessage = t("system.history.readFailed");
     } finally {
       if (!destroyed && ordinal === historyOrdinal) replaceView();
     }
