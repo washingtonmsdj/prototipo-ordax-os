@@ -902,9 +902,14 @@ export function mountInternetBrowserControls(
       syncViewport();
       return;
     }
-    if (mountedSlot !== slot || !slot.dataset.ordaxInternetMounted) {
-      slot.replaceChildren(createView(documentObject, snapshot));
+    const renderLocale = localization.getLocale();
+    const localeChanged =
+      slot.dataset.ordaxInternetMounted
+      && slot.dataset.ordaxInternetLocale !== renderLocale;
+    if (mountedSlot !== slot || !slot.dataset.ordaxInternetMounted || localeChanged) {
+      slot.replaceChildren(createView(documentObject, snapshot, t));
       slot.dataset.ordaxInternetMounted = "true";
+      slot.dataset.ordaxInternetLocale = renderLocale;
       mountedSlot = slot;
       resizeObserver?.disconnect();
       if (typeof windowObject.ResizeObserver === "function") {
