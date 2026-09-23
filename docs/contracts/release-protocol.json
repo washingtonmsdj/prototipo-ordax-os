@@ -256,6 +256,9 @@
     "offline_exact_verification_mutates_release": false,
     "offline_exact_verification_activation_performed": false,
     "physical_write_authority_granted": false,
-    "real_local_ai_runtime_artifact_built": false
+    "real_local_ai_runtime_artifact_built": true,
+    "real_local_ai_runtime_ci_reproducible": true,
+    "canonical_signed_stable_materialization_proven": false,
+    "physical_stable_mvp_boot_proven": false
   }
 }
