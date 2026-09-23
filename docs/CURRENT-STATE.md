@@ -189,7 +189,7 @@ English is **not** yet marked as a complete Surface locale. Files now covers its
 primary navigation/search/list/selection/Recents/Trash journey plus common forms,
 locale-aware sorting, export and preview controls through the shared catalog.
 Settings/System cover their section navigation/header copy, and System now also derives
-its overview health/summary presentation from structured runtime state through the shared
+its overview health/summary plus memory and user-storage resource views from structured runtime state through the shared
 localization owner. Settings covers its Notifications policy/source and local-session
 Security sections end to end, and the Native live session lock rerenders through the same
 localization owner while keeping
@@ -213,6 +213,7 @@ FILES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 FILES_FORMS_SORT_EXPORT_PREVIEW_EN_US=PASS_SOURCE
 SETTINGS_SYSTEM_NAV_EN_US=PASS_SOURCE
 SYSTEM_OVERVIEW_SUMMARY_EN_US=PASS_SOURCE
+SYSTEM_RESOURCE_VIEWS_EN_US=PASS_SOURCE
 SETTINGS_NOTIFICATIONS_EN_US=PASS_SOURCE
 SETTINGS_SECURITY_EN_US=PASS_SOURCE
 LOCAL_SESSION_LOCK_EN_US=PASS_SOURCE
