@@ -325,7 +325,7 @@ export function mountDesktopClock(
     quickTimeNode.setAttribute("datetime", isoNow);
     const timeZoneTitle = localizationPort
       ? localizationPort.translate("shell.clock.timeZone", { timeZone })
-      : `Fuso horário: ${timeZone}`;
+      : timeZone;
     timeNode.title = timeZoneTitle;
     trayTimeNode.title = timeZoneTitle;
   };
