@@ -36,7 +36,14 @@ class FirstRunContractTests(unittest.TestCase):
             ["welcome", "regional", "network", "security", "account", "privacy", "ready"],
         )
         self.assertEqual(contract["regional"]["complete_locales"], ["pt-BR", "en-US", "es-ES", "de-DE", "fr-FR"])
+        self.assertEqual(contract["regional"]["public_mvp_locales"], ["pt-BR", "en-US"])
+        self.assertEqual(contract["regional"]["retained_compatible_locales"], ["es-ES", "de-DE", "fr-FR"])
+        self.assertTrue(contract["regional"]["public_selector_must_only_offer_surface_ready_locales"])
         self.assertEqual(contract["regional"]["completeness_scope"], "first-run-oobe-only")
+        self.assertEqual(
+            contract["regional"]["launch_locale_policy"],
+            "mvp-public-pt-br-en-us-retain-hidden-oobe-translations",
+        )
         self.assertEqual(contract["regional"]["surface_complete_locales"], ["pt-BR"])
         self.assertEqual(
             contract["regional"]["surface_translation_status"]["en-US"],
