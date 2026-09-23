@@ -25,8 +25,6 @@ class SystemResourceLocalizationTests(unittest.TestCase):
             "system.resources.storage.used",
             "system.resources.storage.freeOf",
             "system.resources.storage.scope",
-            "system.resources.readFailedPrevious",
-            "system.resources.readFailedNoData",
         ):
             self.assertIn(f't("{message_id}"', controls)
         for rendered_source_copy in (
@@ -46,6 +44,9 @@ class SystemResourceLocalizationTests(unittest.TestCase):
         self.assertEqual(catalog.count('"system.resources.storage.scope"'), 2)
         self.assertIn('"system.resources.readFailedPrevious": "The current reading failed', catalog)
         self.assertIn('"system.resources.readFailedNoData": "A valid resource reading', catalog)
+        self.assertIn('"system.resources.readFailedPrevious"', controls)
+        self.assertIn('"system.resources.readFailedNoData"', controls)
+        self.assertIn("t(metricsMessage)", controls)
 
 
 if __name__ == "__main__":
