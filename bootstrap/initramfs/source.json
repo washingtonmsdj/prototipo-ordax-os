@@ -125,7 +125,8 @@
         "mount-capsule",
         "mount-base",
         "mount-system",
-        "mount-surface-runtime"
+        "mount-surface-runtime",
+        "mount-ai-runtime"
       ],
       "state_filesystem": "ext4",
       "release_filesystem": "erofs",
@@ -151,7 +152,12 @@
       "surface_runtime_read_only_lower": true,
       "surface_runtime_view": "overlayfs-ephemeral-run",
       "surface_runtime_persistent_upper": false,
-      "surface_runtime_required_shape_checked": true
+      "surface_runtime_required_shape_checked": true,
+      "local_ai_runtime_filesystem": "erofs",
+      "local_ai_runtime_read_only": true,
+      "local_ai_runtime_mount_root": "/run/ordax/runtime/local-ai",
+      "local_ai_runtime_required_shape_checked": true,
+      "local_ai_runtime_failure_policy": "degrade-intelligence-without-blocking-boot"
     },
     "handoff_helper_pid1_connected": true,
     "bootstrap_capsule_pin": {
@@ -239,7 +245,10 @@
       "surface_runtime_overlay": "ephemeral-run",
       "candidate_slot_boot_authority_policy": "armed-one-shot-transaction-only",
       "candidate_failure_rolls_back_before_handoff": true,
-      "activation_helper_retained_after_switch_root": true
+      "activation_helper_retained_after_switch_root": true,
+      "release_manifest_v4_supported": true,
+      "local_ai_runtime_verified_handoff": true,
+      "local_ai_runtime_failure_boot_critical": false
     },
     "mount_security_flags": true,
     "mount_security_flags_busybox_selector": "CONFIG_FEATURE_MOUNT_FLAGS=y",
