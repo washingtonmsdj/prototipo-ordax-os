@@ -16,6 +16,10 @@ import {
   validateSystemMetricsSnapshot,
 } from "../../contracts/system-metrics.mjs";
 import {
+  assertRecoveryStatusPort,
+  validateRecoveryStatusSnapshot,
+} from "../../contracts/recovery-status.mjs";
+import {
   assertUpdateHistoryPort,
   validateUpdateHistorySnapshot,
 } from "../../contracts/update-history.mjs";
@@ -143,6 +147,7 @@ export function mountSystemOverviewControls(
   diagnosticReviewController = null,
   componentManager = null,
   intelligence = null,
+  recoveryStatus = null,
 ) {
   if (!(root instanceof Element)) {
     throw new TypeError("System overview controls require a Surface root Element");
@@ -155,6 +160,7 @@ export function mountSystemOverviewControls(
   const activationPort = appActivation === null ? null : assertAppActivationPort(appActivation);
   const componentPort = componentManager === null ? null : assertComponentManager(componentManager);
   const intelligencePort = intelligence === null ? null : assertIntelligencePort(intelligence);
+  const recoveryPort = recoveryStatus === null ? null : assertRecoveryStatusPort(recoveryStatus);
   const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
   const localization = lifecycle.localization;
   const t = localization.translate;
@@ -180,6 +186,10 @@ export function mountSystemOverviewControls(
   let intelligencePending = false;
   let intelligenceAnswer = "";
   let intelligenceMessage = "";
+  let recoverySnapshot = null;
+  let recoveryPending = false;
+  let recoveryMessage = "";
+  let recoveryOrdinal = 0;
   let historyOrdinal = 0;
   let activeSection = validSystemSection(lifecycle.getAppTarget("system"))
     ? lifecycle.getAppTarget("system")
@@ -206,6 +216,9 @@ export function mountSystemOverviewControls(
     }
     if (element.dataset.systemHistoryRefresh !== undefined) {
       return Object.freeze({ kind: "history-refresh", value: "" });
+    }
+    if (element.dataset.systemRecoveryRefresh !== undefined) {
+      return Object.freeze({ kind: "recovery-refresh", value: "" });
     }
     if (element.dataset.systemDiagnosticsPrepare !== undefined) {
       return Object.freeze({ kind: "diagnostics-prepare", value: "" });
@@ -582,6 +595,115 @@ export function mountSystemOverviewControls(
       section.append(warning);
     }
 
+    view.append(section);
+  };
+
+  const renderRecovery = (view) => {
+    const section = node(documentObject, "section", "ordax-system-section");
+    section.dataset.systemRecovery = "";
+    const heading = node(documentObject, "div", "ordax-system-section-heading");
+    const headingCopy = node(documentObject, "div");
+    headingCopy.append(
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.recovery.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.recovery.title")),
+    );
+    const refresh = node(
+      documentObject,
+      "button",
+      "ordax-system-action",
+      recoveryPending ? t("system.recovery.refreshing") : t("system.recovery.refresh"),
+    );
+    refresh.type = "button";
+    refresh.dataset.systemRecoveryRefresh = "";
+    refresh.disabled = recoveryPending || recoveryPort === null;
+    heading.append(headingCopy, refresh);
+    section.append(heading);
+
+    section.append(
+      node(
+        documentObject,
+        "p",
+        "ordax-system-section-copy",
+        t("system.recovery.policy"),
+      ),
+    );
+
+    if (!recoveryPort) {
+      section.append(
+        node(
+          documentObject,
+          "p",
+          "ordax-system-placeholder",
+          t("system.recovery.unavailableMode"),
+        ),
+      );
+      view.append(section);
+      return;
+    }
+
+    if (!recoverySnapshot) {
+      section.append(
+        node(
+          documentObject,
+          "p",
+          recoveryMessage ? "ordax-system-warning" : "ordax-system-placeholder",
+          recoveryMessage || t("system.recovery.reading"),
+        ),
+      );
+      view.append(section);
+      return;
+    }
+
+    const facts = node(documentObject, "dl", "ordax-system-facts");
+    const addFact = (label, value) => {
+      const item = node(documentObject, "div", "ordax-system-fact");
+      item.append(
+        node(documentObject, "dt", "", label),
+        node(documentObject, "dd", "", value),
+      );
+      facts.append(item);
+    };
+    const shaValue = (value) => value ? shortSha(value) : t("system.recovery.notObserved");
+    const slotLabel = {
+      current: t("system.recovery.slot.current"),
+      "known-good": t("system.recovery.slot.knownGood"),
+      candidate: t("system.recovery.slot.candidate"),
+      unknown: t("system.recovery.slot.unknown"),
+    }[recoverySnapshot.bootSlot] ?? recoverySnapshot.bootSlot;
+    const entryLabel = {
+      verified: t("system.recovery.entry.verified"),
+      missing: t("system.recovery.entry.missing"),
+      invalid: t("system.recovery.entry.invalid"),
+      unavailable: t("system.recovery.entry.unavailable"),
+    }[recoverySnapshot.recoveryEntryStatus] ?? recoverySnapshot.recoveryEntryStatus;
+
+    addFact(t("system.recovery.fact.runningSlot"), slotLabel);
+    addFact(t("system.recovery.fact.runningSource"), shaValue(recoverySnapshot.runningSourceSha));
+    addFact(t("system.recovery.fact.current"), shaValue(recoverySnapshot.currentSha));
+    addFact(t("system.recovery.fact.knownGood"), shaValue(recoverySnapshot.knownGoodSha));
+    addFact(t("system.recovery.fact.candidate"), shaValue(recoverySnapshot.candidateSha));
+    addFact(
+      t("system.recovery.fact.transaction"),
+      recoverySnapshot.transactionPresent
+        ? t("system.recovery.transaction.present")
+        : t("system.recovery.transaction.absent"),
+    );
+    addFact(t("system.recovery.fact.entry"), entryLabel);
+    section.append(facts);
+
+    if (recoverySnapshot.recoveryEntryStatus !== "verified") {
+      section.append(
+        node(
+          documentObject,
+          "p",
+          "ordax-system-warning",
+          t("system.recovery.entryWarning"),
+        ),
+      );
+    }
+    if (recoveryMessage) {
+      section.append(node(documentObject, "p", "ordax-system-message", recoveryMessage));
+    }
     view.append(section);
   };
 
@@ -1057,6 +1179,7 @@ export function mountSystemOverviewControls(
       renderMemory(view);
     } else if (activeSection === "updates") {
       renderUpdateDetails(view);
+      renderRecovery(view);
       renderComponentUpdateScopes(view);
       renderHistory(view);
     } else if (activeSection === "storage") {
@@ -1122,6 +1245,28 @@ export function mountSystemOverviewControls(
     }
   };
 
+  const refreshRecovery = async () => {
+    if (!recoveryPort || recoveryPending) return;
+    const ordinal = ++recoveryOrdinal;
+    recoveryPending = true;
+    recoveryMessage = "";
+    replaceView();
+    try {
+      const next = validateRecoveryStatusSnapshot(await recoveryPort.read());
+      if (destroyed || ordinal !== recoveryOrdinal) return;
+      recoverySnapshot = next;
+    } catch {
+      if (destroyed || ordinal !== recoveryOrdinal) return;
+      recoverySnapshot = null;
+      recoveryMessage = t("system.recovery.readFailed");
+    } finally {
+      if (!destroyed && ordinal === recoveryOrdinal) {
+        recoveryPending = false;
+        replaceView();
+      }
+    }
+  };
+
   const refreshHistory = async () => {
     if (!historyPort) return;
     const ordinal = ++historyOrdinal;
@@ -1159,6 +1304,11 @@ export function mountSystemOverviewControls(
     const historyRefresh = event.target.closest("[data-system-history-refresh]");
     if (historyRefresh && root.contains(historyRefresh)) {
       void refreshHistory();
+      return;
+    }
+    const recoveryRefresh = event.target.closest("[data-system-recovery-refresh]");
+    if (recoveryRefresh && root.contains(recoveryRefresh)) {
+      void refreshRecovery();
       return;
     }
 
@@ -1232,12 +1382,14 @@ export function mountSystemOverviewControls(
 
   if (metricsPort) void refreshMetrics();
   if (historyPort) void refreshHistory();
+  if (recoveryPort) void refreshRecovery();
 
   return Object.freeze({
     destroy() {
       destroyed = true;
       metricsOrdinal += 1;
       historyOrdinal += 1;
+      recoveryOrdinal += 1;
       disposeDiagnosticsReview();
       unsubscribeUpdate?.();
       unsubscribeIntelligence?.();
