@@ -68,6 +68,7 @@ class PortableV2UEFIBootProofTests(unittest.TestCase):
             "ORDAX_SURFACE_RUNTIME_SHA256=",
             "ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED",
             "ORDAX_LOCAL_AI_RUNTIME_SHA256=",
+            "ORDAX_LOCAL_AI_BACKEND=STARTED",
             '"surface_runtime_sha_exact": True',
             '"local_ai_runtime_sha_exact":',
             '"qemu_uefi_boot_proven": True',
