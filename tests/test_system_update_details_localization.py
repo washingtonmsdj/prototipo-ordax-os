@@ -53,6 +53,34 @@ class SystemUpdateDetailsLocalizationTests(unittest.TestCase):
         self.assertNotIn("updateBootLabel(updateSnapshot)", block)
         self.assertNotIn("updateAttentionMessage(updateSnapshot)", block)
 
+    def test_update_history_uses_shared_localization_owner(self):
+        controls = CONTROLS.read_text(encoding="utf-8")
+        block = controls.split("const renderHistory = (view) => {", 1)[1].split(
+            "\n  const renderCapabilities = (view) => {", 1
+        )[0]
+        for message_id in (
+            "system.history.kicker",
+            "system.history.title",
+            "system.history.refresh",
+            "system.history.reading",
+            "system.history.applications",
+            "system.history.result.applied",
+            "system.history.result.rolledBack",
+            "system.history.application.detail",
+            "system.history.releases",
+            "system.history.release.sha",
+        ):
+            self.assertIn(f't("{message_id}"', block)
+        for hardcoded in (
+            '"Registro"',
+            '"Histórico de atualizações"',
+            '"Aplicações neste notebook"',
+            '"Entregas do OrdaX"',
+            '"Aplicada"',
+            '"Revertida"',
+        ):
+            self.assertNotIn(hardcoded, block)
+
     def test_catalog_has_pt_br_and_en_us_update_details(self):
         catalog = CATALOG.read_text(encoding="utf-8")
         self.assertIn('"system.updates.title": "Entrega e recuperação"', catalog)
@@ -62,6 +90,10 @@ class SystemUpdateDetailsLocalizationTests(unittest.TestCase):
         self.assertIn('"system.updates.boot.pendingActivation": "Base pendente de ativação"', catalog)
         self.assertIn('"system.updates.boot.pendingActivation": "Base pending activation"', catalog)
         self.assertEqual(catalog.count('"system.updates.attention.generic"'), 2)
+        self.assertIn('"system.history.title": "Histórico de atualizações"', catalog)
+        self.assertIn('"system.history.title": "Update history"', catalog)
+        self.assertIn('"system.history.result.rolledBack": "Revertida"', catalog)
+        self.assertIn('"system.history.result.rolledBack": "Rolled back"', catalog)
 
 
 if __name__ == "__main__":
