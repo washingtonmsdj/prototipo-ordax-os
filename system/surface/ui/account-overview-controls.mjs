@@ -22,20 +22,9 @@ const ACCOUNT_WINDOW_SELECTOR = '[data-window-id="account"]';
 const ACCOUNT_EXTENSION_SELECTOR = '[data-app-extension="account-overview"]';
 
 const ACCOUNT_SECTIONS = Object.freeze([
-  Object.freeze({ id: "overview", label: "Visão geral" }),
-  Object.freeze({ id: "sync", label: "Sincronização" }),
+  Object.freeze({ id: "overview", messageId: "account.section.overview" }),
+  Object.freeze({ id: "sync", messageId: "account.section.sync" }),
 ]);
-
-const SECTION_COPY = Object.freeze({
-  overview: Object.freeze({
-    title: "Conta",
-    subtitle: "Identidade disponível nesta composição, sem simular login ou perfil remoto.",
-  }),
-  sync: Object.freeze({
-    title: "Sincronização",
-    subtitle: "Estado local preparado para continuidade, sem afirmar envio à nuvem sem transporte confirmado.",
-  }),
-});
 
 function validAccountSection(value) {
   return ACCOUNT_SECTIONS.some((section) => section.id === value);
@@ -48,20 +37,20 @@ function node(documentObject, tag, className, text) {
   return element;
 }
 
-function sessionLabel(snapshot) {
-  if (snapshot.state === "signed-in") return "Sessão ativa";
-  if (snapshot.state === "signed-out") return "Sem sessão";
-  return "Identidade indisponível";
+function sessionLabel(snapshot, t) {
+  if (snapshot.state === "signed-in") return t("account.identity.signedIn");
+  if (snapshot.state === "signed-out") return t("account.identity.signedOut");
+  return t("account.identity.unavailable");
 }
 
-function sessionDescription(snapshot) {
+function sessionDescription(snapshot, t) {
   if (snapshot.state === "signed-in") {
-    return "Esta Surface recebeu uma identidade autenticada do host autorizado.";
+    return t("account.identity.description.signedIn");
   }
   if (snapshot.state === "signed-out") {
-    return "O host oferece identidade, mas nenhuma sessão está ativa.";
+    return t("account.identity.description.signedOut");
   }
-  return "Este host não oferece identidade autenticada. O OrdaX não simula um provedor de login.";
+  return t("account.identity.description.unavailable");
 }
 
 function desiredAction(session, actions) {
@@ -106,6 +95,8 @@ export function mountAccountOverviewControls(
     : assertWorkspaceMetadataSource(workspaceMetadataSource);
   const activationPort = appActivation === null ? null : assertAppActivationPort(appActivation);
   const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
   const documentObject = root.ownerDocument;
 
   let sessionSnapshot = validateIdentitySessionSnapshot(sessionPort.getSnapshot());
@@ -181,20 +172,34 @@ export function mountAccountOverviewControls(
 
   const renderHeader = (view) => {
     const header = node(documentObject, "header", "ordax-account-header");
-    const copy = SECTION_COPY[activeSection];
     header.append(
-      node(documentObject, "span", "ordax-account-eyebrow", "Conta"),
-      node(documentObject, "h3", "ordax-account-title", copy.title),
-      node(documentObject, "p", "ordax-account-subtitle", copy.subtitle),
+      node(documentObject, "span", "ordax-account-eyebrow", t("account.eyebrow")),
+      node(
+        documentObject,
+        "h3",
+        "ordax-account-title",
+        t(`account.section.${activeSection}.title`),
+      ),
+      node(
+        documentObject,
+        "p",
+        "ordax-account-subtitle",
+        t(`account.section.${activeSection}.subtitle`),
+      ),
     );
     view.append(header);
   };
 
   const renderSectionNavigation = (view) => {
     const navigation = node(documentObject, "nav", "ordax-account-navigation");
-    navigation.setAttribute("aria-label", "Seções de Conta");
+    navigation.setAttribute("aria-label", t("account.navigation.aria"));
     for (const section of ACCOUNT_SECTIONS) {
-      const button = node(documentObject, "button", "ordax-account-navigation-item", section.label);
+      const button = node(
+        documentObject,
+        "button",
+        "ordax-account-navigation-item",
+        t(section.messageId),
+      );
       button.type = "button";
       button.dataset.accountSection = section.id;
       const active = activeSection === section.id;
@@ -210,12 +215,22 @@ export function mountAccountOverviewControls(
     const heading = node(documentObject, "div", "ordax-account-section-heading");
     const copy = node(documentObject, "div");
     copy.append(
-      node(documentObject, "span", "ordax-account-eyebrow", "Identidade"),
-      node(documentObject, "h4", "ordax-account-section-title", "Sessão OrdaX"),
-      node(documentObject, "p", "ordax-account-subtitle", sessionDescription(sessionSnapshot)),
+      node(documentObject, "span", "ordax-account-eyebrow", t("account.identity.eyebrow")),
+      node(documentObject, "h4", "ordax-account-section-title", t("account.identity.title")),
+      node(
+        documentObject,
+        "p",
+        "ordax-account-subtitle",
+        sessionDescription(sessionSnapshot, t),
+      ),
     );
 
-    const status = node(documentObject, "span", "ordax-account-status", sessionLabel(sessionSnapshot));
+    const status = node(
+      documentObject,
+      "span",
+      "ordax-account-status",
+      sessionLabel(sessionSnapshot, t),
+    );
     status.dataset.state = sessionSnapshot.state;
     heading.append(copy, status);
     section.append(heading);
@@ -231,7 +246,12 @@ export function mountAccountOverviewControls(
       const identityCopy = node(documentObject, "div", "ordax-account-identity-copy");
       identityCopy.append(
         node(documentObject, "strong", "", sessionSnapshot.displayName),
-        node(documentObject, "small", "", `Identidade: ${sessionSnapshot.subjectId}`),
+        node(
+          documentObject,
+          "small",
+          "",
+          t("account.identity.subject", { subjectId: sessionSnapshot.subjectId }),
+        ),
       );
       identity.append(avatar, identityCopy);
       section.append(identity);
@@ -241,8 +261,12 @@ export function mountAccountOverviewControls(
     const actions = node(documentObject, "div", "ordax-account-actions");
     if (action) {
       const label = pendingAction === action
-        ? action === "sign-in" ? "Entrando…" : "Saindo…"
-        : action === "sign-in" ? "Entrar" : "Sair";
+        ? action === "sign-in"
+          ? t("account.action.signingIn")
+          : t("account.action.signingOut")
+        : action === "sign-in"
+          ? t("account.action.signIn")
+          : t("account.action.signOut");
       const button = node(documentObject, "button", "ordax-account-action ordax-account-action-primary", label);
       button.type = "button";
       button.dataset.accountIdentityAction = action;
@@ -255,8 +279,8 @@ export function mountAccountOverviewControls(
           "span",
           "ordax-account-action-note",
           sessionSnapshot.state === "unavailable"
-            ? "Ações de conta indisponíveis neste host."
-            : "Nenhuma ação de sessão disponível.",
+            ? t("account.action.unavailable")
+            : t("account.action.none"),
         ),
       );
     }
@@ -271,13 +295,13 @@ export function mountAccountOverviewControls(
   const renderContinuity = (view) => {
     const section = node(documentObject, "section", "ordax-account-section");
     section.append(
-      node(documentObject, "span", "ordax-account-eyebrow", "Estado local"),
-      node(documentObject, "h4", "ordax-account-section-title", "Continuidade preparada neste dispositivo"),
+      node(documentObject, "span", "ordax-account-eyebrow", t("account.continuity.eyebrow")),
+      node(documentObject, "h4", "ordax-account-section-title", t("account.continuity.title")),
       node(
         documentObject,
         "p",
         "ordax-account-subtitle",
-        "Estes dados descrevem apenas a fila e o metadata locais. Nada é chamado de sincronizado sem confirmação de um transporte autenticado.",
+        t("account.continuity.subtitle"),
       ),
     );
 
@@ -293,58 +317,78 @@ export function mountAccountOverviewControls(
     appendStateCard(
       documentObject,
       grid,
-      "Alterações locais",
+      t("account.card.localChanges"),
       syncSnapshot
         ? pendingMutationCount > 0
-          ? `${pendingMutationCount} pendente${pendingMutationCount === 1 ? "" : "s"}`
-          : "Nenhuma pendência"
-        : "Estado indisponível",
+          ? t(
+              pendingMutationCount === 1
+                ? "account.card.pending.one"
+                : "account.card.pending.many",
+              { count: pendingMutationCount },
+            )
+          : t("account.card.noPending")
+        : t("account.card.stateUnavailable"),
       syncSnapshot
         ? pendingMutationCount > 0
-          ? "As alterações aguardam um transporte autenticado; nada foi anunciado como enviado à nuvem."
-          : "A fila local está vazia; isso não prova que exista uma conta ou nuvem sincronizada."
-        : "Esta composição não expõe o runtime local de sincronização.",
+          ? t("account.card.pending.detail")
+          : t("account.card.noPending.detail")
+        : t("account.card.syncUnavailable.detail"),
       syncSnapshot ? (pendingMutationCount > 0 ? "neutral" : "available") : "unavailable",
     );
 
     appendStateCard(
       documentObject,
       grid,
-      "Aparência",
-      appearanceTracked ? "Acompanhada localmente" : "Não acompanhada",
+      t("account.card.appearance"),
       appearanceTracked
-        ? "Mudanças de aparência entram no núcleo local de continuidade, sem ativar transporte por conta própria."
-        : "A aparência continua funcional localmente sem depender de sincronização.",
+        ? t("account.card.appearanceTracked")
+        : t("account.card.appearanceUntracked"),
+      appearanceTracked
+        ? t("account.card.appearanceTracked.detail")
+        : t("account.card.appearanceUntracked.detail"),
       appearanceTracked ? "available" : "neutral",
     );
 
     appendStateCard(
       documentObject,
       grid,
-      "Áreas e apps",
+      t("account.card.workspace"),
       workspaceMetadataSnapshot
-        ? `${workspaceAreaCount} área${workspaceAreaCount === 1 ? "" : "s"} · ${workspaceAppCount} app${workspaceAppCount === 1 ? "" : "s"}`
-        : "Metadata indisponível",
+        ? t("account.card.workspaceCounts", {
+            areas: t(
+              workspaceAreaCount === 1
+                ? "account.card.area.one"
+                : "account.card.area.many",
+              { count: workspaceAreaCount },
+            ),
+            apps: t(
+              workspaceAppCount === 1
+                ? "account.card.app.one"
+                : "account.card.app.many",
+              { count: workspaceAppCount },
+            ),
+          })
+        : t("account.card.metadataUnavailable"),
       workspaceMetadataSnapshot
-        ? "Somente áreas e apps abertos entram no metadata portátil; posição, tamanho, maximização e minimização continuam locais."
-        : "A composição atual ainda não expõe metadata portátil do workspace.",
+        ? t("account.card.workspace.detail")
+        : t("account.card.workspaceUnavailable.detail"),
       workspaceMetadataSnapshot ? "available" : "neutral",
     );
 
     appendStateCard(
       documentObject,
       grid,
-      "Fila offline",
+      t("account.card.offlineQueue"),
       syncSnapshot
         ? queueIsDurable
-          ? "Persistente neste dispositivo"
-          : "Somente nesta sessão"
-        : "Indisponível",
+          ? t("account.card.queueDurable")
+          : t("account.card.queueSession")
+        : t("account.card.unavailable"),
       syncSnapshot
         ? queueIsDurable
-          ? "A fila sobrevive a reload/reinício neste dispositivo e continua local até existir transporte autorizado."
-          : "Pendências podem ser perdidas ao encerrar a sessão desta composição; nenhum dado foi enviado."
-        : "Nenhuma fila local foi exposta por esta composição.",
+          ? t("account.card.queueDurable.detail")
+          : t("account.card.queueSession.detail")
+        : t("account.card.queueUnavailable.detail"),
       syncSnapshot ? (queueIsDurable ? "available" : "neutral") : "unavailable",
     );
 
@@ -400,7 +444,7 @@ export function mountAccountOverviewControls(
       if (destroyed || ordinal !== actionOrdinal) return;
     } catch {
       if (destroyed || ordinal !== actionOrdinal) return;
-      actionMessage = "A ação de conta não pôde ser concluída por este host.";
+      actionMessage = t("account.action.failed");
     } finally {
       if (!destroyed && ordinal === actionOrdinal) {
         pendingAction = null;
