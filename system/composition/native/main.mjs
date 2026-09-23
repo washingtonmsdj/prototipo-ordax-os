@@ -23,6 +23,7 @@ import { createNativeFirstRunStateStore } from "../../adapters/native/first-run-
 import { createNativeLocalSession } from "../../adapters/native/local-session.mjs";
 import { createNativeSurfaceHost } from "../../adapters/native/runtime.mjs";
 import { createNativeSystemMetrics } from "../../adapters/native/system-metrics.mjs";
+import { createNativeRecoveryStatus } from "../../adapters/native/recovery-status.mjs";
 import { createNativeUpdateHistory } from "../../adapters/native/update-history.mjs";
 import { createNativeUpdateWatcher } from "../../adapters/native/update-runtime.mjs";
 import { createNativeWorkspaceStore } from "../../adapters/native/workspace.mjs";
@@ -48,6 +49,7 @@ import { createUpdateDiagnosticRecorder } from "../../services/diagnostics/updat
 import { createPreferenceSyncRuntime } from "../../services/sync/preference-runtime.mjs";
 import { createWorkspaceMetadataBridge } from "../../services/sync/workspace-metadata.mjs";
 import { seedMissingRegionalPreferencesFromFirstRun } from "../../services/state/first-run.mjs";
+import { createNativeDiagnosticReviewComposition } from "./diagnostics.mjs";
 import { mountAccountOverviewControls } from "../../surface/ui/account-overview-controls.mjs";
 import { mountFileSpaceControls } from "../../surface/ui/file-space-controls.mjs";
 import { mountNetworkQuickPanel } from "../../surface/ui/network-quick-panel.mjs";
@@ -142,6 +144,10 @@ async function start() {
       () => createNativeSystemMetrics(window),
     ),
     optionalNativeProbe(
+      "OrdaX native recovery status unavailable",
+      () => createNativeRecoveryStatus(window),
+    ),
+    optionalNativeProbe(
       "OrdaX native power status unavailable",
       () => createNativePowerStatus(window),
     ),
@@ -172,6 +178,7 @@ async function start() {
     networkManagement,
     keyboardLayout,
     systemMetrics,
+    recoveryStatus,
     powerStatus,
   ] = await optionalPortsPromise;
 
@@ -279,6 +286,14 @@ async function start() {
     identitySession.getSnapshot(),
     identityActions.getSnapshot(),
   );
+  const diagnosticReviewController = createNativeDiagnosticReviewComposition({
+    host,
+    updateStatus: updateWatcher,
+    systemMetrics,
+    updateHistory,
+    diagnosticJournal,
+    fileSpace,
+  });
   const surface = mountSurface(
     root,
     host,
@@ -394,9 +409,10 @@ async function start() {
     surface,
     updateHistory,
     appActivation,
-    null,
+    diagnosticReviewController,
     componentManager,
     intelligence,
+    recoveryStatus,
   );
   const updateControls = mountUpdateControls(root, updateWatcher, appActivation);
   const powerControls = mountPowerControls(root, powerActions);
