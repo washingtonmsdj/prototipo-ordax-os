@@ -52,8 +52,70 @@ test("update status contract normalizes optional fields", () => {
   assert.equal(snapshot.checkedAt, "unknown");
   assert.equal(snapshot.lastAppliedSha, "");
   assert.equal(snapshot.rejectedSha, "");
+  assert.equal(snapshot.recoveryState, "unavailable");
+  assert.equal(snapshot.recoverySource, "none");
+  assert.equal(snapshot.currentReleaseSha, "");
+  assert.equal(snapshot.knownGoodReleaseSha, "");
+  assert.equal(snapshot.candidateReleaseSha, "");
+  assert.equal(snapshot.recoveryRejectedSha, "");
+  assert.equal(snapshot.rollbackEligible, false);
   assert.equal(snapshot.lastError, "");
   assert.equal(snapshot.healthToken, "");
+});
+
+test("update status preserves observed portable recovery state without granting authority", () => {
+  const current = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const knownGood = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const candidate = "cccccccccccccccccccccccccccccccccccccccc";
+  const rejected = "dddddddddddddddddddddddddddddddddddddddd";
+  const snapshot = validateUpdateStatusSnapshot({
+    sourceSha: current,
+    status: "running",
+    applyMode: "none",
+    recoveryState: "available",
+    recoverySource: "portable-state",
+    currentReleaseSha: current,
+    knownGoodReleaseSha: knownGood,
+    candidateReleaseSha: candidate,
+    recoveryRejectedSha: rejected,
+    rollbackEligible: true,
+  });
+  assert.equal(snapshot.recoveryState, "available");
+  assert.equal(snapshot.recoverySource, "portable-state");
+  assert.equal(snapshot.currentReleaseSha, current);
+  assert.equal(snapshot.knownGoodReleaseSha, knownGood);
+  assert.equal(snapshot.candidateReleaseSha, candidate);
+  assert.equal(snapshot.recoveryRejectedSha, rejected);
+  assert.equal(snapshot.rollbackEligible, true);
+  assert.equal("rollback" in snapshot, false);
+});
+
+test("update status rejects false recovery claims", () => {
+  assert.throws(
+    () => validateUpdateStatusSnapshot({
+      sourceSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      status: "running",
+      applyMode: "none",
+      recoveryState: "available",
+      recoverySource: "portable-state",
+      currentReleaseSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      knownGoodReleaseSha: "",
+    }),
+    /requires observed portable current and known-good/,
+  );
+  assert.throws(
+    () => validateUpdateStatusSnapshot({
+      sourceSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      status: "running",
+      applyMode: "none",
+      recoveryState: "available",
+      recoverySource: "portable-state",
+      currentReleaseSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      knownGoodReleaseSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      rollbackEligible: true,
+    }),
+    /distinct observed known-good/,
+  );
 });
 
 test("update status preserves runtime-effective Surface identity separately from Git HEAD", () => {
