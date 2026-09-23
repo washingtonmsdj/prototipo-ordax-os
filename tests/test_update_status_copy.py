@@ -21,7 +21,7 @@ class UpdateStatusCopyTests(unittest.TestCase):
         )
         self.assertIn("overviewUpdateSummaryMessageId(updateSnapshot)", overview)
         self.assertIn('"system.overview.update.detail.activationReady"', overview)
-        self.assertIn("updateBootLabel(updateSnapshot)", overview)
+        self.assertIn('t(bootMessageId(updateSnapshot))', overview)
         self.assertNotIn('"Reinício necessário"', overview)
         self.assertNotIn("Mudança pendente de reinício físico", overview)
 
@@ -29,7 +29,7 @@ class UpdateStatusCopyTests(unittest.TestCase):
         presentation = UPDATE_PRESENTATION.read_text(encoding="utf-8")
         overview = SYSTEM_OVERVIEW.read_text(encoding="utf-8")
         self.assertIn('running: "Em execução"', presentation)
-        self.assertIn("updateStatusLabel(updateSnapshot.status)", overview)
+        self.assertIn('t(overviewUpdateStatusMessageId(updateSnapshot.status))', overview)
         self.assertNotIn('running: "Atualizado"', presentation)
         self.assertNotIn('"Atualizado"', overview)
 
