@@ -93,6 +93,35 @@ const OVERVIEW_BASE_DETAIL_MESSAGE_IDS = Object.freeze({
   "activation-ready": "system.overview.update.detail.activationReady",
 });
 
+const UPDATE_PHASE_MESSAGE_IDS = Object.freeze({
+  checking: "system.updates.phase.checking",
+  fetching: "system.updates.phase.fetching",
+  validating: "system.updates.phase.validating",
+  activating: "system.updates.phase.activating",
+  "health-wait": "system.updates.phase.healthWait",
+  rollback: "system.updates.phase.rollback",
+  blocked: "system.updates.phase.blocked",
+  error: "system.updates.phase.error",
+  idle: "system.updates.phase.idle",
+});
+
+const BASE_PHASE_MESSAGE_IDS = Object.freeze({
+  "waiting-candidate": "system.updates.basePhase.waitingCandidate",
+  "candidate-requested": "system.updates.basePhase.candidateRequested",
+  "candidate-fetching": "system.updates.basePhase.candidateFetching",
+  "candidate-ready": "system.updates.basePhase.candidateReady",
+  staged: "system.updates.basePhase.staged",
+  "activation-ready": "system.updates.basePhase.activationReady",
+});
+
+const BOOT_MESSAGE_IDS = Object.freeze({
+  "candidate-requested": "system.updates.boot.requested",
+  "candidate-fetching": "system.updates.boot.preparing",
+  "candidate-ready": "system.updates.boot.readyForStaging",
+  staged: "system.updates.boot.inactiveSlot",
+  "activation-ready": "system.updates.boot.pendingActivation",
+});
+
 function overviewUpdateStatusMessageId(status) {
   return OVERVIEW_UPDATE_STATUS_MESSAGE_IDS[status]
     ?? "system.overview.update.status.unavailable";
@@ -623,20 +652,15 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Atualização"),
-      node(documentObject, "h4", "ordax-system-section-title", "Entrega e recuperação"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.updates.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.updates.title")),
     );
     heading.append(headingCopy);
     section.append(heading);
 
     if (!updateSnapshot) {
       section.append(
-        node(
-          documentObject,
-          "p",
-          "ordax-system-placeholder",
-          "Este host não publica o estado do supervisor de atualizações.",
-        ),
+        node(documentObject, "p", "ordax-system-placeholder", t("system.updates.unavailable")),
       );
       view.append(section);
       return;
@@ -651,51 +675,63 @@ export function mountSystemOverviewControls(
       );
       facts.append(item);
     };
+    const locale = localization.getLocale();
+    const formatTimestamp = (value) => formatOverviewTimestamp(value, locale) ?? "—";
+    const statusMessageId = overviewUpdateStatusMessageId(updateSnapshot.status);
+    const modeMessageId = overviewUpdateModeMessageId(updateSnapshot.applyMode);
+    const phaseMessageId = UPDATE_PHASE_MESSAGE_IDS[updateSnapshot.phase] ?? "system.updates.phase.idle";
+    const basePhaseMessageId = BASE_PHASE_MESSAGE_IDS[updateSnapshot.baseUpdatePhase] ?? "system.updates.basePhase.none";
+    const bootMessageId = updateSnapshot.bootRefreshRequired
+      ? (BOOT_MESSAGE_IDS[updateSnapshot.baseUpdatePhase] ?? "system.updates.boot.pendingActivation")
+      : "system.updates.boot.none";
 
-    addFact("Entrega", deliveryLabel(updateSnapshot.deliveryNumber));
-    addFact("Commit técnico", shortSha(updateSnapshot.sourceSha));
+    addFact(t("system.updates.fact.delivery"), t("system.overview.delivery.number", { value: updateSnapshot.deliveryNumber }));
+    addFact(t("system.updates.fact.commit"), shortSha(updateSnapshot.sourceSha));
     if (updateSnapshot.runtimeSurfaceSha) {
-      addFact("Surface em execução", shortSha(updateSnapshot.runtimeSurfaceSha));
+      addFact(t("system.updates.fact.runtimeSurface"), shortSha(updateSnapshot.runtimeSurfaceSha));
     }
-    addFact("Estado", updateStatusLabel(updateSnapshot.status));
-    addFact("Fase", readableUpdatePhase(updateSnapshot.phase));
-    addFact("Aplicação", readableUpdateMode(updateSnapshot.applyMode));
+    addFact(t("system.updates.fact.status"), t(statusMessageId));
+    addFact(t("system.updates.fact.phase"), t(phaseMessageId));
+    addFact(t("system.updates.fact.applyMode"), t(modeMessageId));
     if (updateSnapshot.targetSha) {
-      addFact("Alvo", shortSha(updateSnapshot.targetSha));
+      addFact(t("system.updates.fact.target"), shortSha(updateSnapshot.targetSha));
     }
     if (updateSnapshot.attemptId) {
-      addFact("Tentativa", formatUpdateTimestamp(updateSnapshot.attemptId));
+      addFact(t("system.updates.fact.attempt"), updateSnapshot.attemptId);
     }
     if (updateSnapshot.checkedAt && updateSnapshot.checkedAt !== "unknown") {
-      addFact("Última verificação", formatUpdateTimestamp(updateSnapshot.checkedAt));
+      addFact(t("system.updates.fact.checkedAt"), formatTimestamp(updateSnapshot.checkedAt));
     }
     if (updateSnapshot.lastError) {
-      addFact("Diagnóstico", updateSnapshot.lastError);
+      addFact(t("system.updates.fact.diagnostic"), updateSnapshot.lastError);
     }
     if (updateSnapshot.lastAppliedAt !== "unknown") {
-      addFact("Última aplicação", formatUpdateTimestamp(updateSnapshot.lastAppliedAt));
-      addFact("Duração", `${updateSnapshot.lastApplyDurationSeconds}s · preparação ${updateSnapshot.lastStageDurationSeconds}s`);
+      addFact(t("system.updates.fact.lastApplied"), formatTimestamp(updateSnapshot.lastAppliedAt));
+      addFact(
+        t("system.updates.fact.duration"),
+        t("system.updates.duration", {
+          apply: updateSnapshot.lastApplyDurationSeconds,
+          stage: updateSnapshot.lastStageDurationSeconds,
+        }),
+      );
     }
     if (updateSnapshot.rejectedSha) {
-      addFact("Commit bloqueado", shortSha(updateSnapshot.rejectedSha));
+      addFact(t("system.updates.fact.blockedCommit"), shortSha(updateSnapshot.rejectedSha));
     }
     if (updateSnapshot.bootRefreshRequired) {
-      addFact("Progresso da Base", readableBaseUpdatePhase(updateSnapshot.baseUpdatePhase));
+      addFact(t("system.updates.fact.baseProgress"), t(basePhaseMessageId));
       if (updateSnapshot.baseUpdateSha) {
-        addFact("Base candidata", shortSha(updateSnapshot.baseUpdateSha));
+        addFact(t("system.updates.fact.baseCandidate"), shortSha(updateSnapshot.baseUpdateSha));
       }
     }
-    addFact("Boot", updateBootLabel(updateSnapshot));
+    addFact(t("system.updates.fact.boot"), t(bootMessageId));
     section.append(facts);
 
     if (updateIsAlerting(updateSnapshot)) {
-      const warning = node(
-        documentObject,
-        "p",
-        "ordax-system-warning",
-        updateAttentionMessage(updateSnapshot),
-      );
-      section.append(warning);
+      const warningText = updateSnapshot.bootRefreshRequired
+        ? t(overviewUpdateDetailMessageId(updateSnapshot) ?? "system.overview.update.detail.pending")
+        : t("system.updates.attention.generic");
+      section.append(node(documentObject, "p", "ordax-system-warning", warningText));
     }
 
     view.append(section);
