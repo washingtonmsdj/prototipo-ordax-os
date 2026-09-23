@@ -1216,7 +1216,7 @@ export function mountSettingsOverviewControls(
     if (!keyboardLayoutPort || keyboardLayoutPending || destroyed) return;
     const ordinal = ++keyboardLayoutOrdinal;
     keyboardLayoutPending = true;
-    keyboardLayoutMessage = "Salvando layout do teclado…";
+    keyboardLayoutMessageId = "settings.keyboard.message.saving";
     replaceView();
     try {
       keyboardLayoutSnapshot = validateKeyboardLayoutSnapshot(
@@ -1224,13 +1224,12 @@ export function mountSettingsOverviewControls(
       );
       if (destroyed || ordinal !== keyboardLayoutOrdinal) return;
       keyboardLayoutReadFailed = false;
-      keyboardLayoutMessage = keyboardLayoutSnapshot.restartRequired
-        ? "Layout salvo. Ele será aplicado no próximo início da Surface."
-        : "Layout salvo e já ativo nesta Surface.";
+      keyboardLayoutMessageId = keyboardLayoutSnapshot.restartRequired
+        ? "settings.keyboard.message.savedRestart"
+        : "settings.keyboard.message.savedActive";
     } catch {
       if (destroyed || ordinal !== keyboardLayoutOrdinal) return;
-      keyboardLayoutMessage =
-        "Não foi possível salvar o layout do teclado. O layout atualmente aplicado foi preservado.";
+      keyboardLayoutMessageId = "settings.keyboard.message.saveFailed";
     } finally {
       if (!destroyed && ordinal === keyboardLayoutOrdinal) {
         keyboardLayoutPending = false;
@@ -1295,7 +1294,7 @@ export function mountSettingsOverviewControls(
     const ordinal = ++networkActionOrdinal;
     networkManagementReadOrdinal += 1;
     networkManagementPending = true;
-    networkManagementMessage = networkManagementActionMessage(action, 0);
+    networkManagementMessageId = networkManagementActionMessageId(action, 0);
     replaceView();
 
     try {
@@ -1310,12 +1309,12 @@ export function mountSettingsOverviewControls(
       networkManagementSnapshot = nextSnapshot;
       networkManagementReadFailed = false;
       networkManagementLastSuccessAt = Date.now();
-      networkManagementMessage = networkManagementActionMessage(action, 1);
+      networkManagementMessageId = networkManagementActionMessageId(action, 1);
       if (action === "connect" || action === "forget") selectedNetworkSsid = null;
       void refreshNetwork();
     } catch (error) {
       if (destroyed || ordinal !== networkActionOrdinal) return;
-      networkManagementMessage = networkManagementFailureMessage(action, error);
+      networkManagementMessageId = networkManagementFailureMessageId(action, error);
     } finally {
       if (!destroyed && ordinal === networkActionOrdinal) {
         networkManagementPending = false;
@@ -1333,7 +1332,7 @@ export function mountSettingsOverviewControls(
     ) {
       const nextSection = sectionButton.dataset.settingsSection;
       selectedNetworkSsid = null;
-      networkManagementMessage = "";
+      networkManagementMessageId = null;
       if (activationPort) {
         activationPort.publish({ appId: "settings", target: nextSection });
       } else {
@@ -1457,7 +1456,7 @@ export function mountSettingsOverviewControls(
       && !networkButton.matches("[data-settings-network-action]")
     ) {
       selectedNetworkSsid = networkButton.dataset.settingsWifiSsid ?? null;
-      networkManagementMessage = "";
+      networkManagementMessageId = null;
       replaceView();
       return;
     }
@@ -1476,7 +1475,7 @@ export function mountSettingsOverviewControls(
       let password = input.value;
       input.value = "";
       if (!password) {
-        networkManagementMessage = "Digite a senha da rede Wi-Fi.";
+        networkManagementMessageId = "network.quick.passwordRequired";
         password = "";
         replaceView();
         return;
@@ -1505,7 +1504,7 @@ export function mountSettingsOverviewControls(
       event.preventDefault();
       input.value = "";
       selectedNetworkSsid = null;
-      networkManagementMessage = "";
+      networkManagementMessageId = null;
       replaceView();
     }
   };
@@ -1517,7 +1516,7 @@ export function mountSettingsOverviewControls(
     const nextSection = validSettingsSection(persistedTarget) ? persistedTarget : "appearance";
     if (nextSection !== activeSection) {
       selectedNetworkSsid = null;
-      networkManagementMessage = "";
+      networkManagementMessageId = null;
     }
     activeSection = nextSection;
     renderView(false);
@@ -1530,7 +1529,7 @@ export function mountSettingsOverviewControls(
     ) {
       activeSection = activation.target;
       selectedNetworkSsid = null;
-      networkManagementMessage = "";
+      networkManagementMessageId = null;
       replaceView();
     }
   });
