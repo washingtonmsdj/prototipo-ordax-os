@@ -31,6 +31,13 @@ jobs:
           python-version: '3.12'
           check-latest: false
 
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+          cache: false
+
       - name: Install bounded local AI build dependencies
         run: |
           set -euo pipefail
@@ -288,6 +295,51 @@ jobs:
 
           cleanup_alpine
           trap cleanup EXIT
+
+      - name: Materialize signed v4 with real local AI runtime bytes
+        run: |
+          set -euo pipefail
+          real_ai="$RUNNER_TEMP/local-ai-runtime/build-a/local-ai-runtime.erofs"
+          test -s "$real_ai"
+          (
+            cd bootstrap/release-acquisition
+            ORDAX_TEST_REAL_LOCAL_AI_RUNTIME="$real_ai" \
+              go test -count=1 -run '^TestMaterializePortableV4WithRealAIRuntimeFromEnv        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/local-ai-runtime"
+          sudo umount "$work/mount" 2>/dev/null || true
+          rm -f \
+            "$work/build-a/local-ai-runtime.erofs" \
+            "$work/build-b/local-ai-runtime.erofs" \
+            "$work/cache/Qwen3.5-0.8B-Q4_0.gguf"
+          rm -rf "$work/cache/llama.cpp.git"
+          test ! -e "$work/build-a/local-ai-runtime.erofs"
+          test ! -e "$work/build-b/local-ai-runtime.erofs"
+          echo 'LOCAL_AI_RUNTIME_PUBLISHED=NO'
+          echo 'LOCAL_AI_RUNTIME_ACTIVATED=NO'
+          echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
+
+      - name: Upload proof metadata only
+        if: success()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: local-ai-runtime-candidate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ${{ runner.temp }}/local-ai-runtime/build-a/local-ai-runtime-provenance.json
+            ${{ runner.temp }}/local-ai-runtime/build-b/local-ai-runtime-provenance.json
+            ${{ runner.temp }}/local-ai-runtime/build-a/local-ai-runtime-tree.json
+            ${{ runner.temp }}/local-ai-runtime/build-b/local-ai-runtime-tree.json
+            ${{ runner.temp }}/local-ai-runtime/health.json
+            ${{ runner.temp }}/local-ai-runtime/completion.json
+            ${{ runner.temp }}/local-ai-runtime/alpine-health.json
+            ${{ runner.temp }}/local-ai-runtime/alpine-completion.json
+          if-no-files-found: error
+          retention-days: 14
+ -v
+          )
+          echo 'PORTABLE_V4_REAL_AI_SIGNED_MATERIALIZATION=PASS'
+          echo 'PORTABLE_V4_REAL_AI_ACTIVATION_ALLOWED=NO'
+          echo 'PHYSICAL_WRITE_AUTHORIZED=NO'
 
       - name: Remove unpromoted runtime bytes
         if: always()
