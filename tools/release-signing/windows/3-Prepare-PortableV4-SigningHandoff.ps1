@@ -76,6 +76,7 @@ $ReleaseAgentPath = Get-RealFile $ReleaseAgentPath 'release acquisition agent'
 $TrustPath = Get-RealFile $TrustPath 'canonical public trust'
 $SignScriptPath = Get-RealFile (Join-Path $Root '4-Sign-Initial-OrdaXRelease.ps1') 'canonical signing script'
 $VerifyScriptPath = Get-RealFile (Join-Path $Root '5-Verify-PortableV4-SignedHandoff.ps1') 'post-sign verification script'
+$VerifyLauncherPath = Get-RealFile (Join-Path $Root '5-Verify-PortableV4-SignedHandoff.cmd') 'post-sign verification launcher'
 
 $SystemArtifactUrl = Get-HttpsUrl $SystemArtifactUrl 'SystemArtifactUrl'
 $SurfaceArtifactUrl = Get-HttpsUrl $SurfaceArtifactUrl 'SurfaceArtifactUrl'
@@ -91,6 +92,7 @@ $signerOut = Join-Path $OutputDirectory 'ordax-release-signing.exe'
 $agentOut = Join-Path $OutputDirectory 'ordax-release-agent.exe'
 $signScriptOut = Join-Path $OutputDirectory '4-Sign-Initial-OrdaXRelease.ps1'
 $verifyScriptOut = Join-Path $OutputDirectory '5-Verify-PortableV4-SignedHandoff.ps1'
+$verifyLauncherOut = Join-Path $OutputDirectory '5-Verify-PortableV4-SignedHandoff.cmd'
 $manifestOut = Join-Path $OutputDirectory 'release-manifest.json'
 
 $systemSha = Copy-VerifiedFile $SystemImagePath $systemOut
@@ -102,6 +104,7 @@ $null = Copy-VerifiedFile $SignerPath $signerOut
 $null = Copy-VerifiedFile $ReleaseAgentPath $agentOut
 $null = Copy-VerifiedFile $SignScriptPath $signScriptOut
 $null = Copy-VerifiedFile $VerifyScriptPath $verifyScriptOut
+$null = Copy-VerifiedFile $VerifyLauncherPath $verifyLauncherOut
 
 $manifestArgs = @(
     '--manifest-schema', '4',
