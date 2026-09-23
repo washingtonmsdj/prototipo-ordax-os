@@ -310,7 +310,7 @@ async function start() {
   }
   let networkQuickPanel = null;
   try {
-    networkQuickPanel = mountNetworkQuickPanel(root, networkStatus, networkManagement);
+    networkQuickPanel = mountNetworkQuickPanel(root, networkStatus, networkManagement, surface);
   } catch (error) {
     reportClientDiagnostic("network-quick-panel", error);
   }
@@ -333,7 +333,7 @@ async function start() {
   let networkTrayControls = null;
   if (networkStatus) {
     try {
-      networkTrayControls = mountNetworkTrayControls(root, networkStatus);
+      networkTrayControls = mountNetworkTrayControls(root, networkStatus, surface);
     } catch (error) {
       reportClientDiagnostic("network-tray-status", error);
     }
