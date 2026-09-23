@@ -200,3 +200,38 @@ test("Network tray and quick panel consume the shared localization owner", async
   );
 });
 
+test("Battery tray and quick panel consume the shared localization owner", async () => {
+  const tray = await readFile(
+    new URL("../system/surface/ui/battery-tray-controls.mjs", import.meta.url),
+    "utf8",
+  );
+  const quick = await readFile(
+    new URL("../system/surface/ui/battery-quick-panel.mjs", import.meta.url),
+    "utf8",
+  );
+  const catalog = await readFile(
+    new URL("../system/services/i18n/catalog/power.mjs", import.meta.url),
+    "utf8",
+  );
+
+  for (const source of [tray, quick]) {
+    assert.match(source, /assertSurfaceRenderLifecycle/);
+    assert.match(source, /const localization = lifecycle\.localization/);
+    assert.match(source, /const t = localization\.translate/);
+    assert.match(source, /localization\.subscribe/);
+    assert.match(source, /unsubscribeLocalization/);
+  }
+  assert.match(tray, /power\.tray\.stale\.title/);
+  assert.match(quick, /power\.quick\.stateStale/);
+  assert.match(catalog, /"power\.state\.charging": "Charging"/);
+  assert.match(catalog, /"power\.quick\.unavailable\.state": "Battery status unavailable\."/);
+  assert.doesNotMatch(
+    tray,
+    /Bateria não detectada|Dados antigos|Estado da bateria indisponível|energia externa conectada/,
+  );
+  assert.doesNotMatch(
+    quick,
+    /Carregando|Usando bateria|Carga completa|Nenhuma bateria válida|fonte de energia/,
+  );
+});
+

@@ -2,31 +2,28 @@ import {
   assertPowerStatusPort,
   validatePowerStatusSnapshot,
 } from "../../contracts/power-status.mjs";
+import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
 import { formatPowerReceivedAt } from "./battery-tray-controls.mjs";
 
-function stateLabel(state) {
-  return {
-    charging: "Carregando",
-    discharging: "Usando bateria",
-    full: "Carga completa",
-    "not-charging": "Conectada à energia",
-    unknown: "Estado desconhecido",
-  }[state] ?? "Estado desconhecido";
+function stateMessageId(state) {
+  const key = state === "not-charging" ? "notCharging" : state;
+  return `power.state.${key}`;
 }
 
-function powerLabel(externalPower) {
-  return externalPower === true
-    ? "Conectada"
-    : externalPower === false
-      ? "Desconectada"
-      : "Desconhecida";
+function externalPowerMessageId(externalPower) {
+  if (externalPower === true) return "power.external.connected";
+  if (externalPower === false) return "power.external.disconnected";
+  return "power.external.unknown";
 }
 
-export function mountBatteryQuickPanel(root, powerStatus) {
+export function mountBatteryQuickPanel(root, powerStatus, surfaceLifecycle) {
   if (!(root instanceof Element)) {
     throw new TypeError("Battery quick panel requires a Surface root Element");
   }
   const port = assertPowerStatusPort(powerStatus);
+  const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
   const panel = root.querySelector('[data-quick-panel="battery"]');
   const percent = root.querySelector("[data-quick-battery-percent]");
   const state = root.querySelector("[data-quick-battery-state]");
@@ -39,32 +36,45 @@ export function mountBatteryQuickPanel(root, powerStatus) {
   let pending = false;
   let lastSnapshot = null;
   let lastSuccessAt = null;
+  let lastObservation = "initial";
+
+  const receivedAt = () =>
+    formatPowerReceivedAt(lastSuccessAt, localization.getLocale())
+    ?? t("power.time.unknown");
 
   const render = (snapshot, { stale = false } = {}) => {
     const value = validatePowerStatusSnapshot(snapshot);
-    panel.dataset.powerObservation = stale ? "stale" : "current";
+    lastObservation = stale ? "stale" : "current";
+    panel.dataset.powerObservation = lastObservation;
 
     if (value.battery === null) {
       percent.textContent = "--%";
       state.textContent = stale
-        ? `Nenhuma bateria válida foi detectada · dados antigos · última leitura recebida pela Surface às ${formatPowerReceivedAt(lastSuccessAt)}.`
-        : "Nenhuma bateria válida foi detectada.";
-      power.textContent = powerLabel(value.externalPower);
+        ? t("power.quick.notDetectedStale", { time: receivedAt() })
+        : t("power.quick.notDetected");
+      power.textContent = t(externalPowerMessageId(value.externalPower));
       return;
     }
 
     percent.textContent = `${value.battery.percent}%`;
+    const stateLabel = t(stateMessageId(value.battery.state));
     state.textContent = stale
-      ? `${stateLabel(value.battery.state)} · dados antigos · última leitura recebida pela Surface às ${formatPowerReceivedAt(lastSuccessAt)}.`
-      : stateLabel(value.battery.state);
-    power.textContent = powerLabel(value.externalPower);
+      ? t("power.quick.stateStale", { state: stateLabel, time: receivedAt() })
+      : stateLabel;
+    power.textContent = t(externalPowerMessageId(value.externalPower));
   };
 
   const renderUnavailable = () => {
-    panel.dataset.powerObservation = "unavailable";
+    lastObservation = "unavailable";
+    panel.dataset.powerObservation = lastObservation;
     percent.textContent = "--%";
-    state.textContent = "Estado da bateria indisponível.";
-    power.textContent = "Não foi possível consultar a fonte de energia.";
+    state.textContent = t("power.quick.unavailable.state");
+    power.textContent = t("power.quick.unavailable.external");
+  };
+
+  const renderInitial = () => {
+    state.textContent = t("shell.quick.batteryReading");
+    power.textContent = t("shell.quick.checking");
   };
 
   const refresh = async () => {
@@ -94,10 +104,22 @@ export function mountBatteryQuickPanel(root, powerStatus) {
 
   panel.addEventListener("ordax:quick-panel-open", onOpen);
 
+  const unsubscribeLocalization = localization.subscribe(() => {
+    if (destroyed) return;
+    if (lastSnapshot) {
+      render(lastSnapshot, { stale: lastObservation === "stale" });
+    } else if (lastObservation === "unavailable") {
+      renderUnavailable();
+    } else {
+      renderInitial();
+    }
+  });
+
   return Object.freeze({
     refresh,
     destroy() {
       destroyed = true;
+      unsubscribeLocalization();
       lastSnapshot = null;
       lastSuccessAt = null;
       delete panel.dataset.powerObservation;

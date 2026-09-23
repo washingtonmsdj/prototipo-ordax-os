@@ -193,10 +193,11 @@ primary navigation/editor shell, project/list states, core persistence copy and
 consultative Intelligence controls. Internet now covers its primary browser shell,
 locale-aware tab/address search, project panel and key history/favorite states.
 Operational/error messages plus deeper Files/Settings/System/Notes/Internet flows and
-quick panels other than network still require migration. The network tray and Wi-Fi quick
-panel now use structured message identities from `ordax.localization/1`, rerender on
-locale changes and preserve transient selection/password/focus state without persisting
-credentials. Spanish, German and French remain OOBE-complete but Surface-incomplete.
+remaining quick-panel copy still require migration. Network and battery tray/quick-panel
+presentation now use structured message identities from `ordax.localization/1` and
+rerender on locale changes; the network panel still preserves transient selection,
+password and focus state without persisting credentials. Spanish, German and French
+remain OOBE-complete but Surface-incomplete.
 
 ```text
 SURFACE_LOCALIZATION_OWNER=PASS_SOURCE
@@ -208,6 +209,7 @@ ACCOUNT_EN_US=PASS_SOURCE
 NOTES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 INTERNET_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 NETWORK_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
+BATTERY_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 SURFACE_COMPLETE_LOCALES=pt-BR
 SURFACE_EN_US_APP_CONTROLS=MIGRATING
 ```
