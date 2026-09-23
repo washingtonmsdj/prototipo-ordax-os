@@ -1,5 +1,19 @@
 import { assertAppActivationPort } from "../../contracts/app-activation.mjs";
-import { updateIsAlerting, updateSummaryLabel } from "../../services/update/presentation.mjs";
+import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
+import { updateIsAlerting } from "../../services/update/presentation.mjs";
+
+const BASE_SUMMARY_MESSAGE_IDS = Object.freeze({
+  "candidate-requested": "system.overview.update.summary.candidateRequested",
+  "candidate-fetching": "system.overview.update.summary.candidateFetching",
+  "candidate-ready": "system.overview.update.summary.candidateReady",
+  staged: "system.overview.update.summary.staged",
+  "activation-ready": "system.overview.update.summary.activationReady",
+});
+
+function baseSummaryMessageId(snapshot) {
+  return BASE_SUMMARY_MESSAGE_IDS[snapshot?.baseUpdatePhase]
+    ?? "system.overview.update.summary.pending";
+}
 
 function node(documentObject, tag, className, text) {
   const element = documentObject.createElement(tag);
@@ -8,7 +22,7 @@ function node(documentObject, tag, className, text) {
   return element;
 }
 
-export function mountUpdateControls(root, updatePort, appActivation) {
+export function mountUpdateControls(root, updatePort, appActivation, surfaceLifecycle) {
   if (!(root instanceof Element)) {
     throw new TypeError("Update controls root must be a DOM Element");
   }
@@ -16,6 +30,9 @@ export function mountUpdateControls(root, updatePort, appActivation) {
     throw new TypeError("Update controls require a native update watcher port");
   }
   const activationPort = assertAppActivationPort(appActivation);
+  const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
 
   const documentObject = root.ownerDocument;
   const slot = root.querySelector("[data-update-slot]");
@@ -23,23 +40,33 @@ export function mountUpdateControls(root, updatePort, appActivation) {
     throw new Error("Surface update controls require the shared shell update slot");
   }
 
-  const button = node(documentObject, "button", "ordax-status-action", "Atualizações");
+  const button = node(
+    documentObject,
+    "button",
+    "ordax-status-action",
+    t("system.updates.accelerator.label"),
+  );
   button.type = "button";
   button.dataset.updateOpenSystem = "";
-  button.setAttribute("aria-label", "Abrir Sistema, Atualizações");
+  button.setAttribute("aria-label", t("system.updates.accelerator.aria"));
   slot.append(button);
 
   let snapshot = updatePort.getSnapshot();
 
   const render = () => {
     const alerting = updateIsAlerting(snapshot);
-    button.textContent = alerting ? "Atualizações •" : "Atualizações";
+    button.textContent = alerting
+      ? t("system.updates.accelerator.labelAlerting")
+      : t("system.updates.accelerator.label");
+    button.setAttribute("aria-label", t("system.updates.accelerator.aria"));
     button.dataset.alerting = String(alerting);
     button.title = snapshot?.bootRefreshRequired
-      ? `${updateSummaryLabel(snapshot)}. Abrir Sistema > Atualizações.`
+      ? t("system.updates.accelerator.titleBoot", {
+          summary: t(baseSummaryMessageId(snapshot)),
+        })
       : alerting
-        ? "Há uma atualização que requer atenção. Abrir Sistema > Atualizações."
-        : "Abrir Sistema > Atualizações";
+        ? t("system.updates.accelerator.titleAlerting")
+        : t("system.updates.accelerator.title");
   };
 
   const onClick = (event) => {
@@ -49,15 +76,17 @@ export function mountUpdateControls(root, updatePort, appActivation) {
   };
 
   root.addEventListener("click", onClick);
-  const unsubscribe = updatePort.subscribe((nextSnapshot) => {
+  const unsubscribeUpdate = updatePort.subscribe((nextSnapshot) => {
     snapshot = nextSnapshot;
     render();
   });
+  const unsubscribeLocalization = localization.subscribe(() => render());
   render();
 
   return Object.freeze({
     destroy() {
-      unsubscribe?.();
+      unsubscribeLocalization?.();
+      unsubscribeUpdate?.();
       root.removeEventListener("click", onClick);
       button.remove();
     },
