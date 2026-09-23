@@ -4,6 +4,8 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 PREPARE_SCRIPT = ROOT / "tools/release-signing/windows/3-Prepare-PortableV4-SigningHandoff.ps1"
 SIGN_SCRIPT = ROOT / "tools/release-signing/windows/4-Sign-Initial-OrdaXRelease.ps1"
+VERIFY_SCRIPT = ROOT / "tools/release-signing/windows/5-Verify-PortableV4-SignedHandoff.ps1"
+SIGNING_WORKFLOW = ROOT / ".github/workflows/release-signing.yml"
 SIGNING_DOC = ROOT / "docs/RELEASE-SIGNING.md"
 BUNDLE_DOC = ROOT / "docs/RELEASE-BUNDLE.md"
 PIPELINE_DOC = ROOT / "docs/RELEASE-PIPELINE.md"
@@ -31,6 +33,32 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
         self.assertIn("system.erofs, native-surface-runtime.erofs and local-ai-runtime.erofs", script)
         self.assertIn("Signing alone does not publish, activate, authorize physical media", script)
         self.assertNotIn("may be published with system.tar", script)
+
+    def test_public_handoff_includes_official_release_agent_and_post_sign_verifier(self):
+        script = PREPARE_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("ReleaseAgentPath", script)
+        self.assertIn("ordax-release-agent.exe", script)
+        self.assertIn("5-Verify-PortableV4-SignedHandoff.ps1", script)
+        self.assertIn("Copy-VerifiedFile $ReleaseAgentPath", script)
+        self.assertNotIn("PrivateKeyPath", script)
+
+    def test_post_sign_verification_uses_agent_and_never_materializes_or_activates(self):
+        script = VERIFY_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("verify-envelope", script)
+        self.assertIn("SIGNED_PAYLOAD_MATCHES_MANIFEST_BYTES=YES", script)
+        self.assertIn("LOCAL_ARTIFACTS_MATCH_SIGNED_MANIFEST=YES", script)
+        self.assertIn("PORTABLE_MATERIALIZATION_PERFORMED=NO", script)
+        self.assertIn("PHYSICAL_TARGET_SELECTED=NO", script)
+        self.assertIn("PHYSICAL_WRITE_PERFORMED=NO", script)
+        self.assertNotIn("materialize-portable-v4", script)
+        self.assertNotIn("activate-exact", script)
+        self.assertNotIn("install ", script)
+        self.assertNotIn("PrivateKeyPath", script)
+
+    def test_signing_tooling_publishes_windows_release_agent_for_operator_verification(self):
+        workflow = SIGNING_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("GOOS=windows GOARCH=amd64", workflow)
+        self.assertIn("ordax-release-agent-windows-amd64.exe", workflow)
 
     def test_signing_doc_describes_v4_ai_binding_and_canonical_boundary(self):
         text = SIGNING_DOC.read_text(encoding="utf-8")
