@@ -132,6 +132,9 @@ test("English catalog contains primary Files, Settings and System entries", asyn
   assert.match(settingsCatalog, /"settings\.security\.action\.lock": "Lock now"/);
   assert.match(settingsCatalog, /"settings\.security\.message\.changeFailed": "The local lock could not be changed\."/);
   assert.match(systemCatalog, /"system\.section\.diagnostics": "Diagnostics"/);
+  assert.match(systemCatalog, /"system\.overview\.card\.productVersion": "Prototype version"/);
+  assert.match(systemCatalog, /"system\.overview\.update\.status\.networkError": "No connection for updates"/);
+  assert.match(systemCatalog, /"system\.overview\.update\.detail\.activationReady": "The candidate was revalidated/);
   assert.match(localSessionCatalog, /"localSession\.lock\.title": "Session locked"/);
   assert.match(localSessionCatalog, /"localSession\.lock\.message\.rateLimited": "Too many attempts\./);
 });
