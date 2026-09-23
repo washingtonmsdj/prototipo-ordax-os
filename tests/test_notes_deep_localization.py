@@ -20,7 +20,7 @@ class NotesDeepLocalizationTests(unittest.TestCase):
             't("notes.statistics.summary"',
             't("notes.prompt.newProjectName")',
             't("notes.confirm.deleteForever"',
-            't("notes.intelligence.failed")',
+            'intelligenceErrorMessageId = "notes.intelligence.failed"',
         ):
             self.assertIn(marker, workspace)
         for hardcoded in (
