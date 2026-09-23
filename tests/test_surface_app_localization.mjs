@@ -104,6 +104,32 @@ test("Account consumes the shared localization owner end to end", async () => {
   );
 });
 
+test("Notes consumes shared localization across its primary journey", async () => {
+  const notes = await readFile(
+    new URL("../system/apps/notes/ui/workspace-controls.mjs", import.meta.url),
+    "utf8",
+  );
+  const catalog = await readFile(
+    new URL("../system/services/i18n/catalog/notes.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(notes, /const localization = lifecycle\.localization/);
+  assert.match(notes, /const locale = \(\) => localization\.getLocale\(\)/);
+  assert.match(notes, /t\("notes\.search"\)/);
+  assert.match(notes, /t\("notes\.nav\.trash"\)/);
+  assert.match(notes, /t\("notes\.references\.title"\)/);
+  assert.match(notes, /t\("notes\.intelligence\.summarizeShort"\)/);
+  assert.match(notes, /visibleNotes\(state\.document, mode, query, newestFirst, locale\(\)\)/);
+  assert.match(catalog, /"notes\.search": "Search notes"/);
+  assert.match(catalog, /"notes\.action\.restore": "Restore note"/);
+  assert.match(catalog, /"notes\.confirm\.deleteForever": "Permanently delete/);
+  assert.doesNotMatch(
+    notes,
+    /Buscar notas|Nova nota|Favoritas|Esvaziar lixeira|Não foi possível resumir esta nota localmente\./,
+  );
+});
+
 test("English catalog contains primary Files, Settings and System entries", async () => {
   const filesCatalog = await readFile(
     new URL("../system/services/i18n/catalog/files.mjs", import.meta.url),
