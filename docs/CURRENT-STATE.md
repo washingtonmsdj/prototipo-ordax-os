@@ -197,8 +197,11 @@ Security sections end to end, and the Native live session lock rerenders through
 localization owner while keeping
 the entered secret only in transient repaint memory. Account covers its complete
 first-party overview/sync experience in English. Notes now covers its
-primary navigation/editor shell, project/list states, core persistence copy and
-consultative Intelligence controls. Internet now covers its primary browser shell,
+primary navigation/editor shell, project/list states, core persistence copy,
+locale-aware relative time, image/file-picker/checklist/reference flows, capacity/statistics,
+prompts/confirmations and consultative Intelligence controls. Its picker/runtime failures retain
+semantic message IDs and newly attached local-file metadata no longer persists translated system
+labels. Internet now covers its primary browser shell,
 locale-aware tab/address search, project panel and key history/favorite states.
 Operational/error messages plus deeper Files/Settings/System/Notes/Internet flows and
 remaining Surface copy still require migration. Network and battery tray/quick-panel
@@ -226,6 +229,8 @@ SETTINGS_SECURITY_EN_US=PASS_SOURCE
 LOCAL_SESSION_LOCK_EN_US=PASS_SOURCE
 ACCOUNT_EN_US=PASS_SOURCE
 NOTES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
+NOTES_DEEP_EN_US=PASS_SOURCE
+NOTES_SEMANTIC_ASYNC_MESSAGES=PASS_SOURCE
 INTERNET_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 NETWORK_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 BATTERY_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
