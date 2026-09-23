@@ -139,7 +139,20 @@ def stage_uefi(disk: Path, *, bootloader: Path, kernel: Path, initramfs: Path, l
             run(["losetup", "-d", loop])
 
 
-def boot_ovmf(disk: Path, *, source_commit: str, runtime_sha256: str, code: Path, vars_template: Path, work: Path) -> tuple[str, str, dict[str, bool]]:
+def boot_ovmf(
+    disk: Path,
+    *,
+    release_info: dict[str, Any],
+    code: Path,
+    vars_template: Path,
+    work: Path,
+) -> tuple[str, str, dict[str, bool]]:
+    source_commit = release_info["commit"]
+    runtime_sha256 = release_info["runtime_sha256"]
+    schema_version = release_info["manifest_schema"]
+    ai_runtime_sha256 = release_info["ai_runtime_sha256"]
+    ai_required = schema_version == 4
+
     vars_copy = work / "OVMF_VARS.fd"
     shutil.copyfile(vars_template, vars_copy)
     serial = work / "uefi-serial.log"
@@ -169,9 +182,22 @@ def boot_ovmf(disk: Path, *, source_commit: str, runtime_sha256: str, code: Path
             source_marker = "ORDAX_PORTABLE_V2_SOURCE_SHA=" + source_commit
             stable_source = "ORDAX_STABLE_INIT_SOURCE_SHA=" + source_commit
             slot = "ORDAX_PORTABLE_V2_SLOT=current"
-            schema_marker = "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3"
+            schema_marker = f"ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA={schema_version}"
             runtime_marker = "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED"
             runtime_sha_marker = "ORDAX_SURFACE_RUNTIME_SHA256=" + runtime_sha256
+            ai_marker = "ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED"
+            ai_backend_marker = "ORDAX_LOCAL_AI_BACKEND=STARTED"
+            ai_sha_marker = (
+                "ORDAX_LOCAL_AI_RUNTIME_SHA256=" + ai_runtime_sha256
+                if ai_runtime_sha256
+                else ""
+            )
+            ai_ok = not ai_required or (
+                ai_marker in text
+                and bool(ai_sha_marker)
+                and ai_sha_marker in text
+                and ai_backend_marker in text
+            )
             if (
                 SUCCESS in text
                 and STABLE in text
@@ -181,6 +207,7 @@ def boot_ovmf(disk: Path, *, source_commit: str, runtime_sha256: str, code: Path
                 and schema_marker in text
                 and runtime_marker in text
                 and runtime_sha_marker in text
+                and ai_ok
             ):
                 process.terminate()
                 try:
@@ -195,9 +222,13 @@ def boot_ovmf(disk: Path, *, source_commit: str, runtime_sha256: str, code: Path
                     "current_slot_selected": True,
                     "portable_source_sha_exact": True,
                     "stable_init_source_sha_exact": True,
-                    "portable_manifest_v3_selected": True,
+                    "portable_manifest_selected": True,
                     "surface_runtime_handoff_marker": True,
                     "surface_runtime_sha_exact": True,
+                    "local_ai_runtime_requirement_satisfied": ai_ok,
+                    "local_ai_runtime_handoff_marker": (ai_marker in text) if ai_required else True,
+                    "local_ai_runtime_sha_exact": (ai_sha_marker in text) if ai_required else True,
+                    "local_ai_backend_started": (ai_backend_marker in text) if ai_required else True,
                     "qemu_network_disabled": "-net" in command and "none" in command,
                 }
             if process.poll() is not None:
@@ -207,7 +238,8 @@ def boot_ovmf(disk: Path, *, source_commit: str, runtime_sha256: str, code: Path
         serial_tail = serial.read_text(encoding="utf-8", errors="replace")[-14000:] if serial.exists() else ""
         raise ProofError(
             "OVMF QEMU did not reach portable-v2 handoff markers "
-            f"(exit={process.poll()}, stderr_tail={stderr_tail!r}, serial_tail={serial_tail!r})"
+            f"(schema={schema_version}, exit={process.poll()}, "
+            f"stderr_tail={stderr_tail!r}, serial_tail={serial_tail!r})"
         )
     finally:
         if process.poll() is None:
@@ -217,7 +249,6 @@ def boot_ovmf(disk: Path, *, source_commit: str, runtime_sha256: str, code: Path
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
-
 
 def prove(args: argparse.Namespace) -> dict[str, Any]:
     if direct.os.name != "posix" or direct.os.geteuid() != 0:
@@ -241,9 +272,13 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         "current_slot_selected": False,
         "portable_source_sha_exact": False,
         "stable_init_source_sha_exact": False,
-        "portable_manifest_v3_selected": False,
+        "portable_manifest_selected": False,
         "surface_runtime_handoff_marker": False,
         "surface_runtime_sha_exact": False,
+        "local_ai_runtime_requirement_satisfied": False,
+        "local_ai_runtime_handoff_marker": False,
+        "local_ai_runtime_sha_exact": False,
+        "local_ai_backend_started": False,
         "qemu_network_disabled": False,
         "physical_target_device_untouched": True,
         "guest_disk_destroyed": False,
@@ -267,8 +302,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         checks["dedicated_portable_loader_entries_staged"] = True
         _, vars_sha, qemu_checks = boot_ovmf(
             disk,
-            source_commit=args.source_commit,
-            runtime_sha256=inputs["runtime_sha256"],
+            release_info=inputs["candidate"],
             code=code,
             vars_template=vars_template,
             work=work,
@@ -308,6 +342,12 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
                 "stable_base_sha256": direct.sha256_file(inputs["stable_base"]),
                 "state_image_sha256": direct.sha256_file(inputs["state_image"]),
                 "surface_runtime_sha256": direct.sha256_file(inputs["runtime"]),
+                "release_manifest_schema": inputs["manifest_schema"],
+                "local_ai_runtime_sha256": (
+                    direct.sha256_file(inputs["ai_runtime"])
+                    if inputs["ai_runtime"] is not None
+                    else None
+                ),
             },
             "serial_markers": [
                 SUCCESS,
@@ -315,10 +355,18 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
                 "ORDAX_PORTABLE_V2_SLOT=current",
                 "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit,
                 "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.source_commit,
-                "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3",
+                "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=" + str(inputs["manifest_schema"]),
                 "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED",
                 "ORDAX_SURFACE_RUNTIME_SHA256=" + inputs["runtime_sha256"],
-            ],
+            ] + (
+                [
+                    "ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED",
+                    "ORDAX_LOCAL_AI_RUNTIME_SHA256=" + inputs["ai_runtime_sha256"],
+                    "ORDAX_LOCAL_AI_BACKEND=STARTED",
+                ]
+                if inputs["manifest_schema"] == 4
+                else []
+            ),
             "checks": checks,
         }
         args.out.parent.mkdir(parents=True, exist_ok=True)
