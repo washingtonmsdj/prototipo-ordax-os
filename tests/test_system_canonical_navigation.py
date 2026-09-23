@@ -48,7 +48,7 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
     def test_update_footer_is_only_an_accelerator_to_canonical_system_updates(self):
         update = UPDATE.read_text(encoding="utf-8")
         self.assertIn('activationPort.publish({ appId: "system", target: "updates" })', update)
-        self.assertIn("Abrir Sistema, Atualizações", update)
+        self.assertIn('"system.updateShortcut.aria"', update)
         self.assertNotIn("data.updateMenu", update.replace("dataset", "data"))
         self.assertNotIn("ordax-update-menu", update)
         self.assertNotIn("targetSha", update)
