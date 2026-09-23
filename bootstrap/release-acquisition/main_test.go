@@ -1628,6 +1628,107 @@ func TestMaterializePortableV4StoresAIByDigestWithoutActivation(t *testing.T) {
 	}
 }
 
+func TestMaterializePortableV4WithRealAIRuntimeFromEnv(t *testing.T) {
+	realAIPath := os.Getenv("ORDAX_TEST_REAL_LOCAL_AI_RUNTIME")
+	if realAIPath == "" {
+		t.Skip("ORDAX_TEST_REAL_LOCAL_AI_RUNTIME is not set")
+	}
+	aiData, err := os.ReadFile(realAIPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(aiData) < 4096 {
+		t.Fatal("real local AI runtime fixture is unexpectedly small")
+	}
+
+	systemData := validPortableEROFS()
+	runtimeData := append([]byte(nil), systemData...)
+	runtimeData[len(runtimeData)-1] = 0x79
+
+	trust, pub, priv := testKeys(t)
+	mux := http.NewServeMux()
+	server := httptest.NewTLSServer(mux)
+	defer server.Close()
+
+	m := manifestForPortableV4(
+		server.URL+"/system.erofs",
+		server.URL+"/native-surface-runtime.erofs",
+		server.URL+"/local-ai-runtime.erofs",
+		systemData,
+		runtimeData,
+		aiData,
+	)
+	envelope := signedEnvelope(t, m, trust.KeyID, priv)
+	mux.HandleFunc("/release.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(envelope) })
+	mux.HandleFunc("/system.erofs", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(systemData) })
+	mux.HandleFunc("/native-surface-runtime.erofs", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(runtimeData) })
+	mux.HandleFunc("/local-ai-runtime.erofs", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(aiData) })
+
+	root := filepath.Join(t.TempDir(), ".ordax")
+	first, err := materializePortableV4(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.ActivationAllowed || first.AIRuntimeReused || first.Idempotent {
+		t.Fatalf("unexpected first real-AI materialization receipt: %#v", first)
+	}
+	expectedDigest := sha256.Sum256(aiData)
+	expectedHex := hex.EncodeToString(expectedDigest[:])
+	expectedAI := filepath.Join(
+		root,
+		"ai-runtimes",
+		"sha256",
+		expectedHex,
+		"local-ai-runtime.erofs",
+	)
+	if first.AIRuntimePath != expectedAI {
+		t.Fatalf("real local AI runtime path mismatch: got=%s expected=%s", first.AIRuntimePath, expectedAI)
+	}
+	stored, err := os.ReadFile(expectedAI)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(stored, aiData) {
+		t.Fatal("materialized real local AI runtime differs from source bytes")
+	}
+
+	verified, err := verifyPortableV4Exact(root, trust, pub, defaultRepo, testCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verified.AIRuntimePath != expectedAI || verified.ActivationAllowed {
+		t.Fatalf("unexpected real-AI exact verification receipt: %#v", verified)
+	}
+	if _, err := os.Lstat(filepath.Join(root, "current")); !os.IsNotExist(err) {
+		t.Fatal("real-AI v4 materialization unexpectedly activated current")
+	}
+
+	second, err := materializePortableV4(
+		server.Client(),
+		server.URL+"/release.json",
+		root,
+		trust,
+		pub,
+		defaultRepo,
+		testCommit,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !second.Idempotent || !second.AIRuntimeReused || !second.RuntimeReused || second.ActivationAllowed {
+		t.Fatalf("real-AI v4 materialization is not idempotent/reused: %#v", second)
+	}
+	t.Logf("PORTABLE_V4_REAL_AI_MATERIALIZATION=PASS sha256=%s size=%d", expectedHex, len(aiData))
+}
+
 func TestVerifyPortableV4ExactRejectsTamperedAIRuntime(t *testing.T) {
 	trust, pub, priv := testKeys(t)
 	systemData := validPortableEROFS()
