@@ -86,6 +86,7 @@ on:
       - 'tests/test_internet_favorites_contract.py'
       - 'tests/test_browser_history.mjs'
       - 'tests/test_internet_history_contract.py'
+      - 'tests/test_internet_deep_localization.py'
       - 'tests/test_project_file_space_continuity.mjs'
       - 'tests/test_home_continuation.mjs'
       - 'tests/test_home_continuation_contract.py'
@@ -219,6 +220,7 @@ on:
       - 'tests/test_internet_favorites_contract.py'
       - 'tests/test_browser_history.mjs'
       - 'tests/test_internet_history_contract.py'
+      - 'tests/test_internet_deep_localization.py'
       - 'tests/test_project_file_space_continuity.mjs'
       - 'tests/test_home_continuation.mjs'
       - 'tests/test_home_continuation_contract.py'
@@ -387,6 +389,7 @@ jobs:
           python -m unittest tests.test_internet_project_context_contract -v
           python -m unittest tests.test_internet_favorites_contract -v
           python -m unittest tests.test_internet_history_contract -v
+          python -m unittest tests.test_internet_deep_localization -v
           python -m unittest tests.test_native_host_module_integrity -v
           python -m unittest tests.test_native_request_boundary -v
           python -m unittest tests.test_native_install_runtime -v
