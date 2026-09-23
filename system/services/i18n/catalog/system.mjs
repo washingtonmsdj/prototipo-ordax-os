@@ -91,7 +91,7 @@ export const SYSTEM_SOURCE_MESSAGES = Object.freeze({
   "system.recovery.fact.candidate": "Candidato",
   "system.recovery.fact.transaction": "Ativação",
   "system.recovery.fact.entry": "Entrada de recovery",
-  "system.recovery.entryWarning": "A entrada local de recovery não foi verificada por esta leitura. Isso não dispara nenhuma correção automática."
+  "system.recovery.entryWarning": "A entrada local de recovery não foi verificada por esta leitura. Isso não dispara nenhuma correção automática.",
   "system.resources.memory.kicker": "Uso do dispositivo",
   "system.resources.memory.title": "Memória",
   "system.resources.action.refreshing": "Atualizando…",
@@ -204,7 +204,7 @@ export const SYSTEM_ENGLISH_MESSAGES = Object.freeze({
   "system.recovery.fact.candidate": "Candidate",
   "system.recovery.fact.transaction": "Activation",
   "system.recovery.fact.entry": "Recovery entry",
-  "system.recovery.entryWarning": "The local recovery entry was not verified by this observation. No automatic repair is triggered."
+  "system.recovery.entryWarning": "The local recovery entry was not verified by this observation. No automatic repair is triggered.",
   "system.resources.memory.kicker": "Device usage",
   "system.resources.memory.title": "Memory",
   "system.resources.action.refreshing": "Refreshing…",
