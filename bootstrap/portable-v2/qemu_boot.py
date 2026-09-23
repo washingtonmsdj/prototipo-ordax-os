@@ -518,6 +518,7 @@ def boot_qemu_expected(
             runtime_marker = "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED"
             runtime_sha_marker = "ORDAX_SURFACE_RUNTIME_SHA256=" + runtime_sha256
             ai_marker = "ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED"
+            ai_backend_marker = "ORDAX_LOCAL_AI_BACKEND=STARTED"
             ai_sha_marker = (
                 "ORDAX_LOCAL_AI_RUNTIME_SHA256=" + ai_runtime_sha256
                 if ai_runtime_sha256
@@ -527,6 +528,7 @@ def boot_qemu_expected(
                 ai_marker in text
                 and bool(ai_sha_marker)
                 and ai_sha_marker in text
+                and ai_backend_marker in text
             )
             if (
                 SUCCESS in text
@@ -564,6 +566,7 @@ def boot_qemu_expected(
                     "local_ai_runtime_requirement_satisfied": ai_ok,
                     "local_ai_runtime_handoff_marker": (ai_marker in text) if ai_required else True,
                     "local_ai_runtime_sha_exact": (ai_sha_marker in text) if ai_required else True,
+                    "local_ai_backend_started": (ai_backend_marker in text) if ai_required else True,
                 }
             if process.poll() is not None:
                 break
@@ -705,6 +708,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         "local_ai_runtime_requirement_satisfied": False,
         "local_ai_runtime_handoff_marker": False,
         "local_ai_runtime_sha_exact": False,
+        "local_ai_backend_started": False,
         "physical_target_device_untouched": True,
         "guest_disk_destroyed": False,
     }
@@ -747,7 +751,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
             }
             if not all(activation_checks.values()):
                 raise ProofError(
-                    f"portable-v3 one-shot activation checks incomplete: {activation_checks}"
+                    f"portable one-shot activation checks incomplete: {activation_checks}"
                 )
             checks.update({
                 "portable_pid1_handoff_marker": (
@@ -800,6 +804,10 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
                     first_checks["local_ai_runtime_sha_exact"]
                     and second_checks["local_ai_runtime_sha_exact"]
                 ),
+                "local_ai_backend_started": (
+                    first_checks["local_ai_backend_started"]
+                    and second_checks["local_ai_backend_started"]
+                ),
             })
             serial_text = first_serial + "\n--- SECOND BOOT ---\n" + second_serial
             activation = {
@@ -837,6 +845,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
                 markers.extend([
                     "ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED",
                     "ORDAX_LOCAL_AI_RUNTIME_SHA256=" + release_info["ai_runtime_sha256"],
+                    "ORDAX_LOCAL_AI_BACKEND=STARTED",
                 ])
             return markers
 
