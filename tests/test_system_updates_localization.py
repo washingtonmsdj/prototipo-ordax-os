@@ -57,6 +57,10 @@ class SystemUpdatesLocalizationTests(unittest.TestCase):
             self.assertIn(expected, catalog)
         self.assertEqual(catalog.count('"system.updates.history.applicationDetail"'), 2)
 
+    def test_duplicate_update_catalog_does_not_exist(self):
+        duplicate = ROOT / "system" / "services" / "i18n" / "catalog" / "system-update.mjs"
+        self.assertFalse(duplicate.exists())
+
     def test_surface_aggregates_updates_catalog_under_existing_owner(self):
         surface = SURFACE_I18N.read_text(encoding="utf-8")
         self.assertIn("SYSTEM_UPDATES_SOURCE_MESSAGES", surface)
