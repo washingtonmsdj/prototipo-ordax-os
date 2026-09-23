@@ -188,7 +188,7 @@ English is **not** yet marked as a complete Surface locale. Files now covers its
 primary navigation/search/list/selection/Recents/Trash journey plus common forms,
 locale-aware sorting, export and preview controls through the shared catalog.
 Settings/System cover their section navigation/header copy, and System now also derives
-its overview health/summary, memory and user-storage resource views, explicit sanitized diagnostic review, update transaction details, component update scope, and update history from structured runtime state through the shared
+its overview health/summary, memory and user-storage resource views, explicit sanitized diagnostic review, update transaction details, component update scope/history, About/version identity, runtime capabilities and consultative Intelligence presentation from structured runtime state through the shared
 localization owner. Settings covers its Notifications policy/source and local-session
 Security sections end to end, and the Native live session lock rerenders through the same
 localization owner while keeping
@@ -215,6 +215,8 @@ SYSTEM_OVERVIEW_SUMMARY_EN_US=PASS_SOURCE
 SYSTEM_RESOURCE_VIEWS_EN_US=PASS_SOURCE
 SYSTEM_DIAGNOSTIC_REVIEW_EN_US=PASS_SOURCE
 SYSTEM_UPDATES_HISTORY_EN_US=PASS_SOURCE
+SYSTEM_ABOUT_EN_US=PASS_SOURCE
+SYSTEM_INTELLIGENCE_CAPABILITIES_EN_US=PASS_SOURCE
 SETTINGS_NOTIFICATIONS_EN_US=PASS_SOURCE
 SETTINGS_SECURITY_EN_US=PASS_SOURCE
 LOCAL_SESSION_LOCK_EN_US=PASS_SOURCE
