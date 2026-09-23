@@ -124,8 +124,8 @@ class NativeComponentStateTests(unittest.TestCase):
         self.assertIn('"system.updates.component.release.componentSlot"', view)
         self.assertIn('"system.updates.component.release.gitApp"', view)
         self.assertIn('"system.updates.component.release.bundled"', view)
-        self.assertIn("diretamente pelo Git, sem slot de produção", view)
-        self.assertIn("rollback individual permanece bloqueado", view)
+        self.assertIn('"system.about.components.detail.gitApp"', view)
+        self.assertIn('"system.about.components.detail.bundled"', view)
 
 
 if __name__ == "__main__":
