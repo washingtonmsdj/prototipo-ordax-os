@@ -1,0 +1,41 @@
+{
+  "$schema": "prototype-ordax.recovery-status/1",
+  "status": "native-source-implemented",
+  "product_scope": "stable-mvp-usb-only",
+  "contract": "system/contracts/recovery-status.mjs",
+  "adapter": "system/adapters/native/recovery-status.mjs",
+  "native_owner": "system/surface/runtime/native_host_server.py",
+  "presentation": "system/surface/ui/system-overview-controls.mjs",
+  "observes": {
+    "layout": "portable-v2",
+    "running_source_env": "ORDAX_SOURCE_SHA",
+    "boot_slot_env": "ORDAX_BOOT_SLOT",
+    "state_root_env": "ORDAX_PORTABLE_STATE_ROOT",
+    "current": "/state/ordax/portable-release/current",
+    "known_good": "/state/ordax/portable-release/known-good",
+    "candidate": "/state/ordax/portable-release/candidate",
+    "activation_transaction": "/state/ordax/portable-release/activation-transaction.json",
+    "recovery_entry": "/ordax-esp/loader/entries/ordax-portable-recovery.conf"
+  },
+  "authority": {
+    "read_only": true,
+    "rollback": false,
+    "reboot": false,
+    "repair": false,
+    "automatic_network": false,
+    "automatic_mutation": false
+  },
+  "recovery_entry_verification": {
+    "required_markers": [
+      "linux /ordax/vmlinuz",
+      "initrd /ordax/initrd.gz",
+      "rdinit=/sbin/ordax-portable-init",
+      "ordax.mode=recovery"
+    ],
+    "presence_alone_is_valid": false
+  },
+  "gate_semantics": {
+    "DIAGNOSTICS_RECOVERY_PRESENTATION": "PASS_SOURCE",
+    "RECOVERY_STATUS_PHYSICAL_PROOF": "PENDING_PHYSICAL"
+  }
+}

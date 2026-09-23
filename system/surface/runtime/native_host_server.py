@@ -50,6 +50,7 @@ FILE_EXPORT_PATH = "/__ordax/native/file-export"
 IMAGE_PREVIEW_PATH = "/__ordax/native/image-preview"
 FILE_IMPORT_PATH = "/__ordax/native/file-import"
 METRICS_PATH = "/__ordax/native/metrics"
+RECOVERY_STATUS_PATH = "/__ordax/native/recovery-status"
 POWER_STATUS_PATH = "/__ordax/native/power-status"
 NETWORK_STATUS_PATH = "/__ordax/native/network-status"
 NETWORK_MANAGEMENT_PATH = "/__ordax/native/network-management"
@@ -1076,6 +1077,88 @@ def read_system_metrics(user_root: str, proc_root: str = "/proc") -> dict:
         "memoryAvailableBytes": memory_available,
         "userStorageTotalBytes": storage_total,
         "userStorageFreeBytes": storage_free,
+    }
+
+
+def _optional_release_sha(path: str) -> str | None:
+    try:
+        value = read_small_text(path, 128).strip()
+    except OSError:
+        return None
+    if not value:
+        return None
+    if re.fullmatch(r"[0-9a-f]{40}", value) is None:
+        raise ValueError(f"invalid portable release identity at {path}")
+    return value
+
+
+def read_recovery_status(
+    state_root: str | None = None,
+    esp_root: str = "/ordax-esp",
+    environment: dict[str, str] | None = None,
+) -> dict:
+    env = os.environ if environment is None else environment
+    layout = env.get("ORDAX_STABLE_LAYOUT", "")
+    if layout != "portable-v2":
+        raise ValueError("recovery status is only available for portable-v2 Stable runtime")
+
+    root = state_root or env.get("ORDAX_PORTABLE_STATE_ROOT", "/state")
+    activation_root = os.path.join(root, "ordax", "portable-release")
+    running_source = env.get("ORDAX_SOURCE_SHA", "").strip()
+    if re.fullmatch(r"[0-9a-f]{40}", running_source) is None:
+        raise ValueError("running Stable source identity is unavailable")
+    boot_slot = env.get("ORDAX_BOOT_SLOT", "unknown").strip()
+    if boot_slot not in {"current", "known-good", "candidate"}:
+        boot_slot = "unknown"
+
+    current = _optional_release_sha(os.path.join(activation_root, "current"))
+    known_good = _optional_release_sha(os.path.join(activation_root, "known-good"))
+    candidate = _optional_release_sha(os.path.join(activation_root, "candidate"))
+    transaction_present = os.path.isfile(
+        os.path.join(activation_root, "activation-transaction.json")
+    )
+
+    recovery_entry = os.path.join(
+        esp_root,
+        "loader",
+        "entries",
+        "ordax-portable-recovery.conf",
+    )
+    if not os.path.exists(esp_root):
+        recovery_entry_status = "unavailable"
+    elif not os.path.isfile(recovery_entry):
+        recovery_entry_status = "missing"
+    else:
+        try:
+            recovery_text = read_small_text(recovery_entry, 8192)
+        except OSError:
+            recovery_entry_status = "invalid"
+        else:
+            required = (
+                "linux /ordax/vmlinuz",
+                "initrd /ordax/initrd.gz",
+                "rdinit=/sbin/ordax-portable-init",
+                "ordax.mode=recovery",
+            )
+            recovery_entry_status = (
+                "verified"
+                if all(marker in recovery_text for marker in required)
+                else "invalid"
+            )
+
+    return {
+        "schema": "ordax.recovery-status/1",
+        "layout": "portable-v2",
+        "bootSlot": boot_slot,
+        "runningSourceSha": running_source,
+        "currentSha": current,
+        "knownGoodSha": known_good,
+        "candidateSha": candidate,
+        "transactionPresent": transaction_present,
+        "recoveryEntryStatus": recovery_entry_status,
+        "policy": "local-read-only",
+        "automaticNetwork": False,
+        "automaticMutation": False,
     }
 
 
@@ -2990,7 +3073,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if not self._request_is_trusted():
             return
         parsed_path = urlsplit(self.path).path
-        if parsed_path in {SESSION_PATH, FILES_PATH, TRASH_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
+        if parsed_path in {SESSION_PATH, FILES_PATH, TRASH_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, RECOVERY_STATUS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
         if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH, LOCAL_SESSION_PATH} and self.client_address[0] != "127.0.0.1":
@@ -3004,6 +3087,19 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                 self._empty(503)
                 return
             self._write_json(200, metrics)
+            return
+        if parsed_path == RECOVERY_STATUS_PATH:
+            try:
+                recovery_status = read_recovery_status()
+            except (OSError, ValueError) as exc:
+                print(
+                    f"ordax-native-host: recovery status unavailable: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._empty(503)
+                return
+            self._write_json(200, recovery_status)
             return
         if parsed_path == POWER_STATUS_PATH:
             try:

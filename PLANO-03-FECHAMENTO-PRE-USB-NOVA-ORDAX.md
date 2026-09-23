@@ -84,6 +84,33 @@ FILES_PERMANENT_DELETE_MVP=NO
 FILES_TRASH_PHYSICAL_PROOF=PENDING
 ```
 
+### 0.4 Diagnóstico/Recovery e hardware — fechamento em source
+
+O owner diagnóstico já existente agora é composto na Surface Native, em vez de
+permanecer apenas como serviço/teste. Sistema passa a oferecer revisão local explícita
+e sanitizada, com cópia/exportação quando os adapters reais estão disponíveis.
+
+Recovery ganhou um observer read-only `ordax.recovery-status/1`, limitado ao
+`portable-v2`. Ele lê somente:
+
+- slot/release em execução;
+- `current`;
+- `known-good`;
+- candidato e transação pendente;
+- a entrada `ordax-portable-recovery.conf` no ESP, validando os marcadores mínimos.
+
+O observer não possui rollback, reboot, repair, rede automática ou mutação automática.
+A matriz conservadora `hardware-support-matrix/1` já fecha a política de suporte em
+source, sem promover um único notebook de desenvolvimento a claim amplo de hardware.
+
+```text
+DIAGNOSTICS_RECOVERY_PRESENTATION=PASS_SOURCE
+RECOVERY_STATUS_AUTHORITY=READ_ONLY
+RECOVERY_STATUS_PHYSICAL_PROOF=PENDING_PHYSICAL
+SUPPORTED_HARDWARE_MATRIX=PASS_SOURCE
+CANONICAL_STABLE_TARGET_HARDWARE_PROOF=PENDING_PHYSICAL
+```
+
 ## 1. Decisão principal
 
 **Não gerar ainda o primeiro USB Stable/MVP físico.**
@@ -234,7 +261,7 @@ nem criar owners duplicados no MVP.
 | C04 | Workspace/projeto | **Parcial avançado.** workspace-store v2, áreas/janelas/targets, projetos e recent files existem. | A somente no que sustenta continuidade local |
 | C05 | Checkpoint de sessão | **Parcial.** janelas/targets persistem, mas não existe checkpoint genérico de estado interno por app/documento/posição/rascunho. | A mínimo; riqueza pós-MVP |
 | C06 | Home contextual/continuar trabalho | **Implementado em recorte útil.** Projetos, Recentes e Pendências existem. | Fechado para MVP |
-| C07 | Inventário/suporte de hardware | **Parcial.** métricas/power/network existem; inventário/compatibilidade de produto ainda não forma uma visão mínima completa. | **A/B** |
+| C07 | Inventário/suporte de hardware | **Política mínima fechada em source.** `hardware-support-matrix/1` separa driver presente, evidência física e claim de suporte; não generaliza o notebook de desenvolvimento para outras famílias. | **PASS_SOURCE; prova física=B** |
 | C08 | Conta/identidade entre modos | **Arquitetura pronta, backend real ainda não ativo.** Conta online é opcional no MVP. | C |
 | C09 | Sync/continuidade cloud | **Core offline existe; identity/transport remoto não.** | C |
 | C10 | Mobile Companion | **Futuro.** | C |
@@ -245,7 +272,7 @@ nem criar owners duplicados no MVP.
 | C15 | Objetos com provenance | **Não existe Object System universal.** Usar metadata/provenance pequenos onde necessários, inclusive IA. | C; provenance mínimo=A |
 | C16 | IA nativa/contexto/tools | **IA consultiva fechada em source.** Native compõe `local-ai -> intelligence`; Notas e Sistema possuem consumidores first-party bounded/read-only com provenance. Lifecycle Stable v4 do backend ainda é gate de release. Tools mutáveis permanecem deferidas. | **PASS_SOURCE para consumidores; A/P2 para lifecycle v4; C para tools/agents** |
 | C17 | Conhecimento/integrações/automações | **Deferido.** | C |
-| C18 | Diagnóstico/receipts/captura | **Diagnóstico local avançado**, com store e relatório sanitizado. Fechar apresentação/export/recovery coerentes. | **A/B** |
+| C18 | Diagnóstico/receipts/captura | **Fechado em source para o MVP.** Controller diagnóstico sanitizado é composto no Native; Sistema prepara/copia/exporta revisão explícita e apresenta recovery Portable v2 read-only sem autoridade de rollback/reboot. | **PASS_SOURCE; prova física=B** |
 | C19 | Controle remoto/Companion | Não é requisito do bootstrap/MVP. | C |
 | C20 | Update transacional/rollback | **Muito avançado em CI/source.** Falta Stable físico/cold-health. | **B** |
 | C21 | Native/durable storage | Native pós-MVP. USB durável é a trilha atual. | USB=A/B; Native=C |
@@ -350,8 +377,8 @@ O gate é de produto/source. Ele **não** substitui:
 
 4. Arquivos: remoção segura/lixeira. — **PASS_SOURCE**
 5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE. — **IN_PROGRESS**: owner + shell inglês `PASS_SOURCE`; Arquivos cobre jornada primária, formulários comuns, ordenação, exportação e preview em inglês `PASS_SOURCE`; navegação de Ajustes/Sistema e Conta completa também `PASS_SOURCE`; mensagens operacionais e demais apps ainda em migração
-6. Diagnóstico/recovery em Sistema. — **PENDING**
-7. Inventário mínimo/suporte de hardware. — **PENDING**
+6. Diagnóstico/recovery em Sistema. — **PASS_SOURCE**: controller diagnóstico Native agora é composto de verdade e Sistema exibe recovery read-only a partir dos marcadores reais de `current`, `known-good`, candidato/transação e entrada local de recovery; prova física continua B
+7. Inventário mínimo/suporte de hardware. — **PASS_SOURCE** via `hardware-support-matrix/1`; prova física do hardware-alvo Stable continua B
 
 ### P2 — fechar release
 
