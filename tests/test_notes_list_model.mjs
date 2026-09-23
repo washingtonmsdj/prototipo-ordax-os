@@ -34,11 +34,12 @@ function note({
 
 test("relative time distinguishes minutes from hours", () => {
   const now = Date.UTC(2026, 8, 19, 2, 0, 0);
-  assert.equal(formatNotesRelativeTime(now - 15_000, now), "Agora");
-  assert.equal(formatNotesRelativeTime(now - 2 * 60_000, now), "2 min");
-  assert.equal(formatNotesRelativeTime(now - 59 * 60_000, now), "59 min");
-  assert.equal(formatNotesRelativeTime(now - 2 * 3_600_000, now), "2 h");
-  assert.equal(formatNotesRelativeTime(now - 30 * 3_600_000, now), "Ontem");
+  const options = { locale: "pt-BR", nowLabel: "Agora", yesterdayLabel: "Ontem" };
+  assert.equal(formatNotesRelativeTime(now - 15_000, now, options), "Agora");
+  assert.equal(formatNotesRelativeTime(now - 2 * 60_000, now, options), "2 min");
+  assert.equal(formatNotesRelativeTime(now - 59 * 60_000, now, options), "59 min");
+  assert.equal(formatNotesRelativeTime(now - 2 * 3_600_000, now, options), "2 h");
+  assert.equal(formatNotesRelativeTime(now - 30 * 3_600_000, now, options), "Ontem");
 });
 
 test("relative time accepts active locale and localized day labels", () => {
@@ -64,8 +65,8 @@ test("relative time accepts active locale and localized day labels", () => {
 
 test("first body line ignores empty whitespace-only lines", () => {
   assert.equal(firstNotesBodyLine("\n   \nPrimeira ideia\nSegunda"), "Primeira ideia");
-  assert.equal(firstNotesBodyLine(""), "Nota sem conteúdo");
-  assert.equal(firstNotesBodyLine(null), "Nota sem conteúdo");
+  assert.equal(firstNotesBodyLine("", "Nota sem conteúdo"), "Nota sem conteúdo");
+  assert.equal(firstNotesBodyLine(null, "Nota sem conteúdo"), "Nota sem conteúdo");
 });
 
 test("query matches title, body, tasks and reference metadata", () => {
