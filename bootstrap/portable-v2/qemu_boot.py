@@ -427,6 +427,19 @@ def stage_disk(args: argparse.Namespace, inputs: dict[str, Any], work: Path) -> 
             inputs["runtime"],
             runtime_target / "native-surface-runtime.erofs",
         )
+        for release_info in (inputs["candidate"], inputs["previous"]):
+            if release_info is None or release_info["ai_runtime"] is None:
+                continue
+            ai_target = (
+                internal
+                / "ai-runtimes"
+                / "sha256"
+                / release_info["ai_runtime_sha256"]
+            )
+            ai_target.mkdir(parents=True, exist_ok=True)
+            destination = ai_target / "local-ai-runtime.erofs"
+            if not destination.exists():
+                shutil.copyfile(release_info["ai_runtime"], destination)
         os.sync()
     finally:
         if data_mounted:
@@ -453,6 +466,22 @@ def boot_qemu_expected(
         raise ProofError("unexpected QEMU expected slot")
     if COMMIT_RE.fullmatch(expected_commit) is None:
         raise ProofError("unexpected QEMU expected source commit")
+
+    release_info = (
+        inputs["candidate"]
+        if expected_commit == inputs["candidate"]["commit"]
+        else inputs["previous"]
+        if inputs["previous"] is not None
+        and expected_commit == inputs["previous"]["commit"]
+        else None
+    )
+    if release_info is None:
+        raise ProofError("expected QEMU release identity is not staged")
+
+    schema_version = release_info["manifest_schema"]
+    runtime_sha256 = release_info["runtime_sha256"]
+    ai_runtime_sha256 = release_info["ai_runtime_sha256"]
+    ai_required = schema_version == 4
 
     serial = work / serial_name
     stderr = work / (serial_name + ".stderr")
@@ -485,9 +514,20 @@ def boot_qemu_expected(
             source_marker = "ORDAX_PORTABLE_V2_SOURCE_SHA=" + expected_commit
             stable_source_marker = "ORDAX_STABLE_INIT_SOURCE_SHA=" + expected_commit
             slot_marker = "ORDAX_PORTABLE_V2_SLOT=" + expected_slot
-            schema_marker = "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3"
+            schema_marker = f"ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA={schema_version}"
             runtime_marker = "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED"
-            runtime_sha_marker = "ORDAX_SURFACE_RUNTIME_SHA256=" + inputs["runtime_sha256"]
+            runtime_sha_marker = "ORDAX_SURFACE_RUNTIME_SHA256=" + runtime_sha256
+            ai_marker = "ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED"
+            ai_sha_marker = (
+                "ORDAX_LOCAL_AI_RUNTIME_SHA256=" + ai_runtime_sha256
+                if ai_runtime_sha256
+                else ""
+            )
+            ai_ok = not ai_required or (
+                ai_marker in text
+                and bool(ai_sha_marker)
+                and ai_sha_marker in text
+            )
             if (
                 SUCCESS in text
                 and STABLE in text
@@ -497,6 +537,7 @@ def boot_qemu_expected(
                 and schema_marker in text
                 and runtime_marker in text
                 and runtime_sha_marker in text
+                and ai_ok
             ):
                 process.terminate()
                 try:
@@ -517,9 +558,12 @@ def boot_qemu_expected(
                     "expected_slot_selected": slot_marker in text,
                     "portable_source_sha_exact": source_marker in text,
                     "stable_init_source_sha_exact": stable_source_marker in text,
-                    "portable_manifest_v3_selected": schema_marker in text,
+                    "portable_manifest_selected": schema_marker in text,
                     "surface_runtime_handoff_marker": runtime_marker in text,
                     "surface_runtime_sha_exact": runtime_sha_marker in text,
+                    "local_ai_runtime_requirement_satisfied": ai_ok,
+                    "local_ai_runtime_handoff_marker": (ai_marker in text) if ai_required else True,
+                    "local_ai_runtime_sha_exact": (ai_sha_marker in text) if ai_required else True,
                 }
             if process.poll() is not None:
                 break
@@ -529,8 +573,8 @@ def boot_qemu_expected(
         serial_tail = serial.read_text(encoding="utf-8", errors="replace")[-12000:] if serial.exists() else ""
         raise ProofError(
             "QEMU did not reach portable-v2 handoff markers "
-            f"(slot={expected_slot}, source={expected_commit}, exit={process.poll()}, "
-            f"stderr_tail={tail!r}, serial_tail={serial_tail!r})"
+            f"(slot={expected_slot}, source={expected_commit}, schema={schema_version}, "
+            f"exit={process.poll()}, stderr_tail={tail!r}, serial_tail={serial_tail!r})"
         )
     finally:
         if process.poll() is None:
@@ -540,7 +584,6 @@ def boot_qemu_expected(
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
-
 
 def boot_qemu(
     args: argparse.Namespace,
