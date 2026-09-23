@@ -46,7 +46,8 @@ class SurfaceBootScreenTests(unittest.TestCase):
             self.assertIn('href="../../surface/ui/boot-screen.css"', html)
             self.assertIn('id="ordax-boot-screen"', html)
             self.assertIn('data-ordax-boot-status', html)
-            self.assertIn("Preparando OrdaX", html)
+            self.assertIn(">OrdaX…</span>", html)
+            self.assertNotIn("Preparando OrdaX", html)
             self.assertLess(
                 html.index('id="ordax-boot-screen"'),
                 html.index('id="ordax-root"'),
@@ -61,6 +62,8 @@ class SurfaceBootScreenTests(unittest.TestCase):
         css = BOOT_CSS.read_text(encoding="utf-8")
 
         self.assertIn("createSurfaceBootScreen", controller)
+        self.assertIn("translateSurfaceMessage", controller)
+        self.assertIn("setLocale", controller)
         self.assertIn("setStage", controller)
         self.assertIn("ready()", controller)
         self.assertIn("fail(", controller)
@@ -74,10 +77,11 @@ class SurfaceBootScreenTests(unittest.TestCase):
         for path in (WEB_MAIN, NATIVE_MAIN):
             source = path.read_text(encoding="utf-8")
             self.assertIn("createSurfaceBootScreen", source)
-            self.assertIn('bootScreen.setStage("Carregando superfície…")', source)
-            self.assertIn('bootScreen.setStage("Carregando aplicativos…")', source)
+            self.assertIn('bootScreen.setStage("boot.loadingSurface")', source)
+            self.assertIn('bootScreen.setStage("boot.loadingApps")', source)
+            self.assertIn("bootScreen.setLocale(", source)
             self.assertIn("bootScreen.ready()", source)
-            self.assertIn('bootScreen.fail("Não foi possível iniciar a interface")', source)
+            self.assertIn('bootScreen.fail("boot.failed")', source)
             self.assertLess(
                 source.index('componentId: "notes"'),
                 source.index("bootScreen.ready()"),
