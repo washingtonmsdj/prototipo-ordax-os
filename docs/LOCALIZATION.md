@@ -54,7 +54,7 @@ consumes the shared catalog end to end. Notes now localizes its primary navigati
 shell, projects/list state, core persistence status and consultative
 Intelligence controls; Internet localizes its primary browser shell, tab navigation,
 address/search locale handling, project panel and key history/favorite states.
-Operational/error messages in Files, deeper Settings/System content, deeper Notes/
+System's primary first-party UI now consumes en-US catalog entries end to end, including the shell update accelerator. Operational/error messages in Files, deeper Settings content, deeper Notes/
 Internet flows and remaining Surface copy still contain PT-BR text and remain in
 migration. Network and battery trays/quick panels plus the Notification Center now
 consume the shared localization owner. First-party update notifications persist bounded
@@ -76,6 +76,7 @@ SYSTEM_DIAGNOSTIC_REVIEW_EN_US=PASS_SOURCE
 SYSTEM_UPDATES_HISTORY_EN_US=PASS_SOURCE
 SYSTEM_ABOUT_EN_US=PASS_SOURCE
 SYSTEM_INTELLIGENCE_CAPABILITIES_EN_US=PASS_SOURCE
+SYSTEM_UPDATE_ACCELERATOR_EN_US=PASS_SOURCE
 SETTINGS_NOTIFICATIONS_EN_US=PASS_SOURCE
 SETTINGS_SECURITY_EN_US=PASS_SOURCE
 LOCAL_SESSION_LOCK_EN_US=PASS_SOURCE
