@@ -9,11 +9,16 @@ import {
   validateFirstRunState,
 } from "../system/services/state/first-run.mjs";
 import {
+  REGIONAL_LOCALE_OPTIONS,
   REGIONAL_LOCALE_PREFERENCE_ID,
   REGIONAL_TIME_ZONE_PREFERENCE_ID,
   regionalLocalePreference,
   regionalTimeZonePreference,
 } from "../system/services/preferences/regional.mjs";
+import {
+  FIRST_RUN_PUBLIC_MVP_LOCALES,
+  FIRST_RUN_SUPPORTED_LOCALES,
+} from "../system/contracts/first-run-state-store.mjs";
 
 test("first-run begins incomplete and local/account choice is not preselected", () => {
   assert.deepEqual(createInitialFirstRunState(), {
@@ -61,6 +66,18 @@ test("first-run accepts launch locales and rejects unsupported locale, timezone 
       accountMode: "local-only",
     }),
     TypeError,
+  );
+});
+
+test("public MVP locale selector is narrower than retained compatibility", () => {
+  assert.deepEqual([...FIRST_RUN_PUBLIC_MVP_LOCALES], ["pt-BR", "en-US"]);
+  assert.deepEqual(
+    REGIONAL_LOCALE_OPTIONS.map((entry) => entry.value),
+    ["pt-BR", "en-US"],
+  );
+  assert.deepEqual(
+    [...FIRST_RUN_SUPPORTED_LOCALES],
+    ["pt-BR", "en-US", "es-ES", "de-DE", "fr-FR"],
   );
 });
 
