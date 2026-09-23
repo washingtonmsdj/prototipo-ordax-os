@@ -184,9 +184,10 @@ cover the shared shell, launcher, workspace/window chrome, connectivity labels a
 first-party app metadata. Unsupported message IDs fail closed; locales without a
 shared translation fall back to PT-BR source copy explicitly.
 
-English is **not** yet marked as a complete Surface locale. Files now covers its
-primary navigation/search/list/selection/Recents/Trash journey plus common forms,
-locale-aware sorting, export and preview controls through the shared catalog.
+English is now marked as a complete Surface locale for the public MVP. Files covers its
+primary navigation/search/list/selection/Recents/Trash journey, common forms, deep operational
+feedback, locale-aware sorting, import/export, copy/move/rename/create-folder flows, preview and
+Files → Notes presentation through the shared catalog.
 Settings/System cover their section navigation/header copy, and System now also derives
 its overview health/summary, memory and user-storage resource views, update transaction details/history, component/update scopes, About/versioning, capability inventory, Intelligence presentation, and the explicit sanitized diagnostic review from structured runtime state through the shared
 localization owner. Runtime failure banners in these System flows now retain semantic message IDs and translate at render time, so changing locale does not preserve stale rendered PT-BR copy. Settings now also covers Appearance, Accessibility, Regional preferences,
@@ -205,12 +206,16 @@ labels. Internet now covers its primary browser shell,
 locale-aware tab/address search, project context, home status, project references,
 favorites/history and first-party operational feedback deeply in PT-BR/en-US. Its own
 feedback is stored as semantic message identity so a live locale change does not preserve
-stale rendered copy. Deeper Files flows and remaining Surface copy still require migration. Network and battery tray/quick-panel
-presentation plus the Notification Center use `ordax.localization/1` and rerender on
-locale changes. `ordax.notifications/3` keeps backward-compatible text fallbacks while
-first-party update events persist bounded semantic presentation identity, allowing stored
-update history to rerender in the active locale without heuristic text translation.
-Spanish, German and French remain OOBE-complete but Surface-incomplete.
+stale rendered copy. The remaining shared Home continuation/pending cards, power controls,
+global update accelerator, desktop-clock fallback and Surface boot screen now also use the shared
+localization owner; first-party async feedback retains semantic message identity across live locale
+changes. Network and battery tray/quick-panel presentation plus the Notification Center use
+`ordax.localization/1` and rerender on locale changes. `ordax.notifications/3` keeps
+backward-compatible text fallbacks while first-party update events persist bounded semantic
+presentation identity, allowing stored update history to rerender in the active locale without
+heuristic text translation. The public MVP selectors expose only PT-BR and en-US. Spanish, German
+and French remain OOBE-complete compatibility/future-rollout locales and are not advertised as
+complete Surface languages.
 
 ```text
 SURFACE_LOCALIZATION_OWNER=PASS_SOURCE
@@ -239,10 +244,15 @@ NETWORK_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 BATTERY_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 NOTIFICATION_CENTER_EN_US=PASS_SOURCE
 FIRST_PARTY_UPDATE_NOTIFICATION_HISTORY_EN_US=PASS_SOURCE
-SURFACE_COMPLETE_LOCALES=pt-BR
+FILES_DEEP_EN_US=PASS_SOURCE
+FILES_SEMANTIC_OPERATIONAL_MESSAGES=PASS_SOURCE
+SHELL_DEEP_EN_US=PASS_SOURCE
+MVP_PUBLIC_LOCALES=pt-BR,en-US
+RETAINED_COMPATIBLE_LOCALES=es-ES,de-DE,fr-FR
+SURFACE_COMPLETE_LOCALES=pt-BR,en-US
 SETTINGS_DEEP_EN_US=PASS_SOURCE
 SETTINGS_ASYNC_MESSAGE_IDENTITIES=PASS_SOURCE
-SURFACE_EN_US_APP_CONTROLS=MIGRATING
+SURFACE_EN_US_APP_CONTROLS=PASS_SOURCE
 ```
 
 ### Files safe removal
