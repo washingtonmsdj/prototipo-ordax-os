@@ -538,7 +538,7 @@ class HotUpdateSupervisorContractTests(unittest.TestCase):
         self.assertIn('"Base gravada no slot inativo"', presentation)
         self.assertIn('"Base pronta para ativação"', presentation)
         self.assertIn("overviewUpdateSummaryMessageId", overview)
-        self.assertIn("updateAttentionMessage", overview)
+        self.assertIn('t("system.updates.attention.generic")', overview)
         self.assertNotIn('"Reinício necessário"', overview)
         self.assertIn("lastAppliedAt", overview)
         self.assertIn("rejectedSha", overview)
@@ -633,14 +633,14 @@ class HotUpdateSupervisorContractTests(unittest.TestCase):
 
     def test_update_center_surfaces_transaction_diagnostics(self):
         overview = SYSTEM_OVERVIEW.read_text(encoding="utf-8")
-        self.assertIn("readableUpdatePhase", overview)
-        self.assertIn("readableBaseUpdatePhase", overview)
+        self.assertIn("UPDATE_PHASE_MESSAGE_IDS", overview)
+        self.assertIn("BASE_PHASE_MESSAGE_IDS", overview)
         self.assertIn("baseUpdatePhase", overview)
         self.assertIn("baseUpdateSha", overview)
-        self.assertIn('"Progresso da Base"', overview)
+        self.assertIn('t("system.updates.fact.baseProgress")', overview)
         self.assertIn("targetSha", overview)
-        self.assertIn('"Tentativa"', overview)
-        self.assertIn('"Diagnóstico"', overview)
+        self.assertIn('t("system.updates.fact.attempt")', overview)
+        self.assertIn('t("system.updates.fact.diagnostic")', overview)
         self.assertIn("lastError", overview)
 
     def test_guardian_owns_supervisor_lifetime_without_git_or_network(self):
