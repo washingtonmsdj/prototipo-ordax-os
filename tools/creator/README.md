@@ -103,7 +103,7 @@ ORDAX-DATA  exFAT
   .ordax/state/persistent-state.img
 ```
 
-The Creator Core already owns the v2 geometry through `PlanPortableTargetStorage` and the final 35-operation application plan. Physical v2 apply remains disabled until the disposable Portable media/runtime-v3 QEMU+UEFI proofs, canonical trust, fresh Stable/MVP owner authorization and physical USB gates close in order.
+The Creator Core already owns the v2 geometry through `PlanPortableTargetStorage` and the final 39-operation application plan. Physical v2 apply remains disabled until the disposable Portable media/runtime-v4 QEMU+UEFI proof, canonical trust, fresh Stable/MVP owner authorization for the 17-artifact v4 payload and physical USB gates close in order.
 
 ## Release bootstrap inputs
 
@@ -134,7 +134,7 @@ TARGET_REENUMERATION=IMPLEMENTED
 DESTRUCTIVE_CONFIRMATION_UI=IMPLEMENTED
 WINDOWS_UAC_HANDOFF=IMPLEMENTED
 RAW_DISK_BACKEND=IMPLEMENTED_BUILD_TAGGED
-PORTABLE_APPLICATION_PLAN=IMPLEMENTED_35_OPERATIONS
+PORTABLE_APPLICATION_PLAN=IMPLEMENTED_39_OPERATIONS
 PHYSICAL_APPLY_FLOW=IMPLEMENTED_GATED
 POST_WRITE_READBACK=IMPLEMENTED_GATED
 PHYSICAL_SIGNED_CHANNEL=IMPLEMENTED
@@ -181,7 +181,7 @@ canonical public trust
  -> success / fail-closed result
 ```
 
-There is no target-sized whole-disk RAW image in this final path. Canonical publisher trust is now pinned; the next destructive boundary is still separate and requires the repository owner to deliberately record a **new Stable/MVP-specific authorization** only after the remaining canonical media proof is green. The old first-USB development consent is not reusable.
+The v4 physical plan adds `local-ai-runtime-image` and `local-ai-runtime-ref` to the previous 15-artifact shape; the previous authorization context is intentionally not reusable. There is no target-sized whole-disk RAW image in this final path. Canonical publisher trust is now pinned; the next destructive boundary is still separate and requires the repository owner to deliberately record a **new Stable/MVP-specific authorization** only after the remaining canonical media proof is green. The old first-USB development consent is not reusable.
 
 Read-only authorization preflight:
 
