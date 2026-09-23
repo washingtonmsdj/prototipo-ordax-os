@@ -1,17 +1,17 @@
 {
   "$schema": "prototype-ordax.physical-write-authorization/2",
-  "status": "authorized",
-  "physical_write_allowed": true,
-  "explicit_owner_authorization": true,
+  "status": "blocked-explicit-physical-authorization-pending",
+  "physical_write_allowed": false,
+  "explicit_owner_authorization": false,
   "scope": "first-real-stable-mvp-usb-proof",
   "source_repository": "washingtonmsdj/prototipo-ordax-os",
   "release_sequence": 1,
-  "authorization_context_sha256": "5f7b8fe3754ae87ad7bf6dcdd201f52a8f2bea1766353c70631054f2ebb52104",
+  "authorization_context_sha256": null,
   "bindings": {
     "minimal_bootstrap_sha256": "43e4c1f35816c3fe1561cee9eb15b5d810e2c7cd8da0e3308a40f9417bcd98d0",
     "release_trust_sha256": "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
     "portable_usb_contract_sha256": "d5f28c165b07c4d1201ac79f542a494f87ad520b31c98baa836313162f47c4c0",
-    "creator_portable_media_contract_sha256": "63b098c1e948c2336935e17060f21455a838fab73f481b547a6c7f7d0d38c408"
+    "creator_portable_media_contract_sha256": "f771e519221a59ab065f9f8cf8c02972e0a311755de22b9accae96c5581fc10c"
   },
   "requirements": {
     "canonical_public_trust_pinned": true,
@@ -24,7 +24,7 @@
     "writer_binds_portable_media_plan_sha256": true,
     "writer_binds_generated_media_sha256_and_size": true,
     "writer_binds_public_trust_sha256": true,
-    "writer_requires_exact_15_artifact_readback": true,
+    "writer_requires_exact_17_artifact_readback": true,
     "signed_release_sequence_must_never_decrease": true,
     "live_usb_reenumeration_required": true,
     "end_user_destructive_confirmation_required": true,
