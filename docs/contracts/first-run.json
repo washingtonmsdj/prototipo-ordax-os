@@ -49,7 +49,7 @@
       "fr-FR": "migration-in-progress"
     },
     "default_locale": "pt-BR",
-    "launch_locale_policy": "oobe-five-locales-shared-surface-catalog-with-explicit-completeness",
+    "launch_locale_policy": "mvp-public-pt-br-en-us-retain-hidden-oobe-translations",
     "default_time_zone": "America/Bahia",
     "time_zone_preference": "regional.time-zone",
     "missing_preference_recovery": "seed-from-completed-first-run",
@@ -57,7 +57,17 @@
     "editable_after_first_run_in_settings": true,
     "keyboard_layout_contract": "docs/contracts/keyboard-layout.json",
     "keyboard_layout_selector_exposed": false,
-    "keyboard_layout_selector_gate": "safe-current-session-apply-or-pre-surface-handoff"
+    "keyboard_layout_selector_gate": "safe-current-session-apply-or-pre-surface-handoff",
+    "public_mvp_locales": [
+      "pt-BR",
+      "en-US"
+    ],
+    "retained_compatible_locales": [
+      "es-ES",
+      "de-DE",
+      "fr-FR"
+    ],
+    "public_selector_must_only_offer_surface_ready_locales": true
   },
   "network": {
     "skippable": true,

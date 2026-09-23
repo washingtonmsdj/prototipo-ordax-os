@@ -11,17 +11,16 @@ support”:
 
 ## MVP language set
 
-The Native/USB first-use flow supports:
+The public Native/USB MVP selectors expose:
 
 - `pt-BR` — Portuguese (Brazil), source/default language;
-- `en-US` — English;
-- `es-ES` — Spanish;
-- `de-DE` — German;
-- `fr-FR` — French.
+- `en-US` — English.
 
-The selector must never label a language as completely translated merely
-because the OOBE is translated. Current English/Spanish/German/French coverage
-starts at the first-use flow and expands through shared Surface catalogs.
+The system still recognizes and can read persisted `es-ES`, `de-DE` and `fr-FR`
+state, and their existing OOBE translations remain in source as retained
+compatibility/future rollout assets. They are intentionally hidden from the public
+MVP selectors until their shared Surface/application coverage reaches the same
+launch standard. This avoids advertising a language based only on OOBE translation.
 
 ## Expansion order
 
@@ -59,9 +58,9 @@ Internet flows and remaining Surface copy still contain PT-BR text and remain in
 migration. Network and battery trays/quick panels plus the Notification Center now
 consume the shared localization owner. First-party update notifications persist bounded
 semantic presentation identity so stored history can rerender when the locale changes;
-generic producer text remains untouched by design. Spanish, German and French
-continue to use explicit source-language fallback outside the already translated
-OOBE until their shared catalogs are implemented.
+generic producer text remains untouched by design. Spanish, German and French remain recognized compatibility locales and retain their
+translated OOBE catalogs, but are not offered by the public MVP selectors until their
+shared Surface catalogs are complete enough for launch.
 
 ```text
 SURFACE_LOCALIZATION_OWNER=PASS_SOURCE
@@ -81,11 +80,13 @@ NETWORK_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 BATTERY_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 NOTIFICATION_CENTER_EN_US=PASS_SOURCE
 FIRST_PARTY_UPDATE_NOTIFICATION_HISTORY_EN_US=PASS_SOURCE
+MVP_PUBLIC_LOCALES=pt-BR,en-US
+RETAINED_COMPATIBLE_LOCALES=es-ES,de-DE,fr-FR
 SURFACE_COMPLETE_LOCALES=pt-BR
 SURFACE_EN_US_APP_CONTROLS=MIGRATING
-SURFACE_ES_ES=MIGRATING
-SURFACE_DE_DE=MIGRATING
-SURFACE_FR_FR=MIGRATING
+SURFACE_ES_ES=HIDDEN_MIGRATING
+SURFACE_DE_DE=HIDDEN_MIGRATING
+SURFACE_FR_FR=HIDDEN_MIGRATING
 ```
 
 ## Architecture
