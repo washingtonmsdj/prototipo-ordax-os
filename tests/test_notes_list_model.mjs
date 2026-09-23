@@ -41,6 +41,27 @@ test("relative time distinguishes minutes from hours", () => {
   assert.equal(formatNotesRelativeTime(now - 30 * 3_600_000, now), "Ontem");
 });
 
+test("relative time and empty body labels support the active locale", () => {
+  const now = Date.UTC(2026, 8, 19, 2, 0, 0);
+  assert.equal(
+    formatNotesRelativeTime(now - 15_000, now, {
+      locale: "en-US",
+      nowLabel: "Now",
+      yesterdayLabel: "Yesterday",
+    }),
+    "Now",
+  );
+  assert.equal(
+    formatNotesRelativeTime(now - 30 * 3_600_000, now, {
+      locale: "en-US",
+      nowLabel: "Now",
+      yesterdayLabel: "Yesterday",
+    }),
+    "Yesterday",
+  );
+  assert.equal(firstNotesBodyLine("", "Note has no content"), "Note has no content");
+});
+
 test("first body line ignores empty whitespace-only lines", () => {
   assert.equal(firstNotesBodyLine("\n   \nPrimeira ideia\nSegunda"), "Primeira ideia");
   assert.equal(firstNotesBodyLine(""), "Nota sem conteúdo");
@@ -66,6 +87,7 @@ test("query matches title, body, tasks and reference metadata", () => {
   assert.equal(noteMatchesQuery(candidate, "orçamento"), true);
   assert.equal(noteMatchesQuery(candidate, "referencia.png"), true);
   assert.equal(noteMatchesQuery(candidate, "inexistente"), false);
+  assert.equal(noteMatchesQuery(candidate, "PLANEJAMENTO", "en-US"), true);
 });
 
 test("visible notes preserve lifecycle, project, recent and ordering semantics", () => {
