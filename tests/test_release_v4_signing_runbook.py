@@ -2,6 +2,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+PREPARE_SCRIPT = ROOT / "tools/release-signing/windows/3-Prepare-PortableV4-SigningHandoff.ps1"
 SIGN_SCRIPT = ROOT / "tools/release-signing/windows/4-Sign-Initial-OrdaXRelease.ps1"
 SIGNING_DOC = ROOT / "docs/RELEASE-SIGNING.md"
 BUNDLE_DOC = ROOT / "docs/RELEASE-BUNDLE.md"
@@ -9,6 +10,19 @@ PIPELINE_DOC = ROOT / "docs/RELEASE-PIPELINE.md"
 
 
 class ReleaseV4SigningRunbookTests(unittest.TestCase):
+    def test_public_v4_handoff_preparer_never_accepts_private_material(self):
+        script = PREPARE_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("--manifest-schema', '4'", script)
+        self.assertIn("system.erofs,native-surface-runtime.erofs,local-ai-runtime.erofs", script)
+        self.assertIn("Copy-VerifiedFile", script)
+        self.assertIn("PRIVATE_KEY_INCLUDED=NO", script)
+        self.assertIn("RELEASE_PUBLISHED=NO", script)
+        self.assertIn("RELEASE_ACTIVATED=NO", script)
+        self.assertIn("PHYSICAL_WRITE_AUTHORIZED=NO", script)
+        self.assertIn("must use HTTPS with no embedded credentials", script)
+        self.assertNotIn("PrivateKeyPath", script)
+        self.assertNotIn("ordax-release-private.pem", script)
+
     def test_windows_signing_runbook_is_manifest_v4_aware(self):
         script = SIGN_SCRIPT.read_text(encoding="utf-8")
         self.assertIn("prototype-ordax.release-manifest/4", script)
