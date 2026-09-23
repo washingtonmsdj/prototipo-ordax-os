@@ -149,7 +149,7 @@ class NativeKeyboardLayoutTests(unittest.TestCase):
         self.assertIn("assertKeyboardLayoutPort", settings)
         self.assertIn("validateKeyboardLayoutSnapshot", settings)
         self.assertIn("KEYBOARD_LAYOUT_OPTIONS", settings)
-        self.assertIn('"Próximo início"', settings)
+        self.assertIn('t("settings.keyboard.marker.nextStart")', settings)
         self.assertIn("keyboardLayoutPort.configure", settings)
         self.assertNotIn("/__ordax/native/keyboard-layout", settings)
         self.assertIn(".ordax-settings-keyboard-option", css)
