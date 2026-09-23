@@ -4,6 +4,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 CONTROLS = ROOT / "system/surface/ui/system-overview-controls.mjs"
 CATALOG = ROOT / "system/services/i18n/catalog/system.mjs"
+PRESENTATION = ROOT / "system/services/update/presentation.mjs"
 
 
 class SystemUpdateDetailsLocalizationTests(unittest.TestCase):
@@ -81,6 +82,66 @@ class SystemUpdateDetailsLocalizationTests(unittest.TestCase):
         ):
             self.assertNotIn(hardcoded, block)
 
+    def test_components_about_capabilities_and_intelligence_are_localized(self):
+        controls = CONTROLS.read_text(encoding="utf-8")
+        for marker in (
+            't("system.components.scope.title")',
+            't("system.components.scope.productionBoundary")',
+            'componentChannelLabel(component.updateChannel)',
+            'componentTitleLabel(component.id, component.title)',
+            't("system.about.delivery.kicker")',
+            't("system.components.versionsTitle")',
+            't("system.capabilities.title")',
+            't("system.intelligence.title")',
+            't("system.intelligence.description"',
+            't("system.intelligence.answer.provenance")',
+        ):
+            self.assertIn(marker, controls)
+        for hardcoded in (
+            '"OrdaX e aplicativos"',
+            '"Versões e isolamento"',
+            '"Capacidades desta execução"',
+            '"Explicação local do estado"',
+            '"Fonte: snapshot local de Sistema · autoridade: nenhuma"',
+            '"Estado de componentes e saúde persistido neste dispositivo."',
+        ):
+            self.assertNotIn(hardcoded, controls)
+
+    def test_runtime_failures_store_semantic_ids_not_rendered_copy(self):
+        controls = CONTROLS.read_text(encoding="utf-8")
+        for state_name in (
+            "metricsMessageId",
+            "historyMessageId",
+            "recoveryMessageId",
+            "intelligenceMessageId",
+        ):
+            self.assertIn(state_name, controls)
+        for assignment in (
+            'metricsMessageId = "system.resources.readFailed"',
+            'historyMessageId = "system.history.readFailed"',
+            'recoveryMessageId = "system.recovery.readFailed"',
+            'intelligenceMessageId = "system.intelligence.message.analyzing"',
+            'intelligenceMessageId = "system.intelligence.message.completed"',
+            'intelligenceMessageId = "system.intelligence.message.failed"',
+        ):
+            self.assertIn(assignment, controls)
+        self.assertNotIn('historyMessage = t(', controls)
+        self.assertNotIn('recoveryMessage = t(', controls)
+
+    def test_obsolete_pt_br_update_helpers_are_removed(self):
+        presentation = PRESENTATION.read_text(encoding="utf-8")
+        for helper in (
+            "formatUpdateTimestamp",
+            "readableUpdateMode",
+            "readableBaseUpdatePhase",
+            "readableUpdatePhase",
+            "updateBootLabel",
+            "updateAttentionMessage",
+        ):
+            self.assertNotIn(f"export function {helper}", presentation)
+        for retained in ("updateStatusLabel", "updateSummaryLabel", "updateSummaryDetail"):
+            self.assertIn(f"export function {retained}", presentation)
+
     def test_catalog_has_pt_br_and_en_us_update_details(self):
         catalog = CATALOG.read_text(encoding="utf-8")
         self.assertIn('"system.updates.title": "Entrega e recuperação"', catalog)
@@ -94,6 +155,16 @@ class SystemUpdateDetailsLocalizationTests(unittest.TestCase):
         self.assertIn('"system.history.title": "Update history"', catalog)
         self.assertIn('"system.history.result.rolledBack": "Revertida"', catalog)
         self.assertIn('"system.history.result.rolledBack": "Rolled back"', catalog)
+        self.assertIn('"system.components.scope.title": "OrdaX e aplicativos"', catalog)
+        self.assertIn('"system.components.scope.title": "OrdaX and apps"', catalog)
+        self.assertIn('"system.components.title.updateService": "Serviço de Atualização"', catalog)
+        self.assertIn('"system.components.title.updateService": "Update Service"', catalog)
+        self.assertIn('"system.capabilities.title": "Capacidades desta execução"', catalog)
+        self.assertIn('"system.capabilities.title": "Capabilities in this run"', catalog)
+        self.assertIn('"system.intelligence.title": "Explicação local do estado"', catalog)
+        self.assertIn('"system.intelligence.title": "Local state explanation"', catalog)
+        self.assertIn('"system.resources.readFailedPrevious":', catalog)
+        self.assertEqual(catalog.count('"system.intelligence.message.completed"'), 2)
 
 
 if __name__ == "__main__":
