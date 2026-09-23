@@ -176,11 +176,11 @@ class NativeNetworkManagementTests(unittest.TestCase):
         composition = COMPOSITION.read_text(encoding="utf-8")
         self.assertIn("contracts/network-management.mjs", controls)
         self.assertIn("assertNetworkManagementPort", controls)
-        self.assertIn('"Procurar redes"', controls)
-        self.assertIn('"Conectar"', controls)
-        self.assertIn('"Desconectar"', controls)
-        self.assertIn('"Esquecer"', controls)
-        self.assertIn('"Reconectar"', controls)
+        self.assertIn('"network.quick.action.scan"', controls)
+        self.assertIn('"network.quick.action.connect"', controls)
+        self.assertIn('"network.quick.action.disconnect"', controls)
+        self.assertIn('"settings.network.action.forget"', controls)
+        self.assertIn('"network.quick.action.reconnect"', controls)
         self.assertIn('input.type = "password"', controls)
         self.assertIn('input.autocomplete = "off"', controls)
         self.assertIn('input.value = ""', controls)
@@ -220,7 +220,7 @@ class NativeNetworkManagementTests(unittest.TestCase):
         combined = capture + restore
         for forbidden in ("localStorage", "sessionStorage", "fetch(", "preferences.set"):
             self.assertNotIn(forbidden, combined)
-        self.assertNotIn("networkManagementMessage =", capture)
+        self.assertNotIn("networkManagementMessageId =", capture)
         self.assertNotIn("selectedNetworkSsid =", capture)
 
     def test_quick_wifi_panel_reuses_neutral_owner_and_keeps_password_ephemeral(self):
@@ -232,6 +232,8 @@ class NativeNetworkManagementTests(unittest.TestCase):
         self.assertIn("contracts/network-status.mjs", controls)
         self.assertIn("services/network/management-runtime.mjs", controls)
         self.assertIn("services/network/management-runtime.mjs", settings)
+        self.assertIn("networkManagementActionMessageId", settings)
+        self.assertIn("networkManagementFailureMessageId", settings)
         self.assertIn("assertNetworkManagementPort", controls)
         self.assertIn("assertNetworkStatusPort", controls)
         self.assertIn("assertSurfaceRenderLifecycle", controls)
