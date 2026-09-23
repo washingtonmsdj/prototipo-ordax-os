@@ -3,6 +3,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTROLS = ROOT / "system" / "apps" / "internet" / "ui" / "browser-controls.mjs"
+INTERNET_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "internet.mjs"
 NATIVE_MAIN = ROOT / "system" / "composition" / "native" / "main.mjs"
 WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.mjs"
 INTERNET_RUNTIME = ROOT / "system" / "apps" / "internet" / "runtime.mjs"
@@ -25,7 +26,9 @@ class InternetFavoritesContractTests(unittest.TestCase):
         self.assertIn('favoritePort.remove(', controls)
         self.assertIn('dataset.browserFavoritesToggle', controls)
         self.assertIn('dataset.browserOpenFavorite', controls)
-        self.assertIn('iconButton(documentObject, "☆", "Adicionar aos favoritos", "bookmark")', controls)
+        i18n = self.text(INTERNET_I18N)
+        self.assertIn('iconButton(documentObject, "☆", t("internet.action.bookmark"), "bookmark")', controls)
+        self.assertIn('"internet.action.bookmark": "Add to favorites"', i18n)
         self.assertNotIn('localStorage', controls)
         self.assertNotIn('sessionStorage', controls)
         self.assertNotIn('/__ordax/native/', controls)
