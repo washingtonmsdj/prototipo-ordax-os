@@ -101,7 +101,7 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
             self.assertIn(f'activeSection === "{section}"', system)
         self.assertNotIn('id: "recovery"', system)
         self.assertNotIn('id: "energy"', system)
-        self.assertIn("Este host não informa uma identidade técnica de entrega", system)
+        self.assertIn('t("system.about.delivery.hostUnavailable")', system)
         self.assertIn('t("system.resources.storage.scope")', system)
         self.assertIn('"system.resources.storage.scope":', catalog)
         self.assertIn("Não representa o disco físico inteiro", catalog)
