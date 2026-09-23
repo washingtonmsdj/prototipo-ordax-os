@@ -11,6 +11,7 @@ ADAPTER = ROOT / "system" / "adapters" / "native" / "system-metrics.mjs"
 CONTROLS = ROOT / "system" / "surface" / "ui" / "system-overview-controls.mjs"
 COMPOSITION = ROOT / "system" / "composition" / "native" / "main.mjs"
 CAPABILITIES = ROOT / "docs" / "contracts" / "product-capabilities.json"
+SYSTEM_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "system.mjs"
 
 spec = importlib.util.spec_from_file_location("ordax_native_metrics_test", SERVER)
 native_host = importlib.util.module_from_spec(spec)
@@ -42,7 +43,6 @@ class NativeSystemMetricsTests(unittest.TestCase):
                 "MemTotal: 4096 kB\nMemAvailable: 1024 kB\nMemFree: 512 kB\n",
                 encoding="utf-8",
             )
-
             metrics = native_host.read_system_metrics(str(user), str(proc))
             self.assertEqual(metrics["uptimeSeconds"], 3723)
             self.assertEqual(metrics["memoryTotalBytes"], 4096 * 1024)
@@ -52,13 +52,7 @@ class NativeSystemMetricsTests(unittest.TestCase):
             self.assertLessEqual(metrics["userStorageFreeBytes"], metrics["userStorageTotalBytes"])
             self.assertEqual(
                 set(metrics),
-                {
-                    "uptimeSeconds",
-                    "memoryTotalBytes",
-                    "memoryAvailableBytes",
-                    "userStorageTotalBytes",
-                    "userStorageFreeBytes",
-                },
+                {"uptimeSeconds", "memoryTotalBytes", "memoryAvailableBytes", "userStorageTotalBytes", "userStorageFreeBytes"},
             )
 
     def test_metrics_contract_adapter_and_shared_ui_stay_separated(self):
@@ -66,6 +60,7 @@ class NativeSystemMetricsTests(unittest.TestCase):
         adapter = ADAPTER.read_text(encoding="utf-8")
         controls = CONTROLS.read_text(encoding="utf-8")
         composition = COMPOSITION.read_text(encoding="utf-8")
+        catalog = SYSTEM_I18N.read_text(encoding="utf-8")
         self.assertIn('ordax.system-metrics/1', contract)
         self.assertIn("validateSystemMetricsSnapshot", contract)
         self.assertIn('/__ordax/native/metrics', adapter)
@@ -74,14 +69,20 @@ class NativeSystemMetricsTests(unittest.TestCase):
         self.assertIn("contracts/surface-render-lifecycle.mjs", controls)
         self.assertIn("assertSurfaceRenderLifecycle", controls)
         self.assertNotIn("MutationObserver", controls)
-        self.assertIn('t("system.overview.card.uptime")', controls)
-        self.assertIn("Espaço do usuário", controls)
-        self.assertIn('"Memória"', controls)
-        self.assertIn('"Armazenamento"', controls)
-        self.assertIn("Não representa o disco físico inteiro", controls)
+        for message_id in (
+            "system.overview.card.uptime",
+            "system.resources.memory.title",
+            "system.resources.storage.title",
+            "system.resources.storage.scope",
+            "system.resources.stale",
+        ):
+            self.assertIn(f't("{message_id}"', controls)
+        self.assertIn('"system.resources.memory.title": "Memória"', catalog)
+        self.assertIn('"system.resources.storage.title": "Espaço do usuário"', catalog)
+        self.assertIn("Não representa o disco físico inteiro", catalog)
+        self.assertIn("Leitura antiga", catalog)
         self.assertIn("metricsReadFailed", controls)
         self.assertIn("metricsLastSuccessAt", controls)
-        self.assertIn("Leitura antiga", controls)
         self.assertIn("última leitura válida recebida pela Surface", controls)
         self.assertIn("formatObservationReceivedAt", controls)
         self.assertNotIn("adapters/native", controls)
@@ -95,10 +96,7 @@ class NativeSystemMetricsTests(unittest.TestCase):
     def test_capability_is_native_only_and_read_only(self):
         contract = json.loads(CAPABILITIES.read_text(encoding="utf-8"))
         capabilities = {entry["id"]: entry for entry in contract["capabilities"]}
-        self.assertEqual(
-            capabilities["system.metrics"]["security_boundary"],
-            "read-only-device-observability",
-        )
+        self.assertEqual(capabilities["system.metrics"]["security_boundary"], "read-only-device-observability")
         modes = {mode["id"]: mode for mode in contract["modes"]}
         self.assertIn("system.metrics", modes["usb"]["baseline_capabilities"])
         self.assertIn("system.metrics", modes["native-disk"]["baseline_capabilities"])
@@ -110,10 +108,7 @@ class NativeSystemMetricsTests(unittest.TestCase):
         server = SERVER.read_text(encoding="utf-8")
         self.assertIn('METRICS_PATH = "/__ordax/native/metrics"', server)
         self.assertIn("read_system_metrics(self.server.user_root)", server)
-        self.assertRegex(
-            server,
-            r'parsed_path in \{[^}]*METRICS_PATH[^}]*\} and self\.client_address\[0\] != "127\.0\.0\.1"',
-        )
+        self.assertRegex(server, r'parsed_path in \{[^}]*METRICS_PATH[^}]*\} and self\.client_address\[0\] != "127\.0\.0\.1"')
         self.assertNotIn("if self.path == METRICS_PATH", server.split("def do_POST", 1)[1])
 
 
