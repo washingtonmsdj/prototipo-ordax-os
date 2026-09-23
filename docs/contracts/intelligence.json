@@ -26,7 +26,7 @@
       "system"
     ],
     "direct_provider_access_from_consumers": false,
-    "stable_v4_backend_lifecycle": "pending-mount-and-launch"
+    "stable_v4_backend_lifecycle": "source-handoff-implemented-signed-stable-materialization-pending"
   },
   "authority": {
     "mvp_authority": "none",
@@ -70,6 +70,8 @@
     "note_summary_is_read_only": true,
     "system_explanation_is_read_only": true,
     "backend_absence_must_not_block_surface": true,
-    "stable_v4_backend_lifecycle_required_pre_usb": true
+    "stable_v4_backend_lifecycle_required_pre_usb": true,
+    "stable_v4_boot_handoff_source_complete": true,
+    "signed_stable_v4_materialization_pending": true
   }
 }
