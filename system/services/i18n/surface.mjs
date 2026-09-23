@@ -8,6 +8,7 @@ import { NOTES_SOURCE_MESSAGES, NOTES_ENGLISH_MESSAGES } from "./catalog/notes.m
 import { INTERNET_SOURCE_MESSAGES, INTERNET_ENGLISH_MESSAGES } from "./catalog/internet.mjs";
 import { ACCOUNT_SOURCE_MESSAGES, ACCOUNT_ENGLISH_MESSAGES } from "./catalog/account.mjs";
 import { NETWORK_SOURCE_MESSAGES, NETWORK_ENGLISH_MESSAGES } from "./catalog/network.mjs";
+import { POWER_SOURCE_MESSAGES, POWER_ENGLISH_MESSAGES } from "./catalog/power.mjs";
 
 export const SURFACE_SOURCE_LOCALE = "pt-BR";
 export const SURFACE_COMPLETE_LOCALES = Object.freeze(["pt-BR"]);
@@ -104,7 +105,8 @@ const SOURCE = Object.freeze({
   ...ACCOUNT_SOURCE_MESSAGES,
   ...NOTES_SOURCE_MESSAGES,
   ...INTERNET_SOURCE_MESSAGES,
-  ...NETWORK_SOURCE_MESSAGES
+  ...NETWORK_SOURCE_MESSAGES,
+  ...POWER_SOURCE_MESSAGES
 });
 
 const ENGLISH = Object.freeze({
@@ -198,7 +200,8 @@ const ENGLISH = Object.freeze({
   ...ACCOUNT_ENGLISH_MESSAGES,
   ...NOTES_ENGLISH_MESSAGES,
   ...INTERNET_ENGLISH_MESSAGES,
-  ...NETWORK_ENGLISH_MESSAGES
+  ...NETWORK_ENGLISH_MESSAGES,
+  ...POWER_ENGLISH_MESSAGES
 });
 
 const TABLES = Object.freeze({
