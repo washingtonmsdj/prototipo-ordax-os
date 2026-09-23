@@ -49,6 +49,7 @@ import { createUpdateDiagnosticRecorder } from "../../services/diagnostics/updat
 import { createPreferenceSyncRuntime } from "../../services/sync/preference-runtime.mjs";
 import { createWorkspaceMetadataBridge } from "../../services/sync/workspace-metadata.mjs";
 import { seedMissingRegionalPreferencesFromFirstRun } from "../../services/state/first-run.mjs";
+import { REGIONAL_LOCALE_PREFERENCE_ID } from "../../services/preferences/regional.mjs";
 import { createNativeDiagnosticReviewComposition } from "./diagnostics.mjs";
 import { mountAccountOverviewControls } from "../../surface/ui/account-overview-controls.mjs";
 import { mountFileSpaceControls } from "../../surface/ui/file-space-controls.mjs";
@@ -81,7 +82,6 @@ async function optionalNativeProbe(label, factory) {
 const bootScreen = createSurfaceBootScreen(document);
 
 async function start() {
-  bootScreen.setStage("Carregando superfície…");
   const root = document.querySelector("#ordax-root");
   if (!root) {
     throw new Error("OrdaX composition root is missing #ordax-root");
@@ -165,6 +165,10 @@ async function start() {
   if (regionalRecovery.changed) {
     preferenceStore.save(regionalRecovery.snapshot);
   }
+  bootScreen.setLocale(
+    regionalRecovery.snapshot[REGIONAL_LOCALE_PREFERENCE_ID] ?? "pt-BR",
+  );
+  bootScreen.setStage("boot.loadingSurface");
   const [
     clientDiagnostics,
     diagnosticJournalStore,
@@ -424,7 +428,7 @@ async function start() {
   void updateWatcher.markHealthy();
   const surfaceHeartbeat = createNativeSurfaceHeartbeat(window);
 
-  bootScreen.setStage("Carregando aplicativos…");
+  bootScreen.setStage("boot.loadingApps");
 
   const notesComponent = await loadOptionalComponentRuntime({
     componentId: "notes",
@@ -463,7 +467,7 @@ async function start() {
     },
   });
 
-  bootScreen.setStage("Preparando primeiro uso…");
+  bootScreen.setStage("boot.preparingFirstRun");
   let firstRun = null;
   try {
     firstRun = mountFirstRunExperience(root, {
@@ -533,6 +537,6 @@ async function start() {
 }
 
 start().catch((error) => {
-  bootScreen.fail("Não foi possível iniciar a interface");
+  bootScreen.fail("boot.failed");
   console.error("OrdaX native composition failed", error);
 });
