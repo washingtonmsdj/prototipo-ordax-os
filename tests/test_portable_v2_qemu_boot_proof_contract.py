@@ -100,6 +100,7 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
         self.assertIn("ORDAX_SURFACE_RUNTIME_SHA256=", text)
         self.assertIn("ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED", text)
         self.assertIn("ORDAX_LOCAL_AI_RUNTIME_SHA256=", text)
+        self.assertIn("ORDAX_LOCAL_AI_BACKEND=STARTED", text)
         self.assertIn('"-net", "none"', text)
         self.assertIn('"qemu_direct_kernel_boot_proven": True', text)
         self.assertIn('"qemu_uefi_boot_proven": False', text)
