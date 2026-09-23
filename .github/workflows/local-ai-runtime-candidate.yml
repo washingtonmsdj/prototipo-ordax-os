@@ -9,6 +9,7 @@ on:
       - 'docs/contracts/local-ai.json'
       - 'tests/test_local_ai_contract.py'
       - 'tests/test_local_ai_runtime_builder.py'
+      - 'tests/test_v4_real_ai_materialization_workflow.py'
       - '.github/workflows/local-ai-runtime-candidate.yml'
   workflow_dispatch:
 
@@ -52,7 +53,8 @@ jobs:
           python -m py_compile bootstrap/local-ai-runtime/build.py
           python -m unittest \
             tests.test_local_ai_contract \
-            tests.test_local_ai_runtime_builder -v
+            tests.test_local_ai_runtime_builder \
+            tests.test_v4_real_ai_materialization_workflow -v
 
       - name: Build real local AI runtime twice
         env:
