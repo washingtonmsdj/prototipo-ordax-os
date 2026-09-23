@@ -919,11 +919,21 @@ function buildCompositionProofExpression(moduleSources, styles, assetUrls) {
     result.internetDoesNotEmbedWebContent = internetSlot?.querySelector('iframe') === null
       && internetSlot?.querySelector('[data-browser-viewport] iframe') === null;
 
-    const closePendingTitle = notesSlot?.querySelector('[data-notes-title]');
-    closePendingTitle.value = 'Nota salva ao fechar';
-    closePendingTitle.dispatchEvent(new Event('input', { bubbles: true }));
-    root.querySelector('[data-window-id="notes"] [data-window-action="close"]')?.click();
-    result.notesWindowClosedWithPendingEdit = root.querySelector('[data-window-id="notes"]') === null
+    const notesSlotAfterInternet = root.querySelector(
+      '[data-window-id="notes"] [data-app-extension="notes-workspace"]',
+    );
+    result.notesSlotPreservedAfterInternet = notesSlotAfterInternet === notesSlot;
+    result.notesOwnerPreservedAfterInternet =
+      notesSlotAfterInternet?.dataset.ordaxNotesMounted === 'true';
+    const closePendingTitle = notesSlotAfterInternet?.querySelector('[data-notes-title]');
+    result.notesTitleAvailableAfterInternet = Boolean(closePendingTitle);
+    if (closePendingTitle) {
+      closePendingTitle.value = 'Nota salva ao fechar';
+      closePendingTitle.dispatchEvent(new Event('input', { bubbles: true }));
+      root.querySelector('[data-window-id="notes"] [data-window-action="close"]')?.click();
+    }
+    result.notesWindowClosedWithPendingEdit = Boolean(closePendingTitle)
+      && root.querySelector('[data-window-id="notes"]') === null
       && parsedStorage('ordax.notes.v1')?.notes?.some(
         (item) => item.title === 'Nota salva ao fechar',
       ) === true;
@@ -1091,6 +1101,8 @@ function buildCompositionProofExpression(moduleSources, styles, assetUrls) {
       'notesWebReferenceAdded', 'notesWebReferenceHostRendered',
       'notesReferenceOpenedInInternet', 'internetTargetPersisted',
       'internetFailsClosedOnWeb', 'internetDoesNotEmbedWebContent',
+      'notesSlotPreservedAfterInternet', 'notesOwnerPreservedAfterInternet',
+      'notesTitleAvailableAfterInternet',
       'notesWindowClosedWithPendingEdit', 'notesPendingEditRestoredAfterClose',
       'accountOwnerMounted', 'accountUnavailable', 'accountNoFakeIdentityAction',
       'systemOwnerMounted', 'systemOverviewDefault',

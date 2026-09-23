@@ -4,6 +4,8 @@ import { REGIONAL_LOCALE_PREFERENCE_ID } from "../preferences/regional.mjs";
 import { FILES_SOURCE_MESSAGES, FILES_ENGLISH_MESSAGES } from "./catalog/files.mjs";
 import { SETTINGS_SOURCE_MESSAGES, SETTINGS_ENGLISH_MESSAGES } from "./catalog/settings.mjs";
 import { SYSTEM_SOURCE_MESSAGES, SYSTEM_ENGLISH_MESSAGES } from "./catalog/system.mjs";
+import { NOTES_SOURCE_MESSAGES, NOTES_ENGLISH_MESSAGES } from "./catalog/notes.mjs";
+import { INTERNET_SOURCE_MESSAGES, INTERNET_ENGLISH_MESSAGES } from "./catalog/internet.mjs";
 import { ACCOUNT_SOURCE_MESSAGES, ACCOUNT_ENGLISH_MESSAGES } from "./catalog/account.mjs";
 
 export const SURFACE_SOURCE_LOCALE = "pt-BR";
@@ -70,31 +72,26 @@ const SOURCE = Object.freeze({
   "app.files.panel.0.label": "Espaço do usuário",
   "app.files.panel.0.title": "Arquivos",
   "app.files.panel.0.body": "Este host não expõe um espaço local de arquivos para esta Surface.",
-
   "app.notes.title": "Notas",
   "app.notes.description": "Escrita local, projetos, tarefas e referências disponíveis offline.",
   "app.notes.panel.0.label": "Notas",
   "app.notes.panel.0.title": "Seu espaço de escrita",
   "app.notes.panel.0.body": "O espaço local de Notas não está disponível nesta composição.",
-
   "app.internet.title": "Internet",
   "app.internet.description": "Navegue, organize referências e conecte pesquisa ao seu trabalho.",
   "app.internet.panel.0.label": "Navegador",
   "app.internet.panel.0.title": "Internet",
   "app.internet.panel.0.body": "A navegação integrada depende de um engine isolado fornecido pelo host.",
-
   "app.settings.title": "Ajustes",
   "app.settings.description": "Preferências compartilhadas, aparência e rede do OrdaX.",
   "app.settings.panel.0.label": "Ajustes",
   "app.settings.panel.0.title": "Preferências do OrdaX",
   "app.settings.panel.0.body": "As preferências desta Surface não estão disponíveis neste host.",
-
   "app.account.title": "Conta",
   "app.account.description": "Identidade, acesso e continuidade segura entre os modos do OrdaX.",
   "app.account.panel.0.label": "Conta",
   "app.account.panel.0.title": "Identidade e continuidade",
   "app.account.panel.0.body": "Este host não oferece uma integração de identidade para esta Surface.",
-
   "app.system.title": "Sistema",
   "app.system.description": "Entrega, atualizações, conectividade e recursos desta execução do OrdaX.",
   "app.system.panel.0.label": "Sistema",
@@ -103,7 +100,9 @@ const SOURCE = Object.freeze({
   ...FILES_SOURCE_MESSAGES,
   ...SETTINGS_SOURCE_MESSAGES,
   ...SYSTEM_SOURCE_MESSAGES,
-  ...ACCOUNT_SOURCE_MESSAGES
+  ...ACCOUNT_SOURCE_MESSAGES,
+  ...NOTES_SOURCE_MESSAGES,
+  ...INTERNET_SOURCE_MESSAGES
 });
 
 const ENGLISH = Object.freeze({
@@ -166,31 +165,26 @@ const ENGLISH = Object.freeze({
   "app.files.panel.0.label": "User space",
   "app.files.panel.0.title": "Files",
   "app.files.panel.0.body": "This host does not expose local file storage to this Surface.",
-
   "app.notes.title": "Notes",
   "app.notes.description": "Local writing, projects, tasks, and references available offline.",
   "app.notes.panel.0.label": "Notes",
   "app.notes.panel.0.title": "Your writing space",
   "app.notes.panel.0.body": "The local Notes workspace is unavailable in this composition.",
-
   "app.internet.title": "Internet",
   "app.internet.description": "Browse, organize references, and connect research to your work.",
   "app.internet.panel.0.label": "Browser",
   "app.internet.panel.0.title": "Internet",
   "app.internet.panel.0.body": "Integrated browsing depends on an isolated engine supplied by the host.",
-
   "app.settings.title": "Settings",
   "app.settings.description": "Shared preferences, appearance, and OrdaX network settings.",
   "app.settings.panel.0.label": "Settings",
   "app.settings.panel.0.title": "OrdaX preferences",
   "app.settings.panel.0.body": "Surface preferences are unavailable on this host.",
-
   "app.account.title": "Account",
   "app.account.description": "Identity, access, and secure continuity across OrdaX modes.",
   "app.account.panel.0.label": "Account",
   "app.account.panel.0.title": "Identity and continuity",
   "app.account.panel.0.body": "This host does not provide identity integration for this Surface.",
-
   "app.system.title": "System",
   "app.system.description": "Delivery, updates, connectivity, and resources for this OrdaX run.",
   "app.system.panel.0.label": "System",
@@ -199,7 +193,9 @@ const ENGLISH = Object.freeze({
   ...FILES_ENGLISH_MESSAGES,
   ...SETTINGS_ENGLISH_MESSAGES,
   ...SYSTEM_ENGLISH_MESSAGES,
-  ...ACCOUNT_ENGLISH_MESSAGES
+  ...ACCOUNT_ENGLISH_MESSAGES,
+  ...NOTES_ENGLISH_MESSAGES,
+  ...INTERNET_ENGLISH_MESSAGES
 });
 
 const TABLES = Object.freeze({
@@ -216,34 +212,24 @@ function interpolate(text, values = {}) {
 
 export function createSurfaceLocalization(preferenceRuntime) {
   const preferences = assertPreferenceRuntimePort(preferenceRuntime);
-  let observedLocale =
-    preferences.getSnapshot()[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_SOURCE_LOCALE;
+  let observedLocale = preferences.getSnapshot()[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_SOURCE_LOCALE;
   const listeners = new Set();
-  const currentLocale = () =>
-    preferences.getSnapshot()[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_SOURCE_LOCALE;
+  const currentLocale = () => preferences.getSnapshot()[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_SOURCE_LOCALE;
 
   const translate = (messageId, values = {}) => {
-    if (typeof messageId !== "string" || !messageId) {
-      throw new TypeError("Localization message id must be a non-empty string");
-    }
+    if (typeof messageId !== "string" || !messageId) throw new TypeError("Localization message id must be a non-empty string");
     const source = SOURCE[messageId];
-    if (typeof source !== "string") {
-      throw new TypeError(`Unknown Surface localization message: ${messageId}`);
-    }
+    if (typeof source !== "string") throw new TypeError(`Unknown Surface localization message: ${messageId}`);
     const translated = TABLES[currentLocale()]?.[messageId] ?? source;
     return interpolate(translated, values);
   };
 
   const port = {
     schema: LOCALIZATION_SCHEMA,
-    getLocale() {
-      return currentLocale();
-    },
+    getLocale() { return currentLocale(); },
     translate,
     subscribe(listener) {
-      if (typeof listener !== "function") {
-        throw new TypeError("Localization listener must be a function");
-      }
+      if (typeof listener !== "function") throw new TypeError("Localization listener must be a function");
       listeners.add(listener);
       listener(currentLocale());
       return () => listeners.delete(listener);
@@ -273,11 +259,5 @@ export function surfaceCatalogCoverage(locale) {
   const table = TABLES[locale] ?? null;
   const total = Object.keys(SOURCE).length;
   const translated = table ? Object.keys(table).length : 0;
-  return Object.freeze({
-    locale,
-    sourceLocale: SURFACE_SOURCE_LOCALE,
-    translated,
-    total,
-    complete: locale === SURFACE_SOURCE_LOCALE || translated === total,
-  });
+  return Object.freeze({ locale, sourceLocale: SURFACE_SOURCE_LOCALE, translated, total, complete: locale === SURFACE_SOURCE_LOCALE || translated === total });
 }

@@ -3,6 +3,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTROLS = ROOT / "system" / "apps" / "internet" / "ui" / "browser-controls.mjs"
+INTERNET_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "internet.mjs"
 NATIVE_MAIN = ROOT / "system" / "composition" / "native" / "main.mjs"
 WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.mjs"
 INTERNET_RUNTIME = ROOT / "system" / "apps" / "internet" / "runtime.mjs"
@@ -74,8 +75,11 @@ class InternetProjectContextContractTests(unittest.TestCase):
 
     def test_project_selection_is_explicitly_session_scoped(self):
         controls = self.text(CONTROLS)
-        self.assertIn('PROJETO DESTA SESSÃO', controls)
-        self.assertIn('A escolha vale apenas para esta sessão do navegador.', controls)
+        i18n = self.text(INTERNET_I18N)
+        self.assertIn('t("internet.project.sessionHeading")', controls)
+        self.assertIn('t("internet.project.choose")', controls)
+        self.assertIn('"internet.project.sessionHeading": "PROJECT FOR THIS SESSION"', i18n)
+        self.assertIn('"internet.project.choose": "Choose a project already registered in Files. The selection applies only to this browser session."', i18n)
         self.assertIn('selectedProjectId = null', controls)
         self.assertIn('dataset.browserProjectOptions', controls)
         self.assertIn('aria-pressed', controls)

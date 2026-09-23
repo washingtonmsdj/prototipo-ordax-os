@@ -24,6 +24,7 @@ NOTES_FILE_PICKER = ROOT / "system" / "apps" / "notes" / "ui" / "file-picker.mjs
 NOTES_EDITOR_SAVE = ROOT / "system" / "apps" / "notes" / "ui" / "editor-save.mjs"
 NOTES_REFERENCE_LINKS = ROOT / "system" / "apps" / "notes" / "ui" / "reference-links.mjs"
 NOTES_CSS = ROOT / "system" / "apps" / "notes" / "notes.css"
+NOTES_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "notes.mjs"
 DESKTOP_SHELL = ROOT / "system" / "surface" / "ui" / "desktop-shell.mjs"
 WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.mjs"
 NATIVE_MAIN = ROOT / "system" / "composition" / "native" / "main.mjs"
@@ -155,13 +156,15 @@ class NotesNativeTests(unittest.TestCase):
         native_html = NATIVE_HTML.read_text(encoding="utf-8")
 
         self.assertIn('[data-app-extension="notes-workspace"]', controls)
-        self.assertIn("Buscar notas", controls)
-        self.assertIn("Nova nota", controls)
-        self.assertIn("Favoritas", controls)
-        self.assertIn("Recentes", controls)
-        self.assertIn("Lixeira", controls)
-        self.assertIn("Referências", controls)
-        self.assertIn("Disponível offline", controls)
+        notes_i18n = NOTES_I18N.read_text(encoding="utf-8")
+        self.assertIn('t("notes.search.placeholder")', controls)
+        self.assertIn('t("notes.action.newNote")', controls)
+        self.assertIn('t("notes.nav.favorites")', controls)
+        self.assertIn('t("notes.nav.recents")', controls)
+        self.assertIn('t("notes.nav.trash")', controls)
+        self.assertIn('t("notes.references.title")', controls)
+        self.assertIn('t("notes.offline.available")', controls)
+        self.assertIn('"notes.action.newNote": "New note"', notes_i18n)
         self.assertNotIn("Começar pequeno. Manter o que importa.", controls)
         self.assertIn("scheduleSave", controls)
         self.assertIn("captureEditorPayload", controls)
@@ -187,7 +190,7 @@ class NotesNativeTests(unittest.TestCase):
         self.assertIn("toggleNotesRichInlineMark", controls)
         self.assertIn("setNotesRichBlockType", controls)
         self.assertIn("handleNotesRichBlockKeyDown", controls)
-        self.assertIn('title.placeholder = "Título da nota"', controls)
+        self.assertIn('title.placeholder = t("notes.document.titlePlaceholder")', controls)
         self.assertIn("onWorkspaceKeyDown", controls)
         self.assertIn("createNewNote", controls)
         self.assertIn("focusNotesSearch", controls)
@@ -202,8 +205,10 @@ class NotesNativeTests(unittest.TestCase):
         self.assertIn('key === "i"', controls)
         self.assertIn('key === "k"', controls)
         self.assertIn('key === "s"', controls)
-        self.assertIn("Ctrl/Cmd+B", controls)
-        self.assertIn("Ctrl/Cmd+K", controls)
+        self.assertIn('t("notes.tool.bold")', controls)
+        self.assertIn('t("notes.tool.link")', controls)
+        self.assertIn('"notes.tool.bold": "Bold (Ctrl/Cmd+B)"', notes_i18n)
+        self.assertIn('"notes.tool.link": "Insert link in text (Ctrl/Cmd+K)"', notes_i18n)
         self.assertIn("event.ctrlKey || event.metaKey", controls)
         self.assertNotIn("wrapSelection", controls)
         self.assertNotIn("prefixSelectedLines", controls)
@@ -260,8 +265,8 @@ class NotesNativeTests(unittest.TestCase):
         self.assertIn("title.readOnly = readOnly", controls)
         self.assertIn('body.contentEditable = readOnly ? "false" : "true"', controls)
         self.assertIn('body.setAttribute("aria-readonly", String(readOnly))', controls)
-        self.assertIn("Na lixeira · restaure para editar", controls)
-        self.assertIn("Somente leitura até restaurar", controls)
+        self.assertIn('t("notes.persistence.trashRestoreToEdit")', controls)
+        self.assertIn('t("notes.persistence.readOnly")', controls)
         self.assertIn("validateImagePreview", image_previews)
         self.assertIn("readImagePreview", image_previews)
         self.assertIn("releaseExcept", image_previews)

@@ -187,11 +187,14 @@ shared translation fall back to PT-BR source copy explicitly.
 English is **not** yet marked as a complete Surface locale. Files now covers its
 primary navigation/search/list/selection/Recents/Trash journey plus common forms,
 locale-aware sorting, export and preview controls through the shared catalog.
-Settings/System cover their section navigation/header copy, and Account now covers
-its complete first-party overview/sync experience in English. Files operational/error
-messages plus Notes, Internet, deeper Settings/System content and quick-panel copy
-still require migration. Spanish, German and French remain OOBE-complete but
-Surface-incomplete.
+Settings/System cover their section navigation/header copy, and Account covers
+its complete first-party overview/sync experience in English. Notes now covers its
+primary navigation/editor shell, project/list states, core persistence copy and
+consultative Intelligence controls. Internet now covers its primary browser shell,
+locale-aware tab/address search, project panel and key history/favorite states.
+Operational/error messages plus deeper Files/Settings/System/Notes/Internet flows and
+quick-panel copy still require migration. Spanish, German and French remain
+OOBE-complete but Surface-incomplete.
 
 ```text
 SURFACE_LOCALIZATION_OWNER=PASS_SOURCE
@@ -200,6 +203,8 @@ FILES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 FILES_FORMS_SORT_EXPORT_PREVIEW_EN_US=PASS_SOURCE
 SETTINGS_SYSTEM_NAV_EN_US=PASS_SOURCE
 ACCOUNT_EN_US=PASS_SOURCE
+NOTES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
+INTERNET_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 SURFACE_COMPLETE_LOCALES=pt-BR
 SURFACE_EN_US_APP_CONTROLS=MIGRATING
 ```

@@ -93,40 +93,40 @@ function button(documentObject, className, label, action, text = label) {
   return element;
 }
 
-function buildShell(documentObject) {
+function buildShell(documentObject, t) {
   const view = node(documentObject, "div", "ordax-notes-view");
   view.dataset.ordaxNotesView = "";
 
   const nav = node(documentObject, "aside", "ordax-notes-nav");
   const searchLabel = node(documentObject, "label", "ordax-notes-search");
-  searchLabel.setAttribute("aria-label", "Buscar notas");
+  searchLabel.setAttribute("aria-label", t("notes.search.aria"));
   searchLabel.append(node(documentObject, "span", "ordax-notes-search-icon", "⌕"));
   const search = node(documentObject, "input", "ordax-notes-search-input");
   search.type = "search";
-  search.placeholder = "Buscar notas";
+  search.placeholder = t("notes.search.placeholder");
   search.autocomplete = "off";
   search.dataset.notesSearch = "";
   searchLabel.append(search);
   nav.append(searchLabel);
 
-  const newNote = button(documentObject, "ordax-notes-new", "Nova nota", "new-note", "＋  Nova nota");
+  const newNote = button(documentObject, "ordax-notes-new", t("notes.action.newNote"), "new-note", `＋  ${t("notes.action.newNote")}`);
   nav.append(newNote);
 
   const navList = node(documentObject, "div", "ordax-notes-nav-list");
   navList.append(
-    button(documentObject, "ordax-notes-nav-item", "Todas as notas", "view-all", "▱  Todas as notas"),
-    button(documentObject, "ordax-notes-nav-item", "Favoritas", "view-favorites", "☆  Favoritas"),
-    button(documentObject, "ordax-notes-nav-item", "Recentes", "view-recent", "◷  Recentes"),
-    button(documentObject, "ordax-notes-nav-item", "Lixeira", "view-trash", "♲  Lixeira"),
+    button(documentObject, "ordax-notes-nav-item", t("notes.nav.all"), "view-all", `▱  ${t("notes.nav.all")}`),
+    button(documentObject, "ordax-notes-nav-item", t("notes.nav.favorites"), "view-favorites", `☆  ${t("notes.nav.favorites")}`),
+    button(documentObject, "ordax-notes-nav-item", t("notes.nav.recents"), "view-recent", `◷  ${t("notes.nav.recents")}`),
+    button(documentObject, "ordax-notes-nav-item", t("notes.nav.trash"), "view-trash", `♲  ${t("notes.nav.trash")}`),
   );
   nav.append(navList);
 
   const projectsHeader = node(documentObject, "div", "ordax-notes-projects-header");
-  projectsHeader.append(node(documentObject, "span", "", "PROJETOS"));
-  projectsHeader.append(button(documentObject, "ordax-notes-project-add", "Novo projeto", "new-project", "＋"));
+  projectsHeader.append(node(documentObject, "span", "", t("notes.projects.heading")));
+  projectsHeader.append(button(documentObject, "ordax-notes-project-add", t("notes.projects.new"), "new-project", "＋"));
   nav.append(projectsHeader);
   nav.append(node(documentObject, "div", "ordax-notes-projects"));
-  const device = node(documentObject, "div", "ordax-notes-device", "▱  Neste dispositivo");
+  const device = node(documentObject, "div", "ordax-notes-device", `▱  ${t("notes.device.current")}`);
   device.dataset.notesDevice = "";
   nav.append(device);
 
@@ -134,60 +134,60 @@ function buildShell(documentObject) {
   const listHeader = node(documentObject, "header", "ordax-notes-list-header");
   const listHeading = node(documentObject, "div");
   listHeading.append(
-    node(documentObject, "strong", "ordax-notes-list-title", "Meu espaço"),
-    node(documentObject, "small", "ordax-notes-list-count", "0 notas"),
+    node(documentObject, "strong", "ordax-notes-list-title", t("notes.home")),
+    node(documentObject, "small", "ordax-notes-list-count", `0 ${t("notes.count.notes")}`),
   );
   const listActions = node(documentObject, "div", "ordax-notes-list-actions");
   const emptyTrash = button(
     documentObject,
     "ordax-notes-empty-trash",
-    "Esvaziar lixeira",
+    t("notes.action.emptyTrash"),
     "empty-trash",
-    "Esvaziar",
+    t("notes.action.emptyTrashShort"),
   );
   emptyTrash.hidden = true;
-  const sort = button(documentObject, "ordax-notes-sort", "Ordenar por atualização", "sort", "≡");
+  const sort = button(documentObject, "ordax-notes-sort", t("notes.action.sort"), "sort", "≡");
   listActions.append(emptyTrash, sort);
   listHeader.append(listHeading, listActions);
   list.append(listHeader, node(documentObject, "div", "ordax-notes-list"));
 
   const editor = node(documentObject, "main", "ordax-notes-editor-pane");
   const top = node(documentObject, "header", "ordax-notes-editor-top");
-  const breadcrumb = node(documentObject, "div", "ordax-notes-breadcrumb", "Meu espaço  /  Notas");
+  const breadcrumb = node(documentObject, "div", "ordax-notes-breadcrumb", t("notes.breadcrumb", { project: t("notes.home") }));
   const topActions = node(documentObject, "div", "ordax-notes-top-actions");
   topActions.append(
-    node(documentObject, "span", "ordax-notes-save-status", "Salvo neste dispositivo"),
-    button(documentObject, "ordax-notes-star", "Adicionar aos favoritos", "favorite", "☆"),
-    button(documentObject, "ordax-notes-refs-toggle", "Mostrar referências", "toggle-references", "Referências"),
-    button(documentObject, "ordax-notes-more", "Mais ações", "toggle-menu", "•••"),
+    node(documentObject, "span", "ordax-notes-save-status", t("notes.saved.device")),
+    button(documentObject, "ordax-notes-star", t("notes.favorite.add"), "favorite", "☆"),
+    button(documentObject, "ordax-notes-refs-toggle", t("notes.references.show"), "toggle-references", t("notes.references.title")),
+    button(documentObject, "ordax-notes-more", t("notes.action.more"), "toggle-menu", "•••"),
   );
   const menu = node(documentObject, "div", "ordax-notes-menu");
   menu.hidden = true;
   const duplicateAction = button(
     documentObject,
     "ordax-notes-menu-item ordax-notes-duplicate",
-    "Duplicar nota",
+    t("notes.action.duplicate"),
     "duplicate-note",
-    "Duplicar nota",
+    t("notes.action.duplicate"),
   );
   const trashAction = button(
     documentObject,
     "ordax-notes-menu-item ordax-notes-trash-action",
-    "Mover nota para lixeira",
+    t("notes.action.trash"),
     "trash-note",
-    "Mover para a lixeira",
+    t("notes.action.trashShort"),
   );
   const permanentDeleteAction = button(
     documentObject,
     "ordax-notes-menu-item ordax-notes-delete-forever",
-    "Excluir nota permanentemente",
+    t("notes.action.deleteForever"),
     "delete-note-forever",
-    "Excluir permanentemente",
+    t("notes.action.deleteForeverShort"),
   );
   permanentDeleteAction.hidden = true;
   const moveSection = node(documentObject, "section", "ordax-notes-move-section");
   moveSection.append(
-    node(documentObject, "span", "ordax-notes-menu-label", "MOVER PARA"),
+    node(documentObject, "span", "ordax-notes-menu-label", t("notes.move.heading")),
     node(documentObject, "div", "ordax-notes-move-projects"),
   );
   menu.append(duplicateAction, trashAction, permanentDeleteAction, moveSection);
@@ -197,28 +197,28 @@ function buildShell(documentObject) {
   const toolbar = node(documentObject, "div", "ordax-notes-toolbar");
   const format = node(documentObject, "select", "ordax-notes-format");
   format.dataset.notesFormat = "";
-  for (const [value, label] of [["text", "Texto"], ["h2", "Título 2"], ["list", "Lista"], ["quote", "Citação"]]) {
+  for (const [value, label] of [["text", t("notes.format.text")], ["h2", t("notes.format.heading2")], ["list", t("notes.format.list")], ["quote", t("notes.format.quote")]]) {
     const option = node(documentObject, "option", "", label);
     option.value = value;
     format.append(option);
   }
   toolbar.append(
     format,
-    button(documentObject, "ordax-notes-tool", "Negrito (Ctrl/Cmd+B)", "bold", "B"),
-    button(documentObject, "ordax-notes-tool ordax-notes-tool-italic", "Itálico (Ctrl/Cmd+I)", "italic", "I"),
+    button(documentObject, "ordax-notes-tool", t("notes.tool.bold"), "bold", "B"),
+    button(documentObject, "ordax-notes-tool ordax-notes-tool-italic", t("notes.tool.italic"), "italic", "I"),
     node(documentObject, "span", "ordax-notes-tool-separator"),
-    button(documentObject, "ordax-notes-tool", "Adicionar item de checklist", "add-task", "☑"),
-    button(documentObject, "ordax-notes-tool", "Inserir link no texto (Ctrl/Cmd+K)", "insert-link", "↗"),
-    button(documentObject, "ordax-notes-tool", "Relacionar imagem local", "insert-image", "▧"),
+    button(documentObject, "ordax-notes-tool", t("notes.tool.checklist"), "add-task", "☑"),
+    button(documentObject, "ordax-notes-tool", t("notes.tool.link"), "insert-link", "↗"),
+    button(documentObject, "ordax-notes-tool", t("notes.tool.image"), "insert-image", "▧"),
     node(documentObject, "span", "ordax-notes-tool-separator"),
-    button(documentObject, "ordax-notes-tool", "Desfazer (Ctrl/Cmd+Z)", "undo", "↶"),
+    button(documentObject, "ordax-notes-tool", t("notes.tool.undo"), "undo", "↶"),
     node(documentObject, "span", "ordax-notes-tool-separator"),
     button(
       documentObject,
       "ordax-notes-tool ordax-notes-intelligence-action",
-      "Resumir esta nota com Ordax Intelligence",
+      t("notes.intelligence.summaryAria"),
       "intelligence-summary",
-      "✦  Resumir",
+      `✦  ${t("notes.intelligence.summary")}`,
     ),
   );
   editor.append(toolbar);
@@ -226,23 +226,23 @@ function buildShell(documentObject) {
   const paper = node(documentObject, "article", "ordax-notes-paper");
   const empty = node(documentObject, "div", "ordax-notes-empty");
   empty.append(
-    node(documentObject, "strong", "", "Nenhuma nota selecionada"),
-    node(documentObject, "p", "", "Crie uma nova nota ou escolha uma nota existente."),
+    node(documentObject, "strong", "", t("notes.empty.title")),
+    node(documentObject, "p", "", t("notes.empty.body")),
   );
   empty.dataset.notesEmpty = "";
   const form = node(documentObject, "div", "ordax-notes-document");
   form.dataset.notesDocument = "";
   form.hidden = true;
   form.append(
-    node(documentObject, "span", "ordax-notes-kicker", "NOTA"),
+    node(documentObject, "span", "ordax-notes-kicker", t("notes.document.kicker")),
   );
   const title = node(documentObject, "textarea", "ordax-notes-title");
   title.rows = 1;
   title.maxLength = 1024;
   title.spellcheck = true;
-  title.placeholder = "Título da nota";
+  title.placeholder = t("notes.document.titlePlaceholder");
   title.dataset.notesTitle = "";
-  title.setAttribute("aria-label", "Título da nota");
+  title.setAttribute("aria-label", t("notes.document.titlePlaceholder"));
   form.append(title);
   form.append(node(documentObject, "div", "ordax-notes-meta"));
   const body = createNotesRichEditor(documentObject);
@@ -264,15 +264,15 @@ function buildShell(documentObject) {
   inlineMedia.hidden = true;
   form.append(inlineMedia);
   const tasksSection = node(documentObject, "section", "ordax-notes-tasks");
-  tasksSection.append(node(documentObject, "h3", "", "Para hoje"), node(documentObject, "div", "ordax-notes-task-list"));
+  tasksSection.append(node(documentObject, "h3", "", t("notes.tasks.today")), node(documentObject, "div", "ordax-notes-task-list"));
   form.append(tasksSection);
   paper.append(empty, form);
   editor.append(paper);
   const editorFooter = node(documentObject, "footer", "ordax-notes-editor-footer");
-  const offlineStatus = node(documentObject, "span", "ordax-notes-offline-status", "Disponível offline");
-  const statistics = node(documentObject, "span", "ordax-notes-statistics", "0 palavras · 0 caracteres");
+  const offlineStatus = node(documentObject, "span", "ordax-notes-offline-status", t("notes.offline.available"));
+  const statistics = node(documentObject, "span", "ordax-notes-statistics", t("notes.statistics.empty"));
   statistics.dataset.notesStatistics = "";
-  statistics.setAttribute("aria-label", "Estatísticas da nota");
+  statistics.setAttribute("aria-label", t("notes.statistics.aria"));
   editorFooter.append(offlineStatus, statistics);
   editor.append(editorFooter);
 
@@ -280,17 +280,17 @@ function buildShell(documentObject) {
   refs.dataset.notesReferences = "";
   const refsHeader = node(documentObject, "header", "ordax-notes-refs-header");
   refsHeader.append(
-    node(documentObject, "strong", "", "Referências"),
-    button(documentObject, "ordax-notes-refs-close", "Recolher referências", "toggle-references", "×"),
+    node(documentObject, "strong", "", t("notes.references.title")),
+    button(documentObject, "ordax-notes-refs-close", t("notes.references.collapse"), "toggle-references", "×"),
   );
   refs.append(refsHeader, node(documentObject, "div", "ordax-notes-refs-content"));
-  const addRef = button(documentObject, "ordax-notes-add-reference", "Adicionar referência", "add-reference", "＋  Adicionar referência");
+  const addRef = button(documentObject, "ordax-notes-add-reference", t("notes.references.add"), "add-reference", `＋  ${t("notes.references.add")}`);
   const refChoices = node(documentObject, "div", "ordax-notes-reference-choices");
   refChoices.dataset.notesReferenceChoices = "";
   refChoices.hidden = true;
   refChoices.append(
-    button(documentObject, "ordax-notes-reference-choice", "Adicionar link da web", "add-link-reference", "◎  Link da web"),
-    button(documentObject, "ordax-notes-reference-choice", "Relacionar arquivo deste dispositivo", "add-file-reference", "▱  Arquivo deste dispositivo"),
+    button(documentObject, "ordax-notes-reference-choice", t("notes.references.link"), "add-link-reference", `◎  ${t("notes.references.link")}`),
+    button(documentObject, "ordax-notes-reference-choice", t("notes.references.file"), "add-file-reference", `▱  ${t("notes.references.file")}`),
   );
   const filePicker = node(documentObject, "section", "ordax-notes-file-picker");
   filePicker.dataset.notesFilePicker = "";
@@ -299,7 +299,7 @@ function buildShell(documentObject) {
     addRef,
     refChoices,
     filePicker,
-    node(documentObject, "p", "ordax-notes-refs-caption", "Fontes próximas das suas ideias."),
+    node(documentObject, "p", "ordax-notes-refs-caption", t("notes.references.caption")),
   );
 
   view.append(nav, list, editor, refs);
@@ -317,6 +317,8 @@ export function mountNotesWorkspaceControls(
   }
   const runtime = assertNotesRuntime(notesRuntime);
   const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
   const filePort = fileSpace === null ? null : assertFileSpacePort(fileSpace);
   const activationPort = appActivation === null ? null : assertAppActivationPort(appActivation);
   const intelligencePort = intelligence === null ? null : assertIntelligencePort(intelligence);
@@ -422,7 +424,7 @@ export function mountNotesWorkspaceControls(
       const projectButton = button(
         documentObject,
         "ordax-notes-project",
-        `Abrir projeto ${project.name}`,
+        t("notes.project.open", { name: project.name }),
         "select-project",
         "",
       );
@@ -436,7 +438,7 @@ export function mountNotesWorkspaceControls(
       const actions = button(
         documentObject,
         "ordax-notes-project-actions",
-        `Ações do projeto ${project.name}`,
+        t("notes.project.actions", { name: project.name }),
         "project-actions",
         "•••",
       );
@@ -451,18 +453,18 @@ export function mountNotesWorkspaceControls(
           const rename = button(
             documentObject,
             "ordax-notes-project-menu-item",
-            `Renomear projeto ${project.name}`,
+            t("notes.project.rename", { name: project.name }),
             "rename-project",
-            "Renomear",
+            t("notes.project.renameShort"),
           );
           rename.dataset.projectId = project.id;
           projectMenu.append(rename);
           const remove = button(
             documentObject,
             "ordax-notes-project-menu-item ordax-notes-project-menu-danger",
-            `Excluir projeto ${project.name}`,
+            t("notes.project.remove", { name: project.name }),
             "remove-project",
-            "Excluir projeto",
+            t("notes.project.removeShort"),
           );
           remove.dataset.projectId = project.id;
           projectMenu.append(remove);
@@ -472,7 +474,7 @@ export function mountNotesWorkspaceControls(
               documentObject,
               "small",
               "ordax-notes-project-menu-hint",
-              "Meu espaço é o projeto base e não pode ser renomeado nem excluído.",
+              t("notes.project.homeLocked"),
             ),
           );
         }
@@ -482,17 +484,18 @@ export function mountNotesWorkspaceControls(
   };
 
   const modeLabel = () => {
-    if (mode === "all") return "Todas as notas";
-    if (mode === "favorites") return "Favoritas";
-    if (mode === "recent") return "Recentes";
-    if (mode === "trash") return "Lixeira";
-    return state.document.projects.find((project) => project.id === state.document.selectedProjectId)?.name ?? "Meu espaço";
+    if (mode === "all") return t("notes.mode.all");
+    if (mode === "favorites") return t("notes.mode.favorites");
+    if (mode === "recent") return t("notes.mode.recents");
+    if (mode === "trash") return t("notes.mode.trash");
+    return state.document.projects.find((project) => project.id === state.document.selectedProjectId)?.name
+      ?? t("notes.home");
   };
 
   const renderList = (view) => {
     const items = visibleNotes(state.document, mode, query, newestFirst);
     view.querySelector(".ordax-notes-list-title").textContent = modeLabel();
-    view.querySelector(".ordax-notes-list-count").textContent = `${items.length} ${items.length === 1 ? "nota" : "notas"}`;
+    view.querySelector(".ordax-notes-list-count").textContent = `${items.length} ${items.length === 1 ? t("notes.count.note") : t("notes.count.notes")}`;
     const emptyTrash = view.querySelector(".ordax-notes-empty-trash");
     emptyTrash.hidden = mode !== "trash";
     emptyTrash.disabled = mode !== "trash" || items.length === 0;
@@ -513,7 +516,7 @@ export function mountNotesWorkspaceControls(
       list.append(row);
     }
     if (items.length === 0) {
-      list.append(node(documentObject, "p", "ordax-notes-list-empty", query ? "Nenhuma nota corresponde à busca." : "Nenhuma nota aqui ainda."));
+      list.append(node(documentObject, "p", "ordax-notes-list-empty", query ? t("notes.list.emptySearch") : t("notes.list.empty")));
     }
 
     for (const action of ["all", "favorites", "recent", "trash"]) {
@@ -982,11 +985,11 @@ export function mountNotesWorkspaceControls(
       const ready = intelligenceSnapshot?.state === "ready";
       intelligenceAction.disabled = !note || note.deletedAt !== null || !ready || intelligencePending;
       intelligenceAction.textContent = intelligencePending && intelligenceNoteId === note?.id
-        ? "✦  Resumindo…"
-        : "✦  Resumir";
+        ? `✦  ${t("notes.intelligence.summarizing")}`
+        : `✦  ${t("notes.intelligence.summary")}`;
       intelligenceAction.title = ready
-        ? "Resumir esta nota localmente com Ordax Intelligence"
-        : "Ordax Intelligence não está pronta nesta execução";
+        ? t("notes.intelligence.readyTitle")
+        : t("notes.intelligence.unavailableTitle");
     }
     const more = view.querySelector(".ordax-notes-more");
     if (more) more.disabled = !note;
@@ -996,8 +999,8 @@ export function mountNotesWorkspaceControls(
       imagePreviewCache.releaseExcept(new Set());
       empty.hidden = false;
       documentView.hidden = true;
-      view.querySelector(".ordax-notes-breadcrumb").textContent = `${modeLabel()}  /  Notas`;
-      view.querySelector(".ordax-notes-save-status").textContent = state.persistence.scope === "device" ? "Salvo neste dispositivo" : "Somente nesta sessão";
+      view.querySelector(".ordax-notes-breadcrumb").textContent = t("notes.breadcrumb", { project: modeLabel() });
+      view.querySelector(".ordax-notes-save-status").textContent = state.persistence.scope === "device" ? t("notes.saved.device") : t("notes.persistence.sessionOnly");
       view.querySelector(".ordax-notes-references").hidden = true;
       const intelligencePanel = view.querySelector("[data-notes-intelligence]");
       if (intelligencePanel) intelligencePanel.hidden = true;
@@ -1009,7 +1012,7 @@ export function mountNotesWorkspaceControls(
     documentView.hidden = false;
     const project = state.document.projects.find((candidate) => candidate.id === note.projectId);
     const readOnly = note.deletedAt !== null;
-    view.querySelector(".ordax-notes-breadcrumb").textContent = `${project?.name ?? "Meu espaço"}  /  Notas`;
+    view.querySelector(".ordax-notes-breadcrumb").textContent = t("notes.breadcrumb", { project: project?.name ?? t("notes.home") });
     documentView.dataset.deleted = String(readOnly);
     const active = documentObject.activeElement;
     const title = view.querySelector("[data-notes-title]");
@@ -1031,11 +1034,11 @@ export function mountNotesWorkspaceControls(
 
     const meta = view.querySelector(".ordax-notes-meta");
     meta.textContent = readOnly
-      ? `${project?.name ?? "Meu espaço"}  ·  Na lixeira · somente leitura`
-      : `${project?.name ?? "Meu espaço"}  ·  Nota local`;
+      ? t("notes.meta.trash", { project: project?.name ?? t("notes.home") })
+      : t("notes.meta.local", { project: project?.name ?? t("notes.home") });
     const star = view.querySelector(".ordax-notes-star");
     star.textContent = note.favorite ? "★" : "☆";
-    star.setAttribute("aria-label", note.favorite ? "Remover dos favoritos" : "Adicionar aos favoritos");
+    star.setAttribute("aria-label", note.favorite ? t("notes.favorite.remove") : t("notes.favorite.add"));
     const duplicateAction = view.querySelector(".ordax-notes-duplicate");
     const menuAction = view.querySelector(".ordax-notes-trash-action");
     const permanentDeleteAction = view.querySelector(".ordax-notes-delete-forever");
@@ -1043,8 +1046,8 @@ export function mountNotesWorkspaceControls(
     duplicateAction.disabled = note.deletedAt !== null || state.document.notes.length >= MAX_NOTES;
     duplicateAction.title = state.document.notes.length >= MAX_NOTES
       ? `Limite de ${MAX_NOTES} notas atingido`
-      : "Duplicar nota";
-    menuAction.textContent = note.deletedAt === null ? "Mover para a lixeira" : "Restaurar nota";
+      : t("notes.action.duplicate");
+    menuAction.textContent = note.deletedAt === null ? t("notes.action.trashShort") : t("notes.action.restore");
     menuAction.dataset.notesAction = note.deletedAt === null ? "trash-note" : "restore-note";
     permanentDeleteAction.hidden = note.deletedAt === null;
     renderMoveProjects(view, note);
@@ -1060,10 +1063,10 @@ export function mountNotesWorkspaceControls(
       intelligencePanel.hidden = !belongsToCurrent;
       if (belongsToCurrent) {
         intelligenceStatus.textContent = intelligencePending
-          ? "Analisando esta nota localmente…"
+          ? t("notes.intelligence.analyzing")
           : intelligenceError
             ? intelligenceError
-            : "Resumo local concluído. A resposta abaixo não altera a nota.";
+            : t("notes.intelligence.done");
         intelligenceAnswer.textContent = intelligenceResult;
         intelligenceAnswer.hidden = !intelligenceResult;
       }
@@ -1071,17 +1074,17 @@ export function mountNotesWorkspaceControls(
 
     const saved = view.querySelector(".ordax-notes-save-status");
     saved.textContent = readOnly
-      ? "Na lixeira · restaure para editar"
+      ? t("notes.persistence.trashRestoreToEdit")
       : state.persistence.ok
-        ? (state.persistence.scope === "device" ? "✓  Salvo neste dispositivo" : "✓  Salvo nesta sessão")
-        : "Falha ao salvar localmente";
+        ? (state.persistence.scope === "device" ? `✓  ${t("notes.saved.device")}` : t("notes.persistence.savedSession"))
+        : t("notes.persistence.failed");
     view.querySelector(".ordax-notes-offline-status").textContent = readOnly
-      ? "Somente leitura até restaurar"
+      ? t("notes.persistence.readOnly")
       : state.persistence.scope === "device"
-        ? "☁  Disponível offline"
-        : "Somente nesta sessão";
+        ? t("notes.persistence.offline")
+        : t("notes.persistence.sessionOnly");
     view.querySelector(".ordax-notes-device").textContent =
-      state.persistence.scope === "device" ? "▱  Neste dispositivo" : "▱  Sessão temporária";
+      state.persistence.scope === "device" ? t("notes.persistence.device") : t("notes.persistence.sessionDevice");
     syncEditorStatistics(view, note, body.innerText ?? body.textContent ?? note.body);
   };
 
@@ -1094,9 +1097,15 @@ export function mountNotesWorkspaceControls(
       mountedSlot = null;
       return;
     }
-    if (!slot.dataset.ordaxNotesMounted) {
-      slot.replaceChildren(buildShell(documentObject));
+    const renderLocale = localization.getLocale();
+    const localeChanged =
+      slot.dataset.ordaxNotesMounted
+      && slot.dataset.ordaxNotesLocale !== renderLocale;
+    if (!slot.dataset.ordaxNotesMounted || localeChanged) {
+      if (localeChanged) flushEditor();
+      slot.replaceChildren(buildShell(documentObject, t));
       slot.dataset.ordaxNotesMounted = "true";
+      slot.dataset.ordaxNotesLocale = renderLocale;
     }
     mountedSlot = slot;
     const view = slot.querySelector("[data-ordax-notes-view]");
@@ -1185,7 +1194,7 @@ export function mountNotesWorkspaceControls(
       render();
       void summarizeDocumentWithIntelligence(intelligencePort, {
         id: latest.id,
-        title: latest.title || "Sem título",
+        title: latest.title || t("notes.note.untitled"),
         text: latest.body || "(nota vazia)",
         provenance: `notes:${latest.id}:device-local`,
       }).then((response) => {
@@ -1281,7 +1290,7 @@ export function mountNotesWorkspaceControls(
     if (action === "sort") {
       newestFirst = !newestFirst;
       actionNode.textContent = newestFirst ? "≡" : "≣";
-      actionNode.title = newestFirst ? "Mais recentes primeiro" : "Mais antigas primeiro";
+      actionNode.title = newestFirst ? t("notes.action.sortNewest") : t("notes.action.sortOldest");
       renderList(mountedSlot.querySelector("[data-ordax-notes-view]"));
       return;
     }

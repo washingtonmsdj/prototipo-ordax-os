@@ -33,7 +33,7 @@ class InternetAccessibilityContractTests(unittest.TestCase):
     def test_navigation_toolbar_and_project_panel_expose_relationships(self):
         controls = self.text(CONTROLS)
         self.assertIn('toolbar.setAttribute("role", "toolbar")', controls)
-        self.assertIn('toolbar.setAttribute("aria-label", "Navegação da Internet")', controls)
+        self.assertIn('toolbar.setAttribute("aria-label", t("internet.toolbar.aria"))', controls)
         self.assertIn('more.setAttribute("aria-controls", PROJECT_PANEL_ID)', controls)
         self.assertIn('more.setAttribute("aria-expanded", "true")', controls)
         self.assertIn('panel.id = PROJECT_PANEL_ID', controls)
