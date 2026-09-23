@@ -385,7 +385,8 @@ O gate é de produto/source. Ele **não** substitui:
 
 8. Handoff v4 com AI real. — **PASS_SOURCE**; materialização/assinatura Stable real ainda pendente.
 9. Materialização v4 com bytes reais + assinatura efêmera em CI. — **GATE_IMPLEMENTED_NON_PROMOTIONAL**; assinatura/materialização canônica Stable e regressão QEMU/UEFI v4 continuam pendentes.
-10. Somente então voltar ao primeiro USB Stable/MVP físico.
+10. Creator físico alinhado ao payload Stable v4. — **PASS_SOURCE_CANDIDATE**: plano final passa de 15 para 17 artefatos e de 35 para 39 operações, incluindo `local-ai-runtime.erofs` content-addressed + `local-ai-runtime.sha256`; consentimento físico anterior fica inválido por contexto e exige nova autorização explícita depois dos gates não destrutivos.
+11. Somente então voltar ao primeiro USB Stable/MVP físico.
 
 ---
 
