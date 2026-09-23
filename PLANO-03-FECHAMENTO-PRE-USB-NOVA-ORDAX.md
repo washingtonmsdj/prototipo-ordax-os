@@ -160,11 +160,10 @@ Precisa estar implementado e provado em source/CI antes da escrita física.
 
 3. **Idiomas oferecidos pelo OOBE coerentes com a Surface.**
    - PT-BR permanece fonte;
-   - en-US, es-ES, de-DE e fr-FR já são oferecidos no primeiro uso;
-   - antes do USB público, a seleção não pode levar a uma Surface principal
-     significativamente misturada com português;
-   - ou se completa a cobertura essencial dos cinco idiomas, ou se reduz
-     explicitamente a lista oferecida. Não anunciar cobertura falsa.
+   - o MVP público oferece somente PT-BR e en-US;
+   - es-ES, de-DE e fr-FR continuam aceitos em estados persistidos e mantêm seus catálogos OOBE, mas ficam ocultos dos seletores públicos até a Surface correspondente atingir o mesmo padrão de lançamento;
+   - antes do USB público, a seleção não pode levar a uma Surface principal significativamente misturada com português;
+   - não anunciar cobertura falsa.
 
 4. **Arquivos: fechar jornada cotidiana mínima. — PASS_SOURCE**
    - `ordax.file-space/11` mantém list/create/read/rename/copy/move/import/export e preview;
