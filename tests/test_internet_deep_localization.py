@@ -12,7 +12,7 @@ class InternetDeepLocalizationTests(unittest.TestCase):
         for marker in (
             't("internet.project.localContext"',
             't("internet.project.catalogUnavailable")',
-            't("internet.home.status.tabs"',
+            '"internet.home.status.tabs"',
             't("internet.project.saveReference")',
             't("internet.favorite.headingCount"',
             't("internet.history.headingCount"',
@@ -39,7 +39,7 @@ class InternetDeepLocalizationTests(unittest.TestCase):
             "const setMessage =",
             "const setExternalMessage =",
             "const renderedMessage =",
-            'setMessage("internet.reference.savedProject")',
+            '"internet.reference.savedProject"',
             'setMessage("internet.reference.removed")',
             '"internet.favorite.savedSession"',
             '"internet.favorite.savedDeviceMessage"',
