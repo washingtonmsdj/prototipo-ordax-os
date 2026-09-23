@@ -1300,6 +1300,7 @@ export function mountSystemOverviewControls(
       diagnosticsReviewMount = mountSystemDiagnosticsReview(
         diagnosticMount,
         diagnosticReviewController,
+        lifecycle,
       );
     }
     restoreInteractionState(slot, interaction);
