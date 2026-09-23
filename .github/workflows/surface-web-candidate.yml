@@ -77,6 +77,7 @@ on:
       - 'tests/test_surface_preferences.mjs'
       - 'tests/test_surface_localization.mjs'
       - 'tests/test_surface_app_localization.mjs'
+      - 'tests/test_surface_residual_localization.py'
       - 'tests/test_surface_workspace.mjs'
       - 'tests/test_recent_files.mjs'
       - 'tests/test_recent_files_ui_contract.py'
@@ -212,6 +213,7 @@ on:
       - 'tests/test_surface_preferences.mjs'
       - 'tests/test_surface_localization.mjs'
       - 'tests/test_surface_app_localization.mjs'
+      - 'tests/test_surface_residual_localization.py'
       - 'tests/test_surface_workspace.mjs'
       - 'tests/test_recent_files.mjs'
       - 'tests/test_recent_files_ui_contract.py'
@@ -364,6 +366,7 @@ jobs:
       - name: Run Surface and Web bundle regressions
         run: |
           python -m unittest tests.test_surface_ui_contract -v
+          python -m unittest tests.test_surface_residual_localization -v
           python -m unittest tests.test_diagnostic_system_view_contract -v
           python -m unittest tests.test_diagnostic_system_owner_mount -v
           python -m unittest tests.test_system_resource_localization -v
