@@ -26,7 +26,6 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
         self.assertNotIn("sectionId", system)
         self.assertNotIn("detailId", system)
 
-
     def test_overview_summary_uses_structured_localized_presentation(self):
         system = SYSTEM.read_text(encoding="utf-8")
         catalog = SYSTEM_I18N.read_text(encoding="utf-8")
@@ -37,25 +36,14 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
         self.assertIn('"system.overview.card.productVersion": "Prototype version"', catalog)
         self.assertIn('"system.overview.update.status.rolledBack": "Update rolled back"', catalog)
         self.assertIn('"system.overview.update.summary.activationReady": "Base ready for activation"', catalog)
-        summary = system.split("const renderSummary = (view) => {", 1)[1].split(
-            "\n  const renderMemory = (view) => {",
-            1,
-        )[0]
-        header = system.split("const renderHeader = (view) => {", 1)[1].split(
-            "\n  const renderSectionNavigation = (view) => {",
-            1,
-        )[0]
+        summary = system.split("const renderSummary = (view) => {", 1)[1].split("\n  const renderMemory = (view) => {", 1)[0]
+        header = system.split("const renderHeader = (view) => {", 1)[1].split("\n  const renderSectionNavigation = (view) => {", 1)[0]
         for forbidden in (
-            '"Resumo do sistema"',
-            '"Versão do protótipo"',
-            '"Entrega observada"',
-            '"Gerenciamento de entrega não exposto neste host"',
-            '"Atenção na atualização"',
-            '"Sem conexão"',
-            '"Surface ativa"',
+            '"Resumo do sistema"', '"Versão do protótipo"', '"Entrega observada"',
+            '"Gerenciamento de entrega não exposto neste host"', '"Atenção na atualização"',
+            '"Sem conexão"', '"Surface ativa"',
         ):
             self.assertNotIn(forbidden, summary + header)
-
 
     def test_update_footer_is_only_an_accelerator_to_canonical_system_updates(self):
         update = UPDATE.read_text(encoding="utf-8")
@@ -84,11 +72,8 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
         presentation = PRESENTATION.read_text(encoding="utf-8")
         self.assertIn("services/update/presentation.mjs", update)
         self.assertIn("services/update/presentation.mjs", system)
-        self.assertIn("updateIsAlerting", presentation)
-        self.assertIn("updateStatusLabel", presentation)
-        self.assertIn("readableUpdatePhase", presentation)
-        self.assertIn("readableUpdateMode", presentation)
-        self.assertIn("America/Bahia", presentation)
+        for marker in ("updateIsAlerting", "updateStatusLabel", "readableUpdatePhase", "readableUpdateMode", "America/Bahia"):
+            self.assertIn(marker, presentation)
 
     def test_component_update_scopes_are_visible_in_system_updates(self):
         system = SYSTEM.read_text(encoding="utf-8")
@@ -101,35 +86,25 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
         self.assertIn('" · Beta"', system)
         self.assertIn("component.updateChannel.label", system)
         self.assertIn("não representa uma Loja", system)
-        self.assertIn('"development-git"', component_presentation)
-        self.assertIn('"system-bundle"', component_presentation)
-        self.assertIn('"independent-component"', component_presentation)
+        for marker in ('"development-git"', '"system-bundle"', '"independent-component"'):
+            self.assertIn(marker, component_presentation)
 
     def test_transaction_details_remain_in_system_updates(self):
         system = SYSTEM.read_text(encoding="utf-8")
-        for marker in (
-            "targetSha",
-            "attemptId",
-            "lastError",
-            "lastAppliedAt",
-            "rejectedSha",
-            "runtimeSurfaceSha",
-            '"Tentativa"',
-            '"Diagnóstico"',
-        ):
+        for marker in ("targetSha", "attemptId", "lastError", "lastAppliedAt", "rejectedSha", "runtimeSurfaceSha", '"Tentativa"', '"Diagnóstico"'):
             self.assertIn(marker, system)
 
     def test_system_sections_expose_only_real_existing_data_owners(self):
         system = SYSTEM.read_text(encoding="utf-8")
-        self.assertIn('activeSection === "overview"', system)
-        self.assertIn('activeSection === "updates"', system)
-        self.assertIn('activeSection === "storage"', system)
-        self.assertIn('activeSection === "diagnostics"', system)
-        self.assertIn('activeSection === "about"', system)
+        catalog = SYSTEM_I18N.read_text(encoding="utf-8")
+        for section in ("overview", "updates", "storage", "diagnostics", "about"):
+            self.assertIn(f'activeSection === "{section}"', system)
         self.assertNotIn('id: "recovery"', system)
         self.assertNotIn('id: "energy"', system)
         self.assertIn("Este host não informa uma identidade técnica de entrega", system)
-        self.assertIn("Não representa o disco físico inteiro", system)
+        self.assertIn('t("system.resources.storage.scope")', system)
+        self.assertIn('"system.resources.storage.scope":', catalog)
+        self.assertIn("Não representa o disco físico inteiro", catalog)
 
     def test_navigation_is_shared_responsive_and_wired_in_both_compositions(self):
         css = CSS.read_text(encoding="utf-8")
