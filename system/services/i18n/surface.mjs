@@ -48,6 +48,11 @@ const SOURCE = Object.freeze({
   "shell.quick.dateTimeClose": "Fechar data e hora",
   "shell.quick.timeZone": "Fuso horário",
   "shell.clock.timeZone": "Fuso horário: {timeZone}",
+  "boot.preparing": "Preparando OrdaX…",
+  "boot.loadingSurface": "Carregando superfície…",
+  "boot.loadingApps": "Carregando aplicativos…",
+  "boot.preparingFirstRun": "Preparando primeiro uso…",
+  "boot.failed": "Não foi possível iniciar a interface",
   "home.pending.heading": "Pendências",
   "home.pending.notifications.title.one": "{count} notificação não lida",
   "home.pending.notifications.title.many": "{count} notificações não lidas",
@@ -170,6 +175,11 @@ const ENGLISH = Object.freeze({
   "shell.quick.dateTimeClose": "Close date and time",
   "shell.quick.timeZone": "Time zone",
   "shell.clock.timeZone": "Time zone: {timeZone}",
+  "boot.preparing": "Preparing OrdaX…",
+  "boot.loadingSurface": "Loading Surface…",
+  "boot.loadingApps": "Loading applications…",
+  "boot.preparingFirstRun": "Preparing first use…",
+  "boot.failed": "The interface could not be started",
   "home.pending.heading": "Pending",
   "home.pending.notifications.title.one": "{count} unread notification",
   "home.pending.notifications.title.many": "{count} unread notifications",
@@ -273,19 +283,26 @@ function interpolate(text, values = {}) {
   });
 }
 
+export function translateSurfaceMessage(locale, messageId, values = {}) {
+  if (typeof messageId !== "string" || !messageId) {
+    throw new TypeError("Localization message id must be a non-empty string");
+  }
+  const source = SOURCE[messageId];
+  if (typeof source !== "string") {
+    throw new TypeError(`Unknown Surface localization message: ${messageId}`);
+  }
+  const translated = TABLES[locale]?.[messageId] ?? source;
+  return interpolate(translated, values);
+}
+
 export function createSurfaceLocalization(preferenceRuntime) {
   const preferences = assertPreferenceRuntimePort(preferenceRuntime);
   let observedLocale = preferences.getSnapshot()[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_SOURCE_LOCALE;
   const listeners = new Set();
   const currentLocale = () => preferences.getSnapshot()[REGIONAL_LOCALE_PREFERENCE_ID] ?? SURFACE_SOURCE_LOCALE;
 
-  const translate = (messageId, values = {}) => {
-    if (typeof messageId !== "string" || !messageId) throw new TypeError("Localization message id must be a non-empty string");
-    const source = SOURCE[messageId];
-    if (typeof source !== "string") throw new TypeError(`Unknown Surface localization message: ${messageId}`);
-    const translated = TABLES[currentLocale()]?.[messageId] ?? source;
-    return interpolate(translated, values);
-  };
+  const translate = (messageId, values = {}) =>
+    translateSurfaceMessage(currentLocale(), messageId, values);
 
   const port = {
     schema: LOCALIZATION_SCHEMA,
