@@ -210,7 +210,7 @@ presentation plus the Notification Center use `ordax.localization/1` and rerende
 locale changes. `ordax.notifications/3` keeps backward-compatible text fallbacks while
 first-party update events persist bounded semantic presentation identity, allowing stored
 update history to rerender in the active locale without heuristic text translation.
-Spanish, German and French remain OOBE-complete but Surface-incomplete.
+Spanish, German and French remain OOBE-complete but Surface-incomplete and are retained only as compatibility/future-rollout locales; the public MVP selectors offer only PT-BR and en-US.
 
 ```text
 SURFACE_LOCALIZATION_OWNER=PASS_SOURCE
@@ -239,6 +239,8 @@ NETWORK_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 BATTERY_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 NOTIFICATION_CENTER_EN_US=PASS_SOURCE
 FIRST_PARTY_UPDATE_NOTIFICATION_HISTORY_EN_US=PASS_SOURCE
+MVP_PUBLIC_LOCALES=pt-BR,en-US
+RETAINED_COMPATIBLE_LOCALES=es-ES,de-DE,fr-FR
 SURFACE_COMPLETE_LOCALES=pt-BR
 SETTINGS_DEEP_EN_US=PASS_SOURCE
 SETTINGS_ASYNC_MESSAGE_IDENTITIES=PASS_SOURCE
