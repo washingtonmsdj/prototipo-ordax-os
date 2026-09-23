@@ -48,6 +48,22 @@ if ($PrivateKeyPath.StartsWith($Root + [IO.Path]::DirectorySeparatorChar, [Strin
     --out $Envelope
 if ($LASTEXITCODE -ne 0) { throw 'Initial release signing failed.' }
 
+$ManifestDocument = Get-Content -LiteralPath $Manifest -Raw -Encoding UTF8 | ConvertFrom-Json
+$ManifestSchema = [string]$ManifestDocument.'$schema'
+$SupportedSchemas = @(
+    'prototype-ordax.release-manifest/1',
+    'prototype-ordax.release-manifest/2',
+    'prototype-ordax.release-manifest/3',
+    'prototype-ordax.release-manifest/4'
+)
+if ($ManifestSchema -notin $SupportedSchemas) {
+    throw "Signed manifest schema is not recognized by this runbook: $ManifestSchema"
+}
+$ArtifactNames = @($ManifestDocument.artifacts | ForEach-Object { [string]$_.name })
+if ($ArtifactNames.Count -eq 0) {
+    throw 'Signed manifest does not bind any artifacts.'
+}
+
 $EnvelopeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Envelope).Hash.ToLowerInvariant()
 $ManifestHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Manifest).Hash.ToLowerInvariant()
 Write-Host ''
@@ -55,9 +71,13 @@ Write-Host 'INITIAL_RELEASE_SIGNED=YES'
 Write-Host "RELEASE_MANIFEST_SHA256=$ManifestHash"
 Write-Host "RELEASE_ENVELOPE_SHA256=$EnvelopeHash"
 Write-Host "RELEASE_ENVELOPE_PATH=$Envelope"
+Write-Host "RELEASE_MANIFEST_SCHEMA=$ManifestSchema"
+Write-Host "RELEASE_BOUND_ARTIFACTS=$($ArtifactNames -join ',')"
 Write-Host "PRIVATE_KEY_PATH=$PrivateKeyPath"
 Write-Host 'PRIVATE_KEY_COPIED_TO_PACKAGE=NO'
-Write-Host 'READY_FOR_RELEASE_PUBLICATION=YES'
+Write-Host 'READY_FOR_RELEASE_PUBLICATION_REVIEW=YES'
 Write-Host ''
-Write-Host 'release-envelope.json is public material and may be published with system.tar.'
+Write-Host 'release-envelope.json is public material and must travel with the exact artifacts bound by the signed manifest.'
+Write-Host 'For release-manifest/4 that means system.erofs, native-surface-runtime.erofs and local-ai-runtime.erofs.'
+Write-Host 'Signing alone does not publish, activate, authorize physical media, or select a USB target.'
 Write-Host 'The private PEM must remain in local private storage and must never be uploaded.'
