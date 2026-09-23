@@ -33,9 +33,11 @@ A primeira lacuna P0 já foi atacada na mesma linha arquitetural deste plano:
 - nenhum dos consumidores ganha autoridade de mutação ou importa provider/modelo diretamente;
 - ausência do backend continua degradável e não crítica para o boot.
 
-Isso fecha `INTELLIGENCE_REAL_SYSTEM_CONSUMER` em **source**, mas não fecha o item
-inteiro de entrega Stable: montar `local-ai-runtime.erofs` e iniciar o backend no
-handoff v4 continua pendente antes do USB.
+Isso fecha `INTELLIGENCE_REAL_SYSTEM_CONSUMER` e o handoff v4 em **source**:
+Portable v2 verifica o manifest v4, monta `local-ai-runtime.erofs` read-only e
+Stable Base inicia o backend loopback quando o runtime verificado está disponível.
+Falha da IA continua degradável e não bloqueia o boot. Permanecem pendentes a
+materialização/assinatura Stable v4 real e as provas descartáveis/físicas correspondentes.
 
 ### 0.2 Sessão local/lock Native — fechamento em source
 
@@ -270,7 +272,7 @@ nem criar owners duplicados no MVP.
 | C13 | Store | **Não implementado e não requerido.** | C |
 | C14 | Perfis profissionais | **Visão futura.** | C |
 | C15 | Objetos com provenance | **Não existe Object System universal.** Usar metadata/provenance pequenos onde necessários, inclusive IA. | C; provenance mínimo=A |
-| C16 | IA nativa/contexto/tools | **IA consultiva fechada em source.** Native compõe `local-ai -> intelligence`; Notas e Sistema possuem consumidores first-party bounded/read-only com provenance. Lifecycle Stable v4 do backend ainda é gate de release. Tools mutáveis permanecem deferidas. | **PASS_SOURCE para consumidores; A/P2 para lifecycle v4; C para tools/agents** |
+| C16 | IA nativa/contexto/tools | **IA consultiva fechada em source.** Native compõe `local-ai -> intelligence`; Notas e Sistema possuem consumidores first-party bounded/read-only com provenance. Handoff Stable v4 do backend está `PASS_SOURCE`; materialização assinada e prova física continuam gate de release. Tools mutáveis permanecem deferidas. | **PASS_SOURCE para consumidores; A/P2 para lifecycle v4; C para tools/agents** |
 | C17 | Conhecimento/integrações/automações | **Deferido.** | C |
 | C18 | Diagnóstico/receipts/captura | **Fechado em source para o MVP.** Controller diagnóstico sanitizado é composto no Native; Sistema prepara/copia/exporta revisão explícita e apresenta recovery Portable v2 read-only sem autoridade de rollback/reboot. | **PASS_SOURCE; prova física=B** |
 | C19 | Controle remoto/Companion | Não é requisito do bootstrap/MVP. | C |
@@ -382,8 +384,8 @@ O gate é de produto/source. Ele **não** substitui:
 
 ### P2 — fechar release
 
-8. Gerar/materializar/signar v4 com AI real.
-9. Regressões QEMU/UEFI.
+8. Handoff v4 com AI real. — **PASS_SOURCE**; materialização/assinatura Stable real ainda pendente.
+9. Gerar/materializar/signar o Stable v4 real e executar regressões QEMU/UEFI do caminho v4.
 10. Somente então voltar ao primeiro USB Stable/MVP físico.
 
 ---
