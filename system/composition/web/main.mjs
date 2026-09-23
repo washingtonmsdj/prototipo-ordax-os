@@ -58,7 +58,7 @@ const surface = mountSurface(
   workspaceStore,
   appActivation,
 );
-const notificationCenter = mountNotificationCenterControls(root, notifications, appActivation);
+const notificationCenter = mountNotificationCenterControls(root, notifications, appActivation, surface);
 let quickPanelControls = null;
 let networkQuickPanel = null;
 try {
