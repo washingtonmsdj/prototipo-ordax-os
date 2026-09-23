@@ -4,14 +4,14 @@ import {
 } from "../../contracts/notes-file-importer.mjs";
 import { validateFileSpacePath } from "../../contracts/file-space.mjs";
 
-const FAILURE_MESSAGES = Object.freeze({
-  "source-reference-too-long": "O nome ou caminho deste arquivo é longo demais para ser referenciado pelo Notas.",
-  "source-read-failed": "Não foi possível ler este arquivo como texto seguro. O arquivo original não foi alterado.",
-  "source-mismatch": "A leitura devolveu uma origem diferente da solicitada. Nenhuma nota foi criada.",
-  "source-too-large": "Este texto é grande demais para uma nota. O arquivo original não foi alterado.",
-  "notes-project-unavailable": "O Notas não tem um projeto local disponível para receber este arquivo.",
-  "notes-create-failed": "Não foi possível criar a nota. O arquivo original não foi alterado.",
-  "import-in-progress": "Uma nota já está sendo criada a partir de outro arquivo.",
+const FAILURE_MESSAGE_IDS = Object.freeze({
+  "source-reference-too-long": "files.notes.failure.sourceReferenceTooLong",
+  "source-read-failed": "files.notes.failure.sourceReadFailed",
+  "source-mismatch": "files.notes.failure.sourceMismatch",
+  "source-too-large": "files.notes.failure.sourceTooLarge",
+  "notes-project-unavailable": "files.notes.failure.projectUnavailable",
+  "notes-create-failed": "files.notes.createFailed",
+  "import-in-progress": "files.notes.failure.importInProgress",
 });
 
 function validateFileIdentity(value) {
@@ -40,24 +40,30 @@ export function createFileNotesActionPresentation({
     throw new TypeError("Files to Notes action availability/busy flags must be boolean");
   }
   if (!importerAvailable || selected === null || selected.kind !== "file") {
-    return Object.freeze({ visible: false, label: "", disabled: true, title: "" });
+    return Object.freeze({
+      visible: false,
+      labelMessageId: null,
+      disabled: true,
+      titleMessageId: null,
+    });
   }
   validateFileIdentity(selected);
   return Object.freeze({
     visible: true,
-    label: busy ? "Criando nota…" : "Criar nota",
+    labelMessageId: busy ? "files.notes.action.creating" : "files.notes.action.create",
     disabled: busy,
-    title: "Cria uma nota com uma cópia do texto e preserva o arquivo original.",
+    titleMessageId: "files.notes.action.title",
   });
 }
 
 export function messageForNotesFileImport(resultValue, fileName) {
   const result = validateNotesFileImportResult(resultValue);
-  const name = typeof fileName === "string" && fileName.length > 0 ? fileName : "arquivo";
+  const name = typeof fileName === "string" && fileName.length > 0 ? fileName : null;
   if (result.status === "failed") {
     return Object.freeze({
       kind: "warning",
-      text: FAILURE_MESSAGES[result.code] ?? "Não foi possível criar a nota.",
+      messageId: FAILURE_MESSAGE_IDS[result.code] ?? "files.notes.failure.generic",
+      messageParams: Object.freeze({}),
       openNotes: false,
     });
   }
@@ -65,20 +71,23 @@ export function messageForNotesFileImport(resultValue, fileName) {
   if (result.persistence === "device" && result.persistenceOk) {
     return Object.freeze({
       kind: "success",
-      text: `Nota “${name}” criada no Notas. O arquivo original foi preservado.`,
+      messageId: "files.notes.createdDevice",
+      messageParams: Object.freeze({ name }),
       openNotes: true,
     });
   }
   if (result.persistence === "device") {
     return Object.freeze({
       kind: "warning",
-      text: `Nota “${name}” criada, mas a persistência no dispositivo está degradada. O arquivo original foi preservado.`,
+      messageId: "files.notes.createdDegraded",
+      messageParams: Object.freeze({ name }),
       openNotes: true,
     });
   }
   return Object.freeze({
     kind: "neutral",
-    text: `Nota “${name}” criada somente nesta sessão. O arquivo original foi preservado.`,
+    messageId: "files.notes.createdSession",
+    messageParams: Object.freeze({ name }),
     openNotes: true,
   });
 }
