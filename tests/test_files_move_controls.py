@@ -28,16 +28,17 @@ class FilesMoveControlsTests(unittest.TestCase):
         self.assertIn("data-file-copy-to-toggle", controls)
         self.assertIn("data-file-transfer-confirm", controls)
         self.assertIn("data-file-transfer-cancel", controls)
-        self.assertIn("Mover para esta pasta", controls)
-        self.assertIn("Copiar para esta pasta", controls)
-        self.assertIn("Navegue até a pasta de destino", controls)
+        self.assertIn('"files.transfer.confirmMove"', controls)
+        self.assertIn('"files.transfer.confirmCopy"', controls)
+        self.assertIn('"files.transfer.navigateCopy"', controls)
+        self.assertIn('"files.transfer.navigateMove"', controls)
 
     def test_move_rejects_same_folder_and_directory_descendants(self):
         controls = CONTROLS.read_text(encoding="utf-8")
         self.assertIn("listing.path === transferEntry.sourcePath", controls)
         self.assertIn("listing.path === transferEntry.sourceFullPath", controls)
         self.assertIn("listing.path.startsWith(`${transferEntry.sourceFullPath}/`)", controls)
-        self.assertIn("Uma pasta não pode ser movida para dentro dela mesma.", controls)
+        self.assertIn('"files.transfer.cannotMoveIntoSelf"', controls)
 
     def test_move_errors_are_specific_and_origin_preserving(self):
         controls = CONTROLS.read_text(encoding="utf-8")
@@ -46,8 +47,9 @@ class FilesMoveControlsTests(unittest.TestCase):
         self.assertIn("status === 412", controls)
         self.assertIn("status === 413", controls)
         self.assertIn("status === 422", controls)
-        self.assertIn("Pastas ainda não podem ser movidas entre volumes.", controls)
-        self.assertIn("A origem foi preservada.", controls)
+        self.assertIn('"files.transfer.folderCrossVolumeUnsupported"', controls)
+        self.assertIn('"files.transfer.moveFailed"', controls)
+        self.assertIn('"files.transfer.copyFailed"', controls)
 
     def test_transfer_panel_is_responsive(self):
         css = CSS.read_text(encoding="utf-8")
