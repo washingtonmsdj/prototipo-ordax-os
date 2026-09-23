@@ -46,7 +46,8 @@ This does **not** make `en-US` a complete Surface locale yet. Files now localize
 navigation, search, locale-aware sorting, listing, selection, common create/copy/
 rename/project forms, export/preview controls, Recents and recoverable Trash through
 the same owner. Settings and System localize their shared section navigation/header
-copy, and Settings now also localizes its Notifications policy/source and local-session
+copy; System also localizes its overview health and summary cards from structured
+runtime state. Settings localizes its Notifications policy/source and local-session
 Security sections end to end. The Native live local-session lock screen also consumes the
 shared owner and preserves the secret only transiently across locale repaint. Account
 consumes the shared catalog end to end. Notes now localizes its primary navigation/editor
@@ -69,6 +70,7 @@ SURFACE_SHARED_SHELL_EN_US=PASS_SOURCE
 FILES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 FILES_FORMS_SORT_EXPORT_PREVIEW_EN_US=PASS_SOURCE
 SETTINGS_SYSTEM_NAV_EN_US=PASS_SOURCE
+SYSTEM_OVERVIEW_SUMMARY_EN_US=PASS_SOURCE
 SETTINGS_NOTIFICATIONS_EN_US=PASS_SOURCE
 SETTINGS_SECURITY_EN_US=PASS_SOURCE
 LOCAL_SESSION_LOCK_EN_US=PASS_SOURCE
