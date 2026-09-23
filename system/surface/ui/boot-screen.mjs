@@ -35,9 +35,9 @@ export function createSurfaceBootScreen(documentObject = globalThis.document) {
       element.hidden = true;
       return true;
     },
-    fail(message = "Não foi possível iniciar a interface") {
+    fail(message = "OrdaX") {
       if (finished) return false;
-      const text = String(message ?? "").trim() || "Não foi possível iniciar a interface";
+      const text = String(message ?? "").trim() || "OrdaX";
       status.textContent = text;
       element.dataset.state = "error";
       element.removeAttribute("aria-hidden");
