@@ -497,7 +497,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn("lifecycle.localization", overview)
         self.assertIn('t("account.card.workspace")', overview)
         self.assertIn('t("account.card.queueDurable.detail")', overview)
-        self.assertIn('t("account.section.sync.subtitle")', overview)
+        self.assertIn('t(`account.section.${activeSection}.subtitle`)', overview)
         account_catalog = ACCOUNT_LOCALIZATION_CATALOG.read_text(encoding="utf-8")
         self.assertIn('"account.card.workspace": "Áreas e apps"', account_catalog)
         self.assertIn(
