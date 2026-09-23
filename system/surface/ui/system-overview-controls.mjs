@@ -32,15 +32,8 @@ import { createComponentUpdateScopes } from "../../services/components/update-pr
 import { explainSystemStateWithIntelligence } from "../../services/intelligence/client-actions.mjs";
 import {
   deliveryLabel,
-  formatUpdateTimestamp,
-  readableBaseUpdatePhase,
-  readableUpdateMode,
-  readableUpdatePhase,
   shortSha,
-  updateAttentionMessage,
-  updateBootLabel,
   updateIsAlerting,
-  updateStatusLabel,
 } from "../../services/update/presentation.mjs";
 import { mountSystemDiagnosticsReview } from "./system-diagnostics-review.mjs";
 import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
@@ -618,25 +611,62 @@ export function mountSystemOverviewControls(
     view.append(section);
   };
 
+  const updatePhaseMessageId = (phase) => ({
+    checking: "system.updates.phase.checking",
+    fetching: "system.updates.phase.fetching",
+    validating: "system.updates.phase.validating",
+    activating: "system.updates.phase.activating",
+    "health-wait": "system.updates.phase.healthWait",
+    rollback: "system.updates.phase.rollback",
+    blocked: "system.updates.phase.blocked",
+    error: "system.updates.phase.error",
+  }[phase] ?? "system.updates.phase.idle");
+
+  const baseUpdatePhaseMessageId = (phase) => ({
+    "waiting-candidate": "system.updates.basePhase.waitingCandidate",
+    "candidate-requested": "system.updates.basePhase.candidateRequested",
+    "candidate-fetching": "system.updates.basePhase.candidateFetching",
+    "candidate-ready": "system.updates.basePhase.candidateReady",
+    staged: "system.updates.basePhase.staged",
+    "activation-ready": "system.updates.basePhase.activationReady",
+  }[phase] ?? "system.updates.basePhase.none");
+
+  const bootMessageId = (snapshot) => {
+    if (!snapshot?.bootRefreshRequired) return "system.updates.boot.none";
+    return ({
+      "candidate-requested": "system.updates.boot.candidateRequested",
+      "candidate-fetching": "system.updates.boot.candidateFetching",
+      "candidate-ready": "system.updates.boot.candidateReady",
+      staged: "system.updates.boot.staged",
+      "activation-ready": "system.updates.boot.activationReady",
+    }[snapshot.baseUpdatePhase] ?? "system.updates.boot.pending");
+  };
+
+  const localizedDelivery = (value) => Number.isSafeInteger(value) && value > 0
+    ? t("system.overview.delivery.number", { value })
+    : t("system.overview.delivery.unnumbered");
+
+  const localizedTimestamp = (value) =>
+    formatOverviewTimestamp(value, localization.getLocale()) ?? "—";
+
+  const localizedUpdateAttention = (snapshot) => snapshot?.bootRefreshRequired
+    ? t(overviewUpdateDetailMessageId(snapshot) ?? "system.overview.update.detail.pending")
+    : t("system.updates.attention.generic");
+
   const renderUpdateDetails = (view) => {
     const section = node(documentObject, "section", "ordax-system-section");
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Atualização"),
-      node(documentObject, "h4", "ordax-system-section-title", "Entrega e recuperação"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.updates.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.updates.title")),
     );
     heading.append(headingCopy);
     section.append(heading);
 
     if (!updateSnapshot) {
       section.append(
-        node(
-          documentObject,
-          "p",
-          "ordax-system-placeholder",
-          "Este host não publica o estado do supervisor de atualizações.",
-        ),
+        node(documentObject, "p", "ordax-system-placeholder", t("system.updates.unavailable")),
       );
       view.append(section);
       return;
@@ -652,50 +682,57 @@ export function mountSystemOverviewControls(
       facts.append(item);
     };
 
-    addFact("Entrega", deliveryLabel(updateSnapshot.deliveryNumber));
-    addFact("Commit técnico", shortSha(updateSnapshot.sourceSha));
+    addFact(t("system.updates.fact.delivery"), localizedDelivery(updateSnapshot.deliveryNumber));
+    addFact(t("system.updates.fact.sourceCommit"), shortSha(updateSnapshot.sourceSha));
     if (updateSnapshot.runtimeSurfaceSha) {
-      addFact("Surface em execução", shortSha(updateSnapshot.runtimeSurfaceSha));
+      addFact(t("system.updates.fact.runtimeSurface"), shortSha(updateSnapshot.runtimeSurfaceSha));
     }
-    addFact("Estado", updateStatusLabel(updateSnapshot.status));
-    addFact("Fase", readableUpdatePhase(updateSnapshot.phase));
-    addFact("Aplicação", readableUpdateMode(updateSnapshot.applyMode));
+    addFact(t("system.updates.fact.status"), t(overviewUpdateStatusMessageId(updateSnapshot.status)));
+    addFact(t("system.updates.fact.phase"), t(updatePhaseMessageId(updateSnapshot.phase)));
+    addFact(t("system.updates.fact.applyMode"), t(overviewUpdateModeMessageId(updateSnapshot.applyMode)));
     if (updateSnapshot.targetSha) {
-      addFact("Alvo", shortSha(updateSnapshot.targetSha));
+      addFact(t("system.updates.fact.target"), shortSha(updateSnapshot.targetSha));
     }
     if (updateSnapshot.attemptId) {
-      addFact("Tentativa", formatUpdateTimestamp(updateSnapshot.attemptId));
+      addFact(t("system.updates.fact.attempt"), localizedTimestamp(updateSnapshot.attemptId));
     }
     if (updateSnapshot.checkedAt && updateSnapshot.checkedAt !== "unknown") {
-      addFact("Última verificação", formatUpdateTimestamp(updateSnapshot.checkedAt));
+      addFact(t("system.updates.fact.checkedAt"), localizedTimestamp(updateSnapshot.checkedAt));
     }
     if (updateSnapshot.lastError) {
-      addFact("Diagnóstico", updateSnapshot.lastError);
+      addFact(t("system.updates.fact.diagnostic"), updateSnapshot.lastError);
     }
     if (updateSnapshot.lastAppliedAt !== "unknown") {
-      addFact("Última aplicação", formatUpdateTimestamp(updateSnapshot.lastAppliedAt));
-      addFact("Duração", `${updateSnapshot.lastApplyDurationSeconds}s · preparação ${updateSnapshot.lastStageDurationSeconds}s`);
+      addFact(t("system.updates.fact.lastAppliedAt"), localizedTimestamp(updateSnapshot.lastAppliedAt));
+      addFact(
+        t("system.updates.fact.duration"),
+        t("system.updates.duration", {
+          apply: updateSnapshot.lastApplyDurationSeconds,
+          stage: updateSnapshot.lastStageDurationSeconds,
+        }),
+      );
     }
     if (updateSnapshot.rejectedSha) {
-      addFact("Commit bloqueado", shortSha(updateSnapshot.rejectedSha));
+      addFact(t("system.updates.fact.rejectedCommit"), shortSha(updateSnapshot.rejectedSha));
     }
     if (updateSnapshot.bootRefreshRequired) {
-      addFact("Progresso da Base", readableBaseUpdatePhase(updateSnapshot.baseUpdatePhase));
+      addFact(t("system.updates.fact.baseProgress"), t(baseUpdatePhaseMessageId(updateSnapshot.baseUpdatePhase)));
       if (updateSnapshot.baseUpdateSha) {
-        addFact("Base candidata", shortSha(updateSnapshot.baseUpdateSha));
+        addFact(t("system.updates.fact.baseCandidate"), shortSha(updateSnapshot.baseUpdateSha));
       }
     }
-    addFact("Boot", updateBootLabel(updateSnapshot));
+    addFact(t("system.updates.fact.boot"), t(bootMessageId(updateSnapshot)));
     section.append(facts);
 
     if (updateIsAlerting(updateSnapshot)) {
-      const warning = node(
-        documentObject,
-        "p",
-        "ordax-system-warning",
-        updateAttentionMessage(updateSnapshot),
+      section.append(
+        node(
+          documentObject,
+          "p",
+          "ordax-system-warning",
+          localizedUpdateAttention(updateSnapshot),
+        ),
       );
-      section.append(warning);
     }
 
     view.append(section);
@@ -810,45 +847,54 @@ export function mountSystemOverviewControls(
     view.append(section);
   };
 
-  const componentReleaseLabel = (mode) => ({
-    "base-ab": "Base A/B",
-    "component-slot": "Slot independente",
-    "git-app": "App via Git",
-    bundled: "Distribuição conjunta",
-  }[mode] ?? mode);
+  const componentReleaseLabel = (mode) => t(({
+    "base-ab": "system.updates.component.release.baseAb",
+    "component-slot": "system.updates.component.release.componentSlot",
+    "git-app": "system.updates.component.release.gitApp",
+    bundled: "system.updates.component.release.bundled",
+  }[mode] ?? "system.updates.component.release.bundled"));
 
-  const componentKindLabel = (kind) => ({
-    base: "Base",
-    shell: "Shell",
-    service: "Serviço",
-    app: "App",
-  }[kind] ?? kind);
+  const componentKindLabel = (kind) => t(({
+    base: "system.updates.component.kind.base",
+    shell: "system.updates.component.kind.shell",
+    service: "system.updates.component.kind.service",
+    app: "system.updates.component.kind.app",
+  }[kind] ?? "system.updates.component.kind.app"));
 
-  const componentHealthLabel = (health) => ({
-    healthy: "Saudável",
-    failed: "Falha",
-    unknown: "Não observado",
-  }[health] ?? health);
+  const componentHealthLabel = (health) => t(({
+    healthy: "system.updates.component.health.healthy",
+    failed: "system.updates.component.health.failed",
+    unknown: "system.updates.component.health.unknown",
+  }[health] ?? "system.updates.component.health.unknown"));
+
+  const componentChannelLabel = (channelId) => t(({
+    "system-base": "system.updates.component.channel.systemBase",
+    "system-bundle": "system.updates.component.channel.systemBundle",
+    "development-git": "system.updates.component.channel.developmentGit",
+    "independent-component": "system.updates.component.channel.independentComponent",
+  }[channelId] ?? "system.updates.component.channel.systemBundle"));
+
+  const componentDetail = (releaseMode) => t(({
+    "base-ab": "system.updates.component.detail.baseAb",
+    "component-slot": "system.updates.component.detail.componentSlot",
+    "git-app": "system.updates.component.detail.gitApp",
+    bundled: "system.updates.component.detail.bundled",
+  }[releaseMode] ?? "system.updates.component.detail.bundled"));
 
   const renderComponentUpdateScopes = (view) => {
     const section = node(documentObject, "section", "ordax-system-section");
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Escopo"),
-      node(documentObject, "h4", "ordax-system-section-title", "OrdaX e aplicativos"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.updates.scope.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.updates.scope.title")),
     );
     heading.append(headingCopy);
     section.append(heading);
 
     if (!componentSnapshot) {
       section.append(
-        node(
-          documentObject,
-          "p",
-          "ordax-system-placeholder",
-          "O catálogo de componentes não está disponível nesta composição.",
-        ),
+        node(documentObject, "p", "ordax-system-placeholder", t("system.updates.scope.unavailable")),
       );
       view.append(section);
       return;
@@ -856,18 +902,8 @@ export function mountSystemOverviewControls(
 
     const scopes = createComponentUpdateScopes(componentSnapshot);
     section.append(
-      node(
-        documentObject,
-        "p",
-        "ordax-system-section-copy",
-        "A versão de cada componente e o canal que o entrega são informações separadas. Apps Beta podem ter versão própria mesmo quando ainda atualizam junto com o OrdaX ou, no ambiente de desenvolvimento, diretamente pelo Git.",
-      ),
-      node(
-        documentObject,
-        "p",
-        "ordax-system-section-copy",
-        "Esta tela descreve os canais realmente habilitados; ela não representa uma Loja nem libera atualização independente de produção quando o componente ainda não usa slot assinado.",
-      ),
+      node(documentObject, "p", "ordax-system-section-copy", t("system.updates.scope.policy")),
+      node(documentObject, "p", "ordax-system-section-copy", t("system.updates.scope.channelPolicy")),
     );
 
     const renderScope = (title, components, scopeId) => {
@@ -882,9 +918,9 @@ export function mountSystemOverviewControls(
         item.dataset.releaseMode = component.releaseMode;
         item.dataset.updateChannel = component.updateChannel.id;
         const maturity = component.versionStage === "beta"
-          ? " · Beta"
+          ? t("system.updates.scope.stage.beta")
           : component.versionStage === "stable"
-            ? " · Estável"
+            ? t("system.updates.scope.stage.stable")
             : "";
         item.append(
           node(documentObject, "strong", "", component.title),
@@ -892,24 +928,24 @@ export function mountSystemOverviewControls(
             documentObject,
             "span",
             "",
-            `v${component.version}${maturity} · ${component.updateChannel.label}`,
+            `v${component.version}${maturity} · ${componentChannelLabel(component.updateChannel.id)}`,
           ),
           node(
             documentObject,
             "small",
             "ordax-system-component-health",
-            `Saúde: ${componentHealthLabel(component.health)}`,
+            t("system.updates.scope.health", { health: componentHealthLabel(component.health) }),
           ),
         );
 
-        const detail = component.releaseMode === "base-ab"
-          ? "A Base usa o ciclo A/B do OrdaX; não é um app independente."
-          : component.releaseMode === "component-slot"
-            ? "Atualização independente exige pacote assinado, saúde, promoção e rollback."
-            : component.releaseMode === "git-app"
-              ? "Canal de desenvolvimento via Git; não é o atualizador de produção do app."
-              : "Atualiza junto com a entrega do OrdaX; rollback individual não está habilitado.";
-        item.append(node(documentObject, "small", "ordax-system-component-slots", detail));
+        item.append(
+          node(
+            documentObject,
+            "small",
+            "ordax-system-component-slots",
+            componentDetail(component.releaseMode),
+          ),
+        );
 
         if (component.independentUpdate) {
           item.append(
@@ -917,7 +953,10 @@ export function mountSystemOverviewControls(
               documentObject,
               "small",
               "ordax-system-component-slots",
-              `Anterior: ${component.previousVersion ? `v${component.previousVersion}` : "—"} · Pendente: ${component.pendingVersion ? `v${component.pendingVersion}` : "—"}`,
+              t("system.updates.scope.previousPending", {
+                previous: component.previousVersion ? `v${component.previousVersion}` : "—",
+                pending: component.pendingVersion ? `v${component.pendingVersion}` : "—",
+              }),
             ),
           );
         }
@@ -927,16 +966,16 @@ export function mountSystemOverviewControls(
       section.append(group);
     };
 
-    renderScope("OrdaX e sistema", scopes.system, "system");
-    renderScope("Aplicativos", scopes.applications, "applications");
+    renderScope(t("system.updates.scope.system"), scopes.system, "system");
+    renderScope(t("system.updates.scope.applications"), scopes.applications, "applications");
     section.append(
       node(
         documentObject,
         "p",
         "ordax-system-section-copy",
         scopes.persistence === "device"
-          ? "Estado de componentes e saúde persistido neste dispositivo."
-          : "Catálogo disponível; estado de componentes permanece somente nesta sessão.",
+          ? t("system.updates.scope.persistence.device")
+          : t("system.updates.scope.persistence.session"),
       ),
     );
     view.append(section);
@@ -1092,10 +1131,15 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Registro"),
-      node(documentObject, "h4", "ordax-system-section-title", "Histórico de atualizações"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.updates.history.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.updates.history.title")),
     );
-    const refresh = node(documentObject, "button", "ordax-system-action", "Atualizar histórico");
+    const refresh = node(
+      documentObject,
+      "button",
+      "ordax-system-action",
+      t("system.updates.history.refresh"),
+    );
     refresh.type = "button";
     refresh.dataset.systemHistoryRefresh = "";
     heading.append(headingCopy, refresh);
@@ -1107,7 +1151,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-placeholder",
-          historyMessage || "Lendo histórico persistente deste dispositivo…",
+          historyMessage || t("system.updates.history.reading"),
         ),
       );
       view.append(section);
@@ -1115,28 +1159,32 @@ export function mountSystemOverviewControls(
     }
 
     const applications = node(documentObject, "div", "ordax-system-history");
-    applications.append(node(documentObject, "h5", "ordax-system-history-title", "Aplicações neste notebook"));
+    applications.append(
+      node(documentObject, "h5", "ordax-system-history-title", t("system.updates.history.applications")),
+    );
     if (historySnapshot.applications.length === 0) {
       applications.append(
-        node(
-          documentObject,
-          "p",
-          "ordax-system-placeholder",
-          "O registro local começa nesta geração do atualizador. Versões anteriores continuam listadas no histórico de entregas.",
-        ),
+        node(documentObject, "p", "ordax-system-placeholder", t("system.updates.history.empty")),
       );
     } else {
       for (const entry of historySnapshot.applications.slice(0, 10)) {
         const item = node(documentObject, "article", "ordax-system-history-item");
-        const result = entry.result === "applied" ? "Aplicada" : "Revertida";
+        const result = entry.result === "applied"
+          ? t("system.updates.history.result.applied")
+          : t("system.updates.history.result.rolledBack");
         item.append(
-          node(documentObject, "strong", "", `${deliveryLabel(entry.deliveryNumber)} · ${result}`),
-          node(documentObject, "span", "", formatUpdateTimestamp(entry.appliedAt)),
+          node(documentObject, "strong", "", `${localizedDelivery(entry.deliveryNumber)} · ${result}`),
+          node(documentObject, "span", "", localizedTimestamp(entry.appliedAt)),
           node(
             documentObject,
             "small",
             "",
-            `SHA ${shortSha(entry.sourceSha)} · ${readableUpdateMode(entry.applyMode)} · ${entry.applyDurationSeconds}s (preparação ${entry.stageDurationSeconds}s)`,
+            t("system.updates.history.applicationDetail", {
+              sha: shortSha(entry.sourceSha),
+              mode: t(overviewUpdateModeMessageId(entry.applyMode)),
+              apply: entry.applyDurationSeconds,
+              stage: entry.stageDurationSeconds,
+            }),
           ),
         );
         applications.append(item);
@@ -1144,13 +1192,20 @@ export function mountSystemOverviewControls(
     }
 
     const releases = node(documentObject, "div", "ordax-system-history");
-    releases.append(node(documentObject, "h5", "ordax-system-history-title", "Entregas do OrdaX"));
+    releases.append(
+      node(documentObject, "h5", "ordax-system-history-title", t("system.updates.history.releases")),
+    );
     for (const entry of historySnapshot.releases.slice(0, 12)) {
       const item = node(documentObject, "article", "ordax-system-history-item");
       item.append(
-        node(documentObject, "strong", "", `${deliveryLabel(entry.deliveryNumber)} · ${entry.title}`),
-        node(documentObject, "span", "", formatUpdateTimestamp(entry.releasedAt)),
-        node(documentObject, "small", "", `SHA ${shortSha(entry.sourceSha)}`),
+        node(documentObject, "strong", "", `${localizedDelivery(entry.deliveryNumber)} · ${entry.title}`),
+        node(documentObject, "span", "", localizedTimestamp(entry.releasedAt)),
+        node(
+          documentObject,
+          "small",
+          "",
+          t("system.updates.history.releaseDetail", { sha: shortSha(entry.sourceSha) }),
+        ),
       );
       releases.append(item);
     }
@@ -1381,7 +1436,7 @@ export function mountSystemOverviewControls(
       historySnapshot = next;
     } catch {
       if (destroyed || ordinal !== historyOrdinal) return;
-      historyMessage = "Não foi possível atualizar o histórico local.";
+      historyMessage = t("system.updates.history.readFailed");
     } finally {
       if (!destroyed && ordinal === historyOrdinal) replaceView();
     }
