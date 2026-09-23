@@ -81,12 +81,13 @@ test("localization subscribers observe preference changes without owning another
   localization.dispose();
 });
 
-test("catalog coverage is explicit and does not claim full Surface completion", () => {
+test("catalog coverage marks only launch-complete Surface locales", () => {
   assert.equal(SURFACE_SOURCE_LOCALE, "pt-BR");
   assert.equal(SURFACE_ENGLISH_TARGET_LOCALE, "en-US");
-  assert.deepEqual(SURFACE_COMPLETE_LOCALES, ["pt-BR"]);
+  assert.deepEqual(SURFACE_COMPLETE_LOCALES, ["pt-BR", "en-US"]);
   assert.equal(surfaceCatalogCoverage("pt-BR").complete, true);
   assert.equal(surfaceCatalogCoverage("en-US").complete, true);
+  for (const locale of SURFACE_COMPLETE_LOCALES) assert.equal(surfaceCatalogCoverage(locale).complete, true);
   assert.equal(surfaceCatalogCoverage("es-ES").complete, false);
 });
 
