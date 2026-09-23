@@ -5,6 +5,8 @@ ROOT = Path(__file__).resolve().parents[1]
 PREPARE_SCRIPT = ROOT / "tools/release-signing/windows/3-Prepare-PortableV4-SigningHandoff.ps1"
 SIGN_SCRIPT = ROOT / "tools/release-signing/windows/4-Sign-Initial-OrdaXRelease.ps1"
 VERIFY_SCRIPT = ROOT / "tools/release-signing/windows/5-Verify-PortableV4-SignedHandoff.ps1"
+SIGN_CMD = ROOT / "tools/release-signing/windows/4-Sign-Initial-OrdaXRelease.cmd"
+VERIFY_CMD = ROOT / "tools/release-signing/windows/5-Verify-PortableV4-SignedHandoff.cmd"
 SIGNING_WORKFLOW = ROOT / ".github/workflows/release-signing.yml"
 SIGNING_DOC = ROOT / "docs/RELEASE-SIGNING.md"
 BUNDLE_DOC = ROOT / "docs/RELEASE-BUNDLE.md"
@@ -39,6 +41,7 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
         self.assertIn("ReleaseAgentPath", script)
         self.assertIn("ordax-release-agent.exe", script)
         self.assertIn("5-Verify-PortableV4-SignedHandoff.ps1", script)
+        self.assertIn("5-Verify-PortableV4-SignedHandoff.cmd", script)
         self.assertIn("Copy-VerifiedFile $ReleaseAgentPath", script)
         self.assertNotIn("PrivateKeyPath", script)
 
@@ -54,6 +57,16 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
         self.assertNotIn("activate-exact", script)
         self.assertNotIn("install ", script)
         self.assertNotIn("PrivateKeyPath", script)
+
+    def test_windows_launchers_do_not_advertise_legacy_v1_publication(self):
+        sign_cmd = SIGN_CMD.read_text(encoding="utf-8")
+        verify_cmd = VERIFY_CMD.read_text(encoding="utf-8")
+        self.assertNotIn("system.tar", sign_cmd)
+        self.assertIn("tres artefatos v4", sign_cmd)
+        self.assertIn("5-Verify-PortableV4-SignedHandoff.cmd", sign_cmd)
+        self.assertIn("NAO publica", verify_cmd)
+        self.assertIn("NAO seleciona pendrive", verify_cmd)
+        self.assertIn("NAO escreve midia fisica", verify_cmd)
 
     def test_signing_tooling_publishes_windows_release_agent_for_operator_verification(self):
         workflow = SIGNING_WORKFLOW.read_text(encoding="utf-8")
