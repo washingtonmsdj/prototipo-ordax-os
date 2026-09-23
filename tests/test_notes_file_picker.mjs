@@ -119,7 +119,7 @@ test("closing the picker invalidates pending I/O without reopening it", async ()
   assert.equal(await opening, false);
   assert.equal(picker.getSnapshot().open, false);
   assert.equal(picker.getSnapshot().listing, null);
-  assert.equal(picker.getSnapshot().error, "");
+  assert.equal(picker.getSnapshot().errorMessageId, null);
 });
 
 test("listing path mismatches fail closed with a stable user-facing error", async () => {
@@ -131,7 +131,7 @@ test("listing path mismatches fail closed with a stable user-facing error", asyn
   assert.equal(picker.getSnapshot().open, true);
   assert.equal(picker.getSnapshot().pending, false);
   assert.equal(picker.getSnapshot().listing, null);
-  assert.equal(picker.getSnapshot().error, "Não foi possível abrir esta pasta.");
+  assert.equal(picker.getSnapshot().errorMessageId, "notes.filePicker.openFailed");
 });
 
 test("unavailable and destroyed pickers do not invent filesystem capability", async () => {
