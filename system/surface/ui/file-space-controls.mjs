@@ -1371,9 +1371,9 @@ export function mountFileSpaceControls(
       projectSnapshot = projectPort.create({ name: projectDraft, path: listing.path });
       creatingProject = false;
       projectDraft = "";
-      message = "Projeto adicionado. A pasta e os arquivos permanecem no Meu espaço.";
+      setMessage("files.project.added");
     } catch {
-      message = "Não foi possível adicionar esta pasta como projeto.";
+      setMessage("files.project.addFailed");
     }
     replaceView();
   };
@@ -1384,7 +1384,7 @@ export function mountFileSpaceControls(
     if (!project || project.path !== listing.path) {
       renamingProjectId = null;
       projectRenameDraft = "";
-      message = "Este projeto não está mais disponível nesta pasta.";
+      setMessage("files.project.unavailableHere");
       replaceView();
       return;
     }
@@ -1393,9 +1393,9 @@ export function mountFileSpaceControls(
       const renamed = projectSnapshot.projects.find((candidate) => candidate.id === project.id);
       renamingProjectId = null;
       projectRenameDraft = "";
-      message = `Projeto renomeado para “${renamed?.name ?? project.name}”. A pasta continua em ${project.path}.`;
+      setMessage("files.project.renamed", { name: renamed?.name ?? project.name, path: project.path });
     } catch {
-      message = "Não foi possível renomear este projeto.";
+      setMessage("files.project.renameFailed");
     }
     replaceView();
   };
@@ -1407,14 +1407,14 @@ export function mountFileSpaceControls(
     const loaded = await load(project.path);
     if (destroyed) return;
     if (!loaded) {
-      message = "A pasta vinculada a este projeto não está disponível. A referência foi preservada.";
+      setMessage("files.project.folderUnavailable");
       replaceView();
       return;
     }
     try {
       projectSnapshot = projectPort.recordOpened(projectId);
     } catch {
-      message = "A pasta foi aberta, mas a atividade do projeto não pôde ser atualizada.";
+      setMessage("files.project.activityUpdateFailed");
       replaceView();
     }
   };
@@ -1430,9 +1430,9 @@ export function mountFileSpaceControls(
       if (failedProjectResume?.projectId === projectId) {
         failedProjectResume = null;
       }
-      message = "Projeto removido do catálogo. Nenhum arquivo foi apagado.";
+      setMessage("files.project.removed");
     } catch {
-      message = "Não foi possível remover este projeto do catálogo.";
+      setMessage("files.project.removeFailed");
     }
     replaceView();
   };
@@ -1442,16 +1442,16 @@ export function mountFileSpaceControls(
     const project = projectSnapshot?.projects.find((candidate) => candidate.id === projectId);
     if (!project || project.lastFilePath !== failedProjectResume.path) {
       failedProjectResume = null;
-      message = "A referência do último arquivo mudou. Nada foi alterado.";
+      setMessage("files.project.lastFileChanged");
       replaceView();
       return;
     }
     try {
       projectSnapshot = projectPort.clearLastFile(projectId);
       failedProjectResume = null;
-      message = "Referência do último arquivo esquecida. Nenhum arquivo foi apagado.";
+      setMessage("files.project.lastFileForgotten");
     } catch {
-      message = "Não foi possível esquecer a referência do último arquivo.";
+      setMessage("files.project.lastFileForgetFailed");
     }
     replaceView();
   };
@@ -1951,7 +1951,7 @@ export function mountFileSpaceControls(
     if (!transferEntry || !listing) return;
     const destination = transferDestinationState();
     if (!destination.allowed) {
-      message = destination.reason;
+      setMessage(destination.reasonMessageId);
       replaceView();
       return;
     }
