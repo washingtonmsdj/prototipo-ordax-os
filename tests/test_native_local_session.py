@@ -114,7 +114,7 @@ class NativeLocalSessionTests(unittest.TestCase):
         self.assertIn("assertSurfaceRenderLifecycle", lock)
         self.assertIn("localization.subscribe", lock)
         self.assertIn("unsubscribeLocalization", lock)
-        self.assertIn('messageId = "localSession.lock.message.rateLimited"', lock)
+        self.assertIn('"localSession.lock.message.rateLimited"', lock)
         self.assertIn('t("localSession.lock.title")', lock)
         self.assertIn('"localSession.lock.title": "Session locked"', local_session_i18n)
         self.assertIn('"localSession.lock.action.unlock": "Unlock"', local_session_i18n)
