@@ -378,14 +378,14 @@ O gate é de produto/source. Ele **não** substitui:
 ### P1 — experiência cotidiana
 
 4. Arquivos: remoção segura/lixeira. — **PASS_SOURCE**
-5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE. — **IN_PROGRESS**: owner + shell inglês `PASS_SOURCE`; Arquivos cobre jornada primária, formulários comuns, ordenação, exportação e preview em inglês `PASS_SOURCE`; navegação de Ajustes/Sistema, resumo/health, leituras de memória/armazenamento e revisão diagnóstica sanitizada de Sistema, Ajustes → Notificações, Ajustes → Segurança/sessão local, lock screen Native e Conta completa também `PASS_SOURCE`; jornadas primárias de Notas e Internet agora `PASS_SOURCE`; trays + quick panels de rede/bateria e Central de Notificações agora `PASS_SOURCE`; histórico first-party de updates usa apresentação semântica rerenderizável via `ordax.notifications/3`; o painel de rede continua sem persistir credenciais; mensagens operacionais/profundas restantes ainda estão em migração
+5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE. — **IN_PROGRESS**: owner + shell inglês `PASS_SOURCE`; Arquivos cobre jornada primária, formulários comuns, ordenação, exportação e preview em inglês `PASS_SOURCE`; navegação de Ajustes/Sistema, resumo/health, leituras de memória/armazenamento, detalhes/histórico de Atualizações e revisão diagnóstica sanitizada de Sistema, Ajustes → Notificações, Ajustes → Segurança/sessão local, lock screen Native e Conta completa também `PASS_SOURCE`; jornadas primárias de Notas e Internet agora `PASS_SOURCE`; trays + quick panels de rede/bateria e Central de Notificações agora `PASS_SOURCE`; histórico first-party de updates usa apresentação semântica rerenderizável via `ordax.notifications/3`; o painel de rede continua sem persistir credenciais; mensagens operacionais/profundas restantes ainda estão em migração
 6. Diagnóstico/recovery em Sistema. — **PASS_SOURCE**: controller diagnóstico Native agora é composto de verdade e Sistema exibe recovery read-only a partir dos marcadores reais de `current`, `known-good`, candidato/transação e entrada local de recovery; prova física continua B
 7. Inventário mínimo/suporte de hardware. — **PASS_SOURCE** via `hardware-support-matrix/1`; prova física do hardware-alvo Stable continua B
 
 ### P2 — fechar release
 
 8. Handoff v4 com AI real. — **PASS_SOURCE**; materialização/assinatura Stable real ainda pendente.
-9. Gerar/materializar/signar o Stable v4 real e executar regressões QEMU/UEFI do caminho v4.
+9. Materialização v4 com bytes reais + assinatura efêmera em CI. — **GATE_IMPLEMENTED_NON_PROMOTIONAL**; assinatura/materialização canônica Stable e regressão QEMU/UEFI v4 continuam pendentes.
 10. Somente então voltar ao primeiro USB Stable/MVP físico.
 
 ---
