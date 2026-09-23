@@ -24,7 +24,7 @@ launch standard. This avoids advertising a language based only on OOBE translati
 
 ## Expansion order
 
-1. complete English across the shared Surface and first-party apps;
+1. keep PT-BR and English complete across the shared Surface and first-party apps;
 2. complete Spanish;
 3. complete German;
 4. complete French;
@@ -41,24 +41,18 @@ preference. PT-BR remains the source catalog. The shared desktop shell, launcher
 window chrome, workspace labels, connectivity copy, first-party app titles and
 fallback panel metadata have explicit English catalog entries.
 
-This does **not** make `en-US` a complete Surface locale yet. Files now localizes
-navigation, search, locale-aware sorting, listing, selection, common create/copy/
-rename/project forms, export/preview controls, Recents and recoverable Trash through
-the same owner. Settings and System localize their shared section navigation/header
-copy; System also localizes its overview health and summary cards from structured
-runtime state. Settings localizes its Notifications policy/source and local-session
-Security sections end to end. The Native live local-session lock screen also consumes the
-shared owner and preserves the secret only transiently across locale repaint. Account
-consumes the shared catalog end to end. Notes now localizes its primary navigation/editor
-shell, projects/list state, core persistence status and consultative
-Intelligence controls; Internet localizes its primary browser shell, tab navigation,
-address/search locale handling, project panel and key history/favorite states.
-Operational/error messages in Files, deeper Settings/System content, deeper Notes/
-Internet flows and remaining Surface copy still contain PT-BR text and remain in
-migration. Network and battery trays/quick panels plus the Notification Center now
-consume the shared localization owner. First-party update notifications persist bounded
-semantic presentation identity so stored history can rerender when the locale changes;
-generic producer text remains untouched by design. Spanish, German and French remain recognized compatibility locales and retain their
+`en-US` is now a complete Surface locale for the public MVP. Files covers
+navigation, search, locale-aware sorting, listing, selection, deep create/copy/move/
+rename/project/import/export flows, Recents, recoverable Trash, preview and Files → Notes
+presentation through the same owner. Settings, System, Account, Notes and Internet cover
+their primary and deep first-party journeys in English. The Native local-session lock,
+Home continuation/pending cards, power controls, global update accelerator, desktop clock,
+boot screen, network/battery trays and quick panels, and Notification Center also consume
+the shared owner. First-party async feedback that must survive repaint stores semantic
+message identity instead of already-rendered Portuguese text. First-party update
+notifications likewise persist bounded semantic presentation identity so stored history
+can rerender when the locale changes; generic producer text remains untouched by design.
+Spanish, German and French remain recognized compatibility locales and retain their
 translated OOBE catalogs, but are not offered by the public MVP selectors until their
 shared Surface catalogs are complete enough for launch.
 
@@ -80,10 +74,16 @@ NETWORK_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 BATTERY_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 NOTIFICATION_CENTER_EN_US=PASS_SOURCE
 FIRST_PARTY_UPDATE_NOTIFICATION_HISTORY_EN_US=PASS_SOURCE
+FILES_DEEP_EN_US=PASS_SOURCE
+FILES_SEMANTIC_OPERATIONAL_MESSAGES=PASS_SOURCE
+SETTINGS_DEEP_EN_US=PASS_SOURCE
+NOTES_DEEP_EN_US=PASS_SOURCE
+INTERNET_DEEP_EN_US=PASS_SOURCE
+SHELL_DEEP_EN_US=PASS_SOURCE
 MVP_PUBLIC_LOCALES=pt-BR,en-US
 RETAINED_COMPATIBLE_LOCALES=es-ES,de-DE,fr-FR
-SURFACE_COMPLETE_LOCALES=pt-BR
-SURFACE_EN_US_APP_CONTROLS=MIGRATING
+SURFACE_COMPLETE_LOCALES=pt-BR,en-US
+SURFACE_EN_US_APP_CONTROLS=PASS_SOURCE
 SURFACE_ES_ES=HIDDEN_MIGRATING
 SURFACE_DE_DE=HIDDEN_MIGRATING
 SURFACE_FR_FR=HIDDEN_MIGRATING
