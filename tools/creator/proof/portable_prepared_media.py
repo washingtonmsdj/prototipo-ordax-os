@@ -121,8 +121,8 @@ def load_plan(path: Path) -> dict[str, Any]:
     if not isinstance(target_bytes, int) or target_bytes <= 0 or target_bytes % 512:
         raise ProofError("portable media plan target capacity is invalid")
     artifacts = plan.get("artifacts")
-    if not isinstance(artifacts, list) or len(artifacts) != 15:
-        raise ProofError("portable media plan must contain exactly 15 artifacts")
+    if not isinstance(artifacts, list) or len(artifacts) != 17:
+        raise ProofError("portable media plan must contain exactly 17 artifacts")
     seen_ids: set[str] = set()
     seen_targets: set[tuple[str, str]] = set()
     for artifact in artifacts:
@@ -280,8 +280,8 @@ def prove(plan_path: Path, source_values: list[str], output: Path, proof_path: P
         "exact_two_partition_gpt": False,
         "fat32_esp": False,
         "exfat_data": False,
-        "all_15_source_bindings_verified": True,
-        "all_15_artifacts_materialized_from_core_targets": False,
+        "all_17_source_bindings_verified": True,
+        "all_17_artifacts_materialized_from_core_targets": False,
         "read_only_remount_readback_verified": False,
         "physical_target_device_untouched": True,
         "physical_write_unauthorized": True,
