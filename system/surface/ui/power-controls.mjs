@@ -3,27 +3,28 @@ import {
   isPowerActionSupported,
   validatePowerActionsSnapshot,
 } from "../../contracts/power-actions.mjs";
+import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
 
-const ACTIONS = [
-  {
+const ACTIONS = Object.freeze([
+  Object.freeze({
     id: "restart",
-    label: "Reiniciar",
-    confirmingLabel: "Confirmar reinício",
-    pendingLabel: "Reiniciando…",
-    description: "Encerra esta execução e inicia o OrdaX novamente.",
-    confirmation: "Clique novamente em Reiniciar para confirmar.",
+    labelMessageId: "power.controls.restart.label",
+    confirmingMessageId: "power.controls.restart.confirm",
+    pendingMessageId: "power.controls.restart.pending",
+    descriptionMessageId: "power.controls.restart.description",
+    confirmationMessageId: "power.controls.restart.confirmation",
     mark: "↻",
-  },
-  {
+  }),
+  Object.freeze({
     id: "shutdown",
-    label: "Desligar",
-    confirmingLabel: "Confirmar desligamento",
-    pendingLabel: "Desligando…",
-    description: "Encerra esta execução e desliga o equipamento.",
-    confirmation: "Clique novamente em Desligar para confirmar.",
+    labelMessageId: "power.controls.shutdown.label",
+    confirmingMessageId: "power.controls.shutdown.confirm",
+    pendingMessageId: "power.controls.shutdown.pending",
+    descriptionMessageId: "power.controls.shutdown.description",
+    confirmationMessageId: "power.controls.shutdown.confirmation",
     mark: "⏻",
-  },
-];
+  }),
+]);
 
 function node(documentObject, tag, className, text) {
   const element = documentObject.createElement(tag);
@@ -32,7 +33,7 @@ function node(documentObject, tag, className, text) {
   return element;
 }
 
-export function mountPowerControls(root, powerActions = null) {
+export function mountPowerControls(root, powerActions = null, surfaceLifecycle = null) {
   if (!(root instanceof Element)) {
     throw new TypeError("Power controls root must be a DOM Element");
   }
@@ -41,6 +42,9 @@ export function mountPowerControls(root, powerActions = null) {
   }
 
   const port = assertPowerActionsPort(powerActions);
+  const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
   let snapshot = validatePowerActionsSnapshot(port.getSnapshot());
   const documentObject = root.ownerDocument;
   const shell = root.querySelector("[data-ordax-shell]");
@@ -58,10 +62,10 @@ export function mountPowerControls(root, powerActions = null) {
   toggle.type = "button";
   toggle.dataset.powerToggle = "";
   toggle.setAttribute("aria-expanded", "false");
-  toggle.setAttribute("aria-label", "Abrir controles de energia");
+  toggle.setAttribute("aria-label", t("power.controls.open"));
   toggle.append(
     node(documentObject, "span", "ordax-rail-power-icon", "⏻"),
-    node(documentObject, "span", "", "Desligar"),
+    node(documentObject, "span", "ordax-power-toggle-label", t("power.controls.toggle")),
   );
   slot.append(toggle);
 
@@ -70,12 +74,11 @@ export function mountPowerControls(root, powerActions = null) {
   overlay.hidden = true;
   const panel = node(documentObject, "div", "ordax-launcher-panel");
   panel.setAttribute("role", "dialog");
-  panel.setAttribute("aria-label", "Controles de energia do OrdaX");
+  panel.setAttribute("aria-label", t("power.controls.dialog"));
   const heading = node(documentObject, "div", "ordax-launcher-heading");
-  heading.append(
-    node(documentObject, "span", "", "Energia"),
-    node(documentObject, "small", "", "Ação local do host"),
-  );
+  const headingTitle = node(documentObject, "span", "", t("power.controls.heading"));
+  const headingDetail = node(documentObject, "small", "", t("power.controls.hostAction"));
+  heading.append(headingTitle, headingDetail);
   const grid = node(documentObject, "div", "ordax-launcher-grid");
   const status = node(documentObject, "p", "ordax-empty", "");
   status.setAttribute("role", "status");
@@ -87,7 +90,7 @@ export function mountPowerControls(root, powerActions = null) {
   let open = false;
   let confirming = null;
   let pending = null;
-  let message = "";
+  let messageId = null;
   let resetTimer = null;
   let actionOrdinal = 0;
   let destroyed = false;
@@ -115,6 +118,11 @@ export function mountPowerControls(root, powerActions = null) {
     const focusedAction = captureFocusedAction();
     overlay.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
+    toggle.setAttribute("aria-label", t("power.controls.open"));
+    toggle.querySelector(".ordax-power-toggle-label").textContent = t("power.controls.toggle");
+    panel.setAttribute("aria-label", t("power.controls.dialog"));
+    headingTitle.textContent = t("power.controls.heading");
+    headingDetail.textContent = t("power.controls.hostAction");
     grid.replaceChildren();
     for (const item of availableActions()) {
       const button = node(documentObject, "button", "ordax-launcher-app");
@@ -122,20 +130,21 @@ export function mountPowerControls(root, powerActions = null) {
       button.dataset.powerAction = item.id;
       button.disabled = pending !== null;
       const copy = node(documentObject, "span", "ordax-launcher-app-copy");
-      const label = pending === item.id
-        ? item.pendingLabel
+      const labelMessageId = pending === item.id
+        ? item.pendingMessageId
         : confirming === item.id
-          ? item.confirmingLabel
-          : item.label;
+          ? item.confirmingMessageId
+          : item.labelMessageId;
       copy.append(
-        node(documentObject, "strong", "", label),
-        node(documentObject, "small", "", item.description),
+        node(documentObject, "strong", "", t(labelMessageId)),
+        node(documentObject, "small", "", t(item.descriptionMessageId)),
       );
       button.append(node(documentObject, "span", "ordax-app-mark", item.mark), copy);
       grid.append(button);
     }
-    status.textContent = message;
-    status.hidden = message.length === 0;
+    const renderedMessage = messageId ? t(messageId) : "";
+    status.textContent = renderedMessage;
+    status.hidden = renderedMessage.length === 0;
     restoreFocusedAction(focusedAction);
   };
 
@@ -153,7 +162,7 @@ export function mountPowerControls(root, powerActions = null) {
 
     if (confirming !== action) {
       confirming = action;
-      message = descriptor.confirmation;
+      messageId = descriptor.confirmationMessageId;
       render();
       return;
     }
@@ -161,26 +170,26 @@ export function mountPowerControls(root, powerActions = null) {
     const ordinal = ++actionOrdinal;
     confirming = null;
     pending = action;
-    message = action === "restart" ? "Solicitando reinício ao host…" : "Solicitando desligamento ao host…";
+    messageId = action === "restart" ? "power.controls.request.restart" : "power.controls.request.shutdown";
     render();
     Promise.resolve()
       .then(() => port.execute(action))
       .then(() => {
         if (destroyed || ordinal !== actionOrdinal) return;
-        message = "Solicitação aceita pelo host.";
+        messageId = "power.controls.accepted";
         render();
         clearResetTimer();
         resetTimer = globalThis.setTimeout(() => {
           if (destroyed || ordinal !== actionOrdinal) return;
           pending = null;
-          message = "O host permaneceu ativo; a ação pode ser tentada novamente.";
+          messageId = "power.controls.hostStillActive";
           render();
         }, 5000);
       })
       .catch(() => {
         if (destroyed || ordinal !== actionOrdinal) return;
         pending = null;
-        message = "A ação de energia não pôde ser concluída.";
+        messageId = "power.controls.failed";
         render();
       });
   };
@@ -190,7 +199,7 @@ export function mountPowerControls(root, powerActions = null) {
     open = !open;
     if (!open) {
       confirming = null;
-      message = "";
+      messageId = null;
     }
     render();
   };
@@ -208,7 +217,7 @@ export function mountPowerControls(root, powerActions = null) {
     if (open && !event.target.closest("[data-power-menu]")) {
       open = false;
       confirming = null;
-      message = "";
+      messageId = null;
       render();
     }
   };
@@ -217,7 +226,7 @@ export function mountPowerControls(root, powerActions = null) {
     if (event.key === "Escape" && open && pending === null) {
       open = false;
       confirming = null;
-      message = "";
+      messageId = null;
       render();
       toggle.focus();
     }
@@ -233,6 +242,7 @@ export function mountPowerControls(root, powerActions = null) {
     }
     render();
   });
+  const unsubscribeLocalization = localization.subscribe(() => render());
   render();
 
   return Object.freeze({
@@ -240,6 +250,7 @@ export function mountPowerControls(root, powerActions = null) {
       destroyed = true;
       actionOrdinal += 1;
       clearResetTimer();
+      unsubscribeLocalization?.();
       unsubscribe?.();
       root.removeEventListener("click", onRootClick);
       root.removeEventListener("keydown", onRootKeyDown);

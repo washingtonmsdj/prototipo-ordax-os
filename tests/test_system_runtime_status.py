@@ -88,7 +88,7 @@ class SystemRuntimeStatusTests(unittest.TestCase):
         self.assertIn("mountSystemOverviewControls(", composition)
         self.assertIn("root,\n    host,\n    updateWatcher,\n    systemMetrics,\n    surface,\n    updateHistory,\n    appActivation,", composition)
         self.assertIn("createNativeUpdateHistory(window)", composition)
-        self.assertIn("mountUpdateControls(root, updateWatcher, appActivation)", composition)
+        self.assertIn("mountUpdateControls(root, updateWatcher, appActivation, surface)", composition)
         self.assertIn("systemOverviewControls.destroy()", composition)
         self.assertNotIn("mountSystemStatusControls", composition)
         self.assertNotIn("mountSystemMetricsControls", composition)

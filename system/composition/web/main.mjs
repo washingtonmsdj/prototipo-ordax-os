@@ -14,6 +14,7 @@ import { loadOptionalComponentRuntime } from "../../services/components/runtime-
 import { createNotificationsRuntime } from "../../services/notifications/runtime.mjs";
 import { createPreferenceSyncRuntime } from "../../services/sync/preference-runtime.mjs";
 import { createWorkspaceMetadataBridge } from "../../services/sync/workspace-metadata.mjs";
+import { translateSurfaceMessage } from "../../services/i18n/surface.mjs";
 import { mountAccountOverviewControls } from "../../surface/ui/account-overview-controls.mjs";
 import { mountNetworkQuickPanel } from "../../surface/ui/network-quick-panel.mjs";
 import { mountNotificationCenterControls } from "../../surface/ui/notification-center-controls.mjs";
@@ -24,9 +25,10 @@ import { mountSystemOverviewControls } from "../../surface/ui/system-overview-co
 import { mountSystemTrayQuickPanels } from "../../surface/ui/system-tray-quick-panels.mjs";
 
 const bootScreen = createSurfaceBootScreen(document);
+let bootLocale = "pt-BR";
+const bootText = (messageId) => translateSurfaceMessage(bootLocale, messageId);
 
 try {
-  bootScreen.setStage("Carregando superfície…");
 const root = document.querySelector("#ordax-root");
 if (!root) {
   throw new Error("OrdaX composition root is missing #ordax-root");
@@ -35,6 +37,8 @@ if (!root) {
 const host = createWebSurfaceHost(window);
 const browserSession = createWebBrowserSession();
 const preferenceStore = createWebPreferenceStore(window);
+bootLocale = preferenceStore.load()?.["regional.locale"] ?? "pt-BR";
+bootScreen.setStage(bootText("surface.boot.loadingSurface"));
 const localWorkspaceStore = createWebWorkspaceStore(window);
 const workspaceMetadata = createWorkspaceMetadataBridge(localWorkspaceStore);
 const workspaceStore = workspaceMetadata.store;
@@ -58,6 +62,7 @@ const surface = mountSurface(
   workspaceStore,
   appActivation,
 );
+bootLocale = surface.localization.getLocale();
 const notificationCenter = mountNotificationCenterControls(root, notifications, appActivation, surface);
 let quickPanelControls = null;
 let networkQuickPanel = null;
@@ -108,7 +113,7 @@ const systemOverviewControls = mountSystemOverviewControls(
 );
 
 componentManager.setCurrentHealth("surface-shell", "healthy");
-bootScreen.setStage("Carregando aplicativos…");
+bootScreen.setStage(surface.localization.translate("surface.boot.loadingApps"));
 const notesComponent = await loadOptionalComponentRuntime({
   componentId: "notes",
   importer: () => import("../../apps/notes/runtime.mjs"),
@@ -163,6 +168,6 @@ window.addEventListener(
 );
 
 } catch (error) {
-  bootScreen.fail("Não foi possível iniciar a interface");
+  bootScreen.fail(bootText("surface.boot.failed"));
   console.error("OrdaX web composition failed", error);
 }

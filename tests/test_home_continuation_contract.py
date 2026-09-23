@@ -35,7 +35,7 @@ class HomeContinuationContractTests(unittest.TestCase):
         self.assertIn('appId: "files"', source)
         self.assertIn("target: project.path", source)
         self.assertIn("target: folder", source)
-        self.assertIn("Mostrar ${entry.name} em Arquivos", source)
+        self.assertIn('"home.continuation.recentAction"', source)
         self.assertNotIn("Abrir arquivo recente", source)
         self.assertNotIn("openFile", source)
 
@@ -45,7 +45,7 @@ class HomeContinuationContractTests(unittest.TestCase):
         self.assertIn("textContent", source)
         self.assertIn("section?.remove()", source)
         self.assertNotIn("innerHTML", source)
-        self.assertIn("Continuar trabalho", source)
+        self.assertIn('t("home.continuation.heading")', source)
         self.assertIn("data-home-continuation-key", source.replace("dataset.homeContinuationKey", "data-home-continuation-key"))
 
     def test_home_mount_is_disposable_and_unsubscribes_both_sources(self):
@@ -54,6 +54,8 @@ class HomeContinuationContractTests(unittest.TestCase):
         self.assertIn("unsubscribeRecent?.()", source)
         self.assertIn("unsubscribeProjects?.()", source)
         self.assertIn("destroyed = true", source)
+        self.assertIn("assertSurfaceRenderLifecycle", source)
+        self.assertIn("localization.subscribe", source)
 
     def test_home_pending_consumes_existing_attention_owners_without_duplicate_update_state(self):
         source = self.pending_source()
@@ -70,6 +72,8 @@ class HomeContinuationContractTests(unittest.TestCase):
         self.assertNotIn("localStorage", source)
         self.assertNotIn("sessionStorage", source)
         self.assertNotIn("fetch(", source)
+        self.assertIn("assertSurfaceRenderLifecycle", source)
+        self.assertIn("localization.subscribe", source)
 
     def test_home_pending_uses_real_quick_panel_and_account_sync_destinations(self):
         source = self.pending_source()
@@ -87,7 +91,7 @@ class HomeContinuationContractTests(unittest.TestCase):
         self.assertIn("createElement", source)
         self.assertIn("textContent", source)
         self.assertIn("section?.remove()", source)
-        self.assertIn('"Pendências"', source)
+        self.assertIn('t("home.pending.heading")', source)
         self.assertIn("unsubscribeSync?.()", source)
         self.assertIn("unsubscribeNotifications?.()", source)
         self.assertNotIn("innerHTML", source)
@@ -96,7 +100,7 @@ class HomeContinuationContractTests(unittest.TestCase):
         composition = COMPOSITION.read_text(encoding="utf-8")
         self.assertIn('from "../../surface/ui/home-continuation.mjs"', composition)
         self.assertIn(
-            "const homeContinuation = mountHomeContinuation(root, { projects, recentFiles });",
+            "const homeContinuation = mountHomeContinuation(root, { projects, recentFiles, surfaceLifecycle: surface });",
             composition,
         )
         self.assertIn("homeContinuation.dispose();", composition)
@@ -113,7 +117,7 @@ class HomeContinuationContractTests(unittest.TestCase):
         composition = COMPOSITION.read_text(encoding="utf-8")
         self.assertIn('from "../../surface/ui/home-pending.mjs"', composition)
         self.assertIn(
-            "const homePending = mountHomePending(root, { notifications, syncRuntime: preferenceSync });",
+            "const homePending = mountHomePending(root, { notifications, syncRuntime: preferenceSync, surfaceLifecycle: surface });",
             composition,
         )
         self.assertIn("homePending.dispose();", composition)
