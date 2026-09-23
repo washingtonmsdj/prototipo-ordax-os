@@ -25,6 +25,31 @@ ordax-release-signing sign \
   --out release-envelope.json
 ```
 
+## Portable v4 signing handoff
+
+Before the canonical private key is touched, the Windows operator tooling can prepare a
+public-only signing directory:
+
+```powershell
+.\3-Prepare-PortableV4-SigningHandoff.ps1 \
+  -SystemImagePath <system.erofs> \
+  -SurfaceRuntimePath <native-surface-runtime.erofs> \
+  -LocalAiRuntimePath <local-ai-runtime.erofs> \
+  -LocalAiSourceLockPath <source-lock.json> \
+  -SourceCommit <40-hex-commit> \
+  -SystemArtifactUrl <https-url> \
+  -SurfaceArtifactUrl <https-url> \
+  -LocalAiArtifactUrl <https-url> \
+  -OutputDirectory <empty-directory>
+```
+
+The preparer copies only public material, verifies SHA-256 after every copy, builds the
+exact release-manifest/4, carries the canonical public trust and signer, and emits a
+public handoff receipt. It does not accept a private-key parameter, publish a release,
+activate a release or authorize physical media. The canonical private key is introduced
+only when the operator later runs `4-Sign-Initial-OrdaXRelease.ps1` from that reviewed
+handoff directory.
+
 ## Private-key boundary
 
 The private key:
