@@ -7,6 +7,7 @@ NOTES_RUNTIME = ROOT / "system/apps/notes/runtime.mjs"
 NOTES_UI = ROOT / "system/apps/notes/ui/workspace-controls.mjs"
 SYSTEM_UI = ROOT / "system/surface/ui/system-overview-controls.mjs"
 CLIENT_ACTIONS = ROOT / "system/services/intelligence/client-actions.mjs"
+SYSTEM_RUNTIME_I18N = ROOT / "system/services/i18n/catalog/system-runtime.mjs"
 
 
 class IntelligenceProductConsumerTests(unittest.TestCase):
@@ -40,10 +41,13 @@ class IntelligenceProductConsumerTests(unittest.TestCase):
     def test_system_explanation_is_consultative_and_provider_neutral(self):
         ui = SYSTEM_UI.read_text(encoding="utf-8")
         actions = CLIENT_ACTIONS.read_text(encoding="utf-8")
+        catalog = SYSTEM_RUNTIME_I18N.read_text(encoding="utf-8")
         self.assertIn("assertIntelligencePort", ui)
         self.assertIn("explainSystemStateWithIntelligence", ui)
         self.assertIn("systemIntelligenceExplain", ui)
-        self.assertIn("autoridade: nenhuma", ui)
+        self.assertIn('t("system.intelligence.source")', ui)
+        self.assertIn("autoridade: nenhuma", catalog)
+        self.assertIn("authority: none", catalog)
         self.assertIn('"ordax-system-local-snapshot"', actions)
         self.assertIn('intent: "diagnose"', actions)
         self.assertNotIn("local-ai", ui)
