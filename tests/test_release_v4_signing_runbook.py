@@ -11,6 +11,7 @@ SIGNING_WORKFLOW = ROOT / ".github/workflows/release-signing.yml"
 SIGNING_DOC = ROOT / "docs/RELEASE-SIGNING.md"
 BUNDLE_DOC = ROOT / "docs/RELEASE-BUNDLE.md"
 PIPELINE_DOC = ROOT / "docs/RELEASE-PIPELINE.md"
+HANDOFF_CONTRACT = ROOT / "docs/contracts/portable-v4-signing-handoff.json"
 
 
 class ReleaseV4SigningRunbookTests(unittest.TestCase):
@@ -80,6 +81,30 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
         self.assertIn("ordax.local-ai/1", text)
         self.assertIn("operator-controlled signing/materialization run using the canonical private key", text)
         self.assertIn("does not authorize publication, activation or physical-media writes", text)
+
+    def test_signing_handoff_contract_keeps_pre_publication_boundary_explicit(self):
+        import json
+        contract = json.loads(HANDOFF_CONTRACT.read_text(encoding="utf-8"))
+        self.assertEqual(
+            contract["$schema"],
+            "prototype-ordax.portable-v4-signing-handoff-contract/1",
+        )
+        self.assertEqual(
+            contract["post_sign_verification_receipt_schema"],
+            "prototype-ordax.portable-v4-signed-handoff-verification/1",
+        )
+        self.assertEqual(
+            [artifact["name"] for artifact in contract["canonical_artifacts"]],
+            ["system.erofs", "native-surface-runtime.erofs", "local-ai-runtime.erofs"],
+        )
+        self.assertTrue(contract["sign_boundary"]["canonical_private_key_external_to_handoff"])
+        self.assertTrue(contract["post_sign_verify_boundary"]["official_release_agent_verify_envelope_required"])
+        self.assertFalse(contract["post_sign_verify_boundary"]["portable_materialization_performed"])
+        self.assertFalse(contract["post_sign_verify_boundary"]["publication_performed"])
+        self.assertFalse(contract["post_sign_verify_boundary"]["activation_performed"])
+        self.assertFalse(contract["post_sign_verify_boundary"]["physical_write_performed"])
+        self.assertTrue(contract["next_boundary"]["release_agent_materialize_portable_v4_required"])
+        self.assertTrue(contract["next_boundary"]["physical_media_authority_separate"])
 
     def test_bundle_and_pipeline_identify_v4_as_mvp_path(self):
         bundle = BUNDLE_DOC.read_text(encoding="utf-8")
