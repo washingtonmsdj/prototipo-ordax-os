@@ -50,7 +50,7 @@ class SystemRuntimeStatusTests(unittest.TestCase):
         self.assertIn("services/update/presentation.mjs", controls)
         self.assertIn("contracts/surface-render-lifecycle.mjs", controls)
         self.assertIn('[data-app-extension="system-overview"]', controls)
-        self.assertIn("Entrega observada", controls)
+        self.assertIn('t("system.overview.card.delivery")', controls)
         self.assertIn("Entrega e recuperação", controls)
         self.assertIn("Histórico de atualizações", controls)
         self.assertIn("Identidade da entrega", controls)
