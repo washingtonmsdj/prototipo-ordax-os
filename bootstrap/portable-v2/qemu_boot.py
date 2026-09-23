@@ -188,6 +188,17 @@ def validate_portable_release(
     ):
         regular(release / name, f"{label} release {name}", minimum=2)
 
+    manifest = load_json(release / "release-manifest.json", f"{label} release manifest")
+    schema = manifest.get("$schema")
+    if schema not in {
+        "prototype-ordax.release-manifest/3",
+        "prototype-ordax.release-manifest/4",
+    }:
+        raise ProofError(f"{label} proof requires a signed release-manifest/3 or /4 release")
+    schema_version = 4 if schema.endswith("/4") else 3
+    if manifest.get("source_commit") != commit:
+        raise ProofError(f"{label} manifest source commit differs from release directory")
+
     runtime_sha = (release / "surface-runtime.sha256").read_text(
         encoding="utf-8"
     ).strip()
@@ -201,13 +212,9 @@ def validate_portable_release(
     if sha256_file(runtime) != runtime_sha:
         raise ProofError(f"{label} Surface runtime digest differs from release reference")
 
-    manifest = load_json(release / "release-manifest.json", f"{label} release manifest")
-    if manifest.get("$schema") != "prototype-ordax.release-manifest/3":
-        raise ProofError(f"{label} proof requires a signed release-manifest/3 release")
-    if manifest.get("source_commit") != commit:
-        raise ProofError(f"{label} manifest source commit differs from release directory")
     artifacts = manifest.get("artifacts")
-    if not isinstance(artifacts, list) or len(artifacts) != 2:
+    expected_count = 3 if schema_version == 4 else 2
+    if not isinstance(artifacts, list) or len(artifacts) != expected_count:
         raise ProofError(f"{label} release manifest artifact set is invalid")
     runtime_artifact = artifacts[1]
     if (
@@ -218,13 +225,48 @@ def validate_portable_release(
     ):
         raise ProofError(f"{label} manifest runtime binding differs from materialized store")
 
+    ai_runtime = None
+    ai_runtime_sha = None
+    if schema_version == 4:
+        ai_ref = regular(
+            release / "local-ai-runtime.sha256",
+            f"{label} local AI runtime reference",
+            minimum=64,
+        )
+        ai_runtime_sha = ai_ref.read_text(encoding="utf-8").strip()
+        if SHA256_RE.fullmatch(ai_runtime_sha) is None:
+            raise ProofError(f"{label} local AI runtime reference is not lowercase SHA-256")
+        ai_runtime = regular(
+            portable
+            / "ai-runtimes"
+            / "sha256"
+            / ai_runtime_sha
+            / "local-ai-runtime.erofs",
+            f"{label} local AI runtime",
+            minimum=4096,
+        )
+        if sha256_file(ai_runtime) != ai_runtime_sha:
+            raise ProofError(f"{label} local AI runtime digest differs from release reference")
+        ai_artifact = artifacts[2]
+        if (
+            not isinstance(ai_artifact, dict)
+            or ai_artifact.get("name") != "local-ai-runtime.erofs"
+            or ai_artifact.get("role") != "local-ai-runtime"
+            or ai_artifact.get("sha256") != ai_runtime_sha
+        ):
+            raise ProofError(f"{label} manifest local AI binding differs from materialized store")
+        if not isinstance(manifest.get("local_ai"), dict):
+            raise ProofError(f"{label} release-manifest/4 local_ai binding is missing")
+
     return {
         "commit": commit,
         "release": release,
+        "manifest_schema": schema_version,
         "runtime": runtime,
         "runtime_sha256": runtime_sha,
+        "ai_runtime": ai_runtime,
+        "ai_runtime_sha256": ai_runtime_sha,
     }
-
 
 def validate_inputs(args: argparse.Namespace) -> dict[str, Any]:
     if COMMIT_RE.fullmatch(args.source_commit) is None:
@@ -289,9 +331,14 @@ def validate_inputs(args: argparse.Namespace) -> dict[str, Any]:
         "portable_root": portable,
         "runtime": candidate["runtime"],
         "runtime_sha256": candidate["runtime_sha256"],
+        "ai_runtime": candidate["ai_runtime"],
+        "ai_runtime_sha256": candidate["ai_runtime_sha256"],
+        "manifest_schema": candidate["manifest_schema"],
         "candidate_release": candidate["release"],
+        "candidate": candidate,
         "previous_release": previous["release"] if previous else None,
         "previous_commit": previous["commit"] if previous else None,
+        "previous": previous,
         "provenance": provenance,
     }
 
@@ -380,6 +427,19 @@ def stage_disk(args: argparse.Namespace, inputs: dict[str, Any], work: Path) -> 
             inputs["runtime"],
             runtime_target / "native-surface-runtime.erofs",
         )
+        for release_info in (inputs["candidate"], inputs["previous"]):
+            if release_info is None or release_info["ai_runtime"] is None:
+                continue
+            ai_target = (
+                internal
+                / "ai-runtimes"
+                / "sha256"
+                / release_info["ai_runtime_sha256"]
+            )
+            ai_target.mkdir(parents=True, exist_ok=True)
+            destination = ai_target / "local-ai-runtime.erofs"
+            if not destination.exists():
+                shutil.copyfile(release_info["ai_runtime"], destination)
         os.sync()
     finally:
         if data_mounted:
@@ -406,6 +466,22 @@ def boot_qemu_expected(
         raise ProofError("unexpected QEMU expected slot")
     if COMMIT_RE.fullmatch(expected_commit) is None:
         raise ProofError("unexpected QEMU expected source commit")
+
+    release_info = (
+        inputs["candidate"]
+        if expected_commit == inputs["candidate"]["commit"]
+        else inputs["previous"]
+        if inputs["previous"] is not None
+        and expected_commit == inputs["previous"]["commit"]
+        else None
+    )
+    if release_info is None:
+        raise ProofError("expected QEMU release identity is not staged")
+
+    schema_version = release_info["manifest_schema"]
+    runtime_sha256 = release_info["runtime_sha256"]
+    ai_runtime_sha256 = release_info["ai_runtime_sha256"]
+    ai_required = schema_version == 4
 
     serial = work / serial_name
     stderr = work / (serial_name + ".stderr")
@@ -438,9 +514,22 @@ def boot_qemu_expected(
             source_marker = "ORDAX_PORTABLE_V2_SOURCE_SHA=" + expected_commit
             stable_source_marker = "ORDAX_STABLE_INIT_SOURCE_SHA=" + expected_commit
             slot_marker = "ORDAX_PORTABLE_V2_SLOT=" + expected_slot
-            schema_marker = "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3"
+            schema_marker = f"ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA={schema_version}"
             runtime_marker = "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED"
-            runtime_sha_marker = "ORDAX_SURFACE_RUNTIME_SHA256=" + inputs["runtime_sha256"]
+            runtime_sha_marker = "ORDAX_SURFACE_RUNTIME_SHA256=" + runtime_sha256
+            ai_marker = "ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED"
+            ai_backend_marker = "ORDAX_LOCAL_AI_BACKEND=STARTED"
+            ai_sha_marker = (
+                "ORDAX_LOCAL_AI_RUNTIME_SHA256=" + ai_runtime_sha256
+                if ai_runtime_sha256
+                else ""
+            )
+            ai_ok = not ai_required or (
+                ai_marker in text
+                and bool(ai_sha_marker)
+                and ai_sha_marker in text
+                and ai_backend_marker in text
+            )
             if (
                 SUCCESS in text
                 and STABLE in text
@@ -450,6 +539,7 @@ def boot_qemu_expected(
                 and schema_marker in text
                 and runtime_marker in text
                 and runtime_sha_marker in text
+                and ai_ok
             ):
                 process.terminate()
                 try:
@@ -470,9 +560,13 @@ def boot_qemu_expected(
                     "expected_slot_selected": slot_marker in text,
                     "portable_source_sha_exact": source_marker in text,
                     "stable_init_source_sha_exact": stable_source_marker in text,
-                    "portable_manifest_v3_selected": schema_marker in text,
+                    "portable_manifest_selected": schema_marker in text,
                     "surface_runtime_handoff_marker": runtime_marker in text,
                     "surface_runtime_sha_exact": runtime_sha_marker in text,
+                    "local_ai_runtime_requirement_satisfied": ai_ok,
+                    "local_ai_runtime_handoff_marker": (ai_marker in text) if ai_required else True,
+                    "local_ai_runtime_sha_exact": (ai_sha_marker in text) if ai_required else True,
+                    "local_ai_backend_started": (ai_backend_marker in text) if ai_required else True,
                 }
             if process.poll() is not None:
                 break
@@ -482,8 +576,8 @@ def boot_qemu_expected(
         serial_tail = serial.read_text(encoding="utf-8", errors="replace")[-12000:] if serial.exists() else ""
         raise ProofError(
             "QEMU did not reach portable-v2 handoff markers "
-            f"(slot={expected_slot}, source={expected_commit}, exit={process.poll()}, "
-            f"stderr_tail={tail!r}, serial_tail={serial_tail!r})"
+            f"(slot={expected_slot}, source={expected_commit}, schema={schema_version}, "
+            f"exit={process.poll()}, stderr_tail={tail!r}, serial_tail={serial_tail!r})"
         )
     finally:
         if process.poll() is None:
@@ -493,7 +587,6 @@ def boot_qemu_expected(
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
-
 
 def boot_qemu(
     args: argparse.Namespace,
@@ -609,9 +702,13 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         "current_slot_selected": False,
         "portable_source_sha_exact": False,
         "stable_init_source_sha_exact": False,
-        "portable_manifest_v3_selected": False,
+        "portable_manifest_selected": False,
         "surface_runtime_handoff_marker": False,
         "surface_runtime_sha_exact": False,
+        "local_ai_runtime_requirement_satisfied": False,
+        "local_ai_runtime_handoff_marker": False,
+        "local_ai_runtime_sha_exact": False,
+        "local_ai_backend_started": False,
         "physical_target_device_untouched": True,
         "guest_disk_destroyed": False,
     }
@@ -654,7 +751,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
             }
             if not all(activation_checks.values()):
                 raise ProofError(
-                    f"portable-v3 one-shot activation checks incomplete: {activation_checks}"
+                    f"portable one-shot activation checks incomplete: {activation_checks}"
                 )
             checks.update({
                 "portable_pid1_handoff_marker": (
@@ -683,9 +780,9 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
                     first_checks["stable_init_source_sha_exact"]
                     and second_checks["stable_init_source_sha_exact"]
                 ),
-                "portable_manifest_v3_selected": (
-                    first_checks["portable_manifest_v3_selected"]
-                    and second_checks["portable_manifest_v3_selected"]
+                "portable_manifest_selected": (
+                    first_checks["portable_manifest_selected"]
+                    and second_checks["portable_manifest_selected"]
                 ),
                 "surface_runtime_handoff_marker": (
                     first_checks["surface_runtime_handoff_marker"]
@@ -694,6 +791,22 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
                 "surface_runtime_sha_exact": (
                     first_checks["surface_runtime_sha_exact"]
                     and second_checks["surface_runtime_sha_exact"]
+                ),
+                "local_ai_runtime_requirement_satisfied": (
+                    first_checks["local_ai_runtime_requirement_satisfied"]
+                    and second_checks["local_ai_runtime_requirement_satisfied"]
+                ),
+                "local_ai_runtime_handoff_marker": (
+                    first_checks["local_ai_runtime_handoff_marker"]
+                    and second_checks["local_ai_runtime_handoff_marker"]
+                ),
+                "local_ai_runtime_sha_exact": (
+                    first_checks["local_ai_runtime_sha_exact"]
+                    and second_checks["local_ai_runtime_sha_exact"]
+                ),
+                "local_ai_backend_started": (
+                    first_checks["local_ai_backend_started"]
+                    and second_checks["local_ai_backend_started"]
                 ),
             })
             serial_text = first_serial + "\n--- SECOND BOOT ---\n" + second_serial
@@ -717,31 +830,30 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         if not all(checks.values()):
             raise ProofError(f"portable-v2 QEMU checks incomplete: {checks}")
 
+        def markers_for(release_info: dict[str, Any], slot: str) -> list[str]:
+            markers = [
+                SUCCESS,
+                STABLE,
+                "ORDAX_PORTABLE_V2_SLOT=" + slot,
+                "ORDAX_PORTABLE_V2_SOURCE_SHA=" + release_info["commit"],
+                "ORDAX_STABLE_INIT_SOURCE_SHA=" + release_info["commit"],
+                "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=" + str(release_info["manifest_schema"]),
+                "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED",
+                "ORDAX_SURFACE_RUNTIME_SHA256=" + release_info["runtime_sha256"],
+            ]
+            if release_info["manifest_schema"] == 4:
+                markers.extend([
+                    "ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED",
+                    "ORDAX_LOCAL_AI_RUNTIME_SHA256=" + release_info["ai_runtime_sha256"],
+                    "ORDAX_LOCAL_AI_BACKEND=STARTED",
+                ])
+            return markers
+
         if activation:
-            serial_markers = [
-                SUCCESS,
-                STABLE,
-                "ORDAX_PORTABLE_V2_SLOT=candidate",
-                "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit,
-                "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.source_commit,
-                "ORDAX_PORTABLE_V2_SLOT=current",
-                "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.previous_commit,
-                "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.previous_commit,
-                "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3",
-                "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED",
-                "ORDAX_SURFACE_RUNTIME_SHA256=" + inputs["runtime_sha256"],
-            ]
+            serial_markers = markers_for(inputs["candidate"], "candidate")
+            serial_markers.extend(markers_for(inputs["previous"], "current"))
         else:
-            serial_markers = [
-                SUCCESS,
-                STABLE,
-                "ORDAX_PORTABLE_V2_SLOT=current",
-                "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit,
-                "ORDAX_STABLE_INIT_SOURCE_SHA=" + args.source_commit,
-                "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3",
-                "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED",
-                "ORDAX_SURFACE_RUNTIME_SHA256=" + inputs["runtime_sha256"],
-            ]
+            serial_markers = markers_for(inputs["candidate"], "current")
 
         result = {
             "$schema": SCHEMA,
@@ -771,6 +883,12 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
                 "stable_base_sha256": sha256_file(inputs["stable_base"]),
                 "state_image_sha256": sha256_file(inputs["state_image"]),
                 "surface_runtime_sha256": sha256_file(inputs["runtime"]),
+                "release_manifest_schema": inputs["manifest_schema"],
+                "local_ai_runtime_sha256": (
+                    sha256_file(inputs["ai_runtime"])
+                    if inputs["ai_runtime"] is not None
+                    else None
+                ),
             },
             "checks": checks,
         }
