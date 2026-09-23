@@ -1084,13 +1084,13 @@ export function mountSystemOverviewControls(
           ),
         );
       } else {
-        const detailId = manifest.releaseMode === "base-ab"
+        const componentDetailMessageId = manifest.releaseMode === "base-ab"
           ? "system.about.components.detail.baseAb"
           : manifest.releaseMode === "git-app"
             ? "system.about.components.detail.gitApp"
             : "system.about.components.detail.bundled";
         item.append(
-          node(documentObject, "small", "ordax-system-component-slots", t(detailId)),
+          node(documentObject, "small", "ordax-system-component-slots", t(componentDetailMessageId)),
         );
       }
       list.append(item);
