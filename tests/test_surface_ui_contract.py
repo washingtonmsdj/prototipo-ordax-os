@@ -28,6 +28,7 @@ NATIVE_SYNC_STATE_ADAPTER = ROOT / "system" / "adapters" / "native" / "sync-stat
 PREFERENCE_SYNC_SERVICE = ROOT / "system" / "services" / "sync" / "preference-runtime.mjs"
 IDENTITY_SESSION_CONTRACT = ROOT / "system" / "contracts" / "identity-session.mjs"
 IDENTITY_ACTIONS_CONTRACT = ROOT / "system" / "contracts" / "identity-actions.mjs"
+ACCOUNT_LOCALIZATION_CATALOG = ROOT / "system" / "services" / "i18n" / "catalog" / "account.mjs"
 POWER_ACTIONS_CONTRACT = ROOT / "system" / "contracts" / "power-actions.mjs"
 APP_ACTIVATION_CONTRACT = ROOT / "system" / "contracts" / "app-activation.mjs"
 APP_ACTIVATION_SERVICE = ROOT / "system" / "services" / "apps" / "activation.mjs"
@@ -493,10 +494,18 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn("queuePersistence", overview)
         self.assertIn("contracts/workspace-metadata-source.mjs", overview)
         self.assertIn("assertWorkspaceMetadataSource", overview)
-        self.assertIn('"Áreas e apps"', overview)
-        self.assertIn("posição, tamanho, maximização e minimização continuam locais", overview)
-        self.assertIn("sobrevive a reload/reinício", overview)
-        self.assertIn("sem afirmar envio à nuvem", overview)
+        self.assertIn("lifecycle.localization", overview)
+        self.assertIn('t("account.card.workspace")', overview)
+        self.assertIn('t("account.card.queueDurable.detail")', overview)
+        self.assertIn('t("account.section.sync.subtitle")', overview)
+        account_catalog = ACCOUNT_LOCALIZATION_CATALOG.read_text(encoding="utf-8")
+        self.assertIn('"account.card.workspace": "Áreas e apps"', account_catalog)
+        self.assertIn(
+            "posição, tamanho, maximização e minimização continuam locais",
+            account_catalog,
+        )
+        self.assertIn("sobrevive a reload/reinício", account_catalog)
+        self.assertIn("sem afirmar envio à nuvem", account_catalog)
         self.assertNotIn('"Sincronização segura"', overview)
         self.assertNotIn('"Ativa"', overview)
         self.assertIn("ordax-account-navigation", css)
