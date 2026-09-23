@@ -1,6 +1,6 @@
 # Release Bundle Contract
 
-Status: CANONICAL TOOLING CONTRACT — RELEASE PUBLICATION NOT YET AUTHORIZED
+Status: CANONICAL TOOLING CONTRACT — V1 LEGACY + PORTABLE V4 MVP PATH; RELEASE PUBLICATION STILL EXPLICIT
 
 OrdaX release acquisition v1 consumes exactly one signed artifact:
 
@@ -64,22 +64,51 @@ canonical system/
 
 This candidate does not publish, sign, activate or authorize physical media. A future portable release protocol must use a new manifest schema and explicit consumer support before the boot path may rely on `system.erofs`.
 
+## Portable v4 Stable/MVP path
+
+The current USB Stable/MVP path no longer treats the v1 tar bridge as the final
+portable release identity. It uses `prototype-ordax.release-manifest/4` and binds
+three exact read-only images:
+
+```text
+system.erofs
+native-surface-runtime.erofs
+local-ai-runtime.erofs
+```
+
+The third artifact is content-addressed and tied to the canonical
+`ordax.local-ai/1` source lock/model identity. The v4 signer, release-acquisition
+agent and Stable boot handoff all validate this schema without changing v1/v2/v3
+semantics. Repository CI already proves real-byte v4 materialization with an
+ephemeral test key; that proof is intentionally non-promotional.
+
+The canonical Stable/MVP release still requires the matching external private key
+for `bootstrap/trust/release-ed25519.json`. That key remains outside Git. A
+canonical signature does not itself activate a release or authorize writing a
+physical device.
+
 ## Release boundary
 
 This tooling does not publish a GitHub Release and does not sign a release envelope by itself.
 
-The intended pipeline is:
+The current portable MVP pipeline is:
 
 ```text
-canonical system source
- -> deterministic system.tar
- -> SHA-256 + size
- -> release-manifest.json tied to exact source commit
- -> external Ed25519 signing boundary
- -> release-envelope.json
- -> publication to canonical HTTPS release channel
- -> bootstrap verification and transactional activation
+canonical shared source + pinned native/runtime inputs
+ -> deterministic system.erofs
+ -> deterministic native-surface-runtime.erofs
+ -> deterministic local-ai-runtime.erofs
+ -> release-manifest/4 tied to exact source commit and AI source lock
+ -> external canonical Ed25519 signing boundary
+ -> release-envelope/1
+ -> canonical HTTPS artifact channel
+ -> materialize-portable-v4 + verify-portable-v4-exact
+ -> disposable boot proof
+ -> separate physical-write authorization gate
 ```
+
+The legacy `system.tar -> release-manifest/1` path remains documented and
+verified for compatibility; it is not the target Stable/MVP portable release.
 
 A production release must not be published until the canonical public Ed25519 trust anchor has an explicitly owned private key outside Git and the release-signing gate validates that the external private key matches that trust anchor.
 
