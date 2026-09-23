@@ -803,6 +803,46 @@ derive_base_update_progress() {
     BASE_UPDATE_PHASE=waiting-candidate
 }
 
+derive_recovery_projection() {
+    RECOVERY_STATE=unavailable
+    RECOVERY_SOURCE=none
+    RECOVERY_CURRENT_SHA=""
+    RECOVERY_KNOWN_GOOD_SHA=""
+    RECOVERY_CANDIDATE_SHA=""
+    RECOVERY_REJECTED_SHA=""
+    RECOVERY_ROLLBACK_ELIGIBLE=false
+
+    portable_state_helper_ready || return 0
+    RECOVERY_SOURCE=portable-state
+
+    recovery_current=$("$PORTABLE_STATE_HELPER" "$PORTABLE_STATE_ROOT" current 2>/dev/null || true)
+    recovery_known_good=$("$PORTABLE_STATE_HELPER" "$PORTABLE_STATE_ROOT" known-good 2>/dev/null || true)
+    recovery_candidate=$("$PORTABLE_STATE_HELPER" "$PORTABLE_STATE_ROOT" candidate 2>/dev/null || true)
+    recovery_rejected=$("$PORTABLE_STATE_HELPER" "$PORTABLE_STATE_ROOT" rejected 2>/dev/null || true)
+
+    if is_sha "$recovery_current"; then
+        RECOVERY_CURRENT_SHA=$recovery_current
+    fi
+    if is_sha "$recovery_known_good"; then
+        RECOVERY_KNOWN_GOOD_SHA=$recovery_known_good
+    fi
+    if is_sha "$recovery_candidate"; then
+        RECOVERY_CANDIDATE_SHA=$recovery_candidate
+    fi
+    if is_sha "$recovery_rejected"; then
+        RECOVERY_REJECTED_SHA=$recovery_rejected
+    fi
+
+    if [ -n "$RECOVERY_CURRENT_SHA" ] && [ -n "$RECOVERY_KNOWN_GOOD_SHA" ]; then
+        RECOVERY_STATE=available
+        if [ "$RECOVERY_CURRENT_SHA" != "$RECOVERY_KNOWN_GOOD_SHA" ]; then
+            RECOVERY_ROLLBACK_ELIGIBLE=true
+        fi
+    else
+        RECOVERY_STATE=partial
+    fi
+}
+
 write_update_state() {
     source_sha=$1
     status=$2
@@ -818,15 +858,17 @@ write_update_state() {
     last_apply_duration=$(read_state_value "$LAST_APPLY_DURATION_FILE")
     last_stage_duration=$(read_state_value "$LAST_STAGE_DURATION_FILE")
     derive_base_update_progress "$source_sha"
+    derive_recovery_projection
     [ -n "$last_applied_at" ] || last_applied_at=unknown
     [ -n "$runtime_surface_sha" ] || runtime_surface_sha=$source_sha
     case "$last_apply_duration" in ''|*[!0-9]*) last_apply_duration=0 ;; esac
     case "$last_stage_duration" in ''|*[!0-9]*) last_stage_duration=0 ;; esac
     delivery_number=$(delivery_number_for_sha "$source_sha")
     temporary=$UPDATE_STATE.tmp.$
-    printf '{"sourceSha":"%s","deliveryNumber":%s,"versionNumber":%s,"runtimeSurfaceSha":"%s","targetSha":"%s","status":"%s","phase":"%s","applyMode":"%s","attemptId":"%s","bootRefreshRequired":%s,"baseUpdatePhase":"%s","baseUpdateSha":"%s","checkedAt":"%s","lastAppliedSha":"%s","lastAppliedAt":"%s","stagedReleaseSha":"%s","lastApplyDurationSeconds":%s,"lastStageDurationSeconds":%s,"rejectedSha":"%s","lastError":"%s"}\n' \
+    printf '{"sourceSha":"%s","deliveryNumber":%s,"versionNumber":%s,"runtimeSurfaceSha":"%s","targetSha":"%s","status":"%s","phase":"%s","applyMode":"%s","attemptId":"%s","bootRefreshRequired":%s,"baseUpdatePhase":"%s","baseUpdateSha":"%s","checkedAt":"%s","lastAppliedSha":"%s","lastAppliedAt":"%s","stagedReleaseSha":"%s","lastApplyDurationSeconds":%s,"lastStageDurationSeconds":%s,"rejectedSha":"%s","recoveryState":"%s","recoverySource":"%s","currentReleaseSha":"%s","knownGoodReleaseSha":"%s","candidateReleaseSha":"%s","recoveryRejectedSha":"%s","rollbackEligible":%s,"lastError":"%s"}\n' \
         "$source_sha" "$delivery_number" "$delivery_number" "$runtime_surface_sha" "$UPDATE_TARGET_SHA" "$status" "$UPDATE_PHASE" "$apply_mode" "$UPDATE_ATTEMPT_ID" \
-        "$boot_refresh" "$BASE_UPDATE_PHASE" "$BASE_UPDATE_SHA" "$checked_at" "$last_applied_sha" "$last_applied_at" "$staged_release_sha" "$last_apply_duration" "$last_stage_duration" "$rejected_sha" "$UPDATE_ERROR" >"$temporary"
+        "$boot_refresh" "$BASE_UPDATE_PHASE" "$BASE_UPDATE_SHA" "$checked_at" "$last_applied_sha" "$last_applied_at" "$staged_release_sha" "$last_apply_duration" "$last_stage_duration" "$rejected_sha" \
+        "$RECOVERY_STATE" "$RECOVERY_SOURCE" "$RECOVERY_CURRENT_SHA" "$RECOVERY_KNOWN_GOOD_SHA" "$RECOVERY_CANDIDATE_SHA" "$RECOVERY_REJECTED_SHA" "$RECOVERY_ROLLBACK_ELIGIBLE" "$UPDATE_ERROR" >"$temporary"
     /bin/busybox mv -f "$temporary" "$UPDATE_STATE"
 }
 
