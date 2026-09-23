@@ -292,7 +292,7 @@
     "seed_media_agent_may_precede_refresh_target": true,
     "seed_media_agent_must_be_recognized_migration_source": true,
     "refresh_target_may_advance_without_physical_media_rewrite": true,
-    "current_seed_sha256": "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
+    "current_seed_sha256": "550df685679f1bf15a636729960fe6fc3ffc1afda1a346214ce96716f7170a66",
     "current_refresh_target_sha256": "550df685679f1bf15a636729960fe6fc3ffc1afda1a346214ce96716f7170a66",
     "current_seed_includes_inspect": true,
     "legacy_seed_sha256": [
@@ -300,7 +300,8 @@
       "1a124616c95ee79be1fb50b00205cb5f9f5382bcb4144b36020fcd5d3be04596",
       "ba633274ee2b9497a75a1b287979900ac31611ff93ec52179bd704daf0a6dbce",
       "102c9aeb531b582b4b60d8e808da7f50871c3ea2353c2dc82bd6373f9edc28da",
-      "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c"
+      "ece358c676d6248798bc53f4f5ac52a4e6bc06cda3111b7978acbc917059bf4c",
+      "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740"
     ],
     "current_seed_includes_activate_exact": true,
     "current_seed_includes_portable_v2_verify_exact": true,
@@ -314,7 +315,10 @@
     "previous_seed_refreshes_without_physical_media_rewrite": true,
     "current_refresh_target_includes_portable_v4_materialize": true,
     "current_refresh_target_includes_portable_v4_verify_exact": true,
-    "current_refresh_target_local_ai_runtime_reuse_by_sha256": true
+    "current_refresh_target_local_ai_runtime_reuse_by_sha256": true,
+    "current_seed_includes_portable_v4_materialize": true,
+    "current_seed_includes_portable_v4_verify_exact": true,
+    "current_seed_local_ai_runtime_reuse_by_sha256": true
   },
   "runtime_owner": {
     "development_host_state_root": "/state/ordax",
