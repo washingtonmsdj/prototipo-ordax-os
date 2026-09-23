@@ -47,9 +47,12 @@ canonical engine/model source lock. Surface and AI runtimes are independently
 content-addressed and verified. The real engine/model EROFS is reproducibly proven
 in CI, and the Portable v2/Stable Base handoff now supports exact v4 verification,
 read-only mounting at `/run/ordax/runtime/local-ai`, and non-boot-critical loopback
-backend startup. This still does not claim a promoted Stable/MVP artifact: signed
-Stable v4 materialization/activation plus disposable and physical boot proof remain
-release gates.
+backend startup. A dedicated non-promotional CI gate now signs a v4 envelope with
+an ephemeral CI-only key, materializes the three artifacts over loopback HTTPS using
+the real built AI EROFS, revalidates the release offline and byte-compares the
+content-addressed stored AI runtime. This still does not claim a promoted Stable/MVP
+artifact: canonical-key Stable v4 signing/materialization plus disposable v4 boot and
+physical proof remain release gates.
 
 ## Authority boundary
 
