@@ -578,7 +578,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn("runtimeSurfaceSha", contract)
         self.assertIn("updateSnapshot.runtimeSurfaceSha", overview)
         self.assertIn('t("system.overview.delivery.number"', overview)
-        self.assertIn("America/Bahia", presentation)
+        self.assertIn("America/Bahia", overview)
         self.assertIn('t("system.updates.fact.runtimeSurface")', overview)
         self.assertIn('target: "updates"', controls)
 
