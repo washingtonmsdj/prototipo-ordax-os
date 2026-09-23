@@ -124,3 +124,40 @@ test("English catalog contains primary Files, Settings and System entries", asyn
   assert.match(settingsCatalog, /"settings\.section\.regional": "Language and region"/);
   assert.match(systemCatalog, /"system\.section\.diagnostics": "Diagnostics"/);
 });
+
+test("Notes and Internet primary journeys use the shared localization owner", async () => {
+  const notes = await readFile(
+    new URL("../system/apps/notes/ui/workspace-controls.mjs", import.meta.url),
+    "utf8",
+  );
+  const internet = await readFile(
+    new URL("../system/apps/internet/ui/browser-controls.mjs", import.meta.url),
+    "utf8",
+  );
+  const notesCatalog = await readFile(
+    new URL("../system/services/i18n/catalog/notes.mjs", import.meta.url),
+    "utf8",
+  );
+  const internetCatalog = await readFile(
+    new URL("../system/services/i18n/catalog/internet.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(notes, /const localization = lifecycle\.localization/);
+  assert.match(notes, /buildShell\(documentObject, t\)/);
+  assert.match(notes, /t\("notes\.search\.placeholder"\)/);
+  assert.match(notes, /t\("notes\.nav\.trash"\)/);
+  assert.match(notes, /ordaxNotesLocale/);
+  assert.match(notesCatalog, /"notes\.action\.newNote": "New note"/);
+  assert.match(notesCatalog, /"notes\.intelligence\.summary": "Summarize"/);
+
+  assert.match(internet, /const localization = lifecycle\.localization/);
+  assert.match(internet, /createView\(documentObject, snapshot, t\)/);
+  assert.match(internet, /t\("internet\.toolbar\.aria"\)/);
+  assert.match(internet, /t\("internet\.project\.save"\)/);
+  assert.match(internet, /ordaxInternetLocale/);
+  assert.match(internet, /formatHistoryVisit\(entry\.visitedAt, locale\(\)\)/);
+  assert.doesNotMatch(internet, /toLocaleLowerCase\("pt-BR"\)/);
+  assert.match(internetCatalog, /"internet\.action\.newTab": "New tab"/);
+  assert.match(internetCatalog, /"internet\.project\.currentPage": "Current page"/);
+});
