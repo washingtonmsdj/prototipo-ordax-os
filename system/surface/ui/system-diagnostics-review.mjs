@@ -441,12 +441,13 @@ function appendFact(documentObject, list, label, value) {
   list.append(item);
 }
 
-function renderReview(documentObject, container, presentation) {
+function renderReview(documentObject, container, presentation, localization) {
+  const t = localization.translate;
   const heading = node(documentObject, "div", "ordax-system-section-heading");
   const headingCopy = node(documentObject, "div");
   headingCopy.append(
-    node(documentObject, "span", "ordax-system-section-kicker", "Revisão local"),
-    node(documentObject, "h4", "ordax-system-section-title", "Diagnóstico revisável"),
+    node(documentObject, "span", "ordax-system-section-kicker", t("system.diagnostics.review.kicker")),
+    node(documentObject, "h4", "ordax-system-section-title", t("system.diagnostics.review.title")),
   );
   const actions = node(documentObject, "div", "ordax-system-actions");
   const prepare = node(documentObject, "button", "ordax-system-action", presentation.prepare.label);
@@ -472,12 +473,7 @@ function renderReview(documentObject, container, presentation) {
   container.append(heading);
 
   container.append(
-    node(
-      documentObject,
-      "p",
-      "ordax-system-section-copy",
-      "A revisão é criada somente quando solicitada. Ela usa dados locais permitidos, registra fontes ausentes ou com falha e não envia conteúdo automaticamente. Copiar e salvar são ações explícitas sobre esta mesma revisão.",
-    ),
+    node(documentObject, "p", "ordax-system-section-copy", t("system.diagnostics.review.policy")),
   );
 
   if (presentation.action) {
@@ -494,12 +490,7 @@ function renderReview(documentObject, container, presentation) {
 
   if (!presentation.review) {
     container.append(
-      node(
-        documentObject,
-        "p",
-        "ordax-system-placeholder",
-        "Prepare uma revisão para consultar as fontes disponíveis, a atualidade dos sinais e os eventos locais antes de copiar ou salvar qualquer informação.",
-      ),
+      node(documentObject, "p", "ordax-system-placeholder", t("system.diagnostics.review.empty")),
     );
     return;
   }
@@ -507,20 +498,15 @@ function renderReview(documentObject, container, presentation) {
   const review = presentation.review;
   if (review.hasFailures) {
     container.append(
-      node(
-        documentObject,
-        "p",
-        "ordax-system-warning",
-        "Revisão parcial: uma ou mais fontes falharam. Os dados válidos continuam visíveis abaixo.",
-      ),
+      node(documentObject, "p", "ordax-system-warning", t("system.diagnostics.review.partial")),
     );
   }
 
   const metadata = node(documentObject, "dl", "ordax-system-facts");
-  appendFact(documentObject, metadata, "Preparada em", review.generatedAt);
-  appendFact(documentObject, metadata, "Arquivo", review.fileName);
-  appendFact(documentObject, metadata, "Atualidade da atualização", review.freshness.label);
-  appendFact(documentObject, metadata, "Persistência dos eventos", review.persistence.label);
+  appendFact(documentObject, metadata, t("system.diagnostics.review.fact.preparedAt"), review.generatedAt);
+  appendFact(documentObject, metadata, t("system.diagnostics.review.fact.file"), review.fileName);
+  appendFact(documentObject, metadata, t("system.diagnostics.review.fact.freshness"), review.freshness.label);
+  appendFact(documentObject, metadata, t("system.diagnostics.review.fact.persistence"), review.persistence.label);
   container.append(metadata);
 
   const freshnessDetail = node(
@@ -533,14 +519,21 @@ function renderReview(documentObject, container, presentation) {
   );
   container.append(freshnessDetail);
 
-  if (review.persistence.state === "degraded" || review.persistence.state === "session") {
-    container.append(node(documentObject, "p", "ordax-system-warning", review.persistence.detail));
-  } else {
-    container.append(node(documentObject, "p", "ordax-system-section-copy", review.persistence.detail));
-  }
+  container.append(
+    node(
+      documentObject,
+      "p",
+      review.persistence.state === "degraded" || review.persistence.state === "session"
+        ? "ordax-system-warning"
+        : "ordax-system-section-copy",
+      review.persistence.detail,
+    ),
+  );
 
   const sourceSection = node(documentObject, "div", "ordax-system-history");
-  sourceSection.append(node(documentObject, "h5", "ordax-system-history-title", "Fontes desta revisão"));
+  sourceSection.append(
+    node(documentObject, "h5", "ordax-system-history-title", t("system.diagnostics.review.sources")),
+  );
   for (const source of review.sources) {
     const item = node(documentObject, "article", "ordax-system-history-item");
     item.dataset.state = source.status;
@@ -554,46 +547,55 @@ function renderReview(documentObject, container, presentation) {
 
   if (review.update) {
     const updateFacts = node(documentObject, "dl", "ordax-system-facts");
-    appendFact(documentObject, updateFacts, "Entrega", review.update.delivery);
-    appendFact(documentObject, updateFacts, "Estado observado", review.update.status);
-    appendFact(documentObject, updateFacts, "Fase observada", review.update.phase);
-    appendFact(documentObject, updateFacts, "Verificação publicada", review.update.checkedAt);
-    if (review.update.lastError) appendFact(documentObject, updateFacts, "Último diagnóstico", review.update.lastError);
+    appendFact(documentObject, updateFacts, t("system.diagnostics.review.update.fact.delivery"), review.update.delivery);
+    appendFact(documentObject, updateFacts, t("system.diagnostics.review.update.fact.status"), review.update.status);
+    appendFact(documentObject, updateFacts, t("system.diagnostics.review.update.fact.phase"), review.update.phase);
+    appendFact(documentObject, updateFacts, t("system.diagnostics.review.update.fact.checkedAt"), review.update.checkedAt);
+    if (review.update.lastError) {
+      appendFact(
+        documentObject,
+        updateFacts,
+        t("system.diagnostics.review.update.fact.lastDiagnostic"),
+        review.update.lastError,
+      );
+    }
     container.append(updateFacts);
   }
 
   if (review.metrics || review.history) {
     const localFacts = node(documentObject, "dl", "ordax-system-facts");
     if (review.metrics) {
-      appendFact(documentObject, localFacts, "Memória", review.metrics.memory);
-      appendFact(documentObject, localFacts, "Espaço do usuário", review.metrics.storage);
+      appendFact(documentObject, localFacts, t("system.diagnostics.review.metrics.fact.memory"), review.metrics.memory);
+      appendFact(documentObject, localFacts, t("system.diagnostics.review.metrics.fact.storage"), review.metrics.storage);
     }
     if (review.history) {
-      appendFact(documentObject, localFacts, "Entregas conhecidas", String(review.history.releaseCount));
-      appendFact(documentObject, localFacts, "Aplicações registradas", String(review.history.applicationCount));
+      appendFact(
+        documentObject,
+        localFacts,
+        t("system.diagnostics.review.history.fact.deliveries"),
+        String(review.history.releaseCount),
+      );
+      appendFact(
+        documentObject,
+        localFacts,
+        t("system.diagnostics.review.history.fact.applications"),
+        String(review.history.applicationCount),
+      );
     }
     container.append(localFacts);
   }
 
   const eventSection = node(documentObject, "div", "ordax-system-history");
-  eventSection.append(node(documentObject, "h5", "ordax-system-history-title", "Eventos locais incluídos"));
+  eventSection.append(
+    node(documentObject, "h5", "ordax-system-history-title", t("system.diagnostics.review.events")),
+  );
   if (review.eventCount === null) {
     eventSection.append(
-      node(
-        documentObject,
-        "p",
-        "ordax-system-placeholder",
-        "O journal diagnóstico não foi incluído; esta ausência não é prova de que o sistema esteja sem problemas.",
-      ),
+      node(documentObject, "p", "ordax-system-placeholder", t("system.diagnostics.review.events.unavailable")),
     );
   } else if (review.events.length === 0) {
     eventSection.append(
-      node(
-        documentObject,
-        "p",
-        "ordax-system-placeholder",
-        "Nenhum evento de atualização está retido no journal desta revisão. Isso não é um atestado geral de saúde.",
-      ),
+      node(documentObject, "p", "ordax-system-placeholder", t("system.diagnostics.review.events.empty")),
     );
   } else {
     for (const event of review.events) {
