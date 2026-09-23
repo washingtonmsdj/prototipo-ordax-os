@@ -12,6 +12,9 @@ const UPDATE_PHASES = new Set([
   "error",
 ]);
 
+const RECOVERY_STATES = new Set(["available", "partial", "unavailable"]);
+const RECOVERY_SOURCES = new Set(["portable-state", "none"]);
+
 const BASE_UPDATE_PHASES = new Set([
   "none",
   "waiting-candidate",
@@ -34,6 +37,18 @@ function optionalString(value, fallback) {
   if (value === undefined || value === null || value === "") return fallback;
   if (typeof value !== "string") {
     throw new TypeError("Update status text fields must be strings");
+  }
+  return value;
+}
+
+function optionalCommitSha(value) {
+  if (value === undefined || value === null || value === "") return "";
+  if (
+    typeof value !== "string"
+    || value.length !== 40
+    || !/^[0-9a-f]{40}$/.test(value)
+  ) {
+    throw new TypeError("Update status recovery SHA fields must be lowercase 40-hex commits");
   }
   return value;
 }
@@ -67,6 +82,40 @@ export function validateUpdateStatusSnapshot(value) {
   if (!BASE_UPDATE_PHASES.has(baseUpdatePhase)) {
     throw new TypeError(`Unsupported Base update phase: ${baseUpdatePhase}`);
   }
+  const recoveryState = optionalString(value.recoveryState, "unavailable");
+  if (!RECOVERY_STATES.has(recoveryState)) {
+    throw new TypeError(`Unsupported recovery state: ${recoveryState}`);
+  }
+  const recoverySource = optionalString(value.recoverySource, "none");
+  if (!RECOVERY_SOURCES.has(recoverySource)) {
+    throw new TypeError(`Unsupported recovery source: ${recoverySource}`);
+  }
+  const currentReleaseSha = optionalCommitSha(value.currentReleaseSha);
+  const knownGoodReleaseSha = optionalCommitSha(value.knownGoodReleaseSha);
+  const candidateReleaseSha = optionalCommitSha(value.candidateReleaseSha);
+  const recoveryRejectedSha = optionalCommitSha(value.recoveryRejectedSha);
+  const rollbackEligible = value.rollbackEligible === true;
+
+  if (recoveryState === "available") {
+    if (
+      recoverySource !== "portable-state"
+      || !currentReleaseSha
+      || !knownGoodReleaseSha
+    ) {
+      throw new TypeError("Available recovery state requires observed portable current and known-good commits");
+    }
+  }
+  if (
+    rollbackEligible
+    && (
+      recoveryState !== "available"
+      || !knownGoodReleaseSha
+      || !currentReleaseSha
+      || knownGoodReleaseSha === currentReleaseSha
+    )
+  ) {
+    throw new TypeError("rollbackEligible requires a distinct observed known-good release");
+  }
   return Object.freeze({
     sourceSha: value.sourceSha,
     deliveryNumber,
@@ -86,6 +135,13 @@ export function validateUpdateStatusSnapshot(value) {
     lastApplyDurationSeconds: optionalNonNegativeInteger(value.lastApplyDurationSeconds, 0, 3600),
     lastStageDurationSeconds: optionalNonNegativeInteger(value.lastStageDurationSeconds, 0, 3600),
     rejectedSha: optionalString(value.rejectedSha, ""),
+    recoveryState,
+    recoverySource,
+    currentReleaseSha,
+    knownGoodReleaseSha,
+    candidateReleaseSha,
+    recoveryRejectedSha,
+    rollbackEligible,
     lastError: optionalString(value.lastError, ""),
     healthToken: optionalString(value.healthToken, ""),
   });
