@@ -25,6 +25,63 @@ is_sha256() {
     esac
 }
 
+validate_surface_runtime() {
+    [ "${ORDAX_SURFACE_RUNTIME_MODE:-}" = "verified-erofs-overlay" ] ||
+        return 1
+    [ "${ORDAX_SURFACE_RUNTIME_ROOT:-}" = "/run/ordax/runtime/native-surface/rootfs" ] ||
+        return 1
+    is_sha256 "${ORDAX_SURFACE_RUNTIME_SHA256:-}" ||
+        return 1
+    [ -x "$ORDAX_SURFACE_RUNTIME_ROOT/usr/bin/cage" ] ||
+        return 1
+    [ -x "$ORDAX_SURFACE_RUNTIME_ROOT/usr/bin/python3" ] ||
+        return 1
+}
+
+validate_local_ai_runtime() {
+    [ "${ORDAX_LOCAL_AI_RUNTIME_MODE:-}" = "verified-erofs-read-only" ] ||
+        return 1
+    [ "${ORDAX_LOCAL_AI_RUNTIME_ROOT:-}" = "/run/ordax/runtime/local-ai" ] ||
+        return 1
+    is_sha256 "${ORDAX_LOCAL_AI_RUNTIME_SHA256:-}" ||
+        return 1
+    [ -x "$ORDAX_LOCAL_AI_RUNTIME_ROOT/bin/llama-server" ] ||
+        return 1
+    [ -x "$ORDAX_LOCAL_AI_RUNTIME_ROOT/bin/ordax-local-ai" ] ||
+        return 1
+    [ -f "$ORDAX_LOCAL_AI_RUNTIME_ROOT/metadata/source-lock.json" ] ||
+        return 1
+    [ -f "$ORDAX_LOCAL_AI_RUNTIME_ROOT/metadata/runtime-policy.json" ] ||
+        return 1
+}
+
+disable_local_ai() {
+    reason=$1
+    unset ORDAX_LOCAL_AI_RUNTIME_MODE ORDAX_LOCAL_AI_RUNTIME_ROOT ORDAX_LOCAL_AI_RUNTIME_SHA256
+    echo "ordax-stable-init: local AI degraded: $reason" >&2
+    echo "ORDAX_LOCAL_AI_BACKEND=DEGRADED"
+}
+
+start_local_ai() {
+    [ "${LOCAL_AI_READY:-0}" -eq 1 ] || return 0
+    mkdir -p /run/ordax
+    umask 077
+    ORDAX_LOCAL_AI_RUNTIME_ROOT="$ORDAX_LOCAL_AI_RUNTIME_ROOT" \
+        "$ORDAX_LOCAL_AI_RUNTIME_ROOT/bin/ordax-local-ai" \
+        >/run/ordax/local-ai.log 2>&1 &
+    local_ai_pid=$!
+    case "$local_ai_pid" in
+        ''|*[!0-9]*)
+            LOCAL_AI_READY=0
+            disable_local_ai "backend process did not return a valid pid"
+            return 0
+            ;;
+    esac
+    printf '%s\n' "$local_ai_pid" >/run/ordax/local-ai.pid ||
+        echo "ordax-stable-init: local AI pid receipt could not be written" >&2
+    echo "ORDAX_LOCAL_AI_BACKEND=STARTED"
+}
+
 [ "${ORDAX_DISTRIBUTION_PROFILE:-}" = "stable-mvp" ] ||
     fail "distribution profile must be stable-mvp"
 [ "${ORDAX_PRODUCT_MODE:-}" = "usb" ] ||
@@ -36,20 +93,22 @@ is_sha "${ORDAX_SOURCE_SHA:-}" ||
 [ -x /system/entrypoint ] ||
     fail "verified product system entrypoint is missing"
 
+LOCAL_AI_READY=0
 case "${ORDAX_RELEASE_MANIFEST_SCHEMA:-}" in
     2)
         ;;
     3)
-        [ "${ORDAX_SURFACE_RUNTIME_MODE:-}" = "verified-erofs-overlay" ] ||
-            fail "portable v3 Surface runtime mode is missing"
-        [ "${ORDAX_SURFACE_RUNTIME_ROOT:-}" = "/run/ordax/runtime/native-surface/rootfs" ] ||
-            fail "portable v3 Surface runtime root is invalid"
-        is_sha256 "${ORDAX_SURFACE_RUNTIME_SHA256:-}" ||
-            fail "portable v3 Surface runtime digest is missing or invalid"
-        [ -x "$ORDAX_SURFACE_RUNTIME_ROOT/usr/bin/cage" ] ||
+        validate_surface_runtime ||
             fail "portable v3 Surface runtime handoff is incomplete"
-        [ -x "$ORDAX_SURFACE_RUNTIME_ROOT/usr/bin/python3" ] ||
-            fail "portable v3 Surface runtime Python is missing"
+        ;;
+    4)
+        validate_surface_runtime ||
+            fail "portable v4 Surface runtime handoff is incomplete"
+        if validate_local_ai_runtime; then
+            LOCAL_AI_READY=1
+        else
+            disable_local_ai "verified runtime mount is unavailable or incomplete"
+        fi
         ;;
     *)
         fail "verified portable release manifest schema is missing or unsupported"
@@ -58,5 +117,6 @@ esac
 
 echo "ORDAX_STABLE_INIT_HANDOFF=VERIFIED"
 echo "ORDAX_STABLE_INIT_SOURCE_SHA=$ORDAX_SOURCE_SHA"
+start_local_ai
 
 exec /system/entrypoint
