@@ -123,9 +123,10 @@ physical USB. `PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md` is now the active
 pre-USB closure plan. Physical media work is intentionally held while the remaining
 class-A product gaps are closed. Ordax Intelligence consumers, Native local
 session/lock, and a safe Files removal path are now source-complete. The remaining
-pre-USB gaps are coherent launch-language coverage, product diagnostics/recovery
-presentation, minimum hardware support inventory, and the signed/materializable v4
-release that carries the proven local-AI runtime.
+pre-USB gaps are coherent launch-language coverage, minimum hardware support inventory, and the
+signed/materializable v4 release that carries the proven local-AI runtime. Diagnostics
+and recovery presentation are now source-complete; physical known-good/rollback remain
+separate promotion proofs.
 
 This hold does not revoke or widen any existing destructive authorization. It simply
 adds a product/source prerequisite before target-specific physical execution.
@@ -140,6 +141,11 @@ LOCAL_SESSION_LOCK_PHYSICAL_PROOF=PENDING
 FILES_DAILY_OPERATIONS=PASS_SOURCE
 FILES_SAFE_REMOVAL=PASS_SOURCE
 FILES_TRASH_PHYSICAL_PROOF=PENDING
+DIAGNOSTICS_REVIEW=PASS_SOURCE
+RECOVERY_STATUS_PROJECTION=PASS_SOURCE
+RECOVERY_SYSTEM_PRESENTATION=PASS_SOURCE
+PHYSICAL_KNOWN_GOOD_PROOF=PENDING
+PHYSICAL_ROLLBACK_PROOF=PENDING
 FIRST_STABLE_MVP_USB_WRITE=HOLD_FUNCTIONAL_CLOSURE
 PHYSICAL_WRITE_AUTHORITY=UNCHANGED
 ```
@@ -173,6 +179,25 @@ ACCOUNT_EN_US=PASS_SOURCE
 SURFACE_COMPLETE_LOCALES=pt-BR
 SURFACE_EN_US_APP_CONTROLS=MIGRATING
 ```
+
+### Diagnostics and recovery presentation
+
+System now presents recovery state from the same owner that controls update/recovery
+instead of inferring it from the running Surface. In the Portable path the
+supervisor queries the canonical state helper for `current`, `known-good`,
+`candidate` and `rejected`, validates those identities, and publishes a bounded
+read-only projection through `ordax.update-status/1`.
+
+The UI exposes that projection under Updates and the same observation is included in
+the reviewable diagnostic report. No rollback action was added to the Surface:
+selection, commit and rollback remain bootstrap/supervisor authority. When the
+canonical state cannot be proven the projection says `partial` or `unavailable`;
+it never fabricates a known-good release from the running SHA.
+
+The MVP smoke validator now checks the recovery projection while keeping raw recovery
+commit SHAs out of its evidence summary. This closes the **source/product
+presentation** gap only. Physical known-good promotion and physical rollback on the
+first Stable/MVP USB remain independent promotion gates.
 
 ### Files safe removal
 
