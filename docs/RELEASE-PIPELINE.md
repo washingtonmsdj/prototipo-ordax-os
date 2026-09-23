@@ -5,19 +5,22 @@ Status: CI PROOF ONLY — NOT A PRODUCTION RELEASE OR PHYSICAL AUTHORIZATION
 The release pipeline is intentionally split into small owners with independent validation. The Native assembly step is a build-time composition owner, not a new runtime channel:
 
 ```text
-shared system source + Native release helper source
- -> tools/native-release-assembly
- -> staged Native system/
- -> tools/release-bundle
- -> system.tar
- -> tools/release-manifest
- -> release-manifest.json
- -> tools/release-signing + explicit trust input
- -> release-envelope.json
- -> bootstrap/release-acquisition
- -> verified transactional materialization
- -> atomic current activation
+shared system source + pinned Native/Surface/AI inputs
+ -> deterministic system.erofs
+ -> deterministic native-surface-runtime.erofs
+ -> deterministic local-ai-runtime.erofs
+ -> tools/release-manifest (release-manifest/4)
+ -> tools/release-signing + canonical public trust + external canonical private key
+ -> release-envelope/1
+ -> bootstrap/release-acquisition materialize-portable-v4
+ -> verify-portable-v4-exact
+ -> Stable boot handoff with read-only Surface + AI runtime mounts
+ -> disposable boot proof
+ -> separate physical-write authorization gate
 ```
+
+The v1 `system.tar` pipeline remains supported as a legacy compatibility path and
+is not silently reinterpreted as v4.
 
 ## Native release assembly
 
@@ -44,7 +47,7 @@ MANIFEST_TO_SIGNED_ENVELOPE=PASS
 SIGNED_ENVELOPE_TO_AGENT=PASS
 ```
 
-The workflow uses a CI-only ephemeral Ed25519 key. The private key exists only under the runner temporary directory, is removed before completion and is never uploaded.
+The workflow uses a CI-only ephemeral Ed25519 key. The private key exists only under the runner temporary directory, is removed before completion and is never uploaded. A separate Local AI candidate gate also proves release-manifest/4 signing, loopback-HTTPS acquisition, exact materialization and byte identity of the real AI EROFS without using the canonical private key.
 
 The proof deliberately does **not**:
 
