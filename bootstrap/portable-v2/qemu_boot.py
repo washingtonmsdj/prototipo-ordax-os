@@ -188,6 +188,17 @@ def validate_portable_release(
     ):
         regular(release / name, f"{label} release {name}", minimum=2)
 
+    manifest = load_json(release / "release-manifest.json", f"{label} release manifest")
+    schema = manifest.get("$schema")
+    if schema not in {
+        "prototype-ordax.release-manifest/3",
+        "prototype-ordax.release-manifest/4",
+    }:
+        raise ProofError(f"{label} proof requires a signed release-manifest/3 or /4 release")
+    schema_version = 4 if schema.endswith("/4") else 3
+    if manifest.get("source_commit") != commit:
+        raise ProofError(f"{label} manifest source commit differs from release directory")
+
     runtime_sha = (release / "surface-runtime.sha256").read_text(
         encoding="utf-8"
     ).strip()
@@ -201,13 +212,9 @@ def validate_portable_release(
     if sha256_file(runtime) != runtime_sha:
         raise ProofError(f"{label} Surface runtime digest differs from release reference")
 
-    manifest = load_json(release / "release-manifest.json", f"{label} release manifest")
-    if manifest.get("$schema") != "prototype-ordax.release-manifest/3":
-        raise ProofError(f"{label} proof requires a signed release-manifest/3 release")
-    if manifest.get("source_commit") != commit:
-        raise ProofError(f"{label} manifest source commit differs from release directory")
     artifacts = manifest.get("artifacts")
-    if not isinstance(artifacts, list) or len(artifacts) != 2:
+    expected_count = 3 if schema_version == 4 else 2
+    if not isinstance(artifacts, list) or len(artifacts) != expected_count:
         raise ProofError(f"{label} release manifest artifact set is invalid")
     runtime_artifact = artifacts[1]
     if (
@@ -218,13 +225,48 @@ def validate_portable_release(
     ):
         raise ProofError(f"{label} manifest runtime binding differs from materialized store")
 
+    ai_runtime = None
+    ai_runtime_sha = None
+    if schema_version == 4:
+        ai_ref = regular(
+            release / "local-ai-runtime.sha256",
+            f"{label} local AI runtime reference",
+            minimum=64,
+        )
+        ai_runtime_sha = ai_ref.read_text(encoding="utf-8").strip()
+        if SHA256_RE.fullmatch(ai_runtime_sha) is None:
+            raise ProofError(f"{label} local AI runtime reference is not lowercase SHA-256")
+        ai_runtime = regular(
+            portable
+            / "ai-runtimes"
+            / "sha256"
+            / ai_runtime_sha
+            / "local-ai-runtime.erofs",
+            f"{label} local AI runtime",
+            minimum=4096,
+        )
+        if sha256_file(ai_runtime) != ai_runtime_sha:
+            raise ProofError(f"{label} local AI runtime digest differs from release reference")
+        ai_artifact = artifacts[2]
+        if (
+            not isinstance(ai_artifact, dict)
+            or ai_artifact.get("name") != "local-ai-runtime.erofs"
+            or ai_artifact.get("role") != "local-ai-runtime"
+            or ai_artifact.get("sha256") != ai_runtime_sha
+        ):
+            raise ProofError(f"{label} manifest local AI binding differs from materialized store")
+        if not isinstance(manifest.get("local_ai"), dict):
+            raise ProofError(f"{label} release-manifest/4 local_ai binding is missing")
+
     return {
         "commit": commit,
         "release": release,
+        "manifest_schema": schema_version,
         "runtime": runtime,
         "runtime_sha256": runtime_sha,
+        "ai_runtime": ai_runtime,
+        "ai_runtime_sha256": ai_runtime_sha,
     }
-
 
 def validate_inputs(args: argparse.Namespace) -> dict[str, Any]:
     if COMMIT_RE.fullmatch(args.source_commit) is None:
@@ -289,9 +331,14 @@ def validate_inputs(args: argparse.Namespace) -> dict[str, Any]:
         "portable_root": portable,
         "runtime": candidate["runtime"],
         "runtime_sha256": candidate["runtime_sha256"],
+        "ai_runtime": candidate["ai_runtime"],
+        "ai_runtime_sha256": candidate["ai_runtime_sha256"],
+        "manifest_schema": candidate["manifest_schema"],
         "candidate_release": candidate["release"],
+        "candidate": candidate,
         "previous_release": previous["release"] if previous else None,
         "previous_commit": previous["commit"] if previous else None,
+        "previous": previous,
         "provenance": provenance,
     }
 
