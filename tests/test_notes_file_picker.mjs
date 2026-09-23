@@ -134,6 +134,18 @@ test("listing path mismatches fail closed with a stable user-facing error", asyn
   assert.equal(picker.getSnapshot().error, "Não foi possível abrir esta pasta.");
 });
 
+test("picker accepts a localized user-facing folder error without owning localization", async () => {
+  const picker = createNotesFilePicker({
+    fileSpace: fileSpace(async () => {
+      throw new Error("offline");
+    }),
+    openFolderError: "Could not open this folder.",
+  });
+
+  assert.equal(await picker.open("file", "/Documentos"), false);
+  assert.equal(picker.getSnapshot().error, "Could not open this folder.");
+});
+
 test("unavailable and destroyed pickers do not invent filesystem capability", async () => {
   const unavailable = createNotesFilePicker();
   assert.equal(unavailable.getSnapshot().available, false);
