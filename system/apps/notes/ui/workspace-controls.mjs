@@ -582,17 +582,17 @@ export function mountNotesWorkspaceControls(
       if (preview?.status === "ready" && preview.url) {
         const image = node(documentObject, "img", "ordax-notes-inline-image-preview");
         image.src = preview.url;
-        image.alt = reference.title || "Imagem relacionada à nota";
+        image.alt = reference.title || t("notes.image.alt");
         image.loading = "lazy";
         image.decoding = "async";
         image.draggable = false;
         frame.append(image);
       } else {
         const message = !imagePreviewCache.available
-          ? "Prévia disponível no OrdaX Native."
+          ? t("notes.image.previewNative")
           : preview?.status === "failed"
-            ? "Não foi possível carregar a prévia. O arquivo continua relacionado."
-            : "Carregando imagem…";
+            ? t("notes.image.previewFailed")
+            : t("notes.image.loading");
         frame.append(node(documentObject, "span", "ordax-notes-inline-image-placeholder", message));
         if (!preview && imagePreviewCache.available) {
           void imagePreviewCache.ensure(
@@ -616,17 +616,17 @@ export function mountNotesWorkspaceControls(
       const caption = node(documentObject, "figcaption", "ordax-notes-inline-image-caption");
       const copy = node(documentObject, "span", "ordax-notes-inline-image-copy");
       copy.append(
-        node(documentObject, "strong", "", reference.title || "Imagem"),
-        node(documentObject, "small", "", reference.path || "Arquivo local"),
+        node(documentObject, "strong", "", reference.title || t("notes.image.titleFallback")),
+        node(documentObject, "small", "", reference.path || t("notes.image.fileFallback")),
       );
       const actions = node(documentObject, "span", "ordax-notes-inline-image-actions");
       if (activationPort && reference.path) {
         const open = button(
           documentObject,
           "ordax-notes-inline-image-action",
-          "Abrir localização da imagem no Arquivos",
+          t("notes.image.openAria"),
           "open-file-reference",
-          "Abrir no Arquivos",
+          t("notes.image.open"),
         );
         open.dataset.filePath = reference.path;
         actions.append(open);
@@ -634,9 +634,9 @@ export function mountNotesWorkspaceControls(
       const remove = button(
         documentObject,
         "ordax-notes-inline-image-action ordax-notes-inline-image-remove",
-        "Remover imagem da nota",
+        t("notes.image.remove"),
         "remove-reference",
-        "Remover",
+        t("notes.action.remove"),
       );
       remove.dataset.referenceId = reference.id;
       remove.disabled = readOnly;
@@ -662,7 +662,7 @@ export function mountNotesWorkspaceControls(
       checkbox.disabled = readOnly;
       checkbox.dataset.taskId = task.id;
       checkbox.dataset.notesTaskDone = "";
-      checkbox.setAttribute("aria-label", `Marcar “${task.text}” como concluído`);
+      checkbox.setAttribute("aria-label", t("notes.task.complete", { text: task.text }));
       const text = node(documentObject, "input", "ordax-notes-task-text");
       text.type = "text";
       text.value = task.text;
@@ -670,11 +670,11 @@ export function mountNotesWorkspaceControls(
       text.readOnly = readOnly;
       text.dataset.taskId = task.id;
       text.dataset.notesTaskText = "";
-      text.setAttribute("aria-label", "Texto do item");
+      text.setAttribute("aria-label", t("notes.task.textAria"));
       const remove = button(
         documentObject,
         "ordax-notes-task-remove",
-        `Remover item ${task.text}`,
+        t("notes.task.remove", { text: task.text }),
         "remove-task",
         "×",
       );
