@@ -877,11 +877,11 @@ export function mountFileSpaceControls(
         selected,
       });
       if (notesAction.visible) {
-        createNote = node(documentObject, "button", "ordax-files-action", notesAction.label);
+        createNote = node(documentObject, "button", "ordax-files-action", t(notesAction.labelMessageId));
         createNote.type = "button";
         createNote.dataset.fileCreateNote = "";
         createNote.disabled = itemBusy || notesAction.disabled;
-        createNote.title = notesAction.title;
+        createNote.title = t(notesAction.titleMessageId);
       }
     }
     const move = node(documentObject, "button", "ordax-files-action", t("files.action.move"));
@@ -1931,7 +1931,7 @@ export function mountFileSpaceControls(
     try {
       const outcome = await importSelectedFileToNotes(notesImporterPort, source);
       if (destroyed) return;
-      message = outcome.presentation.text;
+      setMessage(outcome.presentation.messageId, outcome.presentation.messageParams);
       if (outcome.presentation.openNotes && activationPort) {
         activationPort.publish({ appId: "notes", target: null });
       }
@@ -2410,7 +2410,7 @@ export function mountFileSpaceControls(
     const projectStart = event.target.closest("[data-file-project-create-start]");
     if (projectStart && root.contains(projectStart) && projectPort && listing && listing.path !== "/") {
       creatingProject = true;
-      projectDraft = breadcrumbParts(listing.path).at(-1) ?? "Projeto";
+      projectDraft = breadcrumbParts(listing.path).at(-1) ?? t("files.project.defaultName");
       renamingProjectId = null;
       projectRenameDraft = "";
       clearMessage();
