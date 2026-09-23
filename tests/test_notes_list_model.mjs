@@ -89,6 +89,25 @@ test("query matches title, body, tasks and reference metadata", () => {
   assert.equal(noteMatchesQuery(candidate, "inexistente"), false);
 });
 
+test("query matching accepts the active locale explicitly", () => {
+  const candidate = note({
+    id: "n-locale",
+    title: "English Search",
+    body: "Localized body",
+  });
+  assert.equal(noteMatchesQuery(candidate, "english", "en-US"), true);
+  assert.equal(
+    visibleNotes(
+      { selectedProjectId: "meu-espaco", notes: [candidate] },
+      "all",
+      "localized",
+      true,
+      "en-US",
+    )[0].id,
+    "n-locale",
+  );
+});
+
 test("visible notes preserve lifecycle, project, recent and ordering semantics", () => {
   const documentState = {
     selectedProjectId: "projeto-a",
