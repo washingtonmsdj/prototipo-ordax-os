@@ -148,7 +148,7 @@ export function mountSettingsOverviewControls(
     ? null
     : validateLocalSessionSnapshot(localSessionPort.getSnapshot());
   let localSessionPending = false;
-  let localSessionMessage = "";
+  let localSessionMessageId = null;
   let networkManagementReadFailed = false;
   let networkManagementLastSuccessAt = null;
   let networkManagementPending = false;
@@ -193,6 +193,21 @@ export function mountSettingsOverviewControls(
         value: element.dataset.settingsKeyboardLayout,
       });
     }
+    if (element.dataset.settingsLocalSessionSecret !== undefined) {
+      return Object.freeze({ kind: "local-session-secret", value: "secret" });
+    }
+    if (element.dataset.settingsLocalSessionConfirm !== undefined) {
+      return Object.freeze({ kind: "local-session-confirm", value: "confirm" });
+    }
+    if (element.dataset.settingsLocalSessionCurrent !== undefined) {
+      return Object.freeze({ kind: "local-session-current", value: "current" });
+    }
+    if (element.dataset.settingsLocalSessionAction) {
+      return Object.freeze({
+        kind: "local-session-action",
+        value: element.dataset.settingsLocalSessionAction,
+      });
+    }
     if (element.dataset.settingsNotificationDnd !== undefined) {
       return Object.freeze({ kind: "notification-dnd", value: "dnd" });
     }
@@ -228,6 +243,16 @@ export function mountSettingsOverviewControls(
   const captureInteractionState = (slot) => {
     const windowBody = slot.closest(".ordax-window-body");
     const passwordInput = slot.querySelector("[data-settings-wifi-password]");
+    const localSessionInputs = Array.from(
+      slot.querySelectorAll(
+        "[data-settings-local-session-secret], [data-settings-local-session-confirm], [data-settings-local-session-current]",
+      ),
+    ).filter((element) => element instanceof HTMLInputElement).map((element) => ({
+      identity: focusIdentity(element),
+      value: element.value,
+      selectionStart: element.selectionStart,
+      selectionEnd: element.selectionEnd,
+    }));
     const activeElement = documentObject.activeElement;
     const activeInside = activeElement && slot.contains(activeElement);
     return {
@@ -243,6 +268,7 @@ export function mountSettingsOverviewControls(
               selectionEnd: passwordInput.selectionEnd,
             }
           : null,
+      localSessionInputs,
     };
   };
 
@@ -270,6 +296,18 @@ export function mountSettingsOverviewControls(
             snapshot.password.selectionEnd,
           );
         }
+      }
+    }
+
+    for (const inputState of snapshot.localSessionInputs ?? []) {
+      const input = findFocusTarget(slot, inputState.identity);
+      if (!(input instanceof HTMLInputElement) || input.disabled) continue;
+      input.value = inputState.value;
+      if (
+        inputState.selectionStart !== null
+        && inputState.selectionEnd !== null
+      ) {
+        input.setSelectionRange(inputState.selectionStart, inputState.selectionEnd);
       }
     }
 
@@ -450,20 +488,34 @@ export function mountSettingsOverviewControls(
     const section = node(documentObject, "section", "ordax-settings-section");
     section.dataset.settingsSecurity = "";
     section.append(
-      node(documentObject, "span", "ordax-settings-section-kicker", "Sessão local"),
-      node(documentObject, "h4", "ordax-settings-section-title", "Bloqueio deste OrdaX"),
+      node(
+        documentObject,
+        "span",
+        "ordax-settings-section-kicker",
+        t("settings.security.kicker"),
+      ),
+      node(
+        documentObject,
+        "h4",
+        "ordax-settings-section-title",
+        t("settings.security.title"),
+      ),
       node(
         documentObject,
         "p",
         "ordax-settings-section-copy",
-        "A credencial fica somente neste dispositivo e não depende da Conta. "
-          + "Este recurso bloqueia a Surface em execução; ele não criptografa os arquivos do pendrive.",
+        t("settings.security.description"),
       ),
     );
 
     if (!localSessionPort || !localSessionSnapshot) {
       section.append(
-        node(documentObject, "p", "ordax-settings-empty", "O owner de sessão local não está disponível nesta execução."),
+        node(
+          documentObject,
+          "p",
+          "ordax-settings-empty",
+          t("settings.security.unavailable"),
+        ),
       );
       view.append(section);
       return;
@@ -475,8 +527,8 @@ export function mountSettingsOverviewControls(
         "p",
         "ordax-settings-section-copy",
         localSessionSnapshot.credentialConfigured
-          ? "PIN/senha local configurado. O próximo início da Surface começa bloqueado."
-          : "Nenhum PIN/senha local configurado. O bloqueio autenticado fica desativado.",
+          ? t("settings.security.configured")
+          : t("settings.security.notConfigured"),
       ),
     );
 
@@ -487,7 +539,7 @@ export function mountSettingsOverviewControls(
       secret.autocomplete = "new-password";
       secret.minLength = 6;
       secret.maxLength = 128;
-      secret.placeholder = "Novo PIN ou senha local";
+      secret.placeholder = t("settings.security.placeholder.new");
       secret.dataset.settingsLocalSessionSecret = "";
       secret.disabled = localSessionPending;
       const confirm = documentObject.createElement("input");
@@ -495,16 +547,28 @@ export function mountSettingsOverviewControls(
       confirm.autocomplete = "new-password";
       confirm.minLength = 6;
       confirm.maxLength = 128;
-      confirm.placeholder = "Confirmar PIN ou senha";
+      confirm.placeholder = t("settings.security.placeholder.confirm");
       confirm.dataset.settingsLocalSessionConfirm = "";
       confirm.disabled = localSessionPending;
-      const configure = node(documentObject, "button", "ordax-settings-notification-action", localSessionPending ? "Salvando…" : "Configurar bloqueio");
+      const configure = node(
+        documentObject,
+        "button",
+        "ordax-settings-notification-action",
+        localSessionPending
+          ? t("settings.security.action.saving")
+          : t("settings.security.action.configure"),
+      );
       configure.type = "button";
       configure.dataset.settingsLocalSessionAction = "configure";
       configure.disabled = localSessionPending;
       form.append(secret, confirm, configure);
     } else {
-      const lock = node(documentObject, "button", "ordax-settings-notification-action", "Bloquear agora");
+      const lock = node(
+        documentObject,
+        "button",
+        "ordax-settings-notification-action",
+        t("settings.security.action.lock"),
+      );
       lock.type = "button";
       lock.dataset.settingsLocalSessionAction = "lock";
       lock.disabled = localSessionPending;
@@ -513,10 +577,15 @@ export function mountSettingsOverviewControls(
       current.autocomplete = "current-password";
       current.minLength = 6;
       current.maxLength = 128;
-      current.placeholder = "PIN/senha atual para remover";
+      current.placeholder = t("settings.security.placeholder.current");
       current.dataset.settingsLocalSessionCurrent = "";
       current.disabled = localSessionPending;
-      const remove = node(documentObject, "button", "ordax-settings-notification-action", "Remover bloqueio");
+      const remove = node(
+        documentObject,
+        "button",
+        "ordax-settings-notification-action",
+        t("settings.security.action.remove"),
+      );
       remove.type = "button";
       remove.dataset.settingsLocalSessionAction = "remove";
       remove.disabled = localSessionPending;
@@ -524,8 +593,13 @@ export function mountSettingsOverviewControls(
     }
     section.append(form);
 
-    if (localSessionMessage) {
-      const message = node(documentObject, "p", "ordax-settings-section-copy", localSessionMessage);
+    if (localSessionMessageId) {
+      const message = node(
+        documentObject,
+        "p",
+        "ordax-settings-section-copy",
+        t(localSessionMessageId),
+      );
       message.setAttribute("role", "status");
       message.setAttribute("aria-live", "polite");
       section.append(message);
@@ -1108,9 +1182,9 @@ export function mountSettingsOverviewControls(
     ) {
       const action = localSessionButton.dataset.settingsLocalSessionAction;
       if (action === "lock") {
-        localSessionMessage = "";
+        localSessionMessageId = null;
         void localSessionPort.lock().catch(() => {
-          localSessionMessage = "Não foi possível bloquear a sessão.";
+          localSessionMessageId = "settings.security.message.lockFailed";
           replaceView();
         });
         return;
@@ -1127,7 +1201,7 @@ export function mountSettingsOverviewControls(
         confirm.value = "";
         if (secret.length < 6 || secret !== confirmation) {
           secret = "";
-          localSessionMessage = "Use pelo menos 6 caracteres e repita exatamente a mesma credencial.";
+          localSessionMessageId = "settings.security.message.validation";
           replaceView();
           return;
         }
@@ -1138,7 +1212,7 @@ export function mountSettingsOverviewControls(
         input.value = "";
         if (secret.length < 6) {
           secret = "";
-          localSessionMessage = "Digite o PIN ou senha local atual.";
+          localSessionMessageId = "settings.security.message.currentRequired";
           replaceView();
           return;
         }
@@ -1147,7 +1221,9 @@ export function mountSettingsOverviewControls(
       }
 
       localSessionPending = true;
-      localSessionMessage = action === "configure" ? "Criando credencial local…" : "Removendo credencial local…";
+      localSessionMessageId = action === "configure"
+        ? "settings.security.message.creating"
+        : "settings.security.message.removing";
       replaceView();
       const operationSecret = secret;
       secret = "";
@@ -1155,13 +1231,13 @@ export function mountSettingsOverviewControls(
         ? localSessionPort.configureCredential(operationSecret)
         : localSessionPort.removeCredential(operationSecret);
       void operation.then(() => {
-        localSessionMessage = action === "configure"
-          ? "Bloqueio local configurado."
-          : "Bloqueio autenticado removido.";
+        localSessionMessageId = action === "configure"
+          ? "settings.security.message.configured"
+          : "settings.security.message.removed";
       }).catch((error) => {
-        localSessionMessage = error?.status === 401
-          ? "PIN ou senha local incorreto."
-          : "Não foi possível alterar o bloqueio local.";
+        localSessionMessageId = error?.status === 401
+          ? "settings.security.message.incorrect"
+          : "settings.security.message.changeFailed";
       }).finally(() => {
         localSessionPending = false;
         replaceView();

@@ -124,6 +124,9 @@ test("English catalog contains primary Files, Settings and System entries", asyn
   assert.match(settingsCatalog, /"settings\.section\.regional": "Language and region"/);
   assert.match(settingsCatalog, /"settings\.notifications\.dnd\.title": "Do Not Disturb"/);
   assert.match(settingsCatalog, /"settings\.notifications\.sources\.title": "Sources that actually notify"/);
+  assert.match(settingsCatalog, /"settings\.security\.title": "Lock this OrdaX"/);
+  assert.match(settingsCatalog, /"settings\.security\.action\.lock": "Lock now"/);
+  assert.match(settingsCatalog, /"settings\.security\.message\.changeFailed": "The local lock could not be changed\."/);
   assert.match(systemCatalog, /"system\.section\.diagnostics": "Diagnostics"/);
 });
 

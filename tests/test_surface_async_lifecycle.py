@@ -184,5 +184,23 @@ class SurfaceAsyncLifecycleTests(unittest.TestCase):
 
 
 
+    def test_settings_security_preserves_ephemeral_credential_only_during_repaint(self):
+        controls = self.read("settings-overview-controls.mjs")
+        self.assertIn("localSessionInputs", controls)
+        self.assertIn("[data-settings-local-session-secret]", controls)
+        self.assertIn("[data-settings-local-session-confirm]", controls)
+        self.assertIn("[data-settings-local-session-current]", controls)
+        self.assertIn("inputState.selectionStart", controls)
+        self.assertIn("inputState.selectionEnd", controls)
+        self.assertIn("input.value = inputState.value", controls)
+        self.assertIn("localSessionMessageId", controls)
+        self.assertNotIn("localSessionMessage = ", controls)
+        capture = controls.split("const captureInteractionState = (slot) => {", 1)[1].split("\n  };", 1)[0]
+        restore = controls.split("const restoreInteractionState = (slot, snapshot) => {", 1)[1].split("\n  };", 1)[0]
+        for forbidden in ("localStorage", "sessionStorage", "preferences.set", "fetch("):
+            self.assertNotIn(forbidden, capture + restore)
+
+
+
 if __name__ == "__main__":
     unittest.main()
