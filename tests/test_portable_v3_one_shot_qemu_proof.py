@@ -47,8 +47,8 @@ class PortableV3OneShotQemuProofTests(unittest.TestCase):
         self.assertIn('ordax-portable-state"', text)
         self.assertIn('prepare "$mountpoint" "$portable" "$candidate"', text)
         self.assertIn('--previous-commit "$previous"', text)
-        self.assertIn("PORTABLE_V3_QEMU_ONE_SHOT_FALLBACK=PASS", text)
-        self.assertIn("PORTABLE_V3_QEMU_COLD_HEALTH_COMMIT_PROVEN=NO", text)
+        self.assertIn("PORTABLE_V4_TO_V3_QEMU_ONE_SHOT_FALLBACK=PASS", text)
+        self.assertIn("PORTABLE_V4_QEMU_COLD_HEALTH_COMMIT_PROVEN=NO", text)
 
         previous_build = text.index('git worktree add --detach "$previous_source" "$previous"')
         key_destroy = text.index('rm -f "$work/private.pem"')
