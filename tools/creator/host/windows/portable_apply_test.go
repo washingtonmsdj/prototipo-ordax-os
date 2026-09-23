@@ -30,7 +30,8 @@ func portablePhysicalRequestFixture(t *testing.T) PortablePhysicalApplyRequest {
 		"systemd-boot","loader-config","loader-normal","loader-recovery",
 		"kernel","initramfs","bootstrap-capsule","release-trust",
 		"stable-base","persistent-state","system-image","surface-runtime-image",
-		"surface-runtime-ref","release-manifest","release-envelope",
+		"surface-runtime-ref","local-ai-runtime-image","local-ai-runtime-ref",
+		"release-manifest","release-envelope",
 	}
 	root := t.TempDir()
 	for i, id := range ids {
