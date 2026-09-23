@@ -8,6 +8,9 @@ on:
       - 'bootstrap/release-acquisition/**'
       - 'bootstrap/trust/README.md'
       - 'docs/RELEASE-SIGNING.md'
+      - 'docs/RELEASE-BUNDLE.md'
+      - 'docs/RELEASE-PIPELINE.md'
+      - 'tests/test_release_v4_signing_runbook.py'
       - '.github/workflows/release-signing.yml'
   pull_request:
     paths:
@@ -39,6 +42,9 @@ jobs:
       - name: Test release signing boundary
         working-directory: tools/release-signing
         run: go test -count=1 ./...
+
+      - name: Test canonical v4 signing runbook contract
+        run: python3 -m unittest tests.test_release_v4_signing_runbook -v
 
       - name: Build signer and verifier candidates
         run: |
