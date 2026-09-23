@@ -3,6 +3,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 ACCOUNT = ROOT / "system" / "surface" / "ui" / "account-overview-controls.mjs"
+ACCOUNT_CATALOG = ROOT / "system" / "services" / "i18n" / "catalog" / "account.mjs"
 CSS = ROOT / "system" / "surface" / "ui" / "account.css"
 NATIVE = ROOT / "system" / "composition" / "native" / "main.mjs"
 WEB = ROOT / "system" / "composition" / "web" / "main.mjs"
@@ -32,12 +33,22 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
 
     def test_sync_copy_does_not_claim_cloud_transport_from_capability_only(self):
         controls = ACCOUNT.read_text(encoding="utf-8")
+        catalog = ACCOUNT_CATALOG.read_text(encoding="utf-8")
         self.assertNotIn('"Sincronização segura"', controls)
         self.assertNotIn('"Ativa"', controls)
         self.assertNotIn("SYNC_CORE_STATUS", controls)
-        self.assertIn("Nada é chamado de sincronizado sem confirmação de um transporte autenticado.", controls)
-        self.assertIn("A fila local está vazia; isso não prova que exista uma conta ou nuvem sincronizada.", controls)
-        self.assertIn("nada foi anunciado como enviado à nuvem", controls)
+        self.assertIn("account.continuity.subtitle", controls)
+        self.assertIn("account.card.noPending.detail", controls)
+        self.assertIn("account.card.pending.detail", controls)
+        self.assertIn(
+            "Nada é chamado de sincronizado sem confirmação de um transporte autenticado.",
+            catalog,
+        )
+        self.assertIn(
+            "A fila local está vazia; isso não prova que exista uma conta ou nuvem sincronizada.",
+            catalog,
+        )
+        self.assertIn("nada foi anunciado como enviado à nuvem", catalog)
 
     def test_account_no_longer_consumes_host_capability_inventory(self):
         controls = ACCOUNT.read_text(encoding="utf-8")

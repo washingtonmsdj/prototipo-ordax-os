@@ -4,6 +4,7 @@ import { REGIONAL_LOCALE_PREFERENCE_ID } from "../preferences/regional.mjs";
 import { FILES_SOURCE_MESSAGES, FILES_ENGLISH_MESSAGES } from "./catalog/files.mjs";
 import { SETTINGS_SOURCE_MESSAGES, SETTINGS_ENGLISH_MESSAGES } from "./catalog/settings.mjs";
 import { SYSTEM_SOURCE_MESSAGES, SYSTEM_ENGLISH_MESSAGES } from "./catalog/system.mjs";
+import { ACCOUNT_SOURCE_MESSAGES, ACCOUNT_ENGLISH_MESSAGES } from "./catalog/account.mjs";
 
 export const SURFACE_SOURCE_LOCALE = "pt-BR";
 export const SURFACE_COMPLETE_LOCALES = Object.freeze(["pt-BR"]);
@@ -101,7 +102,8 @@ const SOURCE = Object.freeze({
   "app.system.panel.0.body": "O estado detalhado do sistema não está disponível neste host.",
   ...FILES_SOURCE_MESSAGES,
   ...SETTINGS_SOURCE_MESSAGES,
-  ...SYSTEM_SOURCE_MESSAGES
+  ...SYSTEM_SOURCE_MESSAGES,
+  ...ACCOUNT_SOURCE_MESSAGES
 });
 
 const ENGLISH = Object.freeze({
@@ -196,7 +198,8 @@ const ENGLISH = Object.freeze({
   "app.system.panel.0.body": "Detailed system status is unavailable on this host.",
   ...FILES_ENGLISH_MESSAGES,
   ...SETTINGS_ENGLISH_MESSAGES,
-  ...SYSTEM_ENGLISH_MESSAGES
+  ...SYSTEM_ENGLISH_MESSAGES,
+  ...ACCOUNT_ENGLISH_MESSAGES
 });
 
 const TABLES = Object.freeze({
