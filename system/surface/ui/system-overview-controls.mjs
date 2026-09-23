@@ -32,15 +32,8 @@ import { createComponentUpdateScopes } from "../../services/components/update-pr
 import { explainSystemStateWithIntelligence } from "../../services/intelligence/client-actions.mjs";
 import {
   deliveryLabel,
-  formatUpdateTimestamp,
-  readableBaseUpdatePhase,
-  readableUpdateMode,
-  readableUpdatePhase,
   shortSha,
-  updateAttentionMessage,
-  updateBootLabel,
   updateIsAlerting,
-  updateStatusLabel,
 } from "../../services/update/presentation.mjs";
 import { mountSystemDiagnosticsReview } from "./system-diagnostics-review.mjs";
 import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
