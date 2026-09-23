@@ -164,5 +164,15 @@ class SurfaceAsyncLifecycleTests(unittest.TestCase):
         self.assertIn("ordinal !== historyOrdinal", system)
 
 
+    def test_quick_wifi_locale_rerender_uses_existing_interaction_snapshot_and_unsubscribes(self):
+        controls = self.read("network-quick-panel.mjs")
+        self.assertIn("const unsubscribeLocalization = localization.subscribe", controls)
+        self.assertIn("if (!destroyed) render()", controls)
+        self.assertIn("const interaction = captureInteraction()", controls)
+        self.assertIn("restoreInteraction(interaction)", controls)
+        self.assertIn("unsubscribeLocalization()", controls)
+
+
+
 if __name__ == "__main__":
     unittest.main()
