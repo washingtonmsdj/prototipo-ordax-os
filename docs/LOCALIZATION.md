@@ -47,9 +47,10 @@ navigation, search, locale-aware sorting, listing, selection, common create/copy
 rename/project forms, export/preview controls, Recents and recoverable Trash through
 the same owner. Settings and System localize their shared section navigation/header
 copy, and Settings now also localizes its Notifications policy/source and local-session
-Security sections end to end. Account consumes the shared catalog end to end. Notes now
-localizes its primary
-navigation/editor shell, projects/list state, core persistence status and consultative
+Security sections end to end. The Native live local-session lock screen also consumes the
+shared owner and preserves the secret only transiently across locale repaint. Account
+consumes the shared catalog end to end. Notes now localizes its primary navigation/editor
+shell, projects/list state, core persistence status and consultative
 Intelligence controls; Internet localizes its primary browser shell, tab navigation,
 address/search locale handling, project panel and key history/favorite states.
 Operational/error messages in Files, deeper Settings/System content, deeper Notes/
@@ -70,6 +71,7 @@ FILES_FORMS_SORT_EXPORT_PREVIEW_EN_US=PASS_SOURCE
 SETTINGS_SYSTEM_NAV_EN_US=PASS_SOURCE
 SETTINGS_NOTIFICATIONS_EN_US=PASS_SOURCE
 SETTINGS_SECURITY_EN_US=PASS_SOURCE
+LOCAL_SESSION_LOCK_EN_US=PASS_SOURCE
 ACCOUNT_EN_US=PASS_SOURCE
 NOTES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 INTERNET_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
