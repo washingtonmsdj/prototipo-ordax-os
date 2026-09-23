@@ -402,6 +402,42 @@ def validate_update_status(value: object) -> dict:
         if not isinstance(item, int) or isinstance(item, bool) or not 0 <= item <= 3600:
             raise ValueError(f"invalid update status duration: {field}")
 
+    recovery_state = value.get("recoveryState", "unavailable")
+    recovery_source = value.get("recoverySource", "none")
+    if recovery_state not in {"available", "partial", "unavailable"}:
+        raise ValueError("invalid recovery state")
+    if recovery_source not in {"portable-state", "none"}:
+        raise ValueError("invalid recovery source")
+
+    recovery_shas = {}
+    for field in (
+        "currentReleaseSha",
+        "knownGoodReleaseSha",
+        "candidateReleaseSha",
+        "recoveryRejectedSha",
+    ):
+        item = value.get(field, "")
+        if item not in (None, "") and (
+            not isinstance(item, str)
+            or len(item) != 40
+            or any(character not in "0123456789abcdef" for character in item)
+        ):
+            raise ValueError(f"invalid recovery commit: {field}")
+        recovery_shas[field] = item or ""
+
+    rollback_eligible = value.get("rollbackEligible") is True
+    if recovery_state == "available" and (
+        recovery_source != "portable-state"
+        or not recovery_shas["currentReleaseSha"]
+        or not recovery_shas["knownGoodReleaseSha"]
+    ):
+        raise ValueError("available recovery state is incomplete")
+    if rollback_eligible and (
+        recovery_state != "available"
+        or recovery_shas["currentReleaseSha"] == recovery_shas["knownGoodReleaseSha"]
+    ):
+        raise ValueError("invalid rollback eligibility")
+
     runtime_surface_sha = value.get("runtimeSurfaceSha") or source_sha
     return {
         "status": status,
@@ -415,6 +451,11 @@ def validate_update_status(value: object) -> dict:
         "has_target": bool(value.get("targetSha")),
         "has_last_applied": bool(value.get("lastAppliedSha")),
         "has_rejected": bool(value.get("rejectedSha")),
+        "recovery_state": recovery_state,
+        "recovery_source": recovery_source,
+        "rollback_eligible": rollback_eligible,
+        "has_recovery_candidate": bool(recovery_shas["candidateReleaseSha"]),
+        "has_recovery_rejected": bool(recovery_shas["recoveryRejectedSha"]),
         "has_last_error": bool(value.get("lastError")),
         "health_token_present": bool(value.get("healthToken")),
     }
