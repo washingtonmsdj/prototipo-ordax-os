@@ -685,7 +685,12 @@ export function mountSystemOverviewControls(
       ? (BOOT_MESSAGE_IDS[updateSnapshot.baseUpdatePhase] ?? "system.updates.boot.pendingActivation")
       : "system.updates.boot.none";
 
-    addFact(t("system.updates.fact.delivery"), t("system.overview.delivery.number", { value: updateSnapshot.deliveryNumber }));
+    addFact(
+      t("system.updates.fact.delivery"),
+      Number.isSafeInteger(updateSnapshot.deliveryNumber) && updateSnapshot.deliveryNumber > 0
+        ? t("system.overview.delivery.number", { value: updateSnapshot.deliveryNumber })
+        : t("system.overview.delivery.unnumbered"),
+    );
     addFact(t("system.updates.fact.commit"), shortSha(updateSnapshot.sourceSha));
     if (updateSnapshot.runtimeSurfaceSha) {
       addFact(t("system.updates.fact.runtimeSurface"), shortSha(updateSnapshot.runtimeSurfaceSha));
