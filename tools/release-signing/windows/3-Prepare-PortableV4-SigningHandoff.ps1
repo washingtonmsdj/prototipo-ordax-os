@@ -10,6 +10,7 @@ param(
     [Parameter(Mandatory = $true)][string]$LocalAiArtifactUrl,
     [string]$ManifestToolPath = '',
     [string]$SignerPath = '',
+    [string]$ReleaseAgentPath = '',
     [string]$TrustPath = '',
     [string]$OutputDirectory = ''
 )
@@ -61,6 +62,7 @@ if ($SourceCommit -cnotmatch '^[0-9a-f]{40}$') { throw 'SourceCommit must be an 
 $Root = [IO.Path]::GetFullPath($PSScriptRoot)
 if ([string]::IsNullOrWhiteSpace($ManifestToolPath)) { $ManifestToolPath = Join-Path $Root 'ordax-release-manifest.exe' }
 if ([string]::IsNullOrWhiteSpace($SignerPath)) { $SignerPath = Join-Path $Root 'ordax-release-signing.exe' }
+if ([string]::IsNullOrWhiteSpace($ReleaseAgentPath)) { $ReleaseAgentPath = Join-Path $Root 'ordax-release-agent.exe' }
 if ([string]::IsNullOrWhiteSpace($TrustPath)) { $TrustPath = Join-Path $Root 'release-ed25519.json' }
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) { $OutputDirectory = Join-Path $Root 'portable-v4-signing-handoff' }
 
@@ -70,8 +72,10 @@ $LocalAiRuntimePath = Get-RealFile $LocalAiRuntimePath 'local-ai-runtime.erofs'
 $LocalAiSourceLockPath = Get-RealFile $LocalAiSourceLockPath 'local AI source lock'
 $ManifestToolPath = Get-RealFile $ManifestToolPath 'release manifest tool'
 $SignerPath = Get-RealFile $SignerPath 'release signing tool'
+$ReleaseAgentPath = Get-RealFile $ReleaseAgentPath 'release acquisition agent'
 $TrustPath = Get-RealFile $TrustPath 'canonical public trust'
 $SignScriptPath = Get-RealFile (Join-Path $Root '4-Sign-Initial-OrdaXRelease.ps1') 'canonical signing script'
+$VerifyScriptPath = Get-RealFile (Join-Path $Root '5-Verify-PortableV4-SignedHandoff.ps1') 'post-sign verification script'
 
 $SystemArtifactUrl = Get-HttpsUrl $SystemArtifactUrl 'SystemArtifactUrl'
 $SurfaceArtifactUrl = Get-HttpsUrl $SurfaceArtifactUrl 'SurfaceArtifactUrl'
@@ -84,7 +88,9 @@ $aiOut = Join-Path $OutputDirectory 'local-ai-runtime.erofs'
 $lockOut = Join-Path $OutputDirectory 'local-ai-source-lock.json'
 $trustOut = Join-Path $OutputDirectory 'release-ed25519.json'
 $signerOut = Join-Path $OutputDirectory 'ordax-release-signing.exe'
+$agentOut = Join-Path $OutputDirectory 'ordax-release-agent.exe'
 $signScriptOut = Join-Path $OutputDirectory '4-Sign-Initial-OrdaXRelease.ps1'
+$verifyScriptOut = Join-Path $OutputDirectory '5-Verify-PortableV4-SignedHandoff.ps1'
 $manifestOut = Join-Path $OutputDirectory 'release-manifest.json'
 
 $systemSha = Copy-VerifiedFile $SystemImagePath $systemOut
@@ -93,7 +99,9 @@ $aiSha = Copy-VerifiedFile $LocalAiRuntimePath $aiOut
 $lockSha = Copy-VerifiedFile $LocalAiSourceLockPath $lockOut
 $null = Copy-VerifiedFile $TrustPath $trustOut
 $null = Copy-VerifiedFile $SignerPath $signerOut
+$null = Copy-VerifiedFile $ReleaseAgentPath $agentOut
 $null = Copy-VerifiedFile $SignScriptPath $signScriptOut
+$null = Copy-VerifiedFile $VerifyScriptPath $verifyScriptOut
 
 $manifestArgs = @(
     '--manifest-schema', '4',
