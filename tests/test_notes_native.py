@@ -227,7 +227,7 @@ class NotesNativeTests(unittest.TestCase):
         self.assertNotIn("/__ordax/native/", rich_editor)
         self.assertIn("assertFileSpacePort", controls)
         self.assertIn("assertAppActivationPort", controls)
-        self.assertIn("Relacionar arquivo", controls)
+        self.assertIn('"notes.filePicker.title.file"', controls)
         self.assertIn("file-picker-open-directory", controls)
         self.assertIn("attach-file-reference", controls)
         self.assertIn("./image-previews.mjs", controls)
