@@ -888,48 +888,48 @@ export function mountNotesWorkspaceControls(
     if (newNote) {
       newNote.disabled = notesFull;
       newNote.title = notesFull
-        ? `Limite de ${MAX_NOTES} notas atingido`
-        : "Nova nota";
+        ? t("notes.capacity.notes", { limit: MAX_NOTES })
+        : t("notes.action.newNote");
     }
 
     const newProject = view.querySelector('[data-notes-action="new-project"]');
     if (newProject) {
       newProject.disabled = projectsFull;
       newProject.title = projectsFull
-        ? `Limite de ${MAX_NOTE_PROJECTS} projetos atingido`
-        : "Novo projeto";
+        ? t("notes.capacity.projects", { limit: MAX_NOTE_PROJECTS })
+        : t("notes.projects.new");
     }
 
     const addTask = view.querySelector('[data-notes-action="add-task"]');
     if (addTask) {
       addTask.disabled = !note || readOnly || tasksFull;
       addTask.title = readOnly
-        ? "Restaure a nota para editar o checklist"
+        ? t("notes.task.restoreToEdit")
         : tasksFull
-          ? `Limite de ${MAX_NOTE_TASKS} itens atingido`
-          : "Adicionar item de checklist";
+          ? t("notes.capacity.tasks", { limit: MAX_NOTE_TASKS })
+          : t("notes.tool.checklist");
     }
 
     const addReference = view.querySelector('[data-notes-action="add-reference"]');
     if (addReference) {
       addReference.disabled = !note || readOnly || referencesFull;
       addReference.title = readOnly
-        ? "Restaure a nota para adicionar referências"
+        ? t("notes.references.restoreToAdd")
         : referencesFull
-          ? `Limite de ${MAX_NOTE_REFERENCES} referências atingido`
-          : "Adicionar referência";
+          ? t("notes.references.limitReached", { limit: MAX_NOTE_REFERENCES })
+          : t("notes.references.add");
     }
 
     const imageTool = view.querySelector('[data-notes-action="insert-image"]');
     if (imageTool) {
       imageTool.disabled = !note || readOnly || filePort === null || referencesFull;
       imageTool.title = readOnly
-        ? "Restaure a nota para relacionar imagens"
+        ? t("notes.image.restoreToAttach")
         : referencesFull
-          ? `Limite de ${MAX_NOTE_REFERENCES} referências atingido`
+          ? t("notes.references.limitReached", { limit: MAX_NOTE_REFERENCES })
           : filePort === null
-            ? "Imagens locais estão disponíveis no OrdaX Native"
-            : "Relacionar imagem local";
+            ? t("notes.image.nativeOnly")
+            : t("notes.tool.image");
     }
   };
 
@@ -943,7 +943,7 @@ export function mountNotesWorkspaceControls(
       const move = button(
         documentObject,
         "ordax-notes-menu-item ordax-notes-move-project",
-        `Mover nota para ${project.name}`,
+        t("notes.move.toProject", { name: project.name }),
         "move-note-project",
         project.name,
       );
@@ -956,7 +956,7 @@ export function mountNotesWorkspaceControls(
     const target = view.querySelector("[data-notes-statistics]");
     if (!target) return;
     if (!note) {
-      target.textContent = "Nenhuma nota selecionada";
+      target.textContent = t("notes.statistics.noNote");
       return;
     }
 
@@ -965,13 +965,13 @@ export function mountNotesWorkspaceControls(
       tasks: note.tasks,
       references: note.references,
     });
-    const words = `${statistics.words} ${statistics.words === 1 ? "palavra" : "palavras"}`;
-    const characters = `${statistics.characters} ${statistics.characters === 1 ? "caractere" : "caracteres"}`;
+    const words = t(statistics.words === 1 ? "notes.statistics.word" : "notes.statistics.words", { count: statistics.words });
+    const characters = t(statistics.characters === 1 ? "notes.statistics.character" : "notes.statistics.characters", { count: statistics.characters });
     const tasks = statistics.tasks === 0
-      ? "sem tarefas"
-      : `${statistics.completedTasks}/${statistics.tasks} tarefas`;
-    const references = `${statistics.references} ${statistics.references === 1 ? "referência" : "referências"}`;
-    target.textContent = `${words} · ${characters} · ${tasks} · ${references}`;
+      ? t("notes.statistics.noTasks")
+      : t("notes.statistics.tasks", { completed: statistics.completedTasks, count: statistics.tasks });
+    const references = t(statistics.references === 1 ? "notes.statistics.reference" : "notes.statistics.references", { count: statistics.references });
+    target.textContent = t("notes.statistics.summary", { words, characters, tasks, references });
   };
 
   const renderEditor = (view) => {
@@ -1045,7 +1045,7 @@ export function mountNotesWorkspaceControls(
     duplicateAction.hidden = note.deletedAt !== null;
     duplicateAction.disabled = note.deletedAt !== null || state.document.notes.length >= MAX_NOTES;
     duplicateAction.title = state.document.notes.length >= MAX_NOTES
-      ? `Limite de ${MAX_NOTES} notas atingido`
+      ? t("notes.capacity.notes", { limit: MAX_NOTES })
       : t("notes.action.duplicate");
     menuAction.textContent = note.deletedAt === null ? t("notes.action.trashShort") : t("notes.action.restore");
     menuAction.dataset.notesAction = note.deletedAt === null ? "trash-note" : "restore-note";
@@ -1064,8 +1064,8 @@ export function mountNotesWorkspaceControls(
       if (belongsToCurrent) {
         intelligenceStatus.textContent = intelligencePending
           ? t("notes.intelligence.analyzing")
-          : intelligenceError
-            ? intelligenceError
+          : intelligenceErrorMessageId
+            ? t(intelligenceErrorMessageId)
             : t("notes.intelligence.done");
         intelligenceAnswer.textContent = intelligenceResult;
         intelligenceAnswer.hidden = !intelligenceResult;
@@ -1190,19 +1190,19 @@ export function mountNotesWorkspaceControls(
       intelligencePending = true;
       intelligenceNoteId = latest.id;
       intelligenceResult = "";
-      intelligenceError = "";
+      intelligenceErrorMessageId = null;
       render();
       void summarizeDocumentWithIntelligence(intelligencePort, {
         id: latest.id,
         title: latest.title || t("notes.note.untitled"),
-        text: latest.body || "(nota vazia)",
+        text: latest.body || t("notes.note.emptyBody"),
         provenance: `notes:${latest.id}:device-local`,
       }).then((response) => {
         if (destroyed || intelligenceNoteId !== latest.id) return;
         intelligenceResult = response.text;
       }).catch(() => {
         if (destroyed || intelligenceNoteId !== latest.id) return;
-        intelligenceError = "Não foi possível resumir esta nota localmente.";
+        intelligenceErrorMessageId = "notes.intelligence.failed";
       }).finally(() => {
         if (destroyed || intelligenceNoteId !== latest.id) return;
         intelligencePending = false;
@@ -1452,13 +1452,13 @@ export function mountNotesWorkspaceControls(
     ) {
       const selection = filePicker.consumeSelection();
       if (selection) {
-        const title = selection.path.split("/").filter(Boolean).at(-1) || "Arquivo";
+        const title = selection.path.split("/").filter(Boolean).at(-1) || t("notes.file.fallbackTitle");
         referenceChooserOpen = false;
         referenceNoteId = null;
         runtime.addReference(note.id, {
           kind: "file",
           title,
-          detail: selection.purpose === "image" ? "Imagem local" : "Arquivo local",
+          detail: "",
           path: selection.path,
         });
       }
