@@ -175,7 +175,7 @@ canonical public trust
  -> Windows UAC elevation
  -> write exact two-partition GPT
  -> format ORDAX-ESP FAT32 + ORDAX-DATA exFAT
- -> materialize 15 exact artifacts
+ -> materialize 17 exact artifacts, including Local AI runtime + release reference
  -> flush + per-artifact SHA-256/size readback
  -> verify final geometry, labels and capacity
  -> success / fail-closed result
