@@ -385,7 +385,7 @@ O gate é de produto/source. Ele **não** substitui:
 ### P2 — fechar release
 
 8. Handoff v4 com AI real. — **PASS_SOURCE**; materialização/assinatura Stable real ainda pendente.
-9. Gerar/materializar/signar o Stable v4 real e executar regressões QEMU/UEFI do caminho v4.
+9. Materialização v4 com bytes reais + assinatura efêmera em CI. — **GATE_IMPLEMENTED_NON_PROMOTIONAL**; assinatura/materialização canônica Stable e regressão QEMU/UEFI v4 continuam pendentes.
 10. Somente então voltar ao primeiro USB Stable/MVP físico.
 
 ---

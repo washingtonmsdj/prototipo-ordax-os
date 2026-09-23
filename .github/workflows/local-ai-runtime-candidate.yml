@@ -6,6 +6,10 @@ on:
       - 'bootstrap/local-ai-runtime/**'
       - 'system/services/local-ai/source-lock.json'
       - 'docs/contracts/local-ai.json'
+      - 'bootstrap/release-acquisition/**'
+      - 'tools/release-manifest/**'
+      - 'tools/release-signing/**'
+      - 'tests/test_portable_v4_real_materialization_contract.py'
       - 'tests/test_local_ai_contract.py'
       - 'tests/test_local_ai_runtime_builder.py'
       - '.github/workflows/local-ai-runtime-candidate.yml'
@@ -31,12 +35,19 @@ jobs:
           python-version: '3.12'
           check-latest: false
 
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+          cache: false
+
       - name: Install bounded local AI build dependencies
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            binutils cmake curl erofs-utils g++ git iproute2 libc6-dev ninja-build util-linux
+            binutils cmake curl erofs-utils g++ git iproute2 libc6-dev ninja-build openssl util-linux
 
       - name: Validate local AI source and builder contracts
         run: |
@@ -44,7 +55,8 @@ jobs:
           python -m py_compile bootstrap/local-ai-runtime/build.py
           python -m unittest \
             tests.test_local_ai_contract \
-            tests.test_local_ai_runtime_builder -v
+            tests.test_local_ai_runtime_builder \
+            tests.test_portable_v4_real_materialization_contract -v
 
       - name: Build real local AI runtime twice
         env:
@@ -288,6 +300,120 @@ jobs:
 
           cleanup_alpine
           trap cleanup EXIT
+
+      - name: Prove signed v4 materialization with real local AI bytes
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/local-ai-runtime"
+          proof="$work/v4-materialization"
+          mkdir -p "$proof/bin" "$proof/system-root" "$proof/surface-root" "$proof/materialized"
+
+          (cd tools/release-manifest && CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$proof/bin/ordax-release-manifest" .)
+          (cd tools/release-signing && CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$proof/bin/ordax-release-signing" .)
+          (cd bootstrap/release-acquisition && CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$proof/bin/ordax-release-agent" .)
+
+          printf 'system fixture for v4 materialization proof\n' > "$proof/system-root/entrypoint"
+          printf 'surface fixture for v4 materialization proof\n' > "$proof/surface-root/runtime.txt"
+          mkfs.erofs -T 0 "$proof/system.erofs" "$proof/system-root"
+          mkfs.erofs -T 0 "$proof/native-surface-runtime.erofs" "$proof/surface-root"
+          cp "$work/build-a/local-ai-runtime.erofs" "$proof/local-ai-runtime.erofs"
+
+          "$proof/bin/ordax-release-signing" generate-key \
+            --private-key "$proof/private-v4.pem" \
+            --trust "$proof/trust-v4.json" \
+            --key-id ci-real-v4-1
+
+          openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout "$proof/https-key.pem" \
+            -out "$proof/https-cert.pem" \
+            -days 1 \
+            -subj "/CN=127.0.0.1" \
+            -addext "subjectAltName=IP:127.0.0.1"
+
+          "$proof/bin/ordax-release-manifest" \
+            --manifest-schema 4 \
+            --artifact "$proof/system.erofs" \
+            --runtime-artifact "$proof/native-surface-runtime.erofs" \
+            --local-ai-artifact "$proof/local-ai-runtime.erofs" \
+            --local-ai-source-lock system/services/local-ai/source-lock.json \
+            --source-commit "$ORDAX_SOURCE_COMMIT" \
+            --artifact-url "https://127.0.0.1:18443/system.erofs" \
+            --runtime-artifact-url "https://127.0.0.1:18443/native-surface-runtime.erofs" \
+            --local-ai-artifact-url "https://127.0.0.1:18443/local-ai-runtime.erofs" \
+            --out "$proof/release-manifest-v4.json"
+
+          "$proof/bin/ordax-release-signing" sign \
+            --manifest "$proof/release-manifest-v4.json" \
+            --private-key "$proof/private-v4.pem" \
+            --trust "$proof/trust-v4.json" \
+            --key-id ci-real-v4-1 \
+            --out "$proof/release-envelope-v4.json"
+
+          python - "$proof" <<'PY' &
+          import http.server
+          import os
+          import ssl
+          import sys
+
+          root = sys.argv[1]
+          os.chdir(root)
+          server = http.server.ThreadingHTTPServer(("127.0.0.1", 18443), http.server.SimpleHTTPRequestHandler)
+          context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+          context.load_cert_chain("https-cert.pem", "https-key.pem")
+          server.socket = context.wrap_socket(server.socket, server_side=True)
+          server.serve_forever()
+          PY
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
+
+          ready=0
+          for _ in $(seq 1 30); do
+            if curl --fail --silent --show-error \
+              --cacert "$proof/https-cert.pem" \
+              https://127.0.0.1:18443/release-envelope-v4.json \
+              >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+
+          SSL_CERT_FILE="$proof/https-cert.pem" \
+            "$proof/bin/ordax-release-agent" materialize-portable-v4 \
+              --envelope-url "https://127.0.0.1:18443/release-envelope-v4.json" \
+              --trust "$proof/trust-v4.json" \
+              --expected-commit "$ORDAX_SOURCE_COMMIT" \
+              --root "$proof/materialized"
+
+          "$proof/bin/ordax-release-agent" verify-portable-v4-exact \
+            --trust "$proof/trust-v4.json" \
+            --expected-commit "$ORDAX_SOURCE_COMMIT" \
+            --root "$proof/materialized"
+
+          ai_sha="$(sha256sum "$proof/local-ai-runtime.erofs" | awk '{print $1}')"
+          stored_ai="$proof/materialized/ai-runtimes/sha256/$ai_sha/local-ai-runtime.erofs"
+          test -f "$stored_ai"
+          cmp "$proof/local-ai-runtime.erofs" "$stored_ai"
+
+          release_dir="$proof/materialized/releases/$ORDAX_SOURCE_COMMIT"
+          test -f "$release_dir/system.erofs"
+          test -f "$release_dir/surface-runtime.sha256"
+          test -f "$release_dir/local-ai-runtime.sha256"
+          test -f "$release_dir/release-manifest.json"
+          test -f "$release_dir/release-envelope.json"
+          test ! -e "$proof/materialized/current"
+          test ! -e "$proof/materialized/candidate"
+          test ! -e "$proof/materialized/activation-transaction.json"
+
+          rm -f "$proof/private-v4.pem"
+          test ! -e "$proof/private-v4.pem"
+          echo "PORTABLE_V4_REAL_AI_MATERIALIZATION=PASS"
+          echo "PORTABLE_V4_SIGNING_KEY=EPHEMERAL_CI_ONLY"
+          echo "PORTABLE_V4_ACTIVATION_ALLOWED=NO"
+          echo "PHYSICAL_WRITE_AUTHORIZED=NO"
 
       - name: Remove unpromoted runtime bytes
         if: always()
