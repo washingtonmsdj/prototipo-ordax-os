@@ -7,10 +7,12 @@ import {
   validateRecentFilesSnapshot,
 } from "../../contracts/recent-files.mjs";
 import { validateFileSpacePath } from "../../contracts/file-space.mjs";
+import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
 
 const MAX_HOME_CONTINUATION_ITEMS = 4;
 const MAX_PROJECT_ITEMS = 2;
 const MAX_RECENT_ITEMS = 2;
+const HOME_TIME_ZONE = "America/Bahia";
 
 function parentPath(path) {
   const value = validateFileSpacePath(path);
@@ -19,20 +21,16 @@ function parentPath(path) {
   return index <= 0 ? "/" : value.slice(0, index);
 }
 
-function formatActivity(timestamp) {
-  if (!Number.isSafeInteger(timestamp) || timestamp < 0) return "atividade desconhecida";
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Bahia",
+export function formatHomeActivity(timestamp, locale = "pt-BR", unknownLabel = "") {
+  if (!Number.isSafeInteger(timestamp) || timestamp < 0) return unknownLabel;
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: HOME_TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   }).format(new Date(timestamp));
-}
-
-function persistenceLabel(scope) {
-  return scope === "session" ? " · somente nesta sessão" : "";
 }
 
 export function createHomeContinuationPresentation({
@@ -54,8 +52,12 @@ export function createHomeContinuationPresentation({
         key: `project:${project.id}`,
         kind: "project",
         title: project.name,
-        detail: `Projeto · ${project.path} · ${formatActivity(project.lastOpenedAt)}${persistenceLabel(projectSnapshot.persistence)}`,
-        actionLabel: `Continuar projeto ${project.name}`,
+        path: project.path,
+        activityAt: project.lastOpenedAt,
+        persistence: projectSnapshot.persistence,
+        detailMessageId: "home.continuation.project.detail",
+        actionMessageId: "home.continuation.project.action",
+        actionParams: Object.freeze({ name: project.name }),
         appId: "files",
         target: project.path,
       }))
@@ -71,8 +73,12 @@ export function createHomeContinuationPresentation({
           key: `recent:${entry.path}`,
           kind: "recent-file",
           title: entry.name,
-          detail: `Arquivo recente · ${folder} · ${formatActivity(entry.openedAt)}${persistenceLabel(recentSnapshot.persistence)}`,
-          actionLabel: `Mostrar ${entry.name} em Arquivos`,
+          folder,
+          activityAt: entry.openedAt,
+          persistence: recentSnapshot.persistence,
+          detailMessageId: "home.continuation.recent.detail",
+          actionMessageId: "home.continuation.recent.action",
+          actionParams: Object.freeze({ name: entry.name }),
           appId: "files",
           target: folder,
         });
@@ -108,8 +114,12 @@ function assertHomeRoot(root) {
 export function mountHomeContinuation(
   rootValue,
   { projects = null, recentFiles = null } = {},
+  surfaceLifecycle,
 ) {
   const root = assertHomeRoot(rootValue);
+  const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
   const projectPort = projects === null ? null : assertProjectCatalogPort(projects);
   const recentPort = recentFiles === null ? null : assertRecentFilesPort(recentFiles);
   const documentObject = root.ownerDocument;
@@ -145,7 +155,7 @@ export function mountHomeContinuation(
       documentObject,
       "p",
       "ordax-section-kicker",
-      "Continuar trabalho",
+      t("home.continuation.heading"),
     );
     heading.id = "ordax-home-continuation-title";
     next.append(heading);
@@ -156,7 +166,7 @@ export function mountHomeContinuation(
       button.dataset.homeContinuationKey = item.key;
       button.dataset.launchApp = item.appId;
       button.dataset.appTarget = item.target;
-      button.setAttribute("aria-label", item.actionLabel);
+      button.setAttribute("aria-label", t(item.actionMessageId, item.actionParams));
 
       const marker = node(
         documentObject,
@@ -165,10 +175,21 @@ export function mountHomeContinuation(
         item.kind === "project" ? "P" : "R",
       );
       marker.setAttribute("aria-hidden", "true");
+      const activity = formatHomeActivity(
+        item.activityAt,
+        localization.getLocale(),
+        t("home.continuation.activity.unknown"),
+      );
+      const persistence = item.persistence === "session"
+        ? t("home.continuation.persistence.session")
+        : "";
+      const detailParams = item.kind === "project"
+        ? { path: item.path, activity, persistence }
+        : { folder: item.folder, activity, persistence };
       const copy = node(documentObject, "span");
       copy.append(
         node(documentObject, "strong", "", item.title),
-        node(documentObject, "small", "", item.detail),
+        node(documentObject, "small", "", t(item.detailMessageId, detailParams)),
       );
       const arrow = node(documentObject, "span", "ordax-space-arrow", "→");
       arrow.setAttribute("aria-hidden", "true");
@@ -195,6 +216,7 @@ export function mountHomeContinuation(
     recentSnapshot = validateRecentFilesSnapshot(snapshot);
     render();
   });
+  const unsubscribeLocalization = localization.subscribe(() => render());
 
   render();
 
@@ -202,6 +224,7 @@ export function mountHomeContinuation(
     dispose() {
       if (destroyed) return;
       destroyed = true;
+      unsubscribeLocalization();
       unsubscribeRecent?.();
       unsubscribeProjects?.();
       section?.remove();
