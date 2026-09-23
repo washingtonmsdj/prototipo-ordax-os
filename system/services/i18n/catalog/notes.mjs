@@ -135,7 +135,17 @@ export const NOTES_SOURCE_MESSAGES = Object.freeze({
   "notes.prompt.referenceUrl": "Cole o endereço da referência:",
   "notes.prompt.referenceTitle": "Título da referência:",
   "notes.time.now": "Agora",
-  "notes.time.yesterday": "Ontem"
+  "notes.time.yesterday": "Ontem",
+  "notes.save.deviceInitial": "Salvo neste dispositivo",
+  "notes.save.saving": "Salvando…",
+  "notes.format.text": "Texto",
+  "notes.format.list": "Lista",
+  "notes.format.bold": "Negrito (Ctrl/Cmd+B)",
+  "notes.format.link": "Inserir link no texto (Ctrl/Cmd+K)",
+  "notes.format.image": "Relacionar imagem local",
+  "notes.format.undo": "Desfazer (Ctrl/Cmd+Z)",
+  "notes.tasks.today": "Para hoje",
+  "notes.statistics.initial": "0 palavras · 0 caracteres"
 });
 
 export const NOTES_ENGLISH_MESSAGES = Object.freeze({
@@ -275,5 +285,15 @@ export const NOTES_ENGLISH_MESSAGES = Object.freeze({
   "notes.prompt.referenceUrl": "Paste the reference address:",
   "notes.prompt.referenceTitle": "Reference title:",
   "notes.time.now": "Now",
-  "notes.time.yesterday": "Yesterday"
+  "notes.time.yesterday": "Yesterday",
+  "notes.save.deviceInitial": "Saved on this device",
+  "notes.save.saving": "Saving…",
+  "notes.format.text": "Text",
+  "notes.format.list": "List",
+  "notes.format.bold": "Bold (Ctrl/Cmd+B)",
+  "notes.format.link": "Insert link in text (Ctrl/Cmd+K)",
+  "notes.format.image": "Attach local image",
+  "notes.format.undo": "Undo (Ctrl/Cmd+Z)",
+  "notes.tasks.today": "For today",
+  "notes.statistics.initial": "0 words · 0 characters"
 });
