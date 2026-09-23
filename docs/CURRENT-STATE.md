@@ -123,9 +123,10 @@ physical USB. `PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md` is now the active
 pre-USB closure plan. Physical media work is intentionally held while the remaining
 class-A product gaps are closed. Ordax Intelligence consumers, Native local
 session/lock, and a safe Files removal path are now source-complete. The remaining
-pre-USB gaps are coherent launch-language coverage, product diagnostics/recovery
-presentation, minimum hardware support inventory, and the signed/materializable v4
-release that carries the proven local-AI runtime.
+pre-USB source gaps are now narrowed to coherent launch-language coverage and the
+signed/materializable v4 release that carries the proven local-AI runtime.
+Diagnostics/recovery presentation and the conservative MVP hardware-support matrix
+are source-complete; their target-hardware/physical proofs remain later gates.
 
 This hold does not revoke or widen any existing destructive authorization. It simply
 adds a product/source prerequisite before target-specific physical execution.
@@ -140,8 +141,37 @@ LOCAL_SESSION_LOCK_PHYSICAL_PROOF=PENDING
 FILES_DAILY_OPERATIONS=PASS_SOURCE
 FILES_SAFE_REMOVAL=PASS_SOURCE
 FILES_TRASH_PHYSICAL_PROOF=PENDING
+DIAGNOSTICS_RECOVERY_PRESENTATION=PASS_SOURCE
+RECOVERY_STATUS_PHYSICAL_PROOF=PENDING_PHYSICAL
+SUPPORTED_HARDWARE_MATRIX=PASS_SOURCE
+CANONICAL_STABLE_TARGET_HARDWARE_PROOF=PENDING_PHYSICAL
 FIRST_STABLE_MVP_USB_WRITE=HOLD_FUNCTIONAL_CLOSURE
 PHYSICAL_WRITE_AUTHORITY=UNCHANGED
+```
+
+### System diagnostics and recovery presentation
+
+Sistema now composes the existing Native diagnostic-review owner instead of passing a
+null controller. The review remains explicit, local and sanitized, and can copy/export
+only through the existing bounded adapters.
+
+A separate `ordax.recovery-status/1` observer exposes factual Portable v2 state:
+running slot/source, current, known-good, candidate/activation transaction and the
+actual recovery loader entry on ORDAX-ESP. The recovery entry is not accepted by
+presence alone; the observer checks the expected kernel/initramfs/portable-init and
+`ordax.mode=recovery` markers. This port is intentionally read-only and exposes no
+rollback, reboot, repair, network or mutation authority.
+
+The MVP hardware support matrix is also now canonical in source. It explicitly says
+that driver presence is not a support claim and that canonical Stable target hardware
+still requires physical proof.
+
+```text
+DIAGNOSTICS_RECOVERY_PRESENTATION=PASS_SOURCE
+RECOVERY_STATUS_AUTHORITY=READ_ONLY
+RECOVERY_STATUS_PHYSICAL_PROOF=PENDING_PHYSICAL
+SUPPORTED_HARDWARE_MATRIX=PASS_SOURCE
+CANONICAL_STABLE_TARGET_HARDWARE_PROOF=PENDING_PHYSICAL
 ```
 
 ### Shared Surface localization
