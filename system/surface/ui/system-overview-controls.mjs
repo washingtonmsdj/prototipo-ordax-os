@@ -31,16 +31,8 @@ import { PRODUCT_VERSION, productVersionLabel } from "../../contracts/product-ve
 import { createComponentUpdateScopes } from "../../services/components/update-presentation.mjs";
 import { explainSystemStateWithIntelligence } from "../../services/intelligence/client-actions.mjs";
 import {
-  deliveryLabel,
-  formatUpdateTimestamp,
-  readableBaseUpdatePhase,
-  readableUpdateMode,
-  readableUpdatePhase,
   shortSha,
-  updateAttentionMessage,
-  updateBootLabel,
   updateIsAlerting,
-  updateStatusLabel,
 } from "../../services/update/presentation.mjs";
 import { mountSystemDiagnosticsReview } from "./system-diagnostics-review.mjs";
 import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
@@ -91,6 +83,35 @@ const OVERVIEW_BASE_DETAIL_MESSAGE_IDS = Object.freeze({
   "candidate-ready": "system.overview.update.detail.candidateReady",
   staged: "system.overview.update.detail.staged",
   "activation-ready": "system.overview.update.detail.activationReady",
+});
+
+const UPDATE_PHASE_MESSAGE_IDS = Object.freeze({
+  checking: "system.updates.phase.checking",
+  fetching: "system.updates.phase.fetching",
+  validating: "system.updates.phase.validating",
+  activating: "system.updates.phase.activating",
+  "health-wait": "system.updates.phase.healthWait",
+  rollback: "system.updates.phase.rollback",
+  blocked: "system.updates.phase.blocked",
+  error: "system.updates.phase.error",
+  idle: "system.updates.phase.idle",
+});
+
+const BASE_PHASE_MESSAGE_IDS = Object.freeze({
+  "waiting-candidate": "system.updates.basePhase.waitingCandidate",
+  "candidate-requested": "system.updates.basePhase.candidateRequested",
+  "candidate-fetching": "system.updates.basePhase.candidateFetching",
+  "candidate-ready": "system.updates.basePhase.candidateReady",
+  staged: "system.updates.basePhase.staged",
+  "activation-ready": "system.updates.basePhase.activationReady",
+});
+
+const BOOT_MESSAGE_IDS = Object.freeze({
+  "candidate-requested": "system.updates.boot.requested",
+  "candidate-fetching": "system.updates.boot.preparing",
+  "candidate-ready": "system.updates.boot.readyForStaging",
+  staged: "system.updates.boot.inactiveSlot",
+  "activation-ready": "system.updates.boot.pendingActivation",
 });
 
 function overviewUpdateStatusMessageId(status) {
@@ -147,15 +168,76 @@ function validSystemSection(value) {
   return SYSTEM_SECTIONS.some((section) => section.id === value);
 }
 
-const CAPABILITY_LABELS = Object.freeze({
-  "network.https": "Rede HTTPS",
-  "network.status": "Estado local de rede",
-  "network.management": "Gerenciamento de Wi-Fi",
-  "system.boot-control": "Energia do dispositivo",
-  "filesystem.user-space": "Espaço local do usuário",
-  "system.metrics": "Métricas do dispositivo",
-  "power.status": "Estado da bateria",
-  "intelligence.system": "Ordax Intelligence",
+const CAPABILITY_MESSAGE_IDS = Object.freeze({
+  "network.https": "system.capabilities.networkHttps",
+  "network.status": "system.capabilities.networkStatus",
+  "network.management": "system.capabilities.networkManagement",
+  "system.boot-control": "system.capabilities.bootControl",
+  "filesystem.user-space": "system.capabilities.userSpace",
+  "system.metrics": "system.capabilities.metrics",
+  "power.status": "system.capabilities.powerStatus",
+  "intelligence.system": "system.capabilities.intelligence",
+});
+
+const COMPONENT_RELEASE_MODE_MESSAGE_IDS = Object.freeze({
+  "base-ab": "system.components.releaseMode.baseAb",
+  "component-slot": "system.components.releaseMode.componentSlot",
+  "git-app": "system.components.releaseMode.gitApp",
+  bundled: "system.components.releaseMode.bundled",
+});
+
+const COMPONENT_KIND_MESSAGE_IDS = Object.freeze({
+  base: "system.components.kind.base",
+  shell: "system.components.kind.shell",
+  service: "system.components.kind.service",
+  app: "system.components.kind.app",
+});
+
+const COMPONENT_HEALTH_MESSAGE_IDS = Object.freeze({
+  healthy: "system.components.health.healthy",
+  failed: "system.components.health.failed",
+  unknown: "system.components.health.unknown",
+});
+
+const COMPONENT_STAGE_MESSAGE_IDS = Object.freeze({
+  beta: "system.components.stage.beta",
+  stable: "system.components.stage.stable",
+});
+
+const COMPONENT_CHANNEL_MESSAGE_IDS = Object.freeze({
+  "system-base": "system.components.channel.systemBase",
+  "system-bundle": "system.components.channel.systemBundle",
+  "development-git": "system.components.channel.developmentGit",
+  "independent-component": "system.components.channel.independent",
+});
+
+const COMPONENT_TITLE_MESSAGE_IDS = Object.freeze({
+  "ordax-base": "system.components.title.ordaxBase",
+  "surface-shell": "system.components.title.surfaceShell",
+  "update-service": "system.components.title.updateService",
+  "network-service": "system.components.title.networkService",
+  "power-service": "system.components.title.powerService",
+  "local-ai-service": "system.components.title.localAiService",
+  "ordax-intelligence": "system.components.title.intelligence",
+  "clock-service": "system.components.title.clockService",
+  files: "app.files.title",
+  settings: "app.settings.title",
+  account: "app.account.title",
+  system: "app.system.title",
+});
+
+const COMPONENT_FAILURE_DOMAIN_MESSAGE_IDS = Object.freeze({
+  boot: "system.components.failureDomain.boot",
+  surface: "system.components.failureDomain.surface",
+  service: "system.components.failureDomain.service",
+  app: "system.components.failureDomain.app",
+});
+
+const INTELLIGENCE_STATE_MESSAGE_IDS = Object.freeze({
+  ready: "system.intelligence.state.ready",
+  busy: "system.intelligence.state.busy",
+  degraded: "system.intelligence.state.degraded",
+  error: "system.intelligence.state.error",
 });
 
 function node(documentObject, tag, className, text) {
@@ -163,17 +245,6 @@ function node(documentObject, tag, className, text) {
   if (className) element.className = className;
   if (text !== undefined) element.textContent = text;
   return element;
-}
-
-function formatObservationReceivedAt(value) {
-  if (!Number.isFinite(value)) return "horário desconhecido";
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Bahia",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).format(new Date(value));
 }
 
 function formatBytes(bytes) {
@@ -260,20 +331,20 @@ export function mountSystemOverviewControls(
   let metricsPending = false;
   let metricsReadFailed = false;
   let metricsLastSuccessAt = null;
-  let metricsMessage = "";
+  let metricsMessageId = null;
   let metricsOrdinal = 0;
   let historySnapshot = null;
-  let historyMessage = "";
+  let historyMessageId = null;
   let componentSnapshot = componentPort?.getSnapshot() ?? null;
   let intelligenceSnapshot = intelligencePort === null
     ? null
     : validateIntelligenceSnapshot(intelligencePort.getSnapshot());
   let intelligencePending = false;
   let intelligenceAnswer = "";
-  let intelligenceMessage = "";
+  let intelligenceMessageId = null;
   let recoverySnapshot = null;
   let recoveryPending = false;
-  let recoveryMessage = "";
+  let recoveryMessageId = null;
   let recoveryOrdinal = 0;
   let historyOrdinal = 0;
   let activeSection = validSystemSection(lifecycle.getAppTarget("system"))
@@ -517,7 +588,7 @@ export function mountSystemOverviewControls(
           metricsPort
             ? metricsPending
               ? t("system.resources.memory.reading")
-              : (metricsMessage || t("system.resources.waiting"))
+              : (metricsMessageId ? t(metricsMessageId) : t("system.resources.waiting"))
             : t("system.resources.memory.unavailable"),
         ),
       );
@@ -531,7 +602,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-warning",
-          t("system.resources.stale", { time: formatObservationReceivedAt(metricsLastSuccessAt) }),
+          t("system.resources.stale", { time: formatOverviewReceivedAt(metricsLastSuccessAt, localization.getLocale()) ?? t("system.overview.time.unknown") }),
         ),
       );
     }
@@ -545,7 +616,7 @@ export function mountSystemOverviewControls(
       progress: ratio(memoryUsed, metricsSnapshot.memoryTotalBytes),
     });
     section.append(resourceGrid);
-    if (metricsMessage) section.append(node(documentObject, "p", "ordax-system-message", metricsMessage));
+    if (metricsMessageId) section.append(node(documentObject, "p", "ordax-system-message", t(metricsMessageId)));
     view.append(section);
   };
 
@@ -578,7 +649,7 @@ export function mountSystemOverviewControls(
           metricsPort
             ? metricsPending
               ? t("system.resources.storage.reading")
-              : (metricsMessage || t("system.resources.waiting"))
+              : (metricsMessageId ? t(metricsMessageId) : t("system.resources.waiting"))
             : t("system.resources.storage.unavailable"),
         ),
       );
@@ -592,7 +663,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-warning",
-          t("system.resources.stale", { time: formatObservationReceivedAt(metricsLastSuccessAt) }),
+          t("system.resources.stale", { time: formatOverviewReceivedAt(metricsLastSuccessAt, localization.getLocale()) ?? t("system.overview.time.unknown") }),
         ),
       );
     }
@@ -614,7 +685,7 @@ export function mountSystemOverviewControls(
         t("system.resources.storage.scope"),
       ),
     );
-    if (metricsMessage) section.append(node(documentObject, "p", "ordax-system-message", metricsMessage));
+    if (metricsMessageId) section.append(node(documentObject, "p", "ordax-system-message", t(metricsMessageId)));
     view.append(section);
   };
 
@@ -623,20 +694,15 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Atualização"),
-      node(documentObject, "h4", "ordax-system-section-title", "Entrega e recuperação"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.updates.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.updates.title")),
     );
     heading.append(headingCopy);
     section.append(heading);
 
     if (!updateSnapshot) {
       section.append(
-        node(
-          documentObject,
-          "p",
-          "ordax-system-placeholder",
-          "Este host não publica o estado do supervisor de atualizações.",
-        ),
+        node(documentObject, "p", "ordax-system-placeholder", t("system.updates.unavailable")),
       );
       view.append(section);
       return;
@@ -651,51 +717,68 @@ export function mountSystemOverviewControls(
       );
       facts.append(item);
     };
+    const locale = localization.getLocale();
+    const formatTimestamp = (value) => formatOverviewTimestamp(value, locale) ?? "—";
+    const statusMessageId = overviewUpdateStatusMessageId(updateSnapshot.status);
+    const modeMessageId = overviewUpdateModeMessageId(updateSnapshot.applyMode);
+    const phaseMessageId = UPDATE_PHASE_MESSAGE_IDS[updateSnapshot.phase] ?? "system.updates.phase.idle";
+    const basePhaseMessageId = BASE_PHASE_MESSAGE_IDS[updateSnapshot.baseUpdatePhase] ?? "system.updates.basePhase.none";
+    const bootMessageId = updateSnapshot.bootRefreshRequired
+      ? (BOOT_MESSAGE_IDS[updateSnapshot.baseUpdatePhase] ?? "system.updates.boot.pendingActivation")
+      : "system.updates.boot.none";
 
-    addFact("Entrega", deliveryLabel(updateSnapshot.deliveryNumber));
-    addFact("Commit técnico", shortSha(updateSnapshot.sourceSha));
+    addFact(
+      t("system.updates.fact.delivery"),
+      Number.isSafeInteger(updateSnapshot.deliveryNumber) && updateSnapshot.deliveryNumber > 0
+        ? t("system.overview.delivery.number", { value: updateSnapshot.deliveryNumber })
+        : t("system.overview.delivery.unnumbered"),
+    );
+    addFact(t("system.updates.fact.commit"), shortSha(updateSnapshot.sourceSha));
     if (updateSnapshot.runtimeSurfaceSha) {
-      addFact("Surface em execução", shortSha(updateSnapshot.runtimeSurfaceSha));
+      addFact(t("system.updates.fact.runtimeSurface"), shortSha(updateSnapshot.runtimeSurfaceSha));
     }
-    addFact("Estado", updateStatusLabel(updateSnapshot.status));
-    addFact("Fase", readableUpdatePhase(updateSnapshot.phase));
-    addFact("Aplicação", readableUpdateMode(updateSnapshot.applyMode));
+    addFact(t("system.updates.fact.status"), t(statusMessageId));
+    addFact(t("system.updates.fact.phase"), t(phaseMessageId));
+    addFact(t("system.updates.fact.applyMode"), t(modeMessageId));
     if (updateSnapshot.targetSha) {
-      addFact("Alvo", shortSha(updateSnapshot.targetSha));
+      addFact(t("system.updates.fact.target"), shortSha(updateSnapshot.targetSha));
     }
     if (updateSnapshot.attemptId) {
-      addFact("Tentativa", formatUpdateTimestamp(updateSnapshot.attemptId));
+      addFact(t("system.updates.fact.attempt"), updateSnapshot.attemptId);
     }
     if (updateSnapshot.checkedAt && updateSnapshot.checkedAt !== "unknown") {
-      addFact("Última verificação", formatUpdateTimestamp(updateSnapshot.checkedAt));
+      addFact(t("system.updates.fact.checkedAt"), formatTimestamp(updateSnapshot.checkedAt));
     }
     if (updateSnapshot.lastError) {
-      addFact("Diagnóstico", updateSnapshot.lastError);
+      addFact(t("system.updates.fact.diagnostic"), updateSnapshot.lastError);
     }
     if (updateSnapshot.lastAppliedAt !== "unknown") {
-      addFact("Última aplicação", formatUpdateTimestamp(updateSnapshot.lastAppliedAt));
-      addFact("Duração", `${updateSnapshot.lastApplyDurationSeconds}s · preparação ${updateSnapshot.lastStageDurationSeconds}s`);
+      addFact(t("system.updates.fact.lastApplied"), formatTimestamp(updateSnapshot.lastAppliedAt));
+      addFact(
+        t("system.updates.fact.duration"),
+        t("system.updates.duration", {
+          apply: updateSnapshot.lastApplyDurationSeconds,
+          stage: updateSnapshot.lastStageDurationSeconds,
+        }),
+      );
     }
     if (updateSnapshot.rejectedSha) {
-      addFact("Commit bloqueado", shortSha(updateSnapshot.rejectedSha));
+      addFact(t("system.updates.fact.blockedCommit"), shortSha(updateSnapshot.rejectedSha));
     }
     if (updateSnapshot.bootRefreshRequired) {
-      addFact("Progresso da Base", readableBaseUpdatePhase(updateSnapshot.baseUpdatePhase));
+      addFact(t("system.updates.fact.baseProgress"), t(basePhaseMessageId));
       if (updateSnapshot.baseUpdateSha) {
-        addFact("Base candidata", shortSha(updateSnapshot.baseUpdateSha));
+        addFact(t("system.updates.fact.baseCandidate"), shortSha(updateSnapshot.baseUpdateSha));
       }
     }
-    addFact("Boot", updateBootLabel(updateSnapshot));
+    addFact(t("system.updates.fact.boot"), t(bootMessageId));
     section.append(facts);
 
     if (updateIsAlerting(updateSnapshot)) {
-      const warning = node(
-        documentObject,
-        "p",
-        "ordax-system-warning",
-        updateAttentionMessage(updateSnapshot),
-      );
-      section.append(warning);
+      const warningText = updateSnapshot.bootRefreshRequired
+        ? t(overviewUpdateDetailMessageId(updateSnapshot) ?? "system.overview.update.detail.pending")
+        : t("system.updates.attention.generic");
+      section.append(node(documentObject, "p", "ordax-system-warning", warningText));
     }
 
     view.append(section);
@@ -749,8 +832,8 @@ export function mountSystemOverviewControls(
         node(
           documentObject,
           "p",
-          recoveryMessage ? "ordax-system-warning" : "ordax-system-placeholder",
-          recoveryMessage || t("system.recovery.reading"),
+          recoveryMessageId ? "ordax-system-warning" : "ordax-system-placeholder",
+          recoveryMessageId ? t(recoveryMessageId) : t("system.recovery.reading"),
         ),
       );
       view.append(section);
@@ -804,39 +887,46 @@ export function mountSystemOverviewControls(
         ),
       );
     }
-    if (recoveryMessage) {
-      section.append(node(documentObject, "p", "ordax-system-message", recoveryMessage));
+    if (recoveryMessageId) {
+      section.append(node(documentObject, "p", "ordax-system-message", t(recoveryMessageId)));
     }
     view.append(section);
   };
 
-  const componentReleaseLabel = (mode) => ({
-    "base-ab": "Base A/B",
-    "component-slot": "Slot independente",
-    "git-app": "App via Git",
-    bundled: "Distribuição conjunta",
-  }[mode] ?? mode);
+  const localizedMappedValue = (messages, value) => {
+    const messageId = messages[value];
+    return messageId ? t(messageId) : String(value ?? "");
+  };
 
-  const componentKindLabel = (kind) => ({
-    base: "Base",
-    shell: "Shell",
-    service: "Serviço",
-    app: "App",
-  }[kind] ?? kind);
+  const componentReleaseLabel = (mode) =>
+    localizedMappedValue(COMPONENT_RELEASE_MODE_MESSAGE_IDS, mode);
 
-  const componentHealthLabel = (health) => ({
-    healthy: "Saudável",
-    failed: "Falha",
-    unknown: "Não observado",
-  }[health] ?? health);
+  const componentKindLabel = (kind) =>
+    localizedMappedValue(COMPONENT_KIND_MESSAGE_IDS, kind);
+
+  const componentHealthLabel = (health) =>
+    localizedMappedValue(COMPONENT_HEALTH_MESSAGE_IDS, health);
+
+  const componentFailureDomainLabel = (domain) =>
+    localizedMappedValue(COMPONENT_FAILURE_DOMAIN_MESSAGE_IDS, domain);
+
+  const componentTitleLabel = (id, fallback) => {
+    const messageId = COMPONENT_TITLE_MESSAGE_IDS[id];
+    return messageId ? t(messageId) : fallback;
+  };
+
+  const componentChannelLabel = (channel) => {
+    const messageId = COMPONENT_CHANNEL_MESSAGE_IDS[channel?.id];
+    return messageId ? t(messageId) : String(channel?.label ?? channel?.id ?? "");
+  };
 
   const renderComponentUpdateScopes = (view) => {
     const section = node(documentObject, "section", "ordax-system-section");
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Escopo"),
-      node(documentObject, "h4", "ordax-system-section-title", "OrdaX e aplicativos"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.components.scope.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.components.scope.title")),
     );
     heading.append(headingCopy);
     section.append(heading);
@@ -847,7 +937,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-placeholder",
-          "O catálogo de componentes não está disponível nesta composição.",
+          t("system.components.unavailable"),
         ),
       );
       view.append(section);
@@ -860,20 +950,20 @@ export function mountSystemOverviewControls(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        "A versão de cada componente e o canal que o entrega são informações separadas. Apps Beta podem ter versão própria mesmo quando ainda atualizam junto com o OrdaX ou, no ambiente de desenvolvimento, diretamente pelo Git.",
+        t("system.components.scope.description"),
       ),
       node(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        "Esta tela descreve os canais realmente habilitados; ela não representa uma Loja nem libera atualização independente de produção quando o componente ainda não usa slot assinado.",
+        t("system.components.scope.productionBoundary"),
       ),
     );
 
-    const renderScope = (title, components, scopeId) => {
+    const renderScope = (titleMessageId, components, scopeId) => {
       const group = node(documentObject, "div", "ordax-system-history");
       group.dataset.updateScope = scopeId;
-      group.append(node(documentObject, "h5", "ordax-system-history-title", title));
+      group.append(node(documentObject, "h5", "ordax-system-history-title", t(titleMessageId)));
       const list = node(documentObject, "div", "ordax-system-version-grid");
 
       for (const component of components) {
@@ -881,35 +971,44 @@ export function mountSystemOverviewControls(
         item.dataset.componentId = component.id;
         item.dataset.releaseMode = component.releaseMode;
         item.dataset.updateChannel = component.updateChannel.id;
-        const maturity = component.versionStage === "beta"
-          ? " · Beta"
-          : component.versionStage === "stable"
-            ? " · Estável"
-            : "";
+        const maturityMessageId = COMPONENT_STAGE_MESSAGE_IDS[component.versionStage];
+        const maturity = maturityMessageId ? t(maturityMessageId) : "";
         item.append(
-          node(documentObject, "strong", "", component.title),
+          node(documentObject, "strong", "", componentTitleLabel(component.id, component.title)),
           node(
             documentObject,
             "span",
             "",
-            `v${component.version}${maturity} · ${component.updateChannel.label}`,
+            t("system.components.versionLine", {
+              version: component.version,
+              maturity,
+              channel: componentChannelLabel(component.updateChannel),
+            }),
           ),
           node(
             documentObject,
             "small",
             "ordax-system-component-health",
-            `Saúde: ${componentHealthLabel(component.health)}`,
+            t("system.components.healthLine", {
+              health: componentHealthLabel(component.health),
+            }),
           ),
         );
 
-        const detail = component.releaseMode === "base-ab"
-          ? "A Base usa o ciclo A/B do OrdaX; não é um app independente."
-          : component.releaseMode === "component-slot"
-            ? "Atualização independente exige pacote assinado, saúde, promoção e rollback."
-            : component.releaseMode === "git-app"
-              ? "Canal de desenvolvimento via Git; não é o atualizador de produção do app."
-              : "Atualiza junto com a entrega do OrdaX; rollback individual não está habilitado.";
-        item.append(node(documentObject, "small", "ordax-system-component-slots", detail));
+        const detailMessageId = {
+          "base-ab": "system.components.scope.detail.baseAb",
+          "component-slot": "system.components.scope.detail.componentSlot",
+          "git-app": "system.components.scope.detail.gitApp",
+          bundled: "system.components.scope.detail.bundled",
+        }[component.releaseMode] ?? "system.components.scope.detail.bundled";
+        item.append(
+          node(
+            documentObject,
+            "small",
+            "ordax-system-component-slots",
+            t(detailMessageId),
+          ),
+        );
 
         if (component.independentUpdate) {
           item.append(
@@ -917,7 +1016,10 @@ export function mountSystemOverviewControls(
               documentObject,
               "small",
               "ordax-system-component-slots",
-              `Anterior: ${component.previousVersion ? `v${component.previousVersion}` : "—"} · Pendente: ${component.pendingVersion ? `v${component.pendingVersion}` : "—"}`,
+              t("system.components.slots", {
+                previous: component.previousVersion ? `v${component.previousVersion}` : "—",
+                pending: component.pendingVersion ? `v${component.pendingVersion}` : "—",
+              }),
             ),
           );
         }
@@ -927,16 +1029,18 @@ export function mountSystemOverviewControls(
       section.append(group);
     };
 
-    renderScope("OrdaX e sistema", scopes.system, "system");
-    renderScope("Aplicativos", scopes.applications, "applications");
+    renderScope("system.components.scope.system", scopes.system, "system");
+    renderScope("system.components.scope.applications", scopes.applications, "applications");
     section.append(
       node(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        scopes.persistence === "device"
-          ? "Estado de componentes e saúde persistido neste dispositivo."
-          : "Catálogo disponível; estado de componentes permanece somente nesta sessão.",
+        t(
+          scopes.persistence === "device"
+            ? "system.components.persistence.device"
+            : "system.components.persistence.session",
+        ),
       ),
     );
     view.append(section);
@@ -947,7 +1051,7 @@ export function mountSystemOverviewControls(
     const versionHeading = node(documentObject, "div", "ordax-system-section-heading");
     const versionHeadingCopy = node(documentObject, "div");
     versionHeadingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Versão do produto"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.about.productVersion.kicker")),
       node(documentObject, "h4", "ordax-system-section-title", productVersionLabel()),
     );
     versionHeading.append(versionHeadingCopy);
@@ -957,15 +1061,15 @@ export function mountSystemOverviewControls(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        "A versão do produto identifica o marco geral. Cada componente possui identidade própria. Durante o desenvolvimento, apps podem evoluir diretamente pelo Git; slots assinados ficam reservados para distribuição de produção.",
+        t("system.about.productVersion.description"),
       ),
       node(
         documentObject,
         "p",
         "ordax-system-section-copy",
         PRODUCT_VERSION.stableRelease
-          ? "Este marco é uma versão estável do produto."
-          : "Canal de protótipo: v1.0 permanece reservado para o produto estável.",
+          ? t("system.about.productVersion.stable")
+          : t("system.about.productVersion.prototype"),
       ),
     );
     view.append(versionSection);
@@ -974,12 +1078,14 @@ export function mountSystemOverviewControls(
     const deliveryHeading = node(documentObject, "div", "ordax-system-section-heading");
     const deliveryHeadingCopy = node(documentObject, "div");
     deliveryHeadingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Identidade da entrega"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.about.delivery.kicker")),
       node(
         documentObject,
         "h4",
         "ordax-system-section-title",
-        updateSnapshot?.deliveryNumber ? deliveryLabel(updateSnapshot.deliveryNumber) : "Entrega não informada",
+        updateSnapshot?.deliveryNumber
+          ? t("system.overview.delivery.number", { value: updateSnapshot.deliveryNumber })
+          : t("system.about.delivery.unavailableTitle"),
       ),
     );
     deliveryHeading.append(deliveryHeadingCopy);
@@ -989,7 +1095,7 @@ export function mountSystemOverviewControls(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        "Entrega é o número humano do que pode chegar ao notebook; não é número de PR nem versão comercial do OrdaX. O SHA identifica exatamente o build.",
+        t("system.about.delivery.description"),
       ),
     );
     if (!updateSnapshot?.deliveryNumber) {
@@ -998,7 +1104,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-placeholder",
-          "Este host não informa uma identidade técnica de entrega. As versões dos componentes permanecem disponíveis separadamente.",
+          t("system.about.delivery.unavailable"),
         ),
       );
     }
@@ -1008,8 +1114,8 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Componentes"),
-      node(documentObject, "h4", "ordax-system-section-title", "Versões e isolamento"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.components.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.components.versionsTitle")),
     );
     heading.append(headingCopy);
     section.append(heading);
@@ -1020,7 +1126,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-placeholder",
-          "O Component Manager não está disponível nesta composição.",
+          t("system.components.managerUnavailable"),
         ),
       );
       view.append(section);
@@ -1032,9 +1138,11 @@ export function mountSystemOverviewControls(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        componentSnapshot.persistence === "device"
-          ? "Estado de componentes e saúde persistido neste dispositivo."
-          : "Catálogo disponível; estado de componentes permanece somente nesta sessão.",
+        t(
+          componentSnapshot.persistence === "device"
+            ? "system.components.persistence.device"
+            : "system.components.persistence.session",
+        ),
       ),
     );
 
@@ -1044,40 +1152,57 @@ export function mountSystemOverviewControls(
       const item = node(documentObject, "div", "ordax-system-version-item");
       item.dataset.componentId = manifest.id;
       item.dataset.releaseMode = manifest.releaseMode;
-      const title = node(documentObject, "strong", "", manifest.title);
+      const title = node(
+        documentObject,
+        "strong",
+        "",
+        componentTitleLabel(manifest.id, manifest.title),
+      );
       const identity = node(
         documentObject,
         "span",
         "",
-        `${componentKindLabel(manifest.kind)} · v${state.currentVersion} · ${componentReleaseLabel(manifest.releaseMode)}`,
+        t("system.components.identityLine", {
+          kind: componentKindLabel(manifest.kind),
+          version: state.currentVersion,
+          release: componentReleaseLabel(manifest.releaseMode),
+        }),
       );
       const health = node(
         documentObject,
         "small",
         "ordax-system-component-health",
-        `Saúde: ${componentHealthLabel(state.currentHealth)} · falha isolada em ${manifest.failureDomain}`,
+        t("system.components.healthFailureDomain", {
+          health: componentHealthLabel(state.currentHealth),
+          domain: componentFailureDomainLabel(manifest.failureDomain),
+        }),
       );
       item.append(title, identity, health);
 
       if (independentUpdate) {
-        const slots = node(
-          documentObject,
-          "small",
-          "ordax-system-component-slots",
-          `Anterior: ${state.previousVersion ? `v${state.previousVersion}` : "—"} · Pendente: ${state.pendingVersion ? `v${state.pendingVersion}` : "—"}`,
-        );
-        item.append(slots);
-      } else {
         item.append(
           node(
             documentObject,
             "small",
             "ordax-system-component-slots",
-            manifest.releaseMode === "base-ab"
-              ? "Rollback pertence aos slots A/B da Base."
-              : manifest.releaseMode === "git-app"
-                ? "Desenvolvimento: esta versão do app chega diretamente pelo Git, sem slot de produção."
-                : "Ainda acompanha a entrega conjunta; rollback individual permanece bloqueado.",
+            t("system.components.slots", {
+              previous: state.previousVersion ? `v${state.previousVersion}` : "—",
+              pending: state.pendingVersion ? `v${state.pendingVersion}` : "—",
+            }),
+          ),
+        );
+      } else {
+        const detailMessageId = manifest.releaseMode === "base-ab"
+          ? "system.components.version.detail.baseAb"
+          : manifest.releaseMode === "git-app"
+            ? "system.components.version.detail.gitApp"
+            : "system.components.version.detail.bundled";
+        item.append(
+          node(
+            documentObject,
+            "small",
+            "ordax-system-component-slots",
+            t(detailMessageId),
           ),
         );
       }
@@ -1086,16 +1211,17 @@ export function mountSystemOverviewControls(
     section.append(list);
     view.append(section);
   };
+
   const renderHistory = (view) => {
     if (!historyPort) return;
     const section = node(documentObject, "section", "ordax-system-section");
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Registro"),
-      node(documentObject, "h4", "ordax-system-section-title", "Histórico de atualizações"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.history.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.history.title")),
     );
-    const refresh = node(documentObject, "button", "ordax-system-action", "Atualizar histórico");
+    const refresh = node(documentObject, "button", "ordax-system-action", t("system.history.refresh"));
     refresh.type = "button";
     refresh.dataset.systemHistoryRefresh = "";
     heading.append(headingCopy, refresh);
@@ -1107,36 +1233,53 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-placeholder",
-          historyMessage || "Lendo histórico persistente deste dispositivo…",
+          historyMessageId ? t(historyMessageId) : t("system.history.reading"),
         ),
       );
       view.append(section);
       return;
     }
 
+    const formatHistoryTimestamp = (value) =>
+      formatOverviewTimestamp(value, localization.getLocale()) ?? "—";
+    const deliveryText = (value) =>
+      Number.isSafeInteger(value) && value > 0
+        ? t("system.overview.delivery.number", { value })
+        : t("system.overview.delivery.unnumbered");
+
     const applications = node(documentObject, "div", "ordax-system-history");
-    applications.append(node(documentObject, "h5", "ordax-system-history-title", "Aplicações neste notebook"));
+    applications.append(node(documentObject, "h5", "ordax-system-history-title", t("system.history.applications")));
     if (historySnapshot.applications.length === 0) {
       applications.append(
         node(
           documentObject,
           "p",
           "ordax-system-placeholder",
-          "O registro local começa nesta geração do atualizador. Versões anteriores continuam listadas no histórico de entregas.",
+          t("system.history.applications.empty"),
         ),
       );
     } else {
       for (const entry of historySnapshot.applications.slice(0, 10)) {
         const item = node(documentObject, "article", "ordax-system-history-item");
-        const result = entry.result === "applied" ? "Aplicada" : "Revertida";
+        const result = entry.result === "applied"
+          ? t("system.history.result.applied")
+          : t("system.history.result.rolledBack");
         item.append(
-          node(documentObject, "strong", "", `${deliveryLabel(entry.deliveryNumber)} · ${result}`),
-          node(documentObject, "span", "", formatUpdateTimestamp(entry.appliedAt)),
+          node(documentObject, "strong", "", t("system.history.application.title", {
+            delivery: deliveryText(entry.deliveryNumber),
+            result,
+          })),
+          node(documentObject, "span", "", formatHistoryTimestamp(entry.appliedAt)),
           node(
             documentObject,
             "small",
             "",
-            `SHA ${shortSha(entry.sourceSha)} · ${readableUpdateMode(entry.applyMode)} · ${entry.applyDurationSeconds}s (preparação ${entry.stageDurationSeconds}s)`,
+            t("system.history.application.detail", {
+              sha: shortSha(entry.sourceSha),
+              mode: t(overviewUpdateModeMessageId(entry.applyMode)),
+              apply: entry.applyDurationSeconds,
+              stage: entry.stageDurationSeconds,
+            }),
           ),
         );
         applications.append(item);
@@ -1144,19 +1287,24 @@ export function mountSystemOverviewControls(
     }
 
     const releases = node(documentObject, "div", "ordax-system-history");
-    releases.append(node(documentObject, "h5", "ordax-system-history-title", "Entregas do OrdaX"));
+    releases.append(node(documentObject, "h5", "ordax-system-history-title", t("system.history.releases")));
     for (const entry of historySnapshot.releases.slice(0, 12)) {
       const item = node(documentObject, "article", "ordax-system-history-item");
       item.append(
-        node(documentObject, "strong", "", `${deliveryLabel(entry.deliveryNumber)} · ${entry.title}`),
-        node(documentObject, "span", "", formatUpdateTimestamp(entry.releasedAt)),
-        node(documentObject, "small", "", `SHA ${shortSha(entry.sourceSha)}`),
+        node(documentObject, "strong", "", t("system.history.release.title", {
+          delivery: deliveryText(entry.deliveryNumber),
+          title: entry.title,
+        })),
+        node(documentObject, "span", "", formatHistoryTimestamp(entry.releasedAt)),
+        node(documentObject, "small", "", t("system.history.release.sha", {
+          sha: shortSha(entry.sourceSha),
+        })),
       );
       releases.append(item);
     }
 
     section.append(applications, releases);
-    if (historyMessage) section.append(node(documentObject, "p", "ordax-system-message", historyMessage));
+    if (historyMessageId) section.append(node(documentObject, "p", "ordax-system-message", t(historyMessageId)));
     view.append(section);
   };
 
@@ -1165,21 +1313,29 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Contrato"),
-      node(documentObject, "h4", "ordax-system-section-title", "Capacidades desta execução"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.capabilities.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.capabilities.title")),
     );
     heading.append(headingCopy);
     section.append(heading);
 
     const list = node(documentObject, "div", "ordax-system-capabilities");
     if (hostSnapshot.capabilityIds.length === 0) {
-      list.append(node(documentObject, "p", "ordax-system-placeholder", "Nenhuma capacidade adicional declarada."));
+      list.append(
+        node(
+          documentObject,
+          "p",
+          "ordax-system-placeholder",
+          t("system.capabilities.empty"),
+        ),
+      );
     } else {
       for (const capabilityId of hostSnapshot.capabilityIds) {
+        const messageId = CAPABILITY_MESSAGE_IDS[capabilityId];
         const item = node(documentObject, "div", "ordax-system-capability");
         item.append(
           node(documentObject, "span", "ordax-system-capability-dot"),
-          node(documentObject, "strong", "", CAPABILITY_LABELS[capabilityId] ?? capabilityId),
+          node(documentObject, "strong", "", messageId ? t(messageId) : capabilityId),
           node(documentObject, "small", "", capabilityId),
         );
         list.append(item);
@@ -1194,52 +1350,54 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Intelligence"),
-      node(documentObject, "h4", "ordax-system-section-title", "Explicação local do estado"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.intelligence.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.intelligence.title")),
     );
     const action = node(
       documentObject,
       "button",
       "ordax-system-action",
-      intelligencePending ? "Explicando…" : "Explicar estado",
+      intelligencePending
+        ? t("system.intelligence.action.pending")
+        : t("system.intelligence.action.explain"),
     );
     action.type = "button";
     action.dataset.systemIntelligenceExplain = "";
     const ready = intelligenceSnapshot?.state === "ready";
     action.disabled = !ready || intelligencePending;
     action.title = ready
-      ? "Usar Ordax Intelligence para explicar somente os sinais locais exibidos por Sistema"
-      : "Ordax Intelligence não está pronta nesta execução";
+      ? t("system.intelligence.action.readyTitle")
+      : t("system.intelligence.action.unavailableTitle");
     heading.append(headingCopy, action);
     section.append(heading);
 
     const stateLabel = intelligenceSnapshot === null
-      ? "Não exposta neste modo"
-      : intelligenceSnapshot.state === "ready"
-        ? "Pronta"
-        : intelligenceSnapshot.state === "busy"
-          ? "Ocupada"
-          : intelligenceSnapshot.state === "degraded"
-            ? "Degradada"
-            : "Com erro";
+      ? t("system.intelligence.state.unexposed")
+      : t(
+          INTELLIGENCE_STATE_MESSAGE_IDS[intelligenceSnapshot.state]
+            ?? "system.intelligence.state.error",
+        );
     const detail = intelligenceSnapshot?.modelId
-      ? `${stateLabel} · ${intelligenceSnapshot.modelId}`
+      ? t("system.intelligence.stateWithModel", {
+          state: stateLabel,
+          model: intelligenceSnapshot.modelId,
+        })
       : stateLabel;
     section.append(
       node(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        `Estado: ${detail}. Esta consulta é local, somente leitura e não executa ações no dispositivo.`,
+        t("system.intelligence.description", { state: detail }),
       ),
     );
 
-    if (intelligenceMessage) {
+    if (intelligenceMessageId) {
       const message = node(
         documentObject,
         "p",
         intelligenceAnswer ? "ordax-system-message" : "ordax-system-warning",
-        intelligenceMessage,
+        t(intelligenceMessageId),
       );
       message.setAttribute("role", "status");
       message.setAttribute("aria-live", "polite");
@@ -1249,9 +1407,9 @@ export function mountSystemOverviewControls(
       const answer = node(documentObject, "article", "ordax-system-history-item");
       answer.dataset.state = "info";
       answer.append(
-        node(documentObject, "strong", "", "Explicação da Ordax Intelligence"),
+        node(documentObject, "strong", "", t("system.intelligence.answer.title")),
         node(documentObject, "p", "ordax-system-section-copy", intelligenceAnswer),
-        node(documentObject, "small", "", "Fonte: snapshot local de Sistema · autoridade: nenhuma"),
+        node(documentObject, "small", "", t("system.intelligence.answer.provenance")),
       );
       section.append(answer);
     }
@@ -1327,7 +1485,7 @@ export function mountSystemOverviewControls(
     if (!metricsPort || metricsPending) return;
     const ordinal = ++metricsOrdinal;
     metricsPending = true;
-    metricsMessage = "";
+    metricsMessageId = null;
     replaceView();
     try {
       const next = validateSystemMetricsSnapshot(await metricsPort.read());
@@ -1338,9 +1496,9 @@ export function mountSystemOverviewControls(
     } catch {
       if (destroyed || ordinal !== metricsOrdinal) return;
       metricsReadFailed = true;
-      metricsMessage = metricsSnapshot
-        ? "A leitura atual falhou; os valores abaixo são a última leitura válida recebida pela Surface."
-        : "Não foi possível obter uma leitura válida dos recursos nesta sessão.";
+      metricsMessageId = metricsSnapshot
+        ? "system.resources.readFailedPrevious"
+        : "system.resources.readFailed";
     } finally {
       if (!destroyed && ordinal === metricsOrdinal) {
         metricsPending = false;
@@ -1353,7 +1511,7 @@ export function mountSystemOverviewControls(
     if (!recoveryPort || recoveryPending) return;
     const ordinal = ++recoveryOrdinal;
     recoveryPending = true;
-    recoveryMessage = "";
+    recoveryMessageId = null;
     replaceView();
     try {
       const next = validateRecoveryStatusSnapshot(await recoveryPort.read());
@@ -1362,7 +1520,7 @@ export function mountSystemOverviewControls(
     } catch {
       if (destroyed || ordinal !== recoveryOrdinal) return;
       recoverySnapshot = null;
-      recoveryMessage = t("system.recovery.readFailed");
+      recoveryMessageId = "system.recovery.readFailed";
     } finally {
       if (!destroyed && ordinal === recoveryOrdinal) {
         recoveryPending = false;
@@ -1374,14 +1532,14 @@ export function mountSystemOverviewControls(
   const refreshHistory = async () => {
     if (!historyPort) return;
     const ordinal = ++historyOrdinal;
-    historyMessage = "";
+    historyMessageId = null;
     try {
       const next = validateUpdateHistorySnapshot(await historyPort.list());
       if (destroyed || ordinal !== historyOrdinal) return;
       historySnapshot = next;
     } catch {
       if (destroyed || ordinal !== historyOrdinal) return;
-      historyMessage = "Não foi possível atualizar o histórico local.";
+      historyMessageId = "system.history.readFailed";
     } finally {
       if (!destroyed && ordinal === historyOrdinal) replaceView();
     }
@@ -1426,7 +1584,7 @@ export function mountSystemOverviewControls(
     ) {
       intelligencePending = true;
       intelligenceAnswer = "";
-      intelligenceMessage = "Analisando somente os sinais locais exibidos por Sistema…";
+      intelligenceMessageId = "system.intelligence.message.analyzing";
       replaceView();
       void explainSystemStateWithIntelligence(intelligencePort, {
         surface: hostSnapshot,
@@ -1434,10 +1592,10 @@ export function mountSystemOverviewControls(
       }).then((response) => {
         if (destroyed) return;
         intelligenceAnswer = response.text;
-        intelligenceMessage = "Explicação local concluída. Nenhuma ação foi executada.";
+        intelligenceMessageId = "system.intelligence.message.completed";
       }).catch(() => {
         if (destroyed) return;
-        intelligenceMessage = "Não foi possível obter uma explicação local nesta execução.";
+        intelligenceMessageId = "system.intelligence.message.failed";
       }).finally(() => {
         if (destroyed) return;
         intelligencePending = false;

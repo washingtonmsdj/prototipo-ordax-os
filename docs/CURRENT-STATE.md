@@ -188,8 +188,8 @@ English is **not** yet marked as a complete Surface locale. Files now covers its
 primary navigation/search/list/selection/Recents/Trash journey plus common forms,
 locale-aware sorting, export and preview controls through the shared catalog.
 Settings/System cover their section navigation/header copy, and System now also derives
-its overview health/summary, memory and user-storage resource views, and the explicit sanitized diagnostic review from structured runtime state through the shared
-localization owner. Settings covers its Notifications policy/source and local-session
+its overview health/summary, memory and user-storage resource views, update transaction details/history, component/update scopes, About/versioning, capability inventory, Intelligence presentation, and the explicit sanitized diagnostic review from structured runtime state through the shared
+localization owner. Runtime failure banners in these System flows now retain semantic message IDs and translate at render time, so changing locale does not preserve stale rendered PT-BR copy. Settings covers its Notifications policy/source and local-session
 Security sections end to end, and the Native live session lock rerenders through the same
 localization owner while keeping
 the entered secret only in transient repaint memory. Account covers its complete
@@ -213,6 +213,10 @@ FILES_FORMS_SORT_EXPORT_PREVIEW_EN_US=PASS_SOURCE
 SETTINGS_SYSTEM_NAV_EN_US=PASS_SOURCE
 SYSTEM_OVERVIEW_SUMMARY_EN_US=PASS_SOURCE
 SYSTEM_RESOURCE_VIEWS_EN_US=PASS_SOURCE
+SYSTEM_UPDATE_DETAILS_HISTORY_EN_US=PASS_SOURCE
+SYSTEM_COMPONENTS_ABOUT_EN_US=PASS_SOURCE
+SYSTEM_CAPABILITIES_INTELLIGENCE_EN_US=PASS_SOURCE
+SYSTEM_RUNTIME_FAILURE_COPY_EN_US=PASS_SOURCE
 SYSTEM_DIAGNOSTIC_REVIEW_EN_US=PASS_SOURCE
 SETTINGS_NOTIFICATIONS_EN_US=PASS_SOURCE
 SETTINGS_SECURITY_EN_US=PASS_SOURCE

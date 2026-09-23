@@ -121,11 +121,11 @@ class NativeComponentStateTests(unittest.TestCase):
         self.assertNotIn("createNativeComponentStateStore", web)
 
         self.assertIn("assertComponentManager", view)
-        self.assertIn('"Slot independente"', view)
-        self.assertIn('"App via Git"', view)
-        self.assertIn('"Distribuição conjunta"', view)
-        self.assertIn("diretamente pelo Git, sem slot de produção", view)
-        self.assertIn("rollback individual permanece bloqueado", view)
+        self.assertIn('"system.components.releaseMode.componentSlot"', view)
+        self.assertIn('"system.components.releaseMode.gitApp"', view)
+        self.assertIn('"system.components.releaseMode.bundled"', view)
+        self.assertIn('"system.components.version.detail.gitApp"', view)
+        self.assertIn('"system.components.version.detail.bundled"', view)
 
 
 if __name__ == "__main__":

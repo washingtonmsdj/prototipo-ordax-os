@@ -72,8 +72,11 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
         presentation = PRESENTATION.read_text(encoding="utf-8")
         self.assertIn("services/update/presentation.mjs", update)
         self.assertIn("services/update/presentation.mjs", system)
-        for marker in ("updateIsAlerting", "updateStatusLabel", "readableUpdatePhase", "readableUpdateMode", "America/Bahia"):
+        for marker in ("updateIsAlerting", "updateStatusLabel", "updateSummaryLabel", "updateSummaryDetail"):
             self.assertIn(marker, presentation)
+        self.assertIn("America/Bahia", system)
+        self.assertIn("UPDATE_PHASE_MESSAGE_IDS", system)
+        self.assertIn("overviewUpdateModeMessageId", system)
 
     def test_component_update_scopes_are_visible_in_system_updates(self):
         system = SYSTEM.read_text(encoding="utf-8")
@@ -81,18 +84,20 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
         self.assertIn("services/components/update-presentation.mjs", system)
         self.assertIn("createComponentUpdateScopes(componentSnapshot)", system)
         self.assertIn("renderComponentUpdateScopes(view)", system)
-        self.assertIn('"OrdaX e sistema"', system)
-        self.assertIn('"Aplicativos"', system)
-        self.assertIn('" · Beta"', system)
-        self.assertIn("component.updateChannel.label", system)
-        self.assertIn("não representa uma Loja", system)
+        self.assertIn('"system.components.scope.system"', system)
+        self.assertIn('"system.components.scope.applications"', system)
+        self.assertIn('"system.components.stage.beta"', system)
+        self.assertIn("componentChannelLabel(component.updateChannel)", system)
+        self.assertIn('t("system.components.scope.productionBoundary")', system)
         for marker in ('"development-git"', '"system-bundle"', '"independent-component"'):
             self.assertIn(marker, component_presentation)
 
     def test_transaction_details_remain_in_system_updates(self):
         system = SYSTEM.read_text(encoding="utf-8")
-        for marker in ("targetSha", "attemptId", "lastError", "lastAppliedAt", "rejectedSha", "runtimeSurfaceSha", '"Tentativa"', '"Diagnóstico"'):
+        for marker in ("targetSha", "attemptId", "lastError", "lastAppliedAt", "rejectedSha", "runtimeSurfaceSha"):
             self.assertIn(marker, system)
+        for message_id in ("system.updates.fact.attempt", "system.updates.fact.diagnostic"):
+            self.assertIn(f't("{message_id}")', system)
 
     def test_system_sections_expose_only_real_existing_data_owners(self):
         system = SYSTEM.read_text(encoding="utf-8")
@@ -101,7 +106,7 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
             self.assertIn(f'activeSection === "{section}"', system)
         self.assertNotIn('id: "recovery"', system)
         self.assertNotIn('id: "energy"', system)
-        self.assertIn("Este host não informa uma identidade técnica de entrega", system)
+        self.assertIn('t("system.about.delivery.unavailable")', system)
         self.assertIn('t("system.resources.storage.scope")', system)
         self.assertIn('"system.resources.storage.scope":', catalog)
         self.assertIn("Não representa o disco físico inteiro", catalog)
