@@ -22,6 +22,7 @@ SURFACE_RUNTIME_LOWER=/run/ordax/lower/surface-runtime
 SURFACE_RUNTIME_UPPER=/run/ordax/runtime/native-surface/upper
 SURFACE_RUNTIME_WORK=/run/ordax/runtime/native-surface/work
 SURFACE_RUNTIME_ROOT=/run/ordax/runtime/native-surface/rootfs
+AI_RUNTIME_ROOT=/run/ordax/runtime/local-ai
 RUNTIME_STATE_HELPER=/run/ordax/bootstrap-tools/ordax-portable-state
 
 rescue() {
@@ -110,11 +111,38 @@ SELECTED_SLOT=
 SELECTED_COMMIT=
 SELECTED_MANIFEST_SCHEMA=
 SELECTED_SURFACE_RUNTIME_SHA256=
+SELECTED_AI_RUNTIME_SHA256=
+AI_RUNTIME_READY=0
 
 verify_selected_release() {
     slot=$1
     commit=$2
     is_sha "$commit" || return 1
+
+    if "$AGENT" verify-portable-v4-exact \
+        --trust "$TRUST_ANCHOR" \
+        --root "$PORTABLE_ROOT" \
+        --expected-commit "$commit" \
+        >"/run/portable-release-verify.json" 2>/dev/null; then
+        runtime_ref="$PORTABLE_ROOT/releases/$commit/surface-runtime.sha256"
+        runtime_sha="$(cat "$runtime_ref" 2>/dev/null || true)"
+        is_sha256 "$runtime_sha" || return 1
+        runtime_image="$PORTABLE_ROOT/runtimes/sha256/$runtime_sha/native-surface-runtime.erofs"
+        [ -f "$runtime_image" ] || return 1
+
+        ai_ref="$PORTABLE_ROOT/releases/$commit/local-ai-runtime.sha256"
+        ai_sha="$(cat "$ai_ref" 2>/dev/null || true)"
+        is_sha256 "$ai_sha" || return 1
+        ai_image="$PORTABLE_ROOT/ai-runtimes/sha256/$ai_sha/local-ai-runtime.erofs"
+        [ -f "$ai_image" ] || return 1
+
+        SELECTED_SLOT=$slot
+        SELECTED_COMMIT=$commit
+        SELECTED_MANIFEST_SCHEMA=4
+        SELECTED_SURFACE_RUNTIME_SHA256=$runtime_sha
+        SELECTED_AI_RUNTIME_SHA256=$ai_sha
+        return 0
+    fi
 
     if "$AGENT" verify-portable-v3-exact \
         --trust "$TRUST_ANCHOR" \
@@ -131,6 +159,7 @@ verify_selected_release() {
         SELECTED_COMMIT=$commit
         SELECTED_MANIFEST_SCHEMA=3
         SELECTED_SURFACE_RUNTIME_SHA256=$runtime_sha
+        SELECTED_AI_RUNTIME_SHA256=
         return 0
     fi
 
@@ -143,6 +172,7 @@ verify_selected_release() {
         SELECTED_COMMIT=$commit
         SELECTED_MANIFEST_SCHEMA=2
         SELECTED_SURFACE_RUNTIME_SHA256=
+        SELECTED_AI_RUNTIME_SHA256=
         return 0
     fi
 
@@ -187,7 +217,7 @@ select_verified_release() {
 select_verified_release ||
     rescue "no candidate/current/known-good release is safely selectable and exactly verified"
 
-if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ]; then
+if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ] || [ "$SELECTED_MANIFEST_SCHEMA" = "4" ]; then
     SURFACE_RUNTIME_IMAGE="$PORTABLE_ROOT/runtimes/sha256/$SELECTED_SURFACE_RUNTIME_SHA256/native-surface-runtime.erofs"
     mkdir -p \
         "$SURFACE_RUNTIME_LOWER" \
@@ -201,6 +231,19 @@ if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ]; then
         "$SURFACE_RUNTIME_WORK" \
         "$SURFACE_RUNTIME_ROOT" ||
         rescue "cannot compose exactly verified Surface runtime"
+fi
+
+if [ "$SELECTED_MANIFEST_SCHEMA" = "4" ]; then
+    AI_RUNTIME_IMAGE="$PORTABLE_ROOT/ai-runtimes/sha256/$SELECTED_AI_RUNTIME_SHA256/local-ai-runtime.erofs"
+    mkdir -p "$AI_RUNTIME_ROOT"
+    if /sbin/ordax-portable-mount mount-ai-runtime \
+        "$AI_RUNTIME_IMAGE" \
+        "$AI_RUNTIME_ROOT"; then
+        AI_RUNTIME_READY=1
+    else
+        AI_RUNTIME_READY=0
+        echo "ordax-portable-init: verified local AI payload could not be mounted; continuing with Intelligence degraded" >&2
+    fi
 fi
 
 mkdir -p "$BASE_MOUNT" "$NEWROOT" "$RELEASE_MOUNT"
@@ -265,19 +308,33 @@ export ORDAX_PORTABLE_STATE_HELPER="$RUNTIME_STATE_HELPER"
 export ORDAX_PORTABLE_STATE_ROOT=/state
 export ORDAX_PORTABLE_ROOT=/ordax-data/.ordax
 
-if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ]; then
+if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ] || [ "$SELECTED_MANIFEST_SCHEMA" = "4" ]; then
     export ORDAX_SURFACE_RUNTIME_MODE=verified-erofs-overlay
     export ORDAX_SURFACE_RUNTIME_ROOT=/run/ordax/runtime/native-surface/rootfs
     export ORDAX_SURFACE_RUNTIME_SHA256="$SELECTED_SURFACE_RUNTIME_SHA256"
+fi
+
+if [ "$SELECTED_MANIFEST_SCHEMA" = "4" ] && [ "$AI_RUNTIME_READY" -eq 1 ]; then
+    export ORDAX_LOCAL_AI_RUNTIME_MODE=verified-erofs-read-only
+    export ORDAX_LOCAL_AI_RUNTIME_ROOT=/run/ordax/runtime/local-ai
+    export ORDAX_LOCAL_AI_RUNTIME_SHA256="$SELECTED_AI_RUNTIME_SHA256"
 fi
 
 echo "ORDAX_PORTABLE_V2_HANDOFF=VERIFIED"
 echo "ORDAX_PORTABLE_V2_SLOT=$SELECTED_SLOT"
 echo "ORDAX_PORTABLE_V2_SOURCE_SHA=$SELECTED_COMMIT"
 echo "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=$SELECTED_MANIFEST_SCHEMA"
-if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ]; then
+if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ] || [ "$SELECTED_MANIFEST_SCHEMA" = "4" ]; then
     echo "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED"
     echo "ORDAX_SURFACE_RUNTIME_SHA256=$SELECTED_SURFACE_RUNTIME_SHA256"
+fi
+if [ "$SELECTED_MANIFEST_SCHEMA" = "4" ]; then
+    if [ "$AI_RUNTIME_READY" -eq 1 ]; then
+        echo "ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED"
+        echo "ORDAX_LOCAL_AI_RUNTIME_SHA256=$SELECTED_AI_RUNTIME_SHA256"
+    else
+        echo "ORDAX_LOCAL_AI_RUNTIME_HANDOFF=DEGRADED"
+    fi
 fi
 
 exec switch_root "$NEWROOT" /sbin/ordax-stable-init
