@@ -298,7 +298,7 @@ class NotesNativeTests(unittest.TestCase):
         self.assertIn("MAX_NOTE_PROJECTS", controls)
         self.assertIn("MAX_NOTE_TASKS", controls)
         self.assertIn("MAX_NOTE_REFERENCES", controls)
-        self.assertIn("Prévia disponível no OrdaX Native.", controls)
+        self.assertIn('t("notes.image.previewNative")', controls)
         self.assertIn('activationPort.publish({ appId: "files"', controls)
         self.assertIn('activationPort.publish({ appId: "internet"', controls)
         self.assertIn("subscribeRender", controls)
