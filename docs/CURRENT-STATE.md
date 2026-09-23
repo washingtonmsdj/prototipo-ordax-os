@@ -197,7 +197,7 @@ first-party overview/sync experience in English. Notes now covers its
 primary navigation/editor shell, project/list states, core persistence copy and
 consultative Intelligence controls. Internet now covers its primary browser shell,
 locale-aware tab/address search, project panel and key history/favorite states.
-Operational/error messages plus deeper Files/Settings/System/Notes/Internet flows and
+System's primary first-party UI is now covered in en-US through the shared owner, including the shell update accelerator. Operational/error messages plus deeper Files/Settings/Notes/Internet flows and
 remaining Surface copy still require migration. Network and battery tray/quick-panel
 presentation plus the Notification Center use `ordax.localization/1` and rerender on
 locale changes. `ordax.notifications/3` keeps backward-compatible text fallbacks while
@@ -217,6 +217,7 @@ SYSTEM_DIAGNOSTIC_REVIEW_EN_US=PASS_SOURCE
 SYSTEM_UPDATES_HISTORY_EN_US=PASS_SOURCE
 SYSTEM_ABOUT_EN_US=PASS_SOURCE
 SYSTEM_INTELLIGENCE_CAPABILITIES_EN_US=PASS_SOURCE
+SYSTEM_UPDATE_ACCELERATOR_EN_US=PASS_SOURCE
 SETTINGS_NOTIFICATIONS_EN_US=PASS_SOURCE
 SETTINGS_SECURITY_EN_US=PASS_SOURCE
 LOCAL_SESSION_LOCK_EN_US=PASS_SOURCE
