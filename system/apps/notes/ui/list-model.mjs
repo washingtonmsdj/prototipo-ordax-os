@@ -1,10 +1,12 @@
 export function formatNotesRelativeTime(
   timestamp,
-  locale = "pt-BR",
+  localeOrNow = "pt-BR",
   translate = null,
   now = Date.now(),
 ) {
-  const delta = Math.max(0, now - timestamp);
+  const locale = typeof localeOrNow === "string" ? localeOrNow : "pt-BR";
+  const effectiveNow = typeof localeOrNow === "number" ? localeOrNow : now;
+  const delta = Math.max(0, effectiveNow - timestamp);
   if (delta < 60_000) return translate ? translate("notes.time.now") : "Agora";
   if (delta < 3_600_000) {
     const minutes = Math.max(1, Math.floor(delta / 60_000));
