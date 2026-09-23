@@ -61,6 +61,21 @@ class PortableV4AiHandoffContractTests(unittest.TestCase):
         self.assertIn('exec /system/entrypoint', text)
         self.assertLess(text.index("start_local_ai"), text.rindex("exec /system/entrypoint"))
 
+    def test_disposable_qemu_harness_understands_v4_ai_runtime(self):
+        direct = (ROOT / "bootstrap/portable-v2/qemu_boot.py").read_text(encoding="utf-8")
+        uefi = (ROOT / "bootstrap/portable-v2/uefi_boot.py").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github/workflows/portable-v2-qemu-boot-proof.yml").read_text(encoding="utf-8")
+        for text in (direct, uefi):
+            self.assertIn("prototype-ordax.release-manifest/4", text if text is direct else direct)
+            self.assertIn("ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED", text)
+            self.assertIn("ORDAX_LOCAL_AI_RUNTIME_SHA256=", text)
+        self.assertIn("--manifest-schema 4", workflow)
+        self.assertIn("--local-ai-artifact", workflow)
+        self.assertIn("--local-ai-source-lock", workflow)
+        self.assertIn("verify-portable-v4-exact", workflow)
+        self.assertIn("PORTABLE_V4_CANDIDATE_WITH_V3_PREVIOUS=VERIFIED", workflow)
+        self.assertNotIn("/dev/sd", workflow)
+
     def test_canonical_contracts_distinguish_source_handoff_from_stable_proof(self):
         intelligence = json.loads(INTELLIGENCE_CONTRACT.read_text(encoding="utf-8"))
         handoff = json.loads(BOOT_HANDOFF_CONTRACT.read_text(encoding="utf-8"))
