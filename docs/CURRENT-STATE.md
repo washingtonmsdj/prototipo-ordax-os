@@ -184,9 +184,10 @@ cover the shared shell, launcher, workspace/window chrome, connectivity labels a
 first-party app metadata. Unsupported message IDs fail closed; locales without a
 shared translation fall back to PT-BR source copy explicitly.
 
-English is **not** yet marked as a complete Surface locale. Files now covers its
-primary navigation/search/list/selection/Recents/Trash journey plus common forms,
-locale-aware sorting, export and preview controls through the shared catalog.
+English is now marked as a complete Surface locale for the public MVP. Files covers its
+primary navigation/search/list/selection/Recents/Trash journey, common forms, deep operational
+feedback, locale-aware sorting, import/export, copy/move/rename/create-folder flows, preview and
+Files → Notes presentation through the shared catalog.
 Settings/System cover their section navigation/header copy, and System now also derives
 its overview health/summary, memory and user-storage resource views, update transaction details/history, component/update scopes, About/versioning, capability inventory, Intelligence presentation, and the explicit sanitized diagnostic review from structured runtime state through the shared
 localization owner. Runtime failure banners in these System flows now retain semantic message IDs and translate at render time, so changing locale does not preserve stale rendered PT-BR copy. Settings now also covers Appearance, Accessibility, Regional preferences,
@@ -205,12 +206,16 @@ labels. Internet now covers its primary browser shell,
 locale-aware tab/address search, project context, home status, project references,
 favorites/history and first-party operational feedback deeply in PT-BR/en-US. Its own
 feedback is stored as semantic message identity so a live locale change does not preserve
-stale rendered copy. Deeper Files flows and remaining Surface copy still require migration. Network and battery tray/quick-panel
-presentation plus the Notification Center use `ordax.localization/1` and rerender on
-locale changes. `ordax.notifications/3` keeps backward-compatible text fallbacks while
-first-party update events persist bounded semantic presentation identity, allowing stored
-update history to rerender in the active locale without heuristic text translation.
-Spanish, German and French remain OOBE-complete but Surface-incomplete.
+stale rendered copy. The shared Home continuation/pending cards, power controls,
+global update accelerator, desktop-clock fallback and Surface boot screen also use the shared
+localization owner; first-party async feedback retains semantic message identity across live locale
+changes. Network and battery tray/quick-panel presentation plus the Notification Center use
+`ordax.localization/1` and rerender on locale changes. `ordax.notifications/3` keeps
+backward-compatible text fallbacks while first-party update events persist bounded semantic
+presentation identity, allowing stored update history to rerender in the active locale without
+heuristic text translation. The public MVP selectors expose only PT-BR and en-US. Spanish, German
+and French remain OOBE-complete compatibility/future-rollout locales and are not advertised as
+complete Surface languages.
 
 ```text
 SURFACE_LOCALIZATION_OWNER=PASS_SOURCE
@@ -239,10 +244,15 @@ NETWORK_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 BATTERY_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 NOTIFICATION_CENTER_EN_US=PASS_SOURCE
 FIRST_PARTY_UPDATE_NOTIFICATION_HISTORY_EN_US=PASS_SOURCE
-SURFACE_COMPLETE_LOCALES=pt-BR
+FILES_DEEP_EN_US=PASS_SOURCE
+FILES_SEMANTIC_OPERATIONAL_MESSAGES=PASS_SOURCE
+SHELL_DEEP_EN_US=PASS_SOURCE
+MVP_PUBLIC_LOCALES=pt-BR,en-US
+RETAINED_COMPATIBLE_LOCALES=es-ES,de-DE,fr-FR
+SURFACE_COMPLETE_LOCALES=pt-BR,en-US
 SETTINGS_DEEP_EN_US=PASS_SOURCE
 SETTINGS_ASYNC_MESSAGE_IDENTITIES=PASS_SOURCE
-SURFACE_EN_US_APP_CONTROLS=MIGRATING
+SURFACE_EN_US_APP_CONTROLS=PASS_SOURCE
 ```
 
 ### Files safe removal
@@ -293,7 +303,7 @@ LOCAL_AI_PHYSICAL_STABLE_MVP_PROOF=PENDING
 
 The Native/USB first-use flow is now implemented as a persistent device-owned OOBE rather than a presentation-only screen. It follows `welcome -> regional -> network -> security -> account -> privacy -> ready`, stores completion separately from preferences, local-session credentials and online identity, and does not dismiss until durable state has been written. The Security step can configure an optional offline PIN/passphrase through `ordax.local-session/1`; the secret stays transient in Surface memory and never enters `first-run.json`. When configured, the Native host stores only a salted scrypt verifier in private device state and a new Surface session starts locked. The lock keeps the existing Workspace mounted but makes the Surface inert until local authentication succeeds. This is explicitly a session gate, not USB file encryption. The MVP always offers a local-only route: account creation/sign-in is optional and capability-driven, provider unavailability does not block first use, and cloud sync is not an MVP requirement. Network setup is skippable and reuses the existing Native network-management port; Wi-Fi credentials remain transient and do not enter first-run state.
 
-Regional choices are real persisted preferences. The first-use OOBE is translated for `pt-BR`, `en-US`, `es-ES`, `de-DE` and `fr-FR`; this does not claim that the whole Surface is already translated into all five languages. PT-BR remains the source/default locale while broader Surface/app migration prioritizes English, then Spanish, German and French. The default time zone is `America/Bahia`, and locale/time zone remain editable later under **Ajustes -> Idioma e região**. Physical keyboard layout is a separate Native device capability, not a Web preference: `br-abnt2` is the Stable/MVP default and `us` is the alternative. The selected layout is stored privately on the USB and mapped to fixed `XKB_DEFAULT_*` values before Cage starts. Arbitrary XKB values and shell input from HTTP are rejected. When the configured layout differs from the layout already applied to the running compositor, Ajustes reports that a new Surface start is required; no fake live-switch behavior is claimed. The OOBE keyboard selector intentionally remains hidden until a safe current-session application or pre-Surface handoff exists.
+Regional choices are real persisted preferences. The first-use OOBE retains translations for `pt-BR`, `en-US`, `es-ES`, `de-DE` and `fr-FR`, while the public MVP selectors expose only `pt-BR` and `en-US`; both are complete across the shared Surface. Spanish, German and French remain accepted compatibility/future-rollout locales with translated OOBE source but are hidden from the public selectors until their Surface coverage reaches the same launch standard. PT-BR remains the source/default locale. The default time zone is `America/Bahia`, and locale/time zone remain editable later under **Ajustes -> Idioma e região**. Physical keyboard layout is a separate Native device capability, not a Web preference: `br-abnt2` is the Stable/MVP default and `us` is the alternative. The selected layout is stored privately on the USB and mapped to fixed `XKB_DEFAULT_*` values before Cage starts. Arbitrary XKB values and shell input from HTTP are rejected. When the configured layout differs from the layout already applied to the running compositor, Ajustes reports that a new Surface start is required; no fake live-switch behavior is claimed. The OOBE keyboard selector intentionally remains hidden until a safe current-session application or pre-Surface handoff exists.
 
 ```text
 FIRST_RUN_OOBE=PASS_SOURCE_NATIVE_USB
@@ -305,7 +315,7 @@ FIRST_RUN_SOURCE_LOCALE=pt-BR
 FIRST_RUN_OOBE_COMPLETE_LOCALES=pt-BR,en-US,es-ES,de-DE,fr-FR
 SURFACE_LOCALIZATION_OWNER=PASS_SOURCE
 SURFACE_SHARED_SHELL_EN_US=PASS_SOURCE
-FIRST_RUN_FULL_SURFACE_TRANSLATIONS=PT_BR_SOURCE_EN_APP_CONTROLS_MIGRATING_OTHERS_MIGRATING
+FIRST_RUN_FULL_SURFACE_TRANSLATIONS=PT_BR_EN_US_COMPLETE_ES_DE_FR_HIDDEN_MIGRATING
 FIRST_RUN_DEFAULT_TIME_ZONE=America/Bahia
 FIRST_RUN_WEB_DEVICE_OOBE=NO
 KEYBOARD_LAYOUT_NATIVE=PASS_SOURCE
@@ -645,9 +655,9 @@ BROADER_HARDWARE_COVERAGE=PENDING_FINAL
 
 ## Current priorities
 
-1. prioritize the Stable/MVP **USB system path**: preserve the green Portable v3/QEMU/UEFI source path and close the remaining real-hardware gates for first canonical USB boot, cold health, known-good promotion and rollback without coupling ordinary app changes to a full system reboot;
-2. complete the signed **local inference payload**: pin/build the exact llama.cpp engine artifact, package the pinned model, integrate both into Stable/MVP media/release materialization and prove local inference without making AI boot-critical;
-3. continue the shared localization migration after the five-language OOBE, prioritizing full English Surface coverage, then Spanish, German and French without exposing partially translated screens as complete;
+1. prioritize the Stable/MVP **USB system path**: preserve the green source/QEMU/UEFI path, complete canonical signed Stable v4 materialization with the proven local-AI runtime, then close the later real-hardware gates for first canonical USB boot, cold health, known-good promotion and rollback without coupling ordinary app changes to a full system reboot;
+2. keep the **local inference payload** pinned and reproducible: the exact llama.cpp/model artifacts and real-byte v4 materialization are already CI-proven; the remaining release gate is canonical Stable signing/materialization and its disposable v4 regression, without making AI boot-critical;
+3. keep PT-BR/en-US launch coverage regression-closed and continue Spanish, German and French migration without exposing those hidden compatibility locales as complete before their Surface coverage reaches the same standard;
 4. keep the current first-party apps useful and coherent as Beta components, focusing app work on correctness, regression coverage and genuine MVP gaps; move an app toward production-independent packaging only when the signed `component-slot` path is actually ready to prove it;
 5. continue hardening staged/transactional Owner/Development Git-first activation while keeping it explicitly separate from the Stable/MVP public update channel;
 6. execute the integrated Surface smoke only on the eventual Stable/MVP physical USB for canonical promotion; Owner/Development evidence remains development-only and CI or an unexecuted runbook must never become physical PASS;
