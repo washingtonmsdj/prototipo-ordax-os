@@ -33,9 +33,12 @@ A primeira lacuna P0 já foi atacada na mesma linha arquitetural deste plano:
 - nenhum dos consumidores ganha autoridade de mutação ou importa provider/modelo diretamente;
 - ausência do backend continua degradável e não crítica para o boot.
 
-Isso fecha `INTELLIGENCE_REAL_SYSTEM_CONSUMER` em **source**, mas não fecha o item
-inteiro de entrega Stable: montar `local-ai-runtime.erofs` e iniciar o backend no
-handoff v4 continua pendente antes do USB.
+Isso fecha `INTELLIGENCE_REAL_SYSTEM_CONSUMER` em **source** e o handoff v4 também está
+fechado em source: Portable v2 verifica o manifest v4, resolve/monta `local-ai-runtime.erofs`
+read-only e o Stable Base inicia o backend loopback quando o payload verificado está disponível.
+A falha da IA continua degradável e não bloqueia o boot. O item de entrega Stable ainda não está
+fechado porque a assinatura/materialização real do Stable v4 e as provas descartáveis/físicas
+correspondentes continuam pendentes antes do USB.
 
 ### 0.2 Sessão local/lock Native — fechamento em source
 
@@ -382,8 +385,8 @@ O gate é de produto/source. Ele **não** substitui:
 
 ### P2 — fechar release
 
-8. Gerar/materializar/signar v4 com AI real.
-9. Regressões QEMU/UEFI.
+8. Handoff v4 com AI real. — **PASS_SOURCE**; assinatura/materialização Stable real ainda pendente.
+9. Gerar/materializar/signar o Stable v4 real e executar regressões QEMU/UEFI do caminho v4.
 10. Somente então voltar ao primeiro USB Stable/MVP físico.
 
 ---
