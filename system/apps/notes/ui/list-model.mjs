@@ -1,6 +1,14 @@
-export function formatNotesRelativeTime(timestamp, now = Date.now()) {
+export function formatNotesRelativeTime(
+  timestamp,
+  now = Date.now(),
+  {
+    locale = "pt-BR",
+    nowLabel = "Agora",
+    yesterdayLabel = "Ontem",
+  } = {},
+) {
   const delta = Math.max(0, now - timestamp);
-  if (delta < 60_000) return "Agora";
+  if (delta < 60_000) return nowLabel;
   if (delta < 3_600_000) {
     const minutes = Math.max(1, Math.floor(delta / 60_000));
     return `${minutes} min`;
@@ -9,16 +17,16 @@ export function formatNotesRelativeTime(timestamp, now = Date.now()) {
     const hours = Math.max(1, Math.floor(delta / 3_600_000));
     return `${hours} h`;
   }
-  if (delta < 2 * 86_400_000) return "Ontem";
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" })
+  if (delta < 2 * 86_400_000) return yesterdayLabel;
+  return new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short" })
     .format(new Date(timestamp));
 }
 
-export function firstNotesBodyLine(body) {
+export function firstNotesBodyLine(body, emptyLabel = "Nota sem conteúdo") {
   return String(body ?? "")
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .find(Boolean) ?? "Nota sem conteúdo";
+    .find(Boolean) ?? emptyLabel;
 }
 
 export function noteMatchesQuery(note, query) {

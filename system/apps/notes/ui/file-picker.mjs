@@ -12,7 +12,7 @@ function freezeSnapshot(value) {
     path: value.path,
     listing: value.listing,
     pending: value.pending,
-    error: value.error,
+    errorMessageId: value.errorMessageId,
     purpose: value.purpose,
     selectedPath: value.selectedPath,
   });
@@ -25,7 +25,7 @@ function initialState(available) {
     path: "/",
     listing: null,
     pending: false,
-    error: "",
+    errorMessageId: null,
     purpose: "file",
     selectedPath: null,
   });
@@ -85,7 +85,7 @@ export function createNotesFilePicker({ fileSpace = null } = {}) {
       !state.open
       && state.listing === null
       && state.pending === false
-      && state.error === ""
+      && state.errorMessageId === null
       && state.purpose === "file"
       && state.selectedPath === null
     ) {
@@ -104,7 +104,7 @@ export function createNotesFilePicker({ fileSpace = null } = {}) {
       path: target,
       listing: null,
       pending: true,
-      error: "",
+      errorMessageId: null,
       selectedPath: null,
     });
     try {
@@ -117,7 +117,7 @@ export function createNotesFilePicker({ fileSpace = null } = {}) {
         path: listing.path,
         listing,
         pending: false,
-        error: "",
+        errorMessageId: null,
       });
       return true;
     } catch {
@@ -125,7 +125,7 @@ export function createNotesFilePicker({ fileSpace = null } = {}) {
       commit({
         listing: null,
         pending: false,
-        error: "Não foi possível abrir esta pasta.",
+        errorMessageId: "notes.filePicker.openFailed",
       });
       return false;
     }
@@ -156,7 +156,7 @@ export function createNotesFilePicker({ fileSpace = null } = {}) {
         path: target,
         listing: null,
         pending: false,
-        error: "",
+        errorMessageId: null,
         purpose,
         selectedPath: null,
       });

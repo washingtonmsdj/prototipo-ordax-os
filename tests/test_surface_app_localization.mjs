@@ -164,6 +164,15 @@ test("Notes and Internet primary journeys use the shared localization owner", as
   assert.match(notes, /ordaxNotesLocale/);
   assert.match(notesCatalog, /"notes\.action\.newNote": "New note"/);
   assert.match(notesCatalog, /"notes\.intelligence\.summary": "Summarize"/);
+  assert.match(notesCatalog, /"notes\.filePicker\.openFailed": "This folder could not be opened\."/);
+  assert.match(notesCatalog, /"notes\.prompt\.newProjectName": "New project name:"/);
+  assert.match(notes, /t\("notes\.filePicker\.loading"\)/);
+  assert.match(notes, /t\("notes\.confirm\.deleteForever"/);
+  assert.match(notes, /formatNotesRelativeTime\(note\.updatedAt, Date\.now\(\), \{ locale: localization\.getLocale\(\)/);
+  assert.doesNotMatch(
+    notes,
+    /Não foi possível salvar esta edição|Carregando imagem|Fechar seletor de arquivos|Nome do novo projeto|Use um endereço da web válido/,
+  );
 
   assert.match(internet, /const localization = lifecycle\.localization/);
   assert.match(internet, /createView\(documentObject, snapshot, t\)/);
