@@ -79,8 +79,8 @@ class SurfaceAsyncLifecycleTests(unittest.TestCase):
         self.assertIn("statusReadFailed = true;", controls)
         self.assertIn("managementReadFailed = true;", controls)
         self.assertNotIn("statusSnapshot = null;\n    } catch", controls)
-        self.assertIn("Redes exibidas com dados antigos", controls)
-        self.assertIn("última leitura recebida pela Surface", controls)
+        self.assertIn('"network.quick.networksStale"', controls)
+        self.assertIn('"network.quick.summary.staleTitle"', controls)
         self.assertIn('summary.dataset.observation = statusReadFailed ? "stale" : "current"', controls)
 
     def test_read_only_tray_widgets_do_not_render_after_destroy(self):
