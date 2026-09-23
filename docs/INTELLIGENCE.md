@@ -44,9 +44,12 @@ The release layer has a dedicated v4 source contract for this payload.
 `prototype-ordax.release-manifest/4` keeps the system image and Surface runtime
 semantics from v3, adds `local-ai-runtime.erofs`, and signs a binding to the
 canonical engine/model source lock. Surface and AI runtimes are independently
-content-addressed and verified. This closes the protocol boundary only: the real
-engine/model EROFS still has to be reproducibly built and promoted before
-Stable/MVP media can claim local inference is installed.
+content-addressed and verified. The real engine/model EROFS is reproducibly proven
+in CI, and the Portable v2/Stable Base handoff now supports exact v4 verification,
+read-only mounting at `/run/ordax/runtime/local-ai`, and non-boot-critical loopback
+backend startup. This still does not claim a promoted Stable/MVP artifact: signed
+Stable v4 materialization/activation plus disposable and physical boot proof remain
+release gates.
 
 ## Authority boundary
 

@@ -104,10 +104,10 @@
         {
           "source_path": "bootstrap/initramfs/initramfs.cpio.gz",
           "target_path": "/ordax/initrd.gz",
-          "sha256": "233e7d6379f927bb95c1c895e5b84eb2f5968d84a144fa60581c9a160d68d0df",
+          "sha256": "f6eb9a79a7dec4e00b82eb9bf07115d75b8aa21b48a8609f7b83174c6b7e14f9",
           "mode": "0644",
           "logical_owner": "initramfs",
-          "reason": "Fixed clean-room capsule with legacy physical boot unchanged plus isolated Portable helpers, armed one-shot activation-state transactions, rejected-candidate persistence, exact candidate/current/known-good selection, loop/exFAT/FAT-volume-ID primitives, BusyBox mount security-flag parsing, POSIX test/[ support and fail-closed candidate PID1 support"
+          "reason": "Fixed clean-room capsule with legacy physical boot unchanged plus isolated Portable helpers, armed one-shot activation-state transactions, rejected-candidate persistence, exact candidate/current/known-good selection, loop/exFAT/FAT-volume-ID primitives, BusyBox mount security-flag parsing, POSIX test/[ support and fail-closed candidate PID1 support plus verified read-only Stable v4 local-AI runtime mounting"
         }
       ]
     },
@@ -171,10 +171,10 @@
         {
           "source_path": "bootstrap/release-acquisition/ordax-release-agent",
           "target_path": "/ordax/bootstrap/release-acquisition/ordax-release-agent",
-          "sha256": "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
+          "sha256": "550df685679f1bf15a636729960fe6fc3ffc1afda1a346214ce96716f7170a66",
           "mode": "0755",
           "logical_owner": "bootstrap-release-acquisition",
-          "reason": "Static Linux amd64 release agent with immutable v1, portable v2/v3, signed trust-transition v1, inspect/materialize/verify/activation support; physical activation remains separately gated"
+          "reason": "Static Linux amd64 release agent with immutable v1, portable v2/v3/v4, signed trust-transition v1, inspect/materialize/verify/activation support; existing older seed hashes remain migration inputs and physical activation remains separately gated"
         }
       ]
     },

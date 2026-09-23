@@ -14,6 +14,9 @@ on:
       - 'tools/release-manifest/**'
       - 'tools/release-signing/**'
       - 'bootstrap/release-acquisition/**'
+      - 'bootstrap/initramfs/**'
+      - 'bootstrap/stable-base/**'
+      - 'tests/test_portable_v4_ai_handoff_contract.py'
       - 'docs/RELEASE-PIPELINE.md'
       - '.github/workflows/release-pipeline.yml'
   pull_request:
@@ -28,6 +31,9 @@ on:
       - 'tools/release-manifest/**'
       - 'tools/release-signing/**'
       - 'bootstrap/release-acquisition/**'
+      - 'bootstrap/initramfs/**'
+      - 'bootstrap/stable-base/**'
+      - 'tests/test_portable_v4_ai_handoff_contract.py'
       - 'docs/RELEASE-PIPELINE.md'
       - '.github/workflows/release-pipeline.yml'
 
@@ -49,6 +55,9 @@ jobs:
           go-version: '1.27.1'
           check-latest: false
           cache: false
+
+      - name: Validate v4 boot handoff contract
+        run: python -m unittest tests.test_portable_v4_ai_handoff_contract -v
 
       - name: Build release pipeline tools
         run: |

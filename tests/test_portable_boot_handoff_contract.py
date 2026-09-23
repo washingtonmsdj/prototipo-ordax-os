@@ -41,10 +41,25 @@ class PortableBootHandoffContractTests(unittest.TestCase):
             "prototype-ordax.release-manifest/2",
             self.contract["compatible_release_manifest_schemas"],
         )
+        self.assertIn(
+            "prototype-ordax.release-manifest/4",
+            self.contract["compatible_release_manifest_schemas"],
+        )
         self.assertEqual(
             self.contract["proof"]["release_verifier_command"],
             "ordax-release-agent verify-portable-v3-exact",
         )
+        v4 = self.contract["v4_source_handoff"]
+        self.assertTrue(v4["implemented"])
+        self.assertFalse(v4["signed_stable_materialization_proven"])
+        self.assertFalse(v4["qemu_boot_proven"])
+        self.assertFalse(v4["physical_boot_proven"])
+        self.assertEqual(
+            v4["release_verifier_command"],
+            "ordax-release-agent verify-portable-v4-exact",
+        )
+        self.assertEqual(v4["mount_operation"], "mount-ai-runtime")
+        self.assertFalse(v4["backend_failure_boot_critical"])
         handoff = self.contract["initramfs_integration_requirements"]
         self.assertEqual(
             handoff["known_good_exact_resolver_signature_handoff"],
@@ -53,6 +68,7 @@ class PortableBootHandoffContractTests(unittest.TestCase):
         self.assertEqual(
             handoff["known_good_exact_resolver_signature_handoff_compatibility"],
             [
+                "ordax-release-agent verify-portable-v4-exact",
                 "ordax-release-agent verify-portable-v3-exact",
                 "ordax-release-agent verify-portable-exact",
             ],
@@ -116,6 +132,15 @@ class PortableBootHandoffContractTests(unittest.TestCase):
         self.assertTrue(surface["read_only_lower"])
         self.assertEqual(surface["runtime_view"], "overlayfs")
         self.assertFalse(surface["persistent_upper"])
+        local_ai = proof["local_ai_runtime_mount"]
+        self.assertEqual(local_ai["filesystem"], "erofs")
+        self.assertTrue(local_ai["read_only"])
+        self.assertEqual(local_ai["runtime_root"], "/run/ordax/runtime/local-ai")
+        self.assertTrue(local_ai["required_shape_checked"])
+        self.assertEqual(
+            local_ai["failure_policy"],
+            "degrade-intelligence-without-blocking-boot",
+        )
 
     def test_initramfs_integration_and_transaction_helper_are_explicit(self):
         requirements = self.contract["initramfs_integration_requirements"]
@@ -150,7 +175,18 @@ class PortableBootHandoffContractTests(unittest.TestCase):
             "armed-one-shot-transaction-only",
         )
         self.assertTrue(requirements["portable_v3_release_verification"])
+        self.assertTrue(requirements["portable_v4_release_verification"])
         self.assertTrue(requirements["surface_runtime_reference_verified"])
+        self.assertTrue(requirements["local_ai_runtime_reference_verified"])
+        self.assertEqual(
+            requirements["local_ai_runtime_mount_operation"],
+            "mount-ai-runtime",
+        )
+        self.assertEqual(
+            requirements["local_ai_runtime_root"],
+            "/run/ordax/runtime/local-ai",
+        )
+        self.assertFalse(requirements["local_ai_runtime_failure_boot_critical"])
         self.assertEqual(
             requirements["surface_runtime_mount_operation"],
             "mount-surface-runtime",

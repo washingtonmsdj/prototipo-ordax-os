@@ -48,6 +48,7 @@
       "erofs-release-hash-unchanged-after-runtime-write-attempt"
     ],
     "release_verifier_commands": [
+      "ordax-release-agent verify-portable-v4-exact",
       "ordax-release-agent verify-portable-exact",
       "ordax-release-agent verify-portable-v3-exact"
     ],
@@ -57,6 +58,13 @@
       "runtime_view": "overlayfs",
       "upper": "tmpfs-under-/run",
       "persistent_upper": false
+    },
+    "local_ai_runtime_mount": {
+      "filesystem": "erofs",
+      "read_only": true,
+      "runtime_root": "/run/ordax/runtime/local-ai",
+      "required_shape_checked": true,
+      "failure_policy": "degrade-intelligence-without-blocking-boot"
     }
   },
   "runtime_boundary": {
@@ -98,7 +106,11 @@
     "surface_runtime_view": "ephemeral-overlayfs",
     "surface_runtime_persistent_upper": false,
     "portable_update_activation_mode": "signed-v3-materialize-arm-reboot-cold-health",
-    "portable_update_reboot_required": true
+    "portable_update_reboot_required": true,
+    "local_ai_runtime_source": "signed-release-manifest-v4",
+    "local_ai_runtime_store": "content-addressed-sha256",
+    "local_ai_runtime_view": "read-only-erofs",
+    "local_ai_runtime_failure_boot_critical": false
   },
   "initramfs_integration_requirements": {
     "busybox_losetup_applet_required": true,
@@ -124,7 +136,8 @@
       "mount-capsule",
       "mount-base",
       "mount-system",
-      "mount-surface-runtime"
+      "mount-surface-runtime",
+      "mount-ai-runtime"
     ],
     "activation_state_reader_operations": [
       "read-slot",
@@ -180,13 +193,19 @@
     "surface_runtime_overlay_root": "/run/ordax/runtime/native-surface/rootfs",
     "surface_runtime_persistent_upper": false,
     "known_good_exact_resolver_signature_handoff_compatibility": [
+      "ordax-release-agent verify-portable-v4-exact",
       "ordax-release-agent verify-portable-v3-exact",
       "ordax-release-agent verify-portable-exact"
     ],
     "candidate_boot_authority_policy": "armed-one-shot-transaction-only",
     "activation_transaction_writer_implemented": true,
     "activation_transaction_writer_runtime_path": "/run/ordax/bootstrap-tools/ordax-portable-state",
-    "activation_transaction_survives_switch_root": true
+    "activation_transaction_survives_switch_root": true,
+    "portable_v4_release_verification": true,
+    "local_ai_runtime_reference_verified": true,
+    "local_ai_runtime_mount_operation": "mount-ai-runtime",
+    "local_ai_runtime_root": "/run/ordax/runtime/local-ai",
+    "local_ai_runtime_failure_boot_critical": false
   },
   "forbidden": [
     "switch-root-directly-to-system.erofs",
@@ -252,6 +271,9 @@
     "resolve-signed-surface-runtime-sha256-reference",
     "attach-selected-surface-runtime-erofs-read-only",
     "compose-surface-runtime-overlay-with-tmpfs-upper-work",
+    "resolve-signed-local-ai-runtime-sha256-reference",
+    "attach-selected-local-ai-runtime-erofs-read-only-when-v4",
+    "degrade-intelligence-without-blocking-boot-if-local-ai-runtime-unavailable",
     "bind-verified-system-subtree-read-only",
     "switch-root-into-stable-base-overlay",
     "launch-ordax-stable-init-with-verified-portable-release-and-surface-runtime-identity"
@@ -284,11 +306,28 @@
   },
   "compatible_release_manifest_schemas": [
     "prototype-ordax.release-manifest/2",
-    "prototype-ordax.release-manifest/3"
+    "prototype-ordax.release-manifest/3",
+    "prototype-ordax.release-manifest/4"
   ],
   "release_artifacts": [
     "system.erofs",
-    "native-surface-runtime.erofs"
+    "native-surface-runtime.erofs",
+    "local-ai-runtime.erofs"
   ],
-  "surface_runtime_store": ".ordax/runtimes/sha256/<runtime-sha256>/native-surface-runtime.erofs"
+  "surface_runtime_store": ".ordax/runtimes/sha256/<runtime-sha256>/native-surface-runtime.erofs",
+  "v4_source_handoff": {
+    "implemented": true,
+    "signed_stable_materialization_proven": false,
+    "qemu_boot_proven": false,
+    "physical_boot_proven": false,
+    "release_verifier_command": "ordax-release-agent verify-portable-v4-exact",
+    "local_ai_reference": "local-ai-runtime.sha256",
+    "local_ai_store": ".ordax/ai-runtimes/sha256/<runtime-sha256>/local-ai-runtime.erofs",
+    "mount_operation": "mount-ai-runtime",
+    "mount_root": "/run/ordax/runtime/local-ai",
+    "mount_mode": "erofs-read-only",
+    "backend_start": "ordax-local-ai-loopback",
+    "backend_failure_boot_critical": false
+  },
+  "local_ai_runtime_store": ".ordax/ai-runtimes/sha256/<runtime-sha256>/local-ai-runtime.erofs"
 }
