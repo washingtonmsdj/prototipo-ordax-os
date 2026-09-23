@@ -17,6 +17,8 @@ import {
 } from "../system/services/notifications/catalog.mjs";
 import { createNotificationsRuntime } from "../system/services/notifications/runtime.mjs";
 import { createUpdateNotificationBridge } from "../system/services/notifications/update-bridge.mjs";
+import { LOCALIZATION_SCHEMA } from "../system/contracts/localization.mjs";
+import { notificationPresentationCopy } from "../system/services/notifications/presentation.mjs";
 
 function draft(overrides = {}) {
   return {
@@ -114,6 +116,54 @@ test("semantic notification presentation is bounded and optional", () => {
     }),
     /value key/i,
   );
+});
+
+test("semantic first-party presentation rerenders without rewriting stored fallback copy", () => {
+  const localization = Object.freeze({
+    schema: LOCALIZATION_SCHEMA,
+    getLocale() {
+      return "en-US";
+    },
+    translate(messageId, values = {}) {
+      const messages = {
+        "notifications.update.applied.title": "Update applied",
+        "notifications.update.applied.message": "Delivery {deliveryNumber} was applied and confirmed by the updater.",
+      };
+      const source = messages[messageId];
+      assert.equal(typeof source, "string");
+      return source.replace(/\{([A-Za-z][A-Za-z0-9]*)\}/g, (match, key) => (
+        values[key] === undefined ? match : String(values[key])
+      ));
+    },
+    subscribe(listener) {
+      listener("en-US");
+      return () => {};
+    },
+  });
+
+  const entry = {
+    sourceId: SYSTEM_UPDATES_NOTIFICATION_SOURCE_ID,
+    title: "Atualização aplicada",
+    message: "Entrega 12 foi aplicada e confirmada pelo atualizador.",
+    presentation: {
+      id: "system-updates.applied",
+      values: { deliveryNumber: 12 },
+    },
+  };
+  assert.deepEqual(notificationPresentationCopy(entry, localization), {
+    title: "Update applied",
+    message: "Delivery 12 was applied and confirmed by the updater.",
+  });
+
+  const generic = {
+    sourceId: "files",
+    title: "Título do produtor",
+    message: "Conteúdo arbitrário",
+  };
+  assert.deepEqual(notificationPresentationCopy(generic, localization), {
+    title: generic.title,
+    message: generic.message,
+  });
 });
 
 test("notification draft and policy validate bounded sources and app destinations", () => {
