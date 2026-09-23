@@ -664,19 +664,19 @@ export function mountNotesWorkspaceControls(
     const linkChoice = choices.querySelector('[data-notes-action="add-link-reference"]');
     linkChoice.disabled = readOnly || referencesFull;
     linkChoice.title = readOnly
-      ? "Restaure a nota para adicionar referências"
+      ? t("notes.references.restoreToAdd")
       : referencesFull
-      ? `Limite de ${MAX_NOTE_REFERENCES} referências atingido`
-      : "Adicionar link da web";
+      ? t("notes.references.limitReached", { limit: MAX_NOTE_REFERENCES })
+      : t("notes.references.addWebLink");
     const fileChoice = choices.querySelector('[data-notes-action="add-file-reference"]');
     fileChoice.disabled = readOnly || filePort === null || referencesFull;
     fileChoice.title = readOnly
-      ? "Restaure a nota para adicionar referências"
+      ? t("notes.references.restoreToAdd")
       : referencesFull
-        ? `Limite de ${MAX_NOTE_REFERENCES} referências atingido`
+        ? t("notes.references.limitReached", { limit: MAX_NOTE_REFERENCES })
         : filePort
-          ? "Relacionar um arquivo local à nota"
-          : "Arquivos locais estão disponíveis no OrdaX Native";
+          ? t("notes.references.attachLocalFile")
+          : t("notes.references.nativeFilesOnly");
 
     const picker = view.querySelector("[data-notes-file-picker]");
     picker.hidden = !pickerState.open;
@@ -690,27 +690,27 @@ export function mountNotesWorkspaceControls(
         documentObject,
         "strong",
         "",
-        pickerState.purpose === "image" ? "Relacionar imagem" : "Relacionar arquivo",
+        t(pickerState.purpose === "image" ? "notes.filePicker.title.image" : "notes.filePicker.title.file"),
       ),
       node(documentObject, "small", "", pickerState.path),
     );
     header.append(
       heading,
-      button(documentObject, "ordax-notes-file-picker-close", "Fechar seletor de arquivos", "close-file-picker", "×"),
+      button(documentObject, "ordax-notes-file-picker-close", t("notes.filePicker.close"), "close-file-picker", "×"),
     );
     picker.append(header);
 
     const navigation = node(documentObject, "div", "ordax-notes-file-picker-nav");
-    const up = button(documentObject, "ordax-notes-file-picker-up", "Subir uma pasta", "file-picker-up", "↑  Pasta acima");
+    const up = button(documentObject, "ordax-notes-file-picker-up", t("notes.filePicker.up"), "file-picker-up", `↑  ${t("notes.filePicker.upShort")}`);
     up.disabled = pickerState.path === "/" || pickerState.pending;
     navigation.append(up);
     picker.append(navigation);
 
     const list = node(documentObject, "div", "ordax-notes-file-picker-list");
     if (pickerState.pending) {
-      list.append(node(documentObject, "p", "ordax-notes-file-picker-message", "Carregando arquivos…"));
-    } else if (pickerState.error) {
-      list.append(node(documentObject, "p", "ordax-notes-file-picker-message", pickerState.error));
+      list.append(node(documentObject, "p", "ordax-notes-file-picker-message", t("notes.filePicker.loading")));
+    } else if (pickerState.errorMessageId) {
+      list.append(node(documentObject, "p", "ordax-notes-file-picker-message", t(pickerState.errorMessageId)));
     } else if (pickerState.listing) {
       const entries = [...pickerState.listing.entries]
         .filter((entry) => (
@@ -720,10 +720,10 @@ export function mountNotesWorkspaceControls(
         ))
         .sort((a, b) => {
           if (a.kind !== b.kind) return a.kind === "directory" ? -1 : 1;
-          return a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
+          return a.name.localeCompare(b.name, localization.getLocale(), { sensitivity: "base" });
         });
       if (entries.length === 0) {
-        list.append(node(documentObject, "p", "ordax-notes-file-picker-message", "Esta pasta está vazia."));
+        list.append(node(documentObject, "p", "ordax-notes-file-picker-message", t("notes.filePicker.empty")));
       }
       for (const entry of entries) {
         const fullPath = joinNotesLogicalPath(pickerState.listing.path, entry.name);
@@ -731,7 +731,7 @@ export function mountNotesWorkspaceControls(
         const row = button(
           documentObject,
           "ordax-notes-file-picker-row",
-          entry.kind === "directory" ? `Abrir pasta ${entry.name}` : `Selecionar arquivo ${entry.name}`,
+          t(entry.kind === "directory" ? "notes.filePicker.openDirectory" : "notes.filePicker.selectFile", { name: entry.name }),
           action,
           "",
         );
@@ -741,7 +741,7 @@ export function mountNotesWorkspaceControls(
         row.append(
           node(documentObject, "span", "ordax-notes-file-picker-icon", entry.kind === "directory" ? "□" : "▱"),
           node(documentObject, "span", "ordax-notes-file-picker-name", entry.name),
-          node(documentObject, "small", "ordax-notes-file-picker-kind", entry.kind === "directory" ? "Pasta" : "Arquivo"),
+          node(documentObject, "small", "ordax-notes-file-picker-kind", t(entry.kind === "directory" ? "notes.filePicker.kind.directory" : "notes.filePicker.kind.file")),
         );
         list.append(row);
       }
@@ -751,9 +751,9 @@ export function mountNotesWorkspaceControls(
     const attach = button(
       documentObject,
       "ordax-notes-file-picker-attach",
-      pickerState.purpose === "image" ? "Relacionar imagem selecionada" : "Relacionar arquivo selecionado",
+      t(pickerState.purpose === "image" ? "notes.filePicker.attachSelectedImage" : "notes.filePicker.attachSelectedFile"),
       "attach-file-reference",
-      pickerState.purpose === "image" ? "Relacionar imagem" : "Relacionar arquivo",
+      t(pickerState.purpose === "image" ? "notes.filePicker.attachImage" : "notes.filePicker.attachFile"),
     );
     attach.disabled = readOnly
       || !pickerState.selectedPath
@@ -768,12 +768,12 @@ export function mountNotesWorkspaceControls(
     panel.hidden = !referencesOpen;
     const refs = view.querySelector(".ordax-notes-refs-content");
     refs.replaceChildren();
-    refs.append(node(documentObject, "span", "ordax-notes-refs-kicker", "DESTA NOTA"));
+    refs.append(node(documentObject, "span", "ordax-notes-refs-kicker", t("notes.references.thisNote")));
 
     const links = note.references.filter((reference) => reference.kind === "link");
     const files = note.references.filter((reference) => reference.kind === "file");
     if (note.references.length === 0) {
-      refs.append(node(documentObject, "p", "ordax-notes-refs-empty", "Nenhuma referência adicionada."));
+      refs.append(node(documentObject, "p", "ordax-notes-refs-empty", t("notes.references.empty")));
     }
 
     for (const reference of links) {
@@ -783,9 +783,9 @@ export function mountNotesWorkspaceControls(
       copy.append(
         node(documentObject, "strong", "", reference.title),
         node(documentObject, "small", "", notesWebReferenceHost(reference.href)),
-        node(documentObject, "span", "", reference.detail || "Link"),
+        node(documentObject, "span", "", reference.detail || t("notes.references.linkFallback")),
       );
-      const remove = button(documentObject, "ordax-notes-ref-remove", "Remover referência", "remove-reference", "×");
+      const remove = button(documentObject, "ordax-notes-ref-remove", t("notes.references.remove"), "remove-reference", "×");
       remove.dataset.referenceId = reference.id;
       remove.disabled = readOnly;
       card.append(leading, copy, remove);
@@ -798,21 +798,21 @@ export function mountNotesWorkspaceControls(
     }
 
     if (files.length) {
-      refs.append(node(documentObject, "h3", "ordax-notes-refs-subtitle", "Arquivos relacionados"));
+      refs.append(node(documentObject, "h3", "ordax-notes-refs-subtitle", t("notes.references.relatedFiles")));
       for (const reference of files) {
         const card = node(documentObject, "article", "ordax-notes-ref-card ordax-notes-file-ref-card");
         const copy = node(documentObject, "span", "ordax-notes-ref-copy");
         copy.append(
           node(documentObject, "strong", "", reference.title),
-          node(documentObject, "small", "", reference.path || "Arquivo local"),
-          node(documentObject, "span", "", reference.detail || "Arquivo local"),
+          node(documentObject, "small", "", reference.path || t("notes.file.local")),
+          node(documentObject, "span", "", reference.detail || t("notes.file.local")),
         );
         if (reference.path && activationPort) {
-          const open = button(documentObject, "ordax-notes-ref-open", "Abrir localização no Arquivos", "open-file-reference", "Abrir");
+          const open = button(documentObject, "ordax-notes-ref-open", t("notes.file.openLocation"), "open-file-reference", t("notes.action.open"));
           open.dataset.filePath = reference.path;
           copy.append(open);
         }
-        const remove = button(documentObject, "ordax-notes-ref-remove", "Remover referência", "remove-reference", "×");
+        const remove = button(documentObject, "ordax-notes-ref-remove", t("notes.references.remove"), "remove-reference", "×");
         remove.dataset.referenceId = reference.id;
         remove.disabled = readOnly;
         card.append(node(documentObject, "span", "ordax-notes-ref-icon", "▱"), copy, remove);
