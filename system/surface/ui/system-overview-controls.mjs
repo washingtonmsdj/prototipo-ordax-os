@@ -31,7 +31,6 @@ import { PRODUCT_VERSION, productVersionLabel } from "../../contracts/product-ve
 import { createComponentUpdateScopes } from "../../services/components/update-presentation.mjs";
 import { explainSystemStateWithIntelligence } from "../../services/intelligence/client-actions.mjs";
 import {
-  deliveryLabel,
   shortSha,
   updateIsAlerting,
 } from "../../services/update/presentation.mjs";
