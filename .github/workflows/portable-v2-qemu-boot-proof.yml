@@ -472,6 +472,7 @@ jobs:
           assert len(proof['artifacts']['local_ai_runtime_sha256']) == 64
           assert 'ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED' in proof['serial_markers']
           assert any(marker.startswith('ORDAX_LOCAL_AI_RUNTIME_SHA256=') for marker in proof['serial_markers'])
+          assert 'ORDAX_LOCAL_AI_BACKEND=STARTED' in proof['serial_markers']
           assert all(proof['checks'].values())
           print('PORTABLE_V4_QEMU_DIRECT_KERNEL_BOOT=PASS')
           print('PORTABLE_V2_UEFI_BOOT_PROVEN=NO')
