@@ -1,6 +1,6 @@
 import { validateAppActivation } from "./app-activation.mjs";
 
-export const NOTIFICATIONS_SCHEMA = "ordax.notifications/2";
+export const NOTIFICATIONS_SCHEMA = "ordax.notifications/3";
 export const MAX_NOTIFICATIONS = 64;
 export const MAX_DISABLED_NOTIFICATION_SOURCES = 32;
 
@@ -8,6 +8,11 @@ const LEVELS = new Set(["info", "success", "warning", "error"]);
 const PERSISTENCE_SCOPES = new Set(["device", "session"]);
 const SOURCE_ID_RE = /^[a-z][a-z0-9-]{0,63}$/;
 const CONTROL_RE = /[\u0000-\u001f\u007f]/;
+
+const PRESENTATION_ID_RE = /^[a-z][a-z0-9.-]{0,95}$/;
+const PRESENTATION_VALUE_KEY_RE = /^[A-Za-z][A-Za-z0-9]{0,31}$/;
+const MAX_PRESENTATION_VALUES = 12;
+const MAX_PRESENTATION_VALUE_TEXT = 160;
 
 function boundedText(value, label, maximum) {
   if (
@@ -58,6 +63,51 @@ export function validateNotificationPolicy(value) {
   });
 }
 
+export function validateNotificationPresentation(value) {
+  if (value === null || value === undefined) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError("Notification presentation must be an object");
+  }
+  if (typeof value.id !== "string" || !PRESENTATION_ID_RE.test(value.id)) {
+    throw new TypeError("Notification presentation id is invalid");
+  }
+  const sourceValues = value.values ?? {};
+  if (!sourceValues || typeof sourceValues !== "object" || Array.isArray(sourceValues)) {
+    throw new TypeError("Notification presentation values must be an object");
+  }
+  const entries = Object.entries(sourceValues).sort(([left], [right]) => left.localeCompare(right));
+  if (entries.length > MAX_PRESENTATION_VALUES) {
+    throw new TypeError("Notification presentation has too many values");
+  }
+  const values = {};
+  for (const [key, rawValue] of entries) {
+    if (!PRESENTATION_VALUE_KEY_RE.test(key)) {
+      throw new TypeError("Notification presentation value key is invalid");
+    }
+    if (typeof rawValue === "string") {
+      values[key] = boundedText(
+        rawValue,
+        `Notification presentation value ${key}`,
+        MAX_PRESENTATION_VALUE_TEXT,
+      );
+      continue;
+    }
+    if (typeof rawValue === "number" && Number.isFinite(rawValue)) {
+      values[key] = rawValue;
+      continue;
+    }
+    if (typeof rawValue === "boolean") {
+      values[key] = rawValue;
+      continue;
+    }
+    throw new TypeError("Notification presentation values must be bounded strings, numbers or booleans");
+  }
+  return Object.freeze({
+    id: value.id,
+    values: Object.freeze(values),
+  });
+}
+
 export function validateNotificationDraft(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new TypeError("Notification draft must be an object");
@@ -69,13 +119,16 @@ export function validateNotificationDraft(value) {
   const destination = value.destination == null
     ? null
     : validateAppActivation(value.destination);
-  return Object.freeze({
+  const presentation = validateNotificationPresentation(value.presentation);
+  const draft = {
     sourceId,
     level: value.level,
     title: boundedText(value.title, "Notification title", 96),
     message: boundedText(value.message, "Notification message", 360),
     destination,
-  });
+  };
+  if (presentation !== null) draft.presentation = presentation;
+  return Object.freeze(draft);
 }
 
 export function validateNotificationEntry(value) {

@@ -235,3 +235,31 @@ test("Battery tray and quick panel consume the shared localization owner", async
   );
 });
 
+test("Notification center and first-party update history use shared localization", async () => {
+  const center = await readFile(
+    new URL("../system/surface/ui/notification-center-controls.mjs", import.meta.url),
+    "utf8",
+  );
+  const presentation = await readFile(
+    new URL("../system/services/notifications/presentation.mjs", import.meta.url),
+    "utf8",
+  );
+  const catalog = await readFile(
+    new URL("../system/services/i18n/catalog/notifications.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(center, /assertSurfaceRenderLifecycle/);
+  assert.match(center, /notificationPresentationCopy/);
+  assert.match(center, /localization\.subscribe/);
+  assert.match(center, /notifications\.center\.title/);
+  assert.match(presentation, /system-updates\.applied/);
+  assert.match(presentation, /notifications\.update\.applied\.message/);
+  assert.match(catalog, /"notifications\.center\.title": "Notifications"/);
+  assert.match(catalog, /"notifications\.update\.rolledBack\.title": "Update rolled back"/);
+  assert.doesNotMatch(
+    center,
+    /Abrir notificações|Fechar notificações|Marcar lidas|Limpar lidas|Ativar Não perturbe/,
+  );
+});
+

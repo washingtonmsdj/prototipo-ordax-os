@@ -1,12 +1,16 @@
 import { assertAppActivationPort } from "../../contracts/app-activation.mjs";
 import { assertNotificationsPort } from "../../contracts/notifications.mjs";
+import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
 import { notificationSourceLabel } from "../../services/notifications/catalog.mjs";
+import { notificationPresentationCopy } from "../../services/notifications/presentation.mjs";
 
-function formatTimestamp(value) {
+const NOTIFICATION_TIME_ZONE = "America/Bahia";
+
+function formatTimestamp(value, locale, translate) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Horário indisponível";
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Bahia",
+  if (Number.isNaN(date.getTime())) return translate("notifications.time.unavailable");
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: NOTIFICATION_TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -14,7 +18,6 @@ function formatTimestamp(value) {
     hour12: false,
   }).format(date);
 }
-
 
 function requireHost(root, selector, label) {
   const element = root.querySelector(selector);
@@ -24,7 +27,7 @@ function requireHost(root, selector, label) {
   return element;
 }
 
-function ensureNotificationMarkup(root) {
+function ensureNotificationMarkup(root, translate) {
   if (root.querySelector("[data-notification-tray], [data-quick-panel='notifications']")) {
     throw new Error("Notification center is already mounted");
   }
@@ -39,7 +42,7 @@ function ensureNotificationMarkup(root) {
   tray.dataset.quickPanelToggle = "notifications";
   tray.setAttribute("aria-expanded", "false");
   tray.setAttribute("aria-controls", "ordax-quick-notifications");
-  tray.setAttribute("aria-label", "Abrir notificações — nenhuma nova");
+  tray.setAttribute("aria-label", translate("notifications.tray.none"));
 
   const icon = documentRef.createElement("span");
   icon.className = "ordax-tray-icon ordax-notification-bell";
@@ -70,23 +73,19 @@ function ensureNotificationMarkup(root) {
   const headingWrap = documentRef.createElement("div");
   const kicker = documentRef.createElement("span");
   kicker.className = "ordax-quick-kicker";
-  kicker.textContent = "Atividade";
   const heading = documentRef.createElement("h2");
   heading.id = "ordax-quick-notifications-title";
-  heading.textContent = "Notificações";
   headingWrap.append(kicker, heading);
   const close = documentRef.createElement("button");
   close.type = "button";
   close.className = "ordax-quick-close";
   close.dataset.quickPanelClose = "";
-  close.setAttribute("aria-label", "Fechar notificações");
   close.textContent = "×";
   header.append(headingWrap, close);
 
   const empty = documentRef.createElement("p");
   empty.className = "ordax-quick-empty ordax-notification-empty";
   empty.dataset.notificationEmpty = "";
-  empty.textContent = "Nenhuma notificação registrada nesta sessão.";
 
   const list = documentRef.createElement("div");
   list.className = "ordax-notification-list";
@@ -108,12 +107,10 @@ function ensureNotificationMarkup(root) {
   markAllRead.type = "button";
   markAllRead.className = "ordax-notification-action";
   markAllRead.dataset.notificationMarkAllRead = "";
-  markAllRead.textContent = "Marcar lidas";
   const clearRead = documentRef.createElement("button");
   clearRead.type = "button";
   clearRead.className = "ordax-notification-action";
   clearRead.dataset.notificationClearRead = "";
-  clearRead.textContent = "Limpar lidas";
   actions.append(doNotDisturb, markAllRead, clearRead);
   footer.append(persistence, actions);
 
@@ -124,6 +121,9 @@ function ensureNotificationMarkup(root) {
     tray,
     badge,
     panel,
+    kicker,
+    heading,
+    close,
     list,
     empty,
     persistence,
@@ -135,6 +135,15 @@ function ensureNotificationMarkup(root) {
       tray.remove();
     },
   });
+}
+
+function syncStaticCopy(markup, translate) {
+  markup.kicker.textContent = translate("notifications.center.kicker");
+  markup.heading.textContent = translate("notifications.center.title");
+  markup.close.setAttribute("aria-label", translate("notifications.center.close"));
+  markup.empty.textContent = translate("notifications.center.empty");
+  markup.markAllRead.textContent = translate("notifications.action.markAllRead");
+  markup.clearRead.textContent = translate("notifications.action.clearRead");
 }
 
 function buildEntryNode(documentRef, entry) {
@@ -165,18 +174,17 @@ function buildEntryNode(documentRef, entry) {
   open.type = "button";
   open.className = "ordax-notification-action";
   open.dataset.notificationOpen = entry.id;
-  open.textContent = "Abrir";
   const dismiss = documentRef.createElement("button");
   dismiss.type = "button";
   dismiss.className = "ordax-notification-action";
   dismiss.dataset.notificationDismiss = entry.id;
-  dismiss.textContent = "Dispensar";
   actions.append(open, dismiss);
   article.append(header, title, message, actions);
   return article;
 }
 
-function updateEntryNode(node, entry) {
+function updateEntryNode(node, entry, localization) {
+  const t = localization.translate;
   node.dataset.level = entry.level;
   node.dataset.read = String(entry.read);
   const source = node.querySelector("[data-notification-source]");
@@ -184,27 +192,55 @@ function updateEntryNode(node, entry) {
   const title = node.querySelector("[data-notification-title]");
   const message = node.querySelector("[data-notification-message]");
   const open = node.querySelector("[data-notification-open]");
-  source.textContent = notificationSourceLabel(entry.sourceId);
+  const dismiss = node.querySelector("[data-notification-dismiss]");
+  const copy = notificationPresentationCopy(entry, localization);
+  source.textContent = notificationSourceLabel(entry.sourceId, t);
   time.dateTime = new Date(entry.createdAt).toISOString();
-  time.textContent = formatTimestamp(entry.createdAt);
-  title.textContent = entry.title;
-  message.textContent = entry.message;
+  time.textContent = formatTimestamp(entry.createdAt, localization.getLocale(), t);
+  title.textContent = copy.title;
+  message.textContent = copy.message;
+  open.textContent = t("notifications.action.open");
+  dismiss.textContent = t("notifications.action.dismiss");
   if (entry.destination) {
     open.hidden = false;
     open.dataset.notificationOpen = entry.id;
-    open.setAttribute("aria-label", `Abrir destino de ${entry.title}`);
+    open.setAttribute(
+      "aria-label",
+      t("notifications.action.openDestination", { title: copy.title }),
+    );
   } else {
     open.hidden = true;
+    open.removeAttribute("aria-label");
   }
 }
 
-export function mountNotificationCenterControls(root, notifications, appActivation) {
+function trayAriaLabel(snapshot, translate) {
+  const unread = snapshot.unreadCount;
+  if (snapshot.doNotDisturb) {
+    if (unread === 0) return translate("notifications.tray.dnd.none");
+    if (unread === 1) return translate("notifications.tray.dnd.one");
+    return translate("notifications.tray.dnd.many", { count: unread });
+  }
+  if (unread === 0) return translate("notifications.tray.none");
+  if (unread === 1) return translate("notifications.tray.unread.one");
+  return translate("notifications.tray.unread.many", { count: unread });
+}
+
+export function mountNotificationCenterControls(
+  root,
+  notifications,
+  appActivation,
+  surfaceLifecycle,
+) {
   if (!(root instanceof Element)) {
     throw new TypeError("Notification center requires a Surface root Element");
   }
   const center = assertNotificationsPort(notifications);
   const activation = assertAppActivationPort(appActivation);
-  const markup = ensureNotificationMarkup(root);
+  const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
+  const markup = ensureNotificationMarkup(root, t);
   const {
     tray,
     badge,
@@ -218,9 +254,12 @@ export function mountNotificationCenterControls(root, notifications, appActivati
   } = markup;
   const entryNodes = new Map();
   let snapshot = center.getSnapshot();
+  let destroyed = false;
 
   const render = (nextSnapshot) => {
+    if (destroyed) return;
     snapshot = nextSnapshot;
+    syncStaticCopy(markup, t);
     const visibleIds = new Set(snapshot.entries.map((entry) => entry.id));
     for (const [id, node] of entryNodes) {
       if (visibleIds.has(id)) continue;
@@ -235,7 +274,7 @@ export function mountNotificationCenterControls(root, notifications, appActivati
         node = buildEntryNode(root.ownerDocument, entry);
         entryNodes.set(entry.id, node);
       }
-      updateEntryNode(node, entry);
+      updateEntryNode(node, entry, localization);
       const expectedBefore = previousNode === null ? list.firstElementChild : previousNode.nextElementSibling;
       if (node !== expectedBefore) list.insertBefore(node, expectedBefore);
       previousNode = node;
@@ -247,27 +286,20 @@ export function mountNotificationCenterControls(root, notifications, appActivati
     badge.textContent = unread > 99 ? "99+" : String(unread);
     tray.dataset.unread = String(attentionVisible);
     tray.dataset.doNotDisturb = String(snapshot.doNotDisturb);
-    tray.setAttribute(
-      "aria-label",
-      snapshot.doNotDisturb
-        ? `Abrir notificações — Não perturbe ativo; ${unread} não ${unread === 1 ? "lida" : "lidas"}`
-        : unread > 0
-          ? `Abrir notificações — ${unread} não ${unread === 1 ? "lida" : "lidas"}`
-          : "Abrir notificações — nenhuma nova",
-    );
+    tray.setAttribute("aria-label", trayAriaLabel(snapshot, t));
     doNotDisturb.setAttribute("aria-pressed", String(snapshot.doNotDisturb));
     doNotDisturb.textContent = snapshot.doNotDisturb
-      ? "Desativar Não perturbe"
-      : "Ativar Não perturbe";
+      ? t("notifications.dnd.disable")
+      : t("notifications.dnd.enable");
     empty.hidden = snapshot.entries.length !== 0;
     markAllRead.disabled = unread === 0;
     clearRead.disabled = !snapshot.entries.some((entry) => entry.read);
     const historyPersistence = snapshot.persistence === "device"
-      ? "Histórico salvo neste dispositivo"
-      : "Histórico disponível somente nesta sessão";
+      ? t("notifications.persistence.history.device")
+      : t("notifications.persistence.history.session");
     const policyPersistence = snapshot.policyPersistence === "device"
-      ? "Política de notificações salva neste dispositivo"
-      : "Política de notificações vale somente nesta sessão";
+      ? t("notifications.persistence.policy.device")
+      : t("notifications.persistence.policy.session");
     persistence.textContent = `${historyPersistence} · ${policyPersistence}`;
   };
 
@@ -306,16 +338,22 @@ export function mountNotificationCenterControls(root, notifications, appActivati
     if (center.getSnapshot().unreadCount > 0) center.markAllRead();
   };
 
-  const unsubscribe = center.subscribe(render);
+  const unsubscribeNotifications = center.subscribe(render);
+  const unsubscribeLocalization = localization.subscribe(() => {
+    render(center.getSnapshot());
+  });
   panel.addEventListener("click", onClick);
   panel.addEventListener("ordax:quick-panel-open", onPanelOpen);
   render(snapshot);
 
   return Object.freeze({
     destroy() {
-      unsubscribe();
+      destroyed = true;
+      unsubscribeNotifications();
+      unsubscribeLocalization();
       panel.removeEventListener("click", onClick);
       panel.removeEventListener("ordax:quick-panel-open", onPanelOpen);
+      entryNodes.clear();
       markup.remove();
     },
   });

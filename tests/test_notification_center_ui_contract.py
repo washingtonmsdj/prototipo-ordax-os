@@ -18,7 +18,7 @@ class NotificationCenterUiContractTest(unittest.TestCase):
         bridge = read("system/services/notifications/update-bridge.mjs")
         native_store = read("system/adapters/native/notifications.mjs")
 
-        self.assertIn('NOTIFICATIONS_SCHEMA = "ordax.notifications/2"', contract)
+        self.assertIn('NOTIFICATIONS_SCHEMA = "ordax.notifications/3"', contract)
         self.assertIn('NOTIFICATION_STORE_SCHEMA = "ordax.notification-store/3"', store_contract)
         self.assertIn("MAX_NOTIFICATIONS = 64", contract)
         self.assertIn("MAX_DISABLED_NOTIFICATION_SOURCES", contract)
@@ -52,6 +52,10 @@ class NotificationCenterUiContractTest(unittest.TestCase):
         self.assertIn("center.setDoNotDisturb(!snapshot.doNotDisturb)", controls)
         self.assertIn("const attentionVisible = unread > 0 && !snapshot.doNotDisturb", controls)
         self.assertIn("notificationSourceLabel", controls)
+        self.assertIn("notificationPresentationCopy", controls)
+        self.assertIn("assertSurfaceRenderLifecycle", controls)
+        self.assertIn("localization.subscribe", controls)
+        self.assertIn("unsubscribeLocalization", controls)
         self.assertIn('panel.addEventListener("ordax:quick-panel-open", onPanelOpen)', controls)
         self.assertIn("activation.publish(entry.destination)", controls)
         self.assertIn("textContent", controls)
@@ -73,7 +77,10 @@ class NotificationCenterUiContractTest(unittest.TestCase):
 
         for source in [web, native]:
             self.assertIn("createNotificationsRuntime", source)
-            self.assertIn("mountNotificationCenterControls", source)
+            self.assertIn(
+                "mountNotificationCenterControls(root, notifications, appActivation, surface)",
+                source,
+            )
             mount_index = source.index("mountNotificationCenterControls(")
             generic_index = source.index("mountSystemTrayQuickPanels(root)")
             self.assertLess(mount_index, generic_index)

@@ -26,6 +26,7 @@ function sameEntries(left, right) {
       && entry.level === candidate.level
       && entry.title === candidate.title
       && entry.message === candidate.message
+      && JSON.stringify(entry.presentation ?? null) === JSON.stringify(candidate.presentation ?? null)
       && entry.destination?.appId === candidate.destination?.appId
       && entry.destination?.target === candidate.destination?.target;
   });
