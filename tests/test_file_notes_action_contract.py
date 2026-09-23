@@ -48,12 +48,15 @@ class FileNotesActionContractTests(unittest.TestCase):
         self.assertNotIn("services/notes", source)
         self.assertNotIn("services/files/notes-import", source)
 
-    def test_source_file_semantics_are_explicit_in_user_messages(self):
+    def test_source_file_semantics_are_semantic_message_identities(self):
         source = ACTION.read_text(encoding="utf-8")
-        self.assertIn("preserva o arquivo original", source)
-        self.assertIn("arquivo original não foi alterado", source)
-        self.assertIn("persistência no dispositivo está degradada", source)
-        self.assertIn("somente nesta sessão", source)
+        self.assertIn('"files.notes.action.title"', source)
+        self.assertIn('"files.notes.createdDevice"', source)
+        self.assertIn('"files.notes.createdDegraded"', source)
+        self.assertIn('"files.notes.createdSession"', source)
+        self.assertIn('"files.notes.createFailed"', source)
+        self.assertNotIn("preserva o arquivo original", source)
+        self.assertNotIn("arquivo original não foi alterado", source)
         self.assertNotIn("Abrir com Notas", source)
 
     def test_surface_candidate_owns_contract_action_and_regressions(self):
