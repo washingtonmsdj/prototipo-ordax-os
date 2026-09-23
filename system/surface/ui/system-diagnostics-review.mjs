@@ -613,7 +613,7 @@ function renderReview(documentObject, container, presentation, localization) {
   container.append(eventSection);
 }
 
-export function mountSystemDiagnosticsReview(container, controllerValue) {
+export function mountSystemDiagnosticsReview(container, controllerValue, surfaceLifecycle) {
   if (
     !container
     || typeof container !== "object"
@@ -624,6 +624,8 @@ export function mountSystemDiagnosticsReview(container, controllerValue) {
     throw new TypeError("System diagnostics review requires a DOM container");
   }
   const controller = assertDiagnosticReviewController(controllerValue);
+  const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
   const documentObject = container.ownerDocument;
   let destroyed = false;
 
@@ -636,10 +638,10 @@ export function mountSystemDiagnosticsReview(container, controllerValue) {
         : documentObject.activeElement?.dataset?.systemDiagnosticsExport !== undefined
           ? "export"
           : null;
-    const presentation = createDiagnosticReviewPresentation(stateValue);
+    const presentation = createDiagnosticReviewPresentation(stateValue, localization);
     const section = node(documentObject, "section", "ordax-system-section");
     section.dataset.systemDiagnosticsReview = "";
-    renderReview(documentObject, section, presentation);
+    renderReview(documentObject, section, presentation, localization);
     container.replaceChildren(section);
 
     if (focused) {
@@ -668,13 +670,17 @@ export function mountSystemDiagnosticsReview(container, controllerValue) {
 
   container.addEventListener("click", click);
   render(controller.getSnapshot());
-  const unsubscribe = controller.subscribe(render);
+  const unsubscribeController = controller.subscribe(render);
+  const unsubscribeLocalization = localization.subscribe(() => {
+    if (!destroyed) render(controller.getSnapshot());
+  });
 
   return Object.freeze({
     dispose() {
       if (destroyed) return;
       destroyed = true;
-      unsubscribe();
+      unsubscribeController();
+      unsubscribeLocalization();
       container.removeEventListener("click", click);
       container.replaceChildren();
     },
