@@ -157,17 +157,6 @@ function node(documentObject, tag, className, text) {
   return element;
 }
 
-function formatObservationReceivedAt(value) {
-  if (!Number.isFinite(value)) return "horário desconhecido";
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Bahia",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).format(new Date(value));
-}
-
 function formatBytes(bytes) {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = bytes;
@@ -509,7 +498,7 @@ export function mountSystemOverviewControls(
           metricsPort
             ? metricsPending
               ? t("system.resources.memory.reading")
-              : (metricsMessage || t("system.resources.waiting"))
+              : (metricsMessage ? t(metricsMessage) : t("system.resources.waiting"))
             : t("system.resources.memory.unavailable"),
         ),
       );
@@ -523,7 +512,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-warning",
-          t("system.resources.stale", { time: formatObservationReceivedAt(metricsLastSuccessAt) }),
+          t("system.resources.stale", { time: formatOverviewReceivedAt(metricsLastSuccessAt, localization.getLocale()) ?? t("system.overview.time.unknown") }),
         ),
       );
     }
@@ -537,7 +526,7 @@ export function mountSystemOverviewControls(
       progress: ratio(memoryUsed, metricsSnapshot.memoryTotalBytes),
     });
     section.append(resourceGrid);
-    if (metricsMessage) section.append(node(documentObject, "p", "ordax-system-message", metricsMessage));
+    if (metricsMessage) section.append(node(documentObject, "p", "ordax-system-message", t(metricsMessage)));
     view.append(section);
   };
 
@@ -570,7 +559,7 @@ export function mountSystemOverviewControls(
           metricsPort
             ? metricsPending
               ? t("system.resources.storage.reading")
-              : (metricsMessage || t("system.resources.waiting"))
+              : (metricsMessage ? t(metricsMessage) : t("system.resources.waiting"))
             : t("system.resources.storage.unavailable"),
         ),
       );
@@ -584,7 +573,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-warning",
-          t("system.resources.stale", { time: formatObservationReceivedAt(metricsLastSuccessAt) }),
+          t("system.resources.stale", { time: formatOverviewReceivedAt(metricsLastSuccessAt, localization.getLocale()) ?? t("system.overview.time.unknown") }),
         ),
       );
     }
@@ -606,7 +595,7 @@ export function mountSystemOverviewControls(
         t("system.resources.storage.scope"),
       ),
     );
-    if (metricsMessage) section.append(node(documentObject, "p", "ordax-system-message", metricsMessage));
+    if (metricsMessage) section.append(node(documentObject, "p", "ordax-system-message", t(metricsMessage)));
     view.append(section);
   };
 
@@ -1384,8 +1373,8 @@ export function mountSystemOverviewControls(
       if (destroyed || ordinal !== metricsOrdinal) return;
       metricsReadFailed = true;
       metricsMessage = metricsSnapshot
-        ? "A leitura atual falhou; os valores abaixo são a última leitura válida recebida pela Surface."
-        : "Não foi possível obter uma leitura válida dos recursos nesta sessão.";
+        ? "system.resources.readFailedPrevious"
+        : "system.resources.readFailedNoData";
     } finally {
       if (!destroyed && ordinal === metricsOrdinal) {
         metricsPending = false;
