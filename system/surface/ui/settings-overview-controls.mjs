@@ -423,22 +423,38 @@ export function mountSettingsOverviewControls(
   const renderPreferences = (view, sectionId) => {
     for (const definition of listPreferenceDefinitions()) {
       if (definition.sectionId !== sectionId) continue;
+      const presentation = PREFERENCE_PRESENTATION_IDS[definition.id] ?? null;
       const section = node(documentObject, "section", "ordax-settings-section");
       section.append(
         node(
           documentObject,
           "span",
           "ordax-settings-section-kicker",
-          definition.label ?? t("settings.preference.fallbackLabel"),
+          presentation?.label
+            ? t(presentation.label)
+            : (definition.label ?? t("settings.preference.fallbackLabel")),
         ),
-        node(documentObject, "h4", "ordax-settings-section-title", definition.title ?? definition.id),
-        node(documentObject, "p", "ordax-settings-section-copy", definition.description ?? definition.id),
+        node(
+          documentObject,
+          "h4",
+          "ordax-settings-section-title",
+          presentation?.title ? t(presentation.title) : (definition.title ?? definition.id),
+        ),
+        node(
+          documentObject,
+          "p",
+          "ordax-settings-section-copy",
+          presentation?.description
+            ? t(presentation.description)
+            : (definition.description ?? definition.id),
+        ),
       );
 
       if (Array.isArray(definition.options) && definition.options.length > 0) {
         const options = node(documentObject, "div", "ordax-settings-options");
         for (const option of definition.options) {
           const selected = preferenceSnapshot[definition.id] === option.value;
+          const optionPresentation = presentation?.options?.[option.value] ?? null;
           const button = node(documentObject, "button", "ordax-settings-option");
           button.type = "button";
           button.dataset.settingsPreferenceId = definition.id;
@@ -454,11 +470,28 @@ export function mountSettingsOverviewControls(
           preview.append(previewRail, previewBody);
 
           const copy = node(documentObject, "span", "ordax-settings-option-copy");
+          const optionDescription = optionPresentation?.description
+            ? t(optionPresentation.description)
+            : definition.id === "regional.time-zone"
+              ? t("settings.preference.timeZone.option.description", { value: option.value })
+              : definition.id === "regional.locale" && option.value === "pt-BR"
+                ? t("settings.preference.locale.option.ptBr.description")
+                : String(option.value);
           copy.append(
-            node(documentObject, "strong", "", option.label),
-            node(documentObject, "small", "", optionDescription(definition.id, option.value)),
+            node(
+              documentObject,
+              "strong",
+              "",
+              optionPresentation?.label ? t(optionPresentation.label) : option.label,
+            ),
+            node(documentObject, "small", "", optionDescription),
           );
-          const marker = node(documentObject, "span", "ordax-settings-option-marker", selected ? "Ativo" : "");
+          const marker = node(
+            documentObject,
+            "span",
+            "ordax-settings-option-marker",
+            selected ? t("settings.preference.active") : "",
+          );
           button.append(preview, copy, marker);
           options.append(button);
         }
@@ -474,22 +507,22 @@ export function mountSettingsOverviewControls(
     const section = node(documentObject, "section", "ordax-settings-section");
     section.dataset.settingsKeyboardLayoutSection = "";
     section.append(
-      node(documentObject, "span", "ordax-settings-section-kicker", "Teclado físico"),
-      node(documentObject, "h4", "ordax-settings-section-title", "Layout do teclado"),
+      node(documentObject, "span", "ordax-settings-section-kicker", t("settings.keyboard.kicker")),
+      node(documentObject, "h4", "ordax-settings-section-title", t("settings.keyboard.title")),
       node(
         documentObject,
         "p",
         "ordax-settings-section-copy",
-        "O layout é aplicado pelo Cage antes da Surface iniciar. A escolha fica salva no USB e, quando diferente do layout atual, entra em vigor no próximo início da Surface.",
+        t("settings.keyboard.description"),
       ),
     );
 
-    if (keyboardLayoutMessage) {
+    if (keyboardLayoutMessageId) {
       const status = node(
         documentObject,
         "p",
         "ordax-settings-keyboard-message",
-        keyboardLayoutMessage,
+        t(keyboardLayoutMessageId),
       );
       status.setAttribute("role", "status");
       status.setAttribute("aria-live", "polite");
@@ -502,7 +535,7 @@ export function mountSettingsOverviewControls(
           documentObject,
           "p",
           "ordax-settings-empty",
-          "O layout do teclado físico está temporariamente indisponível neste host.",
+          t("settings.keyboard.unavailable"),
         ),
       );
       view.append(section);
@@ -510,14 +543,16 @@ export function mountSettingsOverviewControls(
     }
 
     if (keyboardLayoutSnapshot === null) {
-      section.append(node(documentObject, "p", "ordax-settings-empty", "Lendo layout do teclado…"));
+      section.append(
+        node(documentObject, "p", "ordax-settings-empty", t("settings.keyboard.reading")),
+      );
       view.append(section);
       return;
     }
 
     const stateCopy = keyboardLayoutSnapshot.restartRequired
-      ? "Alteração salva · será aplicada no próximo início da Surface."
-      : "O layout configurado já está em uso nesta Surface.";
+      ? t("settings.keyboard.state.restartRequired")
+      : t("settings.keyboard.state.applied");
     const state = node(documentObject, "p", "ordax-settings-keyboard-state", stateCopy);
     state.dataset.restartRequired = String(keyboardLayoutSnapshot.restartRequired);
     section.append(state);
@@ -527,6 +562,7 @@ export function mountSettingsOverviewControls(
       if (!keyboardLayoutSnapshot.supportedLayoutIds.includes(option.id)) continue;
       const selected = keyboardLayoutSnapshot.configuredLayoutId === option.id;
       const applied = keyboardLayoutSnapshot.appliedLayoutId === option.id;
+      const presentation = KEYBOARD_LAYOUT_PRESENTATION_IDS[option.id];
       const button = node(documentObject, "button", "ordax-settings-keyboard-option");
       button.type = "button";
       button.dataset.settingsKeyboardLayout = option.id;
@@ -536,12 +572,26 @@ export function mountSettingsOverviewControls(
 
       const copy = node(documentObject, "span", "ordax-settings-keyboard-copy");
       copy.append(
-        node(documentObject, "strong", "", option.label),
-        node(documentObject, "small", "", option.description),
+        node(
+          documentObject,
+          "strong",
+          "",
+          presentation?.label ? t(presentation.label) : option.label,
+        ),
+        node(
+          documentObject,
+          "small",
+          "",
+          presentation?.description ? t(presentation.description) : option.description,
+        ),
       );
       const markerLabel = selected
-        ? applied ? "Em uso" : "Próximo início"
-        : applied ? "Atual" : "";
+        ? applied
+          ? t("settings.keyboard.marker.inUse")
+          : t("settings.keyboard.marker.nextStart")
+        : applied
+          ? t("settings.keyboard.marker.current")
+          : "";
       button.append(
         copy,
         node(documentObject, "span", "ordax-settings-keyboard-marker", markerLabel),
