@@ -81,17 +81,17 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
         self.assertIn("services/components/update-presentation.mjs", system)
         self.assertIn("createComponentUpdateScopes(componentSnapshot)", system)
         self.assertIn("renderComponentUpdateScopes(view)", system)
-        self.assertIn('"OrdaX e sistema"', system)
-        self.assertIn('"Aplicativos"', system)
-        self.assertIn('" · Beta"', system)
-        self.assertIn("component.updateChannel.label", system)
-        self.assertIn("não representa uma Loja", system)
+        self.assertIn('t("system.updates.scope.system")', system)
+        self.assertIn('t("system.updates.scope.applications")', system)
+        self.assertIn('t("system.updates.scope.stage.beta")', system)
+        self.assertIn("component.updateChannel.id", system)
+        self.assertIn('t("system.updates.scope.channelPolicy")', system)
         for marker in ('"development-git"', '"system-bundle"', '"independent-component"'):
             self.assertIn(marker, component_presentation)
 
     def test_transaction_details_remain_in_system_updates(self):
         system = SYSTEM.read_text(encoding="utf-8")
-        for marker in ("targetSha", "attemptId", "lastError", "lastAppliedAt", "rejectedSha", "runtimeSurfaceSha", '"Tentativa"', '"Diagnóstico"'):
+        for marker in ("targetSha", "attemptId", "lastError", "lastAppliedAt", "rejectedSha", "runtimeSurfaceSha", '"system.updates.fact.attempt"', '"system.updates.fact.diagnostic"'):
             self.assertIn(marker, system)
 
     def test_system_sections_expose_only_real_existing_data_owners(self):
