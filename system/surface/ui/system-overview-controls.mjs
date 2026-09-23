@@ -33,6 +33,8 @@ import { explainSystemStateWithIntelligence } from "../../services/intelligence/
 import {
   shortSha,
   updateIsAlerting,
+  updateStatusMessageId,
+  updateSummaryMessageId,
 } from "../../services/update/presentation.mjs";
 import { mountSystemDiagnosticsReview } from "./system-diagnostics-review.mjs";
 import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
@@ -48,33 +50,11 @@ const SYSTEM_SECTIONS = Object.freeze([
   Object.freeze({ id: "about", messageId: "system.section.about" }),
 ]);
 
-const OVERVIEW_UPDATE_STATUS_MESSAGE_IDS = Object.freeze({
-  running: "system.overview.update.status.running",
-  applied: "system.overview.update.status.applied",
-  updating: "system.overview.update.status.updating",
-  "network-error": "system.overview.update.status.networkError",
-  "remote-error": "system.overview.update.status.remoteError",
-  "pull-error": "system.overview.update.status.pullError",
-  "rolled-back": "system.overview.update.status.rolledBack",
-  rejected: "system.overview.update.status.rejected",
-  pinned: "system.overview.update.status.pinned",
-  disabled: "system.overview.update.status.disabled",
-  unavailable: "system.overview.update.status.unavailable",
-});
-
 const OVERVIEW_UPDATE_MODE_MESSAGE_IDS = Object.freeze({
   reload: "system.overview.update.mode.reload",
   "surface-restart": "system.overview.update.mode.surfaceRestart",
   "supervisor-restart": "system.overview.update.mode.supervisorRestart",
   initial: "system.overview.update.mode.initial",
-});
-
-const OVERVIEW_BASE_SUMMARY_MESSAGE_IDS = Object.freeze({
-  "candidate-requested": "system.overview.update.summary.candidateRequested",
-  "candidate-fetching": "system.overview.update.summary.candidateFetching",
-  "candidate-ready": "system.overview.update.summary.candidateReady",
-  staged: "system.overview.update.summary.staged",
-  "activation-ready": "system.overview.update.summary.activationReady",
 });
 
 const OVERVIEW_BASE_DETAIL_MESSAGE_IDS = Object.freeze({
@@ -115,8 +95,7 @@ const BOOT_MESSAGE_IDS = Object.freeze({
 });
 
 function overviewUpdateStatusMessageId(status) {
-  return OVERVIEW_UPDATE_STATUS_MESSAGE_IDS[status]
-    ?? "system.overview.update.status.unavailable";
+  return updateStatusMessageId(status);
 }
 
 function overviewUpdateModeMessageId(mode) {
@@ -125,11 +104,7 @@ function overviewUpdateModeMessageId(mode) {
 }
 
 function overviewUpdateSummaryMessageId(snapshot) {
-  if (!snapshot?.bootRefreshRequired) {
-    return overviewUpdateStatusMessageId(snapshot?.status);
-  }
-  return OVERVIEW_BASE_SUMMARY_MESSAGE_IDS[snapshot?.baseUpdatePhase]
-    ?? "system.overview.update.summary.pending";
+  return updateSummaryMessageId(snapshot);
 }
 
 function overviewUpdateDetailMessageId(snapshot) {
