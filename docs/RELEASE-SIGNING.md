@@ -27,6 +27,8 @@ ordax-release-signing sign \
 
 ## Portable v4 signing handoff
 
+The versioned pre-publication boundary is `docs/contracts/portable-v4-signing-handoff.json`; scripts 3/4/5 and their receipts must remain consistent with that contract.
+
 Before the canonical private key is touched, the Windows operator tooling can prepare a
 public-only signing directory:
 
