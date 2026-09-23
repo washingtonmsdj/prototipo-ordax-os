@@ -2,13 +2,14 @@ import {
   assertPowerStatusPort,
   validatePowerStatusSnapshot,
 } from "../../contracts/power-status.mjs";
+import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
 
 const POLL_INTERVAL_MS = 30000;
 const POWER_TIME_ZONE = "America/Bahia";
 
-export function formatPowerReceivedAt(value) {
-  if (!Number.isFinite(value)) return "horário desconhecido";
-  return new Intl.DateTimeFormat("pt-BR", {
+export function formatPowerReceivedAt(value, locale = "pt-BR") {
+  if (!Number.isFinite(value)) return null;
+  return new Intl.DateTimeFormat(locale, {
     timeZone: POWER_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
@@ -25,36 +26,40 @@ function batteryLevel(percent) {
   return 4;
 }
 
-function batteryStateLabel(state) {
-  return {
-    charging: "Carregando",
-    discharging: "Em uso",
-    full: "Carga completa",
-    "not-charging": "Conectada à energia",
-    unknown: "Estado desconhecido",
-  }[state] ?? "Estado desconhecido";
+function stateKey(state) {
+  return state === "not-charging" ? "notCharging" : state;
 }
 
-function batteryTitle(battery, externalPower) {
-  const stateCopy = batteryStateLabel(battery.state).toLocaleLowerCase("pt-BR");
-  const powerCopy =
-    externalPower === true
-      ? " · energia externa conectada"
-      : externalPower === false
-        ? " · usando bateria"
-        : "";
-  return `Bateria ${battery.percent}% · ${stateCopy}${powerCopy}`;
+function externalTitleMessageId(externalPower) {
+  if (externalPower === true) return "power.tray.external.connected";
+  if (externalPower === false) return "power.tray.external.disconnected";
+  return null;
+}
+
+function batteryTitle(battery, externalPower, translate) {
+  const state = translate(`power.stateTitle.${stateKey(battery.state)}`);
+  const externalMessageId = externalTitleMessageId(externalPower);
+  const external = externalMessageId ? translate(externalMessageId) : "";
+  return translate("power.tray.title", {
+    percent: battery.percent,
+    state,
+    external,
+  });
 }
 
 export function mountBatteryTrayControls(
   root,
   powerStatus,
+  surfaceLifecycle,
   { pollIntervalMs = POLL_INTERVAL_MS } = {},
 ) {
   if (!(root instanceof Element)) {
     throw new TypeError("Battery tray controls require a Surface root Element");
   }
   const port = assertPowerStatusPort(powerStatus);
+  const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
   const item = root.querySelector("[data-battery-tray]");
   const icon = root.querySelector("[data-battery-icon]");
   const label = root.querySelector("[data-battery-label]");
@@ -66,11 +71,17 @@ export function mountBatteryTrayControls(
   let polling = false;
   let lastSnapshot = null;
   let lastSuccessAt = null;
+  let lastObservation = "initial";
+
+  const receivedAt = () =>
+    formatPowerReceivedAt(lastSuccessAt, localization.getLocale())
+    ?? t("power.time.unknown");
 
   const render = (snapshot, { stale = false } = {}) => {
     const value = validatePowerStatusSnapshot(snapshot);
+    lastObservation = stale ? "stale" : "current";
     item.hidden = false;
-    item.dataset.batteryObservation = stale ? "stale" : "current";
+    item.dataset.batteryObservation = lastObservation;
     item.dataset.externalPower =
       value.externalPower === null ? "unknown" : String(value.externalPower);
 
@@ -78,10 +89,12 @@ export function mountBatteryTrayControls(
       item.dataset.batteryState = "not-detected";
       icon.dataset.batteryLevel = "unknown";
       icon.dataset.charging = "false";
-      label.textContent = stale ? "-- · antigo" : "--";
+      label.textContent = stale
+        ? t("power.tray.notDetected.staleLabel")
+        : "--";
       item.title = stale
-        ? `Dados antigos · bateria não detectada · última leitura recebida pela Surface às ${formatPowerReceivedAt(lastSuccessAt)}`
-        : "Bateria não detectada";
+        ? t("power.tray.notDetected.staleTitle", { time: receivedAt() })
+        : t("power.tray.notDetected.title");
       return;
     }
 
@@ -90,22 +103,26 @@ export function mountBatteryTrayControls(
       ? "unknown"
       : String(batteryLevel(value.battery.percent));
     icon.dataset.charging = stale ? "false" : String(value.battery.state === "charging");
-    label.textContent = stale ? `${value.battery.percent}% · antigo` : `${value.battery.percent}%`;
-    const title = batteryTitle(value.battery, value.externalPower);
+    const labelValue = `${value.battery.percent}%`;
+    label.textContent = stale
+      ? t("power.tray.stale.label", { label: labelValue })
+      : labelValue;
+    const title = batteryTitle(value.battery, value.externalPower, t);
     item.title = stale
-      ? `Dados antigos · ${title} · última leitura recebida pela Surface às ${formatPowerReceivedAt(lastSuccessAt)}`
+      ? t("power.tray.stale.title", { title, time: receivedAt() })
       : title;
   };
 
   const renderUnavailable = () => {
+    lastObservation = "unavailable";
     item.hidden = false;
     item.dataset.batteryState = "unavailable";
-    item.dataset.batteryObservation = "unavailable";
+    item.dataset.batteryObservation = lastObservation;
     item.dataset.externalPower = "unknown";
     icon.dataset.batteryLevel = "unknown";
     icon.dataset.charging = "false";
     label.textContent = "--";
-    item.title = "Estado da bateria indisponível";
+    item.title = t("power.tray.unavailable.title");
   };
 
   const refresh = async () => {
@@ -129,6 +146,15 @@ export function mountBatteryTrayControls(
     }
   };
 
+  const unsubscribeLocalization = localization.subscribe(() => {
+    if (destroyed || lastObservation === "initial") return;
+    if (lastSnapshot) {
+      render(lastSnapshot, { stale: lastObservation === "stale" });
+    } else {
+      renderUnavailable();
+    }
+  });
+
   void refresh();
   const timer = setInterval(() => void refresh(), pollIntervalMs);
 
@@ -137,6 +163,7 @@ export function mountBatteryTrayControls(
     destroy() {
       destroyed = true;
       clearInterval(timer);
+      unsubscribeLocalization();
       lastSnapshot = null;
       lastSuccessAt = null;
       delete item.dataset.batteryObservation;
