@@ -339,7 +339,7 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertTrue(helper["static"])
         self.assertEqual(
             helper["operations"],
-            ["mount-state", "mount-capsule", "mount-base", "mount-system", "mount-surface-runtime"],
+            ["mount-state", "mount-capsule", "mount-base", "mount-system", "mount-surface-runtime", "mount-ai-runtime"],
         )
         self.assertEqual(helper["state_filesystem"], "ext4")
         self.assertEqual(helper["capsule_filesystem"], "erofs")
@@ -368,6 +368,14 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertEqual(helper["surface_runtime_view"], "overlayfs-ephemeral-run")
         self.assertFalse(helper["surface_runtime_persistent_upper"])
         self.assertTrue(helper["surface_runtime_required_shape_checked"])
+        self.assertEqual(helper["local_ai_runtime_filesystem"], "erofs")
+        self.assertTrue(helper["local_ai_runtime_read_only"])
+        self.assertEqual(helper["local_ai_runtime_mount_root"], "/run/ordax/runtime/local-ai")
+        self.assertTrue(helper["local_ai_runtime_required_shape_checked"])
+        self.assertEqual(
+            helper["local_ai_runtime_failure_policy"],
+            "degrade-intelligence-without-blocking-boot",
+        )
 
         self.assertIn('strncmp(path, "/dev/", 5) == 0', PORTABLE_MOUNT_HELPER)
         self.assertIn("O_NOFOLLOW", PORTABLE_MOUNT_HELPER)
@@ -382,6 +390,11 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn('mount(base.device, base_mount, "erofs"', PORTABLE_MOUNT_HELPER)
         self.assertIn('mount("overlay", root_mount, "overlay"', PORTABLE_MOUNT_HELPER)
         self.assertIn('mount(release.device, release_mount, "erofs"', PORTABLE_MOUNT_HELPER)
+        self.assertIn('mount(runtime.device, runtime_root, "erofs"', PORTABLE_MOUNT_HELPER)
+        self.assertIn('"bin/llama-server"', PORTABLE_MOUNT_HELPER)
+        self.assertIn('"bin/ordax-local-ai"', PORTABLE_MOUNT_HELPER)
+        self.assertIn('"metadata/source-lock.json"', PORTABLE_MOUNT_HELPER)
+        self.assertIn('"metadata/runtime-policy.json"', PORTABLE_MOUNT_HELPER)
         self.assertIn("MS_BIND | MS_REMOUNT | MS_RDONLY", PORTABLE_MOUNT_HELPER)
         self.assertNotIn('mount("overlay", system_mount, "overlay"', PORTABLE_MOUNT_HELPER)
         # The capsule shape may contain the official release-envelope-url
@@ -435,6 +448,9 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertTrue(pid1["candidate_failure_rolls_back_before_handoff"])
         self.assertTrue(pid1["activation_helper_retained_after_switch_root"])
         self.assertTrue(pid1["selected_release_exact_signature_verification"])
+        self.assertTrue(pid1["release_manifest_v4_supported"])
+        self.assertTrue(pid1["local_ai_runtime_verified_handoff"])
+        self.assertFalse(pid1["local_ai_runtime_failure_boot_critical"])
         self.assertEqual(pid1["switch_root_target"], "stable-base-overlay")
         self.assertEqual(pid1["product_system_mount"], "read-only-bind")
         self.assertFalse(pid1["pid1_promotion_allowed"])
@@ -445,15 +461,22 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn('/sbin/ordax-portable-capsule-verify verify', PORTABLE_INIT)
         self.assertIn('/sbin/ordax-portable-base-verify verify', PORTABLE_INIT)
         self.assertIn('select-boot "$STATE_MOUNT" "$PORTABLE_ROOT"', PORTABLE_INIT)
+        self.assertIn('verify-portable-v4-exact', PORTABLE_INIT)
         self.assertIn('verify-portable-v3-exact', PORTABLE_INIT)
         self.assertIn('verify-portable-exact', PORTABLE_INIT)
         self.assertIn('surface-runtime.sha256', PORTABLE_INIT)
+        self.assertIn('local-ai-runtime.sha256', PORTABLE_INIT)
         self.assertIn('runtimes/sha256', PORTABLE_INIT)
+        self.assertIn('ai-runtimes/sha256', PORTABLE_INIT)
         self.assertIn('mount-base', PORTABLE_INIT)
         self.assertIn('mount-system', PORTABLE_INIT)
         self.assertIn('mount-surface-runtime', PORTABLE_INIT)
+        self.assertIn('mount-ai-runtime', PORTABLE_INIT)
         self.assertIn('ORDAX_SURFACE_RUNTIME_MODE=verified-erofs-overlay', PORTABLE_INIT)
         self.assertIn('ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED', PORTABLE_INIT)
+        self.assertIn('ORDAX_LOCAL_AI_RUNTIME_MODE=verified-erofs-read-only', PORTABLE_INIT)
+        self.assertIn('ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED', PORTABLE_INIT)
+        self.assertIn('ORDAX_LOCAL_AI_RUNTIME_HANDOFF=DEGRADED', PORTABLE_INIT)
         self.assertIn('exec switch_root "$NEWROOT" /sbin/ordax-stable-init', PORTABLE_INIT)
         self.assertNotIn('materialize-portable', PORTABLE_INIT)
         self.assertIn('current|known-good|candidate', PORTABLE_INIT)
