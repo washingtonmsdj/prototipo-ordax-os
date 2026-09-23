@@ -2,53 +2,75 @@ import {
   DIAGNOSTIC_REVIEW_CONTROLLER_SCHEMA,
   DIAGNOSTIC_REVIEW_CONTROLLER_STATE_SCHEMA,
 } from "../../services/diagnostics/controller.mjs";
-import {
-  deliveryLabel,
-  formatUpdateTimestamp,
-  readableUpdatePhase,
-  updateStatusLabel,
-} from "../../services/update/presentation.mjs";
+import { assertLocalizationPort } from "../../contracts/localization.mjs";
+import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
 
 const CONTROLLER_PHASES = new Set(["idle", "preparing", "ready", "copying", "exporting"]);
 
-const SOURCE_LABELS = Object.freeze({
-  surface: "Surface",
-  update: "Atualização",
-  metrics: "Métricas locais",
-  history: "Histórico de atualizações",
-  journal: "Eventos diagnósticos",
+const SOURCE_MESSAGE_IDS = Object.freeze({
+  surface: "system.diagnostics.review.source.surface",
+  update: "system.diagnostics.review.source.update",
+  metrics: "system.diagnostics.review.source.metrics",
+  history: "system.diagnostics.review.source.history",
+  journal: "system.diagnostics.review.source.journal",
 });
 
-const SOURCE_STATUS_LABELS = Object.freeze({
-  included: "Incluída",
-  unavailable: "Indisponível",
-  failed: "Falha na leitura",
+const SOURCE_STATUS_MESSAGE_IDS = Object.freeze({
+  included: "system.diagnostics.review.sourceStatus.included",
+  unavailable: "system.diagnostics.review.sourceStatus.unavailable",
+  failed: "system.diagnostics.review.sourceStatus.failed",
 });
 
-const FAILURE_LABELS = Object.freeze({
-  "surface-read-failed": "A Surface não pôde ser observada nesta revisão.",
-  "update-read-failed": "O estado de atualização não pôde ser lido.",
-  "metrics-read-failed": "As métricas locais não puderam ser lidas.",
-  "history-read-failed": "O histórico de atualizações não pôde ser lido.",
-  "journal-read-failed": "Os eventos diagnósticos não puderam ser lidos.",
+const FAILURE_MESSAGE_IDS = Object.freeze({
+  "surface-read-failed": "system.diagnostics.review.failure.surface-read-failed",
+  "update-read-failed": "system.diagnostics.review.failure.update-read-failed",
+  "metrics-read-failed": "system.diagnostics.review.failure.metrics-read-failed",
+  "history-read-failed": "system.diagnostics.review.failure.history-read-failed",
+  "journal-read-failed": "system.diagnostics.review.failure.journal-read-failed",
 });
 
-const LAST_RESULT_LABELS = Object.freeze({
-  "review-prepare-failed": "Não foi possível preparar a revisão local. Tente novamente.",
-  "copy-unavailable": "Copiar resumo não está disponível neste modo.",
-  "copy-in-progress": "O resumo sanitizado já está sendo copiado.",
-  "copy-failed": "Não foi possível copiar o resumo sanitizado. A revisão continua disponível para nova tentativa.",
-  "export-unavailable": "Salvar diagnóstico não está disponível neste modo.",
-  "export-in-progress": "O diagnóstico já está sendo salvo.",
-  "export-failed": "Não foi possível salvar o diagnóstico. A revisão continua disponível para nova tentativa.",
+const LAST_RESULT_MESSAGE_IDS = Object.freeze({
+  "review-prepare-failed": "system.diagnostics.review.result.review-prepare-failed",
+  "copy-unavailable": "system.diagnostics.review.result.copy-unavailable",
+  "copy-in-progress": "system.diagnostics.review.result.copy-in-progress",
+  "copy-failed": "system.diagnostics.review.result.copy-failed",
+  "export-unavailable": "system.diagnostics.review.result.export-unavailable",
+  "export-in-progress": "system.diagnostics.review.result.export-in-progress",
+  "export-failed": "system.diagnostics.review.result.export-failed",
 });
 
-const SEVERITY_LABELS = Object.freeze({
-  debug: "Depuração",
-  info: "Informação",
-  warning: "Atenção",
-  error: "Erro",
-  critical: "Crítico",
+const SEVERITY_MESSAGE_IDS = Object.freeze({
+  debug: "system.diagnostics.review.severity.debug",
+  info: "system.diagnostics.review.severity.info",
+  warning: "system.diagnostics.review.severity.warning",
+  error: "system.diagnostics.review.severity.error",
+  critical: "system.diagnostics.review.severity.critical",
+});
+
+const UPDATE_STATUS_MESSAGE_IDS = Object.freeze({
+  running: "system.diagnostics.review.update.status.running",
+  applied: "system.diagnostics.review.update.status.applied",
+  updating: "system.diagnostics.review.update.status.updating",
+  "network-error": "system.diagnostics.review.update.status.network-error",
+  "remote-error": "system.diagnostics.review.update.status.remote-error",
+  "pull-error": "system.diagnostics.review.update.status.pull-error",
+  "rolled-back": "system.diagnostics.review.update.status.rolled-back",
+  rejected: "system.diagnostics.review.update.status.rejected",
+  pinned: "system.diagnostics.review.update.status.pinned",
+  disabled: "system.diagnostics.review.update.status.disabled",
+  unavailable: "system.diagnostics.review.update.status.unavailable",
+});
+
+const UPDATE_PHASE_MESSAGE_IDS = Object.freeze({
+  checking: "system.diagnostics.review.update.phase.checking",
+  fetching: "system.diagnostics.review.update.phase.fetching",
+  validating: "system.diagnostics.review.update.phase.validating",
+  activating: "system.diagnostics.review.update.phase.activating",
+  "health-wait": "system.diagnostics.review.update.phase.health-wait",
+  rollback: "system.diagnostics.review.update.phase.rollback",
+  blocked: "system.diagnostics.review.update.phase.blocked",
+  error: "system.diagnostics.review.update.phase.error",
+  idle: "system.diagnostics.review.update.phase.idle",
 });
 
 function freeze(value) {
