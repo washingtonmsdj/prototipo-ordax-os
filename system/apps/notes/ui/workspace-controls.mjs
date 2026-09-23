@@ -328,6 +328,9 @@ export function mountNotesWorkspaceControls(
   }
   const runtime = assertNotesRuntime(notesRuntime);
   const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
+  const locale = () => localization.getLocale();
   const filePort = fileSpace === null ? null : assertFileSpacePort(fileSpace);
   const activationPort = appActivation === null ? null : assertAppActivationPort(appActivation);
   const intelligencePort = intelligence === null ? null : assertIntelligencePort(intelligence);
@@ -1106,7 +1109,7 @@ export function mountNotesWorkspaceControls(
       return;
     }
     if (!slot.dataset.ordaxNotesMounted) {
-      slot.replaceChildren(buildShell(documentObject));
+      slot.replaceChildren(buildShell(documentObject, t));
       slot.dataset.ordaxNotesMounted = "true";
     }
     mountedSlot = slot;
