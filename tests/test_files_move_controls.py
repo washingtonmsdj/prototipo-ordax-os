@@ -28,8 +28,8 @@ class FilesMoveControlsTests(unittest.TestCase):
         self.assertIn("data-file-copy-to-toggle", controls)
         self.assertIn("data-file-transfer-confirm", controls)
         self.assertIn("data-file-transfer-cancel", controls)
-        self.assertIn("Mover para esta pasta", controls)
-        self.assertIn("Copiar para esta pasta", controls)
+        self.assertIn('"files.transfer.confirmMove"', controls)
+        self.assertIn('"files.transfer.confirmCopy"', controls)
         self.assertIn("Navegue até a pasta de destino", controls)
 
     def test_move_rejects_same_folder_and_directory_descendants(self):
@@ -37,7 +37,7 @@ class FilesMoveControlsTests(unittest.TestCase):
         self.assertIn("listing.path === transferEntry.sourcePath", controls)
         self.assertIn("listing.path === transferEntry.sourceFullPath", controls)
         self.assertIn("listing.path.startsWith(`${transferEntry.sourceFullPath}/`)", controls)
-        self.assertIn("Uma pasta não pode ser movida para dentro dela mesma.", controls)
+        self.assertIn('"files.transfer.cannotMoveIntoSelf"', controls)
 
     def test_move_errors_are_specific_and_origin_preserving(self):
         controls = CONTROLS.read_text(encoding="utf-8")
