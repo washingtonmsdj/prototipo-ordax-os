@@ -356,8 +356,8 @@ async function start() {
     workspaceMetadata.source,
     appActivation,
   );
-  const homeContinuation = mountHomeContinuation(root, { projects, recentFiles });
-  const homePending = mountHomePending(root, { notifications, syncRuntime: preferenceSync });
+  const homeContinuation = mountHomeContinuation(root, { projects, recentFiles }, surface);
+  const homePending = mountHomePending(root, { notifications, syncRuntime: preferenceSync }, surface);
   const filesOwnerSpace = fileSpace === null
     ? null
     : createProjectContinuityFileSpace(fileSpace, projects, {
@@ -414,8 +414,8 @@ async function start() {
     intelligence,
     recoveryStatus,
   );
-  const updateControls = mountUpdateControls(root, updateWatcher, appActivation);
-  const powerControls = mountPowerControls(root, powerActions);
+  const updateControls = mountUpdateControls(root, updateWatcher, appActivation, surface);
+  const powerControls = mountPowerControls(root, powerActions, surface);
 
   // Reaching this point proves that the shared Surface composition mounted.
   // Optional app runtimes load only after this acknowledgement so an app-level
