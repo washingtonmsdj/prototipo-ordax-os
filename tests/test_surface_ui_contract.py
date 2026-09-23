@@ -65,6 +65,7 @@ SETTINGS_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "settings.mj
 SYSTEM_TRAY_QUICK_PANELS = SURFACE / "system-tray-quick-panels.mjs"
 NETWORK_QUICK_PANEL = SURFACE / "network-quick-panel.mjs"
 NETWORK_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "network.mjs"
+POWER_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "power.mjs"
 BATTERY_QUICK_PANEL = SURFACE / "battery-quick-panel.mjs"
 HOST_CONTRACT = ROOT / "system" / "contracts" / "surface-host.mjs"
 WEB_WORKFLOW = ROOT / ".github" / "workflows" / "surface-web-candidate.yml"
@@ -773,13 +774,17 @@ class SurfaceUiContractTests(unittest.TestCase):
         for forbidden in ("localStorage", "sessionStorage", "/__ordax/native/", "telemetry"):
             self.assertNotIn(forbidden, network)
         self.assertIn("assertPowerStatusPort", battery)
+        self.assertIn("assertSurfaceRenderLifecycle", battery)
         self.assertIn("validatePowerStatusSnapshot", battery)
         self.assertIn("lastSnapshot", battery)
         self.assertIn("lastSuccessAt", battery)
         self.assertIn("powerObservation", battery)
         self.assertIn('root.querySelector("[data-quick-battery-power]")', battery)
-        self.assertIn('"Conectada"', battery)
-        self.assertIn('"Desconectada"', battery)
+        self.assertIn('t("power.quick.unavailable.state")', battery)
+        self.assertIn("externalPowerMessageId", battery)
+        power_i18n = POWER_I18N.read_text(encoding="utf-8")
+        self.assertIn('"power.external.connected": "Conectada"', power_i18n)
+        self.assertIn('"power.external.connected": "Connected"', power_i18n)
         localization = SURFACE_LOCALIZATION.read_text(encoding="utf-8")
         self.assertIn('"shell.quick.powerSource": "Fonte de energia"', localization)
         self.assertIn("data-ordax-power-source-label", shell)
