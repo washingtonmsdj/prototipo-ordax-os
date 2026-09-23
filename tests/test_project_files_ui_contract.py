@@ -108,7 +108,7 @@ class ProjectFilesUiContractTests(unittest.TestCase):
         self.assertNotIn("projectPort.remove", click_block)
         self.assertNotIn("renameEntry(", click_block)
         self.assertIn('"files.preview.projectResumeMissing"', controls)
-        self.assertIn("Não foi possível retomar o último arquivo deste projeto. O projeto foi preservado.", controls)
+        self.assertIn('"files.preview.projectResumeFailed"', controls)
 
     def test_stale_project_resume_recovery_is_exact_reference_guarded_and_non_destructive(self):
         controls = CONTROLS.read_text(encoding="utf-8")
@@ -132,7 +132,7 @@ class ProjectFilesUiContractTests(unittest.TestCase):
         self.assertIn(clear, recovery_block)
         self.assertLess(recovery_block.index(guard), recovery_block.index(clear))
         self.assertIn('setMessage("files.project.lastFileChanged")', recovery_block)
-        self.assertIn("Referência do último arquivo esquecida. Nenhum arquivo foi apagado.", recovery_block)
+        self.assertIn('setMessage("files.project.lastFileForgotten")', recovery_block)
         self.assertNotIn("port.renameEntry(", recovery_block)
         self.assertNotIn("port.moveEntry(", recovery_block)
         self.assertNotIn("port.copyFile(", recovery_block)
