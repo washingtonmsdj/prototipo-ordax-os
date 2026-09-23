@@ -108,6 +108,8 @@ class ProjectFilesUiContractTests(unittest.TestCase):
         self.assertNotIn("projectPort.remove", click_block)
         self.assertNotIn("renameEntry(", click_block)
         self.assertIn('"files.preview.projectResumeMissing"', controls)
+        self.assertIn('"files.preview.projectResumeTooLarge"', controls)
+        self.assertIn('"files.preview.projectResumeInvalidUtf8"', controls)
         self.assertIn('"files.preview.projectResumeFailed"', controls)
 
     def test_stale_project_resume_recovery_is_exact_reference_guarded_and_non_destructive(self):
