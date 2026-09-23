@@ -260,7 +260,7 @@ export function mountSystemOverviewControls(
   let metricsPending = false;
   let metricsReadFailed = false;
   let metricsLastSuccessAt = null;
-  let metricsMessage = "";
+  let metricsMessageId = null;
   let metricsOrdinal = 0;
   let historySnapshot = null;
   let historyMessage = "";
@@ -493,14 +493,26 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Uso do dispositivo"),
-      node(documentObject, "h4", "ordax-system-section-title", "Memória"),
+      node(
+        documentObject,
+        "span",
+        "ordax-system-section-kicker",
+        t("system.overview.memory.kicker"),
+      ),
+      node(
+        documentObject,
+        "h4",
+        "ordax-system-section-title",
+        t("system.overview.memory.title"),
+      ),
     );
     const refresh = node(
       documentObject,
       "button",
       "ordax-system-action",
-      metricsPending ? "Atualizando…" : "Atualizar leitura",
+      metricsPending
+        ? t("system.overview.memory.refreshing")
+        : t("system.overview.memory.refresh"),
     );
     refresh.type = "button";
     refresh.dataset.systemOverviewRefresh = "";
@@ -516,9 +528,11 @@ export function mountSystemOverviewControls(
           "ordax-system-placeholder",
           metricsPort
             ? metricsPending
-              ? "Lendo recursos do dispositivo…"
-              : (metricsMessage || "Aguardando leitura local.")
-            : "Este host não expõe métricas locais de memória.",
+              ? t("system.overview.memory.reading")
+              : metricsMessageId
+                ? t(metricsMessageId)
+                : t("system.overview.memory.waiting")
+            : t("system.overview.memory.unavailable"),
         ),
       );
       view.append(section);
@@ -526,12 +540,16 @@ export function mountSystemOverviewControls(
     }
 
     if (metricsReadFailed) {
+      const receivedAt = formatOverviewReceivedAt(
+        metricsLastSuccessAt,
+        localization.getLocale(),
+      ) ?? t("system.overview.time.unknown");
       section.append(
         node(
           documentObject,
           "p",
           "ordax-system-warning",
-          `Leitura antiga · a tentativa atual falhou. Última leitura recebida pela Surface às ${formatObservationReceivedAt(metricsLastSuccessAt)}.`,
+          t("system.overview.memory.stale", { time: receivedAt }),
         ),
       );
     }
@@ -539,13 +557,25 @@ export function mountSystemOverviewControls(
     const memoryUsed = metricsSnapshot.memoryTotalBytes - metricsSnapshot.memoryAvailableBytes;
     const resourceGrid = node(documentObject, "div", "ordax-system-resource-grid");
     appendMetricCard(documentObject, resourceGrid, {
-      label: "Memória em uso",
+      label: t("system.overview.memory.used"),
       value: formatBytes(memoryUsed),
-      detail: `${formatBytes(metricsSnapshot.memoryAvailableBytes)} disponível de ${formatBytes(metricsSnapshot.memoryTotalBytes)}`,
+      detail: t("system.overview.memory.available", {
+        available: formatBytes(metricsSnapshot.memoryAvailableBytes),
+        total: formatBytes(metricsSnapshot.memoryTotalBytes),
+      }),
       progress: ratio(memoryUsed, metricsSnapshot.memoryTotalBytes),
     });
     section.append(resourceGrid);
-    if (metricsMessage) section.append(node(documentObject, "p", "ordax-system-message", metricsMessage));
+    if (metricsMessageId) {
+      section.append(
+        node(
+          documentObject,
+          "p",
+          "ordax-system-message",
+          t(metricsMessageId),
+        ),
+      );
+    }
     view.append(section);
   };
 
@@ -578,7 +608,7 @@ export function mountSystemOverviewControls(
           metricsPort
             ? metricsPending
               ? "Lendo armazenamento do usuário…"
-              : (metricsMessage || "Aguardando leitura local.")
+              : (metricsMessageId ? t(metricsMessageId) : "Aguardando leitura local.")
             : "Este host não expõe a capacidade do espaço do usuário.",
         ),
       );
@@ -614,7 +644,7 @@ export function mountSystemOverviewControls(
         "Esta leitura cobre somente o espaço persistente do usuário exposto pelo host. Não representa o disco físico inteiro.",
       ),
     );
-    if (metricsMessage) section.append(node(documentObject, "p", "ordax-system-message", metricsMessage));
+    if (metricsMessageId) section.append(node(documentObject, "p", "ordax-system-message", t(metricsMessageId)));
     view.append(section);
   };
 
@@ -1326,7 +1356,7 @@ export function mountSystemOverviewControls(
     if (!metricsPort || metricsPending) return;
     const ordinal = ++metricsOrdinal;
     metricsPending = true;
-    metricsMessage = "";
+    metricsMessageId = null;
     replaceView();
     try {
       const next = validateSystemMetricsSnapshot(await metricsPort.read());
@@ -1337,9 +1367,9 @@ export function mountSystemOverviewControls(
     } catch {
       if (destroyed || ordinal !== metricsOrdinal) return;
       metricsReadFailed = true;
-      metricsMessage = metricsSnapshot
-        ? "A leitura atual falhou; os valores abaixo são a última leitura válida recebida pela Surface."
-        : "Não foi possível obter uma leitura válida dos recursos nesta sessão.";
+      metricsMessageId = metricsSnapshot
+        ? "system.metrics.message.lastValid"
+        : "system.metrics.message.unavailable";
     } finally {
       if (!destroyed && ordinal === metricsOrdinal) {
         metricsPending = false;
