@@ -79,8 +79,8 @@ class SurfaceAsyncLifecycleTests(unittest.TestCase):
         self.assertIn("statusReadFailed = true;", controls)
         self.assertIn("managementReadFailed = true;", controls)
         self.assertNotIn("statusSnapshot = null;\n    } catch", controls)
-        self.assertIn("Redes exibidas com dados antigos", controls)
-        self.assertIn("última leitura recebida pela Surface", controls)
+        self.assertIn('"network.quick.networksStale"', controls)
+        self.assertIn('"network.quick.summary.staleTitle"', controls)
         self.assertIn('summary.dataset.observation = statusReadFailed ? "stale" : "current"', controls)
 
     def test_read_only_tray_widgets_do_not_render_after_destroy(self):
@@ -162,6 +162,16 @@ class SurfaceAsyncLifecycleTests(unittest.TestCase):
         self.assertIn("ordinal !== metricsOrdinal", system)
         self.assertIn("historyOrdinal", system)
         self.assertIn("ordinal !== historyOrdinal", system)
+
+
+    def test_quick_wifi_locale_rerender_uses_existing_interaction_snapshot_and_unsubscribes(self):
+        controls = self.read("network-quick-panel.mjs")
+        self.assertIn("const unsubscribeLocalization = localization.subscribe", controls)
+        self.assertIn("if (!destroyed) render()", controls)
+        self.assertIn("const interaction = captureInteraction()", controls)
+        self.assertIn("restoreInteraction(interaction)", controls)
+        self.assertIn("unsubscribeLocalization()", controls)
+
 
 
 if __name__ == "__main__":

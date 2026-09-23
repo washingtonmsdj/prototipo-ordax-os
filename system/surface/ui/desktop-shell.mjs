@@ -131,7 +131,7 @@ export function createDesktopShellMarkup(localization) {
         <div class="ordax-system-tray" aria-label="${t("shell.systemStatus.aria")}">
           <button type="button" class="ordax-tray-item ordax-tray-network" data-connectivity-tray data-quick-panel-toggle="network" aria-expanded="false" aria-controls="ordax-quick-network" aria-label="${t("shell.network.quickOpen")}">
             <span class="ordax-tray-icon ordax-tray-network-icon" data-connectivity-icon data-state="unknown" data-network-kind="unknown" data-signal-level="0" aria-hidden="true">${ICONS.networkWifi}${ICONS.networkEthernet}${ICONS.networkOther}</span>
-            <span class="ordax-tray-label" data-connectivity-label>Conectividade desconhecida</span>
+            <span class="ordax-tray-label" data-connectivity-label>${t("surface.connectivity.unknown")}</span>
           </button>
           <button type="button" class="ordax-tray-item ordax-tray-battery" data-battery-tray data-quick-panel-toggle="battery" aria-expanded="false" aria-controls="ordax-quick-battery" aria-label="${t("shell.battery.quickOpen")}" hidden>
             <span class="ordax-tray-icon ordax-tray-battery-icon" data-battery-icon data-battery-level="0" data-charging="false" aria-hidden="true">${ICONS.battery}</span>
@@ -243,6 +243,10 @@ export function syncDesktopShellLocalization(root, localization) {
   aria("[data-running-apps]", "shell.runningApps.aria");
   aria(".ordax-system-tray", "shell.systemStatus.aria");
   aria("[data-connectivity-tray]", "shell.network.quickOpen");
+  const connectivityTray = root.querySelector("[data-connectivity-tray]");
+  if (connectivityTray?.dataset.networkDetailOwner !== "true") {
+    text("[data-connectivity-label]", "surface.connectivity.unknown");
+  }
   aria("[data-battery-tray]", "shell.battery.quickOpen");
   aria('[data-quick-panel-toggle="datetime"]', "shell.datetime.quickOpen");
   text('[data-quick-panel="network"] .ordax-quick-kicker', "shell.quick.access");

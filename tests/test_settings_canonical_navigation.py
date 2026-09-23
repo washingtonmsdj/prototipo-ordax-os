@@ -9,6 +9,7 @@ NATIVE = ROOT / "system" / "composition" / "native" / "main.mjs"
 WEB = ROOT / "system" / "composition" / "web" / "main.mjs"
 APP = ROOT / "system" / "apps" / "settings" / "app.mjs"
 SETTINGS_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "settings.mjs"
+NETWORK_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "network.mjs"
 
 
 class SettingsCanonicalNavigationTests(unittest.TestCase):
@@ -44,9 +45,12 @@ class SettingsCanonicalNavigationTests(unittest.TestCase):
 
     def test_quick_wifi_opens_canonical_network_section(self):
         quick = QUICK_NETWORK.read_text(encoding="utf-8")
+        network_i18n = NETWORK_I18N.read_text(encoding="utf-8")
         self.assertIn('settings.dataset.launchApp = "settings"', quick)
         self.assertIn('settings.dataset.appTarget = "network"', quick)
-        self.assertIn('"Abrir Ajustes de rede"', quick)
+        self.assertIn('t("network.quick.settings")', quick)
+        self.assertIn('"network.quick.settings": "Abrir Ajustes de rede"', network_i18n)
+        self.assertIn('"network.quick.settings": "Open network settings"', network_i18n)
 
     def test_notifications_section_reuses_notification_owner(self):
         controls = SETTINGS.read_text(encoding="utf-8")

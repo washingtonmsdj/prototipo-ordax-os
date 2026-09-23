@@ -234,6 +234,9 @@ class NativeNetworkManagementTests(unittest.TestCase):
         self.assertIn("services/network/management-runtime.mjs", settings)
         self.assertIn("assertNetworkManagementPort", controls)
         self.assertIn("assertNetworkStatusPort", controls)
+        self.assertIn("assertSurfaceRenderLifecycle", controls)
+        self.assertIn("networkManagementActionMessageId", controls)
+        self.assertIn("networkManagementFailureMessageId", controls)
         for action in ("scan", "connect", "disconnect", "forget", "reconnect"):
             self.assertIn(f'case "{action}"', runtime)
         self.assertNotIn('data-quick-network-action="forget"', controls)
@@ -243,7 +246,7 @@ class NativeNetworkManagementTests(unittest.TestCase):
         self.assertNotIn("localStorage", controls)
         self.assertNotIn("sessionStorage", controls)
         self.assertNotIn("/__ordax/native/", controls)
-        self.assertIn("mountNetworkQuickPanel(root, networkStatus, networkManagement)", composition)
+        self.assertIn("mountNetworkQuickPanel(root, networkStatus, networkManagement, surface)", composition)
         self.assertIn('reportClientDiagnostic("network-quick-panel", error)', composition)
 
     def test_native_composition_recovers_if_optional_wifi_settings_mount_fails(self):

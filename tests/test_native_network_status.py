@@ -13,6 +13,7 @@ TRAY_CONTROLS = ROOT / "system" / "surface" / "ui" / "network-tray-controls.mjs"
 COMPOSITION = ROOT / "system" / "composition" / "native" / "main.mjs"
 RUNTIME = ROOT / "system" / "adapters" / "native" / "runtime.mjs"
 CAPABILITIES = ROOT / "docs" / "contracts" / "product-capabilities.json"
+NETWORK_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "network.mjs"
 
 spec = importlib.util.spec_from_file_location("ordax_native_network_status_test", SERVER)
 native_host = importlib.util.module_from_spec(spec)
@@ -109,10 +110,14 @@ class NativeNetworkStatusTests(unittest.TestCase):
         self.assertIn("summarizeNetworkStatus", tray_controls)
         self.assertIn("lastSnapshot", tray_controls)
         self.assertIn("lastSuccessAt", tray_controls)
-        self.assertIn('tray.dataset.networkObservation = stale ? "stale" : "current"', tray_controls)
+        self.assertIn('lastObservation = stale ? "stale" : "current"', tray_controls)
+        self.assertIn("tray.dataset.networkObservation = lastObservation", tray_controls)
         self.assertIn('"unavailable"', tray_controls)
-        self.assertIn("Dados antigos", tray_controls)
-        self.assertIn("última leitura recebida pela Surface", tray_controls)
+        self.assertIn('"network.tray.stale.title"', tray_controls)
+        self.assertIn('"network.tray.stale.label"', tray_controls)
+        network_i18n = NETWORK_I18N.read_text(encoding="utf-8")
+        self.assertIn('"network.tray.stale.title": "Dados antigos', network_i18n)
+        self.assertIn('"network.tray.stale.title": "Stale data', network_i18n)
         self.assertNotIn("ssid", tray_controls.lower())
         self.assertNotIn("password", tray_controls.lower())
         self.assertNotIn("/__ordax/native/", tray_controls)

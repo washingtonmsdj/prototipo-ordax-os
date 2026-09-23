@@ -98,7 +98,11 @@ test("desktop shell is born in English when regional locale is English", () => {
   assert.match(markup, />Your space</);
   assert.match(markup, /placeholder="Search applications"/);
   assert.match(markup, />Area 01</);
-  assert.doesNotMatch(markup, /Aplicativos principais|>Arquivos<|>Seu espaço</);
+  assert.match(markup, />Connectivity unknown</);
+  assert.doesNotMatch(
+    markup,
+    /Aplicativos principais|>Arquivos<|>Seu espaço|Conectividade desconhecida/,
+  );
   localization.dispose();
 });
 

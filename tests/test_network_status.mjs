@@ -75,8 +75,9 @@ test("network tray prefers connected Wi-Fi and maps signal strength", () => {
       kind: "wifi",
       state: "connected",
       signalLevel: 4,
-      label: "Wi-Fi",
-      title: "Wi-Fi conectado · sinal forte",
+      labelMessageId: "network.kind.wifi",
+      titleMessageId: "network.status.wifi.connectedSignal.title",
+      qualityMessageId: "network.signal.strong",
     },
   );
 });
@@ -93,8 +94,9 @@ test("network tray falls back to cable and never invents connection", () => {
       kind: "ethernet",
       state: "connected",
       signalLevel: 0,
-      label: "Cabo",
-      title: "Rede por cabo conectada",
+      labelMessageId: "network.kind.ethernet",
+      titleMessageId: "network.status.ethernet.connected.title",
+      qualityMessageId: null,
     },
   );
   assert.equal(
@@ -102,8 +104,8 @@ test("network tray falls back to cable and never invents connection", () => {
       interfaces: [
         { name: "wlan0", kind: "wifi", state: "disconnected", signalDbm: null },
       ],
-    }).label,
-    "Wi-Fi desconectado",
+    }).labelMessageId,
+    "network.status.wifi.disconnected.label",
   );
 });
 
