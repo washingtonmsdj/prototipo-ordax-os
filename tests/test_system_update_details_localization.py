@@ -117,7 +117,8 @@ class SystemUpdateDetailsLocalizationTests(unittest.TestCase):
         ):
             self.assertIn(state_name, controls)
         for assignment in (
-            'metricsMessageId = "system.resources.readFailed"',
+            '"system.resources.readFailedPrevious"',
+            '"system.resources.readFailed"',
             'historyMessageId = "system.history.readFailed"',
             'recoveryMessageId = "system.recovery.readFailed"',
             'intelligenceMessageId = "system.intelligence.message.analyzing"',
