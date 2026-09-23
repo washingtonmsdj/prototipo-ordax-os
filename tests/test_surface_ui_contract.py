@@ -784,7 +784,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn("mountSystemTrayQuickPanels", native_main)
         self.assertIn("mountNetworkQuickPanel", native_main)
         self.assertIn("mountSystemTrayQuickPanels", web_main)
-        self.assertIn("mountNetworkQuickPanel(root, null, null)", web_main)
+        self.assertIn("mountNetworkQuickPanel(root, null, null, surface)", web_main)
 
     def test_windows_center_by_default_and_maximize_to_full_workspace(self):
         surface = (SURFACE / "surface.mjs").read_text(encoding="utf-8")
