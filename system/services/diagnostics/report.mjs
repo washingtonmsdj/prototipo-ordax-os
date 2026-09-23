@@ -37,6 +37,13 @@ function summarizeUpdate(value) {
     lastAppliedSha: snapshot.lastAppliedSha || null,
     lastAppliedAt: snapshot.lastAppliedAt,
     rejectedSha: snapshot.rejectedSha || null,
+    recoveryState: snapshot.recoveryState,
+    recoverySource: snapshot.recoverySource,
+    currentReleaseSha: snapshot.currentReleaseSha || null,
+    knownGoodReleaseSha: snapshot.knownGoodReleaseSha || null,
+    candidateReleaseSha: snapshot.candidateReleaseSha || null,
+    recoveryRejectedSha: snapshot.recoveryRejectedSha || null,
+    rollbackEligible: snapshot.rollbackEligible,
     lastError: redactDiagnosticText(snapshot.lastError),
     healthTokenPresent: snapshot.healthToken.length > 0,
   });
