@@ -230,18 +230,41 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             workflow,
         )
 
-    def test_repository_stable_mvp_authorization_records_exact_owner_consent_without_target(self):
+    def test_repository_v4_media_scope_requires_fresh_owner_authorization(self):
         auth = json.loads(
             (ROOT / "docs/contracts/physical-write-authorization.json").read_text(
                 encoding="utf-8"
             )
         )
-        self.assertEqual(auth["status"], "authorized")
-        self.assertTrue(auth["physical_write_allowed"])
-        self.assertTrue(auth["explicit_owner_authorization"])
-        self.assertRegex(auth["authorization_context_sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(
+            auth["status"],
+            "blocked-explicit-physical-authorization-pending",
+        )
+        self.assertFalse(auth["physical_write_allowed"])
+        self.assertFalse(auth["explicit_owner_authorization"])
+        self.assertIsNone(auth["authorization_context_sha256"])
         self.assertEqual(auth["scope"], "first-real-stable-mvp-usb-proof")
         self.assertEqual(auth["release_sequence"], 1)
+        self.assertTrue(
+            auth["requirements"]["writer_requires_exact_17_artifact_readback"]
+        )
+        self.assertNotIn(
+            "writer_requires_exact_15_artifact_readback",
+            auth["requirements"],
+        )
+        status = promotion.evaluate(ROOT)
+        self.assertFalse(status["ready"])
+        self.assertTrue(
+            status["pre_authorization_ready"],
+            status["pre_authorization_blockers"],
+        )
+        self.assertTrue(status["physical_authorization_bindings_resolved"])
+        self.assertEqual(
+            status["authorization_blockers"],
+            ["explicit-physical-write-authorization-missing"],
+        )
+        self.assertTrue(status["owner_authorization_required"])
+        self.assertFalse(status["authorized_candidate_materialization_allowed"])
         for forbidden in ("physical_path", "device_path", "disk_number", "volume_id"):
             self.assertNotIn(forbidden, auth)
 
