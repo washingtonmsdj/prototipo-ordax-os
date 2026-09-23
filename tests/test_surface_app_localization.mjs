@@ -80,6 +80,30 @@ test("Settings and System navigation consume the same localization owner", async
   assert.match(system, /t\(section\.messageId\)/);
 });
 
+test("Account consumes the shared localization owner end to end", async () => {
+  const account = await readFile(
+    new URL("../system/surface/ui/account-overview-controls.mjs", import.meta.url),
+    "utf8",
+  );
+  const accountCatalog = await readFile(
+    new URL("../system/services/i18n/catalog/account.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(account, /const localization = lifecycle\.localization/);
+  assert.match(account, /const t = localization\.translate/);
+  assert.match(account, /t\("account\.navigation\.aria"\)/);
+  assert.match(account, /t\("account\.identity\.title"\)/);
+  assert.match(account, /t\("account\.card\.offlineQueue"\)/);
+  assert.match(accountCatalog, /"account\.section\.overview": "Overview"/);
+  assert.match(accountCatalog, /"account\.action\.signIn": "Sign in"/);
+  assert.match(accountCatalog, /"account\.card\.queueDurable": "Persistent on this device"/);
+  assert.doesNotMatch(
+    account,
+    /Conta|Sessão ativa|Sincronização|Nenhuma pendência|Fila offline|Aparência/,
+  );
+});
+
 test("English catalog contains primary Files, Settings and System entries", async () => {
   const filesCatalog = await readFile(
     new URL("../system/services/i18n/catalog/files.mjs", import.meta.url),
