@@ -376,7 +376,7 @@ O gate é de produto/source. Ele **não** substitui:
 ### P1 — experiência cotidiana
 
 4. Arquivos: remoção segura/lixeira. — **PASS_SOURCE**
-5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE. — **IN_PROGRESS**: owner + shell inglês `PASS_SOURCE`; Arquivos cobre jornada primária, formulários comuns, ordenação, exportação e preview em inglês `PASS_SOURCE`; navegação de Ajustes/Sistema e Conta completa também `PASS_SOURCE`; jornadas primárias de Notas e Internet agora `PASS_SOURCE`; tray + quick panel de rede agora `PASS_SOURCE` com estado estruturado e troca de locale sem persistir credenciais; mensagens operacionais/profundas e os demais quick panels ainda estão em migração
+5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE. — **IN_PROGRESS**: owner + shell inglês `PASS_SOURCE`; Arquivos cobre jornada primária, formulários comuns, ordenação, exportação e preview em inglês `PASS_SOURCE`; navegação de Ajustes/Sistema e Conta completa também `PASS_SOURCE`; jornadas primárias de Notas e Internet agora `PASS_SOURCE`; trays + quick panels de rede e bateria agora `PASS_SOURCE` com estado estruturado e troca de locale; o painel de rede continua sem persistir credenciais; mensagens operacionais/profundas e os demais quick panels ainda estão em migração
 6. Diagnóstico/recovery em Sistema. — **PASS_SOURCE**: controller diagnóstico Native agora é composto de verdade e Sistema exibe recovery read-only a partir dos marcadores reais de `current`, `known-good`, candidato/transação e entrada local de recovery; prova física continua B
 7. Inventário mínimo/suporte de hardware. — **PASS_SOURCE** via `hardware-support-matrix/1`; prova física do hardware-alvo Stable continua B
 
