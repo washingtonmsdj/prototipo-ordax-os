@@ -577,7 +577,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         contract = (ROOT / "system" / "contracts" / "update-status.mjs").read_text(encoding="utf-8")
         self.assertIn("runtimeSurfaceSha", contract)
         self.assertIn("updateSnapshot.runtimeSurfaceSha", overview)
-        self.assertIn("deliveryLabel(updateSnapshot.deliveryNumber)", overview)
+        self.assertIn("localizedDelivery(updateSnapshot.deliveryNumber)", overview)
         self.assertIn("America/Bahia", presentation)
         self.assertIn('t("system.updates.fact.runtimeSurface")', overview)
         self.assertIn('target: "updates"', controls)
