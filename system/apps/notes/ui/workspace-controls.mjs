@@ -1183,15 +1183,15 @@ export function mountNotesWorkspaceControls(
   };
 
   const promptEditorLink = (body) => {
-    const input = windowObject.prompt?.("Cole o endereço do link:");
+    const input = windowObject.prompt?.(t("notes.prompt.link"));
     if (!input) return false;
     const parsed = parseNotesWebHref(input);
     if (!parsed) {
-      windowObject.alert?.("Use um endereço da web válido.");
+      windowObject.alert?.(t("notes.error.invalidWeb"));
       return false;
     }
     if (!applyNotesRichLink(body, parsed.href)) {
-      windowObject.alert?.("Selecione um trecho da nota antes de adicionar o link.");
+      windowObject.alert?.(t("notes.error.selectLinkText"));
       return false;
     }
     return true;
@@ -1225,15 +1225,15 @@ export function mountNotesWorkspaceControls(
       render();
       void summarizeDocumentWithIntelligence(intelligencePort, {
         id: latest.id,
-        title: latest.title || "Sem título",
-        text: latest.body || "(nota vazia)",
+        title: latest.title || t("notes.untitled"),
+        text: latest.body || t("notes.emptyNote"),
         provenance: `notes:${latest.id}:device-local`,
       }).then((response) => {
         if (destroyed || intelligenceNoteId !== latest.id) return;
         intelligenceResult = response.text;
       }).catch(() => {
         if (destroyed || intelligenceNoteId !== latest.id) return;
-        intelligenceError = "Não foi possível resumir esta nota localmente.";
+        intelligenceError = t("notes.intelligence.failed");
       }).finally(() => {
         if (destroyed || intelligenceNoteId !== latest.id) return;
         intelligencePending = false;
@@ -1248,7 +1248,7 @@ export function mountNotesWorkspaceControls(
     }
     if (action === "new-project") {
       if (state.document.projects.length >= MAX_NOTE_PROJECTS) return;
-      const name = windowObject.prompt?.("Nome do novo projeto:");
+      const name = windowObject.prompt?.(t("notes.prompt.newProject"));
       if (name?.trim()) {
         projectMenuId = null;
         flushEditor();
@@ -1267,7 +1267,7 @@ export function mountNotesWorkspaceControls(
       const projectId = actionNode.dataset.projectId;
       const project = state.document.projects.find((candidate) => candidate.id === projectId);
       if (!project) return;
-      const name = windowObject.prompt?.("Novo nome do projeto:", project.name);
+      const name = windowObject.prompt?.(t("notes.prompt.renameProject"), project.name);
       if (name?.trim()) {
         projectMenuId = null;
         runtime.renameProject(projectId, name);
@@ -1281,8 +1281,14 @@ export function mountNotesWorkspaceControls(
       const noteCount = state.document.notes.filter((candidate) => candidate.projectId === projectId).length;
       const confirmed = windowObject.confirm?.(
         noteCount > 0
-          ? `Excluir “${project.name}”? As ${noteCount} ${noteCount === 1 ? "nota será movida" : "notas serão movidas"} para Meu espaço.`
-          : `Excluir o projeto “${project.name}”?`,
+          ? t("notes.confirm.removeProjectWithNotes", {
+              name: project.name,
+              count: noteCount,
+              movement: noteCount === 1
+                ? t("notes.confirm.moveOne")
+                : t("notes.confirm.moveMany"),
+            })
+          : t("notes.confirm.removeProject", { name: project.name }),
       );
       if (confirmed) {
         projectMenuId = null;
@@ -1330,8 +1336,8 @@ export function mountNotesWorkspaceControls(
       if (deletedCount === 0) return;
       const confirmed = windowObject.confirm?.(
         deletedCount === 1
-          ? "Excluir permanentemente a nota da lixeira? Esta ação não pode ser desfeita."
-          : `Excluir permanentemente as ${deletedCount} notas da lixeira? Esta ação não pode ser desfeita.`,
+          ? t("notes.confirm.deleteOneTrash")
+          : t("notes.confirm.deleteManyTrash", { count: deletedCount }),
       );
       if (confirmed) {
         resetReferenceFlow();
@@ -1387,7 +1393,9 @@ export function mountNotesWorkspaceControls(
     }
     if (action === "delete-note-forever" && note.deletedAt !== null) {
       const confirmed = windowObject.confirm?.(
-        `Excluir “${note.title || "Sem título"}” permanentemente? Esta ação não pode ser desfeita.`,
+        t("notes.confirm.deleteForever", {
+          title: note.title || t("notes.untitled"),
+        }),
       );
       if (confirmed) {
         resetReferenceFlow();
@@ -1443,14 +1451,14 @@ export function mountNotesWorkspaceControls(
     if (action === "add-link-reference") {
       if (note.references.length >= MAX_NOTE_REFERENCES) return;
       referenceNoteId = note.id;
-      const input = windowObject.prompt?.("Cole o endereço da referência:");
+      const input = windowObject.prompt?.(t("notes.prompt.referenceUrl"));
       if (!input) return;
       const parsed = parseNotesWebHref(input);
       if (!parsed) {
         windowObject.alert?.("Use um endereço da web válido.");
         return;
       }
-      const title = windowObject.prompt?.("Título da referência:", parsed.host) || parsed.host;
+      const title = windowObject.prompt?.(t("notes.prompt.referenceTitle"), parsed.host) || parsed.host;
       resetReferenceFlow();
       runtime.addReference(note.id, createNotesLinkReference(parsed.href, title));
     }
@@ -1483,13 +1491,13 @@ export function mountNotesWorkspaceControls(
     ) {
       const selection = filePicker.consumeSelection();
       if (selection) {
-        const title = selection.path.split("/").filter(Boolean).at(-1) || "Arquivo";
+        const title = selection.path.split("/").filter(Boolean).at(-1) || t("notes.file.kind");
         referenceChooserOpen = false;
         referenceNoteId = null;
         runtime.addReference(note.id, {
           kind: "file",
           title,
-          detail: selection.purpose === "image" ? "Imagem local" : "Arquivo local",
+          detail: selection.purpose === "image" ? t("notes.reference.imageLocal") : t("notes.file.local"),
           path: selection.path,
         });
       }
