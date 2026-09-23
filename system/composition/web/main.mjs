@@ -63,7 +63,7 @@ let quickPanelControls = null;
 let networkQuickPanel = null;
 try {
   quickPanelControls = mountSystemTrayQuickPanels(root);
-  networkQuickPanel = mountNetworkQuickPanel(root, null, null);
+  networkQuickPanel = mountNetworkQuickPanel(root, null, null, surface);
 } catch (error) {
   console.warn("OrdaX quick panels unavailable", error);
 }
