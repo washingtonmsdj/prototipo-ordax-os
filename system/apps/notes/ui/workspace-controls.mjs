@@ -406,7 +406,10 @@ export function mountNotesWorkspaceControls(
     }
   };
 
-  const filePicker = createNotesFilePicker({ fileSpace: filePort });
+  const filePicker = createNotesFilePicker({
+    fileSpace: filePort,
+    openFolderError: t("notes.file.openFolderFailed"),
+  });
 
   const resetReferenceFlow = () => {
     referenceChooserOpen = false;
