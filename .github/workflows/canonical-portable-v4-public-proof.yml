@@ -1,0 +1,355 @@
+name: Canonical Portable v4 Public Proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/canonical-portable-v4-public-proof.yml'
+      - 'tests/test_canonical_portable_v4_public_proof.py'
+      - 'docs/RELEASE-SIGNING.md'
+      - 'bootstrap/portable-v2/qemu_boot.py'
+      - 'bootstrap/portable-v2/uefi_boot.py'
+  workflow_dispatch:
+    inputs:
+      expected_commit:
+        description: 'Exact lowercase 40-hex source commit bound by the canonical signed v4 release'
+        required: true
+        type: string
+      envelope_url:
+        description: 'HTTPS URL of the public canonical release-envelope.json'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          check-latest: false
+      - name: Validate canonical public-proof boundary
+        run: python -m unittest tests.test_canonical_portable_v4_public_proof -v
+
+  canonical-v4-public-proof:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - name: Checkout exact signed source commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.expected_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          check-latest: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+          cache: false
+
+      - name: Validate public inputs and exact checkout
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+          ENVELOPE_URL: ${{ inputs.envelope_url }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
+          python - "$EXPECTED_COMMIT" "$ENVELOPE_URL" <<'PY'
+          import re, sys, urllib.parse
+          commit, raw = sys.argv[1], sys.argv[2]
+          assert re.fullmatch(r"[0-9a-f]{40}", commit), commit
+          parsed = urllib.parse.urlsplit(raw)
+          assert parsed.scheme == "https", raw
+          assert parsed.hostname, raw
+          assert parsed.username is None and parsed.password is None, raw
+          assert parsed.fragment == "", raw
+          print("CANONICAL_V4_PUBLIC_INPUTS=PASS")
+          PY
+
+      - name: Install bounded build and disposable QEMU dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-13 make bc perl bison flex openssl libssl-dev libelf-dev \
+            dwarves kmod xz-utils pkg-config musl-tools binutils bzip2 \
+            e2fsprogs util-linux proot erofs-utils gdisk dosfstools \
+            exfatprogs exfat-fuse qemu-system-x86 ovmf \
+            meson ninja-build gperf libcap-dev libmount-dev libblkid-dev \
+            liblz4-dev libzstd-dev liblzma-dev libpcre2-dev
+          python -m pip install --disable-pip-version-check --no-cache-dir jinja2 pyelftools
+          command -v qemu-system-x86_64
+          test -e /usr/share/OVMF/OVMF_CODE.fd || test -e /usr/share/OVMF/OVMF_CODE_4M.fd
+
+      - name: Build exact kernel and Stable Base
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ inputs.expected_commit }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/canonical-v4"
+          mkdir -p "$work/bin" "$work/metadata"
+          python bootstrap/kernel/build.py build \
+            --jobs 4 \
+            --work-dir "$work/kernel-work" \
+            --out-dir "$work/kernel"
+          python bootstrap/kernel/verify.py "$work/kernel"
+          sudo -E env ORDAX_SOURCE_COMMIT="$ORDAX_SOURCE_COMMIT" \
+            python bootstrap/stable-base/build.py build \
+              --kernel-modules "$work/kernel/kernel-modules-6.6.52.tar" \
+              --out-dir "$work/stable-base" \
+              --cache-dir "$work/stable-base-cache" \
+              > "$work/metadata/stable-base-build.json"
+          sudo chown -R "$(id -u):$(id -g)" "$work/stable-base"
+          python bootstrap/stable-base/build.py verify \
+            --out-dir "$work/stable-base" \
+            > "$work/metadata/stable-base-verify.json"
+
+      - name: Build exact release agent capsule and pinned initramfs
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ inputs.expected_commit }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/canonical-v4"
+          mkdir -p "$work/capsule"
+          (
+            cd bootstrap/release-acquisition
+            go test -count=1 ./...
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+              go build -trimpath -buildvcs=false -ldflags='-s -w' \
+              -o "$work/bin/ordax-release-agent" .
+          )
+          python bootstrap/portable-v2/capsule/build.py build \
+            --release-agent "$work/bin/ordax-release-agent" \
+            --out "$work/capsule/bootstrap.erofs" \
+            > "$work/metadata/capsule-build.json"
+          python bootstrap/portable-v2/capsule/build.py verify \
+            --release-agent "$work/bin/ordax-release-agent" \
+            --image "$work/capsule/bootstrap.erofs" \
+            > "$work/metadata/capsule-verify.json"
+          python bootstrap/initramfs/build.py build \
+            --jobs 4 \
+            --work-dir "$work/initramfs-work" \
+            --out-dir "$work/initramfs" \
+            --portable-bootstrap-capsule "$work/capsule/bootstrap.erofs" \
+            --portable-stable-base "$work/stable-base/stable-base.erofs" \
+            > "$work/metadata/initramfs-build.json"
+          python bootstrap/initramfs/build.py verify \
+            --out-dir "$work/initramfs" \
+            > "$work/metadata/initramfs-verify.json"
+
+      - name: Verify and materialize canonical signed v4 public release
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+          ENVELOPE_URL: ${{ inputs.envelope_url }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/canonical-v4"
+          portable="$work/portable/.ordax"
+          trust="$PWD/bootstrap/trust/release-ed25519.json"
+          mkdir -p "$portable"
+
+          "$work/bin/ordax-release-agent" inspect \
+            --envelope-url "$ENVELOPE_URL" \
+            --trust "$trust" \
+            > "$work/metadata/canonical-inspect.json"
+
+          "$work/bin/ordax-release-agent" materialize-portable-v4 \
+            --envelope-url "$ENVELOPE_URL" \
+            --trust "$trust" \
+            --expected-commit "$EXPECTED_COMMIT" \
+            --root "$portable" \
+            > "$work/metadata/canonical-materialize.json"
+
+          "$work/bin/ordax-release-agent" verify-portable-v4-exact \
+            --trust "$trust" \
+            --expected-commit "$EXPECTED_COMMIT" \
+            --root "$portable" \
+            > "$work/metadata/canonical-verify.json"
+
+          python - "$work/metadata/canonical-inspect.json" "$work/metadata/canonical-materialize.json" "$work/metadata/canonical-verify.json" "$EXPECTED_COMMIT" <<'PY'
+          import json, pathlib, sys
+          inspect, materialized, verified = [
+              json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+              for path in sys.argv[1:4]
+          ]
+          expected = sys.argv[4]
+          for receipt in (inspect, materialized, verified):
+              assert receipt["source_commit"] == expected, receipt
+          assert inspect["manifest_schema"] == "prototype-ordax.release-manifest/4", inspect
+          assert [a["role"] for a in inspect["artifacts"]] == [
+              "system-image", "surface-runtime", "local-ai-runtime"
+          ], inspect
+          assert inspect["local_ai"]["contract"] == "ordax.local-ai/1", inspect
+          assert materialized["activation_allowed"] is False, materialized
+          assert verified["activation_allowed"] is False, verified
+          print("CANONICAL_SIGNED_V4_PUBLIC_MATERIALIZATION=PASS")
+          PY
+
+      - name: Build persistent state for exact current release
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/canonical-v4"
+          state="$work/persistent-state.img"
+          current="$work/current.txt"
+          known="$work/known-good.txt"
+          printf '%s\n' "$EXPECTED_COMMIT" > "$current"
+          printf '%s\n' "$EXPECTED_COMMIT" > "$known"
+          truncate -s 268435456 "$state"
+          mkfs.ext4 -q -F -L ORDAX-STATE "$state"
+          debugfs -w -R 'mkdir /ordax' "$state"
+          debugfs -w -R 'mkdir /ordax/base' "$state"
+          debugfs -w -R 'mkdir /ordax/base/upper' "$state"
+          debugfs -w -R 'mkdir /ordax/base/work' "$state"
+          debugfs -w -R 'mkdir /ordax/portable-release' "$state"
+          debugfs -w -R 'mkdir /ordax/runtime' "$state"
+          debugfs -w -R 'mkdir /home' "$state"
+          debugfs -w -R "write $current /ordax/portable-release/current" "$state"
+          debugfs -w -R "write $known /ordax/portable-release/known-good" "$state"
+          e2fsck -fn "$state"
+
+      - name: Prove canonical v4 direct-kernel boot
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/canonical-v4"
+          mkdir -p "$work/qemu-proof"
+          sudo -E python3 bootstrap/portable-v2/qemu_boot.py \
+            --kernel "$work/kernel/vmlinuz-6.6.52" \
+            --initramfs "$work/initramfs/initramfs.cpio.gz" \
+            --initramfs-provenance "$work/initramfs/initramfs-provenance.json" \
+            --capsule "$work/capsule/bootstrap.erofs" \
+            --stable-base "$work/stable-base/stable-base.erofs" \
+            --state-image "$work/persistent-state.img" \
+            --portable-root "$work/portable/.ordax" \
+            --trust "$PWD/bootstrap/trust/release-ed25519.json" \
+            --source-commit "$EXPECTED_COMMIT" \
+            --out "$work/qemu-proof/proof.json"
+          sudo chown -R "$(id -u):$(id -g)" "$work/qemu-proof"
+          python - "$work/qemu-proof/proof.json" <<'PY'
+          import json, pathlib
+          proof = json.loads(pathlib.Path("$RUNNER_TEMP/canonical-v4/qemu-proof/proof.json").read_text())
+          assert proof["status"] == "pass", proof
+          assert proof["artifacts"]["release_manifest_schema"] == 4, proof
+          assert proof["checks"]["local_ai_runtime_handoff_marker"] is True, proof
+          assert proof["checks"]["local_ai_runtime_sha_exact"] is True, proof
+          assert proof["checks"]["local_ai_backend_started"] is True, proof
+          assert proof["physical_target_device_touched"] is False, proof
+          assert proof["physical_write_authorized"] is False, proof
+          PY
+
+      - name: Build pinned systemd-boot
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/canonical-v4"
+          python boot/esp/build.py check
+          python boot/esp/build.py build --work-dir "$work/esp-work" --out-dir "$work/esp"
+          python boot/esp/build.py verify --out-dir "$work/esp"
+
+      - name: Prove canonical v4 OVMF boot
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/canonical-v4"
+          mkdir -p "$work/uefi-proof"
+          sudo -E python3 bootstrap/portable-v2/uefi_boot.py \
+            --kernel "$work/kernel/vmlinuz-6.6.52" \
+            --initramfs "$work/initramfs/initramfs.cpio.gz" \
+            --initramfs-provenance "$work/initramfs/initramfs-provenance.json" \
+            --capsule "$work/capsule/bootstrap.erofs" \
+            --stable-base "$work/stable-base/stable-base.erofs" \
+            --state-image "$work/persistent-state.img" \
+            --portable-root "$work/portable/.ordax" \
+            --trust "$PWD/bootstrap/trust/release-ed25519.json" \
+            --source-commit "$EXPECTED_COMMIT" \
+            --bootloader "$work/esp/systemd-bootx64.efi" \
+            --loader-conf boot/portable-v2/loader/loader.conf \
+            --normal-entry boot/portable-v2/loader/entries/ordax-portable.conf \
+            --recovery-entry boot/portable-v2/loader/entries/ordax-portable-recovery.conf \
+            --out "$work/uefi-proof/proof.json"
+          sudo chown -R "$(id -u):$(id -g)" "$work/uefi-proof"
+          python - "$work/uefi-proof/proof.json" <<'PY'
+          import json, pathlib
+          proof = json.loads(pathlib.Path("$RUNNER_TEMP/canonical-v4/uefi-proof/proof.json").read_text())
+          assert proof["status"] == "pass", proof
+          assert proof["artifacts"]["release_manifest_schema"] == 4, proof
+          assert proof["checks"]["local_ai_runtime_handoff_marker"] is True, proof
+          assert proof["checks"]["local_ai_runtime_sha_exact"] is True, proof
+          assert proof["checks"]["local_ai_backend_started"] is True, proof
+          assert proof["physical_usb_boot_proven"] is False, proof
+          assert proof["physical_target_device_touched"] is False, proof
+          assert proof["physical_write_authorized"] is False, proof
+          PY
+
+      - name: Emit public promotion-proof receipt
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+          ENVELOPE_URL: ${{ inputs.envelope_url }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/canonical-v4"
+          python - "$work" "$EXPECTED_COMMIT" "$ENVELOPE_URL" <<'PY'
+          import hashlib, json, pathlib, sys
+          work = pathlib.Path(sys.argv[1])
+          expected = sys.argv[2]
+          envelope_url = sys.argv[3]
+          def sha(path):
+              h = hashlib.sha256()
+              with pathlib.Path(path).open("rb") as f:
+                  for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+          receipt = {
+              "$schema": "prototype-ordax.canonical-v4-public-proof/1",
+              "status": "pass",
+              "source_commit": expected,
+              "envelope_url": envelope_url,
+              "canonical_trust_sha256": sha("bootstrap/trust/release-ed25519.json"),
+              "qemu_direct_proof_sha256": sha(work / "qemu-proof/proof.json"),
+              "qemu_uefi_proof_sha256": sha(work / "uefi-proof/proof.json"),
+              "private_key_received": False,
+              "release_signed_in_ci": False,
+              "release_activated": False,
+              "physical_target_device_touched": False,
+              "physical_write_authorized": False,
+          }
+          (work / "canonical-v4-public-proof.json").write_text(
+              json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print("CANONICAL_V4_PUBLIC_QEMU_UEFI_PROOF=PASS")
+          print("PRIVATE_KEY_RECEIVED=NO")
+          print("PHYSICAL_WRITE_AUTHORIZED=NO")
+          PY
+
+      - name: Upload public proof metadata only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: canonical-portable-v4-public-proof-${{ inputs.expected_commit }}
+          path: |
+            ${{ runner.temp }}/canonical-v4/canonical-v4-public-proof.json
+            ${{ runner.temp }}/canonical-v4/qemu-proof/proof.json
+            ${{ runner.temp }}/canonical-v4/uefi-proof/proof.json
+            ${{ runner.temp }}/canonical-v4/metadata/
+          if-no-files-found: error
+          retention-days: 30
