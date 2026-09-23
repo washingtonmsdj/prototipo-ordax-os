@@ -39,7 +39,7 @@ function normalizedAddress(value, t) {
   throw new TypeError(t("internet.address.invalidExample"));
 }
 
-function displayHost(url, emptyLabel = "Nova aba") {
+function displayHost(url, emptyLabel = "") {
   if (!url) return emptyLabel;
   try {
     return new URL(url).hostname || url;
@@ -336,7 +336,9 @@ export function mountInternetBrowserControls(
   let mountedSlot = null;
   let destroyed = false;
   let nextTabOrdinal = 1;
-  let message = "";
+  let messageId = null;
+  let messageParams = Object.freeze({});
+  let externalMessage = "";
   let panelCollapsed = false;
   let favoritesExpanded = false;
   let historyExpanded = false;
@@ -346,6 +348,23 @@ export function mountInternetBrowserControls(
   let resizeObserver = null;
 
   const findSlot = () => root.querySelector(`${INTERNET_WINDOW_SELECTOR} ${INTERNET_EXTENSION_SELECTOR}`);
+  const clearMessage = () => {
+    messageId = null;
+    messageParams = Object.freeze({});
+    externalMessage = "";
+  };
+  const setMessage = (id, params = {}) => {
+    messageId = id;
+    messageParams = Object.freeze({ ...params });
+    externalMessage = "";
+  };
+  const setExternalMessage = (value) => {
+    messageId = null;
+    messageParams = Object.freeze({});
+    externalMessage = String(value ?? "");
+  };
+  const renderedMessage = () =>
+    messageId ? t(messageId, messageParams) : externalMessage;
   const activeTab = () => snapshot.tabs.find((tab) => tab.id === snapshot.activeTabId) ?? null;
   const selectedProject = () => projectSnapshot?.projects.find((project) => project.id === selectedProjectId) ?? null;
   const activeReferenceUrl = () => {
@@ -456,16 +475,14 @@ export function mountInternetBrowserControls(
       const url = normalizedAddress(target, t);
       if (!url) return;
       const tab = activeTab();
-      message = "";
+      clearMessage();
       if (tab) {
         if (tab.url !== url) port.navigate(tab.id, url);
       } else {
         port.openTab(allocateTabId(), url);
       }
-    } catch (error) {
-      message = error instanceof Error
-        ? error.message
-        : t("internet.address.invalid");
+    } catch {
+      setMessage("internet.address.invalid");
     }
   };
 
@@ -531,14 +548,14 @@ export function mountInternetBrowserControls(
     const folder = slot.querySelector("[data-browser-project-folder]");
     const selected = selectedProject();
 
-    if (contextName) contextName.textContent = selected?.name ?? "Nenhum projeto selecionado";
+    if (contextName) contextName.textContent = selected?.name ?? t("internet.project.none");
     if (contextDetail) {
       if (selected) {
-        contextDetail.textContent = `Contexto local da sessão · ${selected.path}`;
+        contextDetail.textContent = t("internet.project.localContext", { path: selected.path });
       } else if (projectSnapshot) {
-        contextDetail.textContent = "Escolha um projeto já cadastrado em Arquivos. A escolha vale apenas para esta sessão do navegador.";
+        contextDetail.textContent = t("internet.project.choose");
       } else {
-        contextDetail.textContent = "O catálogo local de projetos não está disponível neste host.";
+        contextDetail.textContent = t("internet.project.catalogUnavailable");
       }
     }
 
@@ -546,8 +563,8 @@ export function mountInternetBrowserControls(
       folder.replaceChildren();
       folder.append(node(documentObject, "span", "", selected ? "□" : "○"));
       const copy = node(documentObject, "span", "ordax-internet-page-copy");
-      copy.append(node(documentObject, "strong", "", selected ? "Pasta do projeto" : "Sem contexto de projeto"));
-      copy.append(node(documentObject, "small", "", selected?.path ?? "Selecione um projeto para relacionar a pesquisa à sessão."));
+      copy.append(node(documentObject, "strong", "", t(selected ? "internet.project.folder" : "internet.project.noContext")));
+      copy.append(node(documentObject, "small", "", selected?.path ?? t("internet.project.selectForResearch")));
       folder.append(copy);
     }
 
@@ -563,11 +580,11 @@ export function mountInternetBrowserControls(
     options.replaceChildren();
 
     if (!projectSnapshot) {
-      options.append(node(documentObject, "div", "ordax-internet-tab-placeholder", "Catálogo de projetos indisponível neste host."));
+      options.append(node(documentObject, "div", "ordax-internet-tab-placeholder", t("internet.project.catalogUnavailable")));
       return;
     }
     if (projectEntries.length === 0) {
-      options.append(node(documentObject, "div", "ordax-internet-tab-placeholder", "Nenhum projeto cadastrado em Arquivos."));
+      options.append(node(documentObject, "div", "ordax-internet-tab-placeholder", t("internet.project.noneRegistered")));
       return;
     }
 
@@ -576,12 +593,12 @@ export function mountInternetBrowserControls(
       row.type = "button";
       row.dataset.browserProjectId = project.id;
       row.setAttribute("aria-pressed", String(project.id === selectedProjectId));
-      row.title = `Usar ${project.name} como contexto desta sessão do navegador`;
+      row.title = t("internet.project.useAsContext", { name: project.name });
       row.append(node(documentObject, "span", "", project.id === selectedProjectId ? "●" : "○"));
       const copy = node(documentObject, "span", "ordax-internet-page-copy");
       copy.append(node(documentObject, "strong", "", project.name));
       copy.append(node(documentObject, "small", "", project.path));
-      row.append(copy, node(documentObject, "span", "", project.id === selectedProjectId ? "ATUAL" : ""));
+      row.append(copy, node(documentObject, "span", "", project.id === selectedProjectId ? t("internet.project.currentMarker") : ""));
       options.append(row);
     }
   };
@@ -595,56 +612,48 @@ export function mountInternetBrowserControls(
     setStatus(
       "session",
       snapshot.supported
-        ? (tabCount === 1 ? "1 aba aberta" : `${tabCount} abas abertas`)
-        : "Navegação indisponível",
+        ? t(tabCount === 1 ? "internet.home.status.tabOne" : "internet.home.status.tabs", { count: tabCount })
+        : t("internet.home.status.navigationUnavailable"),
     );
 
     const projectCount = projectSnapshot?.projects.length ?? 0;
     setStatus(
       "projects",
       !projectSnapshot
-        ? "Indisponível neste host"
+        ? t("internet.home.status.unavailable")
         : projectCount === 0
-          ? "Nenhum projeto cadastrado"
-          : projectCount === 1
-            ? "1 projeto disponível"
-            : `${projectCount} projetos disponíveis`,
+          ? t("internet.home.status.projectsNone")
+          : t(projectCount === 1 ? "internet.home.status.projectOne" : "internet.home.status.projects", { count: projectCount }),
     );
 
     const referenceCount = referenceSnapshot?.references.length ?? 0;
     setStatus(
       "references",
       !referenceSnapshot
-        ? "Indisponível neste host"
+        ? t("internet.home.status.unavailable")
         : referenceCount === 0
-          ? "Nenhuma página salva"
-          : referenceCount === 1
-            ? "1 página salva em projetos"
-            : `${referenceCount} páginas salvas em projetos`,
+          ? t("internet.home.status.referencesNone")
+          : t(referenceCount === 1 ? "internet.home.status.referenceOne" : "internet.home.status.references", { count: referenceCount }),
     );
 
     const favoriteCount = favoriteSnapshot?.favorites.length ?? 0;
     setStatus(
       "favorites",
       !favoriteSnapshot
-        ? "Indisponível neste host"
+        ? t("internet.home.status.unavailable")
         : favoriteCount === 0
-          ? "Nenhum favorito salvo"
-          : favoriteCount === 1
-            ? "1 favorito salvo"
-            : `${favoriteCount} favoritos salvos`,
+          ? t("internet.home.status.favoritesNone")
+          : t(favoriteCount === 1 ? "internet.home.status.favoriteOne" : "internet.home.status.favorites", { count: favoriteCount }),
     );
 
     const historyCount = historySnapshot?.entries.length ?? 0;
     setStatus(
       "history",
       !historySnapshot
-        ? "Indisponível neste host"
+        ? t("internet.home.status.unavailable")
         : historyCount === 0
-          ? "Nenhuma visita registrada"
-          : historyCount === 1
-            ? "1 visita registrada"
-            : `${historyCount} visitas registradas`,
+          ? t("internet.home.status.historyNone")
+          : t(historyCount === 1 ? "internet.home.status.historyOne" : "internet.home.status.history", { count: historyCount }),
     );
   };
 
@@ -671,7 +680,8 @@ export function mountInternetBrowserControls(
     const home = viewport?.querySelector("[data-browser-home]");
     if (home) home.hidden = Boolean(tab?.url);
     let status = slot.querySelector("[data-browser-message]");
-    if (!status && message) {
+    const currentMessage = renderedMessage();
+    if (!status && currentMessage) {
       status = node(documentObject, "div", "ordax-internet-message");
       status.dataset.browserMessage = "";
       status.setAttribute("role", "status");
@@ -679,8 +689,8 @@ export function mountInternetBrowserControls(
       slot.querySelector(".ordax-internet-center")?.append(status);
     }
     if (status) {
-      status.textContent = message;
-      status.hidden = !message;
+      status.textContent = currentMessage;
+      status.hidden = !currentMessage;
     }
   };
 
@@ -695,16 +705,16 @@ export function mountInternetBrowserControls(
     const save = slot.querySelector("[data-browser-save-project]");
     if (save) {
       save.disabled = !available;
-      save.textContent = saved ? "▱  Atualizar no projeto" : "▱  Salvar no projeto";
+      save.textContent = t(saved ? "internet.project.updateReference" : "internet.project.saveReference");
       save.title = !referencePort
-        ? "Referências de projeto não estão disponíveis neste host."
+        ? t("internet.project.referenceUnavailable")
         : !project
-          ? "Selecione um projeto para salvar esta página."
+          ? t("internet.project.selectBeforeSave")
           : !url
-            ? "Abra uma página HTTP ou HTTPS válida antes de salvá-la."
+            ? t("internet.project.openValidBeforeSave")
             : saved
-              ? "Atualizar título e nota desta referência."
-              : "Salvar a página atual como referência explícita deste projeto.";
+              ? t("internet.project.updateReferenceHint")
+              : t("internet.project.saveReferenceHint");
     }
 
     const textarea = slot.querySelector("[data-browser-reference-note]");
@@ -718,14 +728,14 @@ export function mountInternetBrowserControls(
     const hint = slot.querySelector("[data-browser-reference-note-hint]");
     if (hint) {
       hint.textContent = !referencePort
-        ? "Persistência de referências indisponível neste host."
+        ? t("internet.project.referencePersistenceUnavailable")
         : !project
-          ? "Selecione um projeto para relacionar uma nota à página."
+          ? t("internet.project.selectBeforeNote")
           : !url
-            ? "Abra uma página HTTP ou HTTPS válida para adicionar contexto."
+            ? t("internet.project.openValidForContext")
             : saved
-              ? "A nota é salva junto desta referência."
-              : "A nota será salva junto com a página.";
+              ? t("internet.project.noteSavedWithReference")
+              : t("internet.project.noteWillSaveWithPage");
     }
 
     const stateNode = slot.querySelector("[data-browser-reference-state]");
@@ -737,19 +747,21 @@ export function mountInternetBrowserControls(
           documentObject,
           "span",
           "ordax-internet-reference-state-copy",
-          referenceSnapshot?.persistence === "device"
-            ? "Salvo neste dispositivo"
-            : "Salvo somente nesta sessão",
+          t(
+            referenceSnapshot?.persistence === "device"
+              ? "internet.persistence.savedDevice"
+              : "internet.persistence.sessionOnly",
+          ),
         );
         const remove = node(
           documentObject,
           "button",
           "ordax-internet-reference-remove",
-          "Remover",
+          t("internet.action.remove"),
         );
         remove.type = "button";
         remove.dataset.browserRemoveReference = saved.id;
-        remove.setAttribute("aria-label", "Remover página salva do projeto");
+        remove.setAttribute("aria-label", t("internet.project.removeReference"));
         stateNode.append(copy, remove);
       }
     }
@@ -765,30 +777,34 @@ export function mountInternetBrowserControls(
       bookmark.setAttribute("aria-pressed", String(Boolean(favorite)));
       bookmark.setAttribute(
         "aria-label",
-        favorite ? "Remover dos favoritos" : "Adicionar aos favoritos",
+        t(favorite ? "internet.favorite.remove" : "internet.favorite.add"),
       );
       bookmark.title = !favoritePort
-        ? "Favoritos não estão disponíveis neste host."
+        ? t("internet.favorite.unavailable")
         : !url
-          ? "Abra uma página HTTP ou HTTPS válida para adicioná-la aos favoritos."
+          ? t("internet.favorite.openValidBeforeAdd")
           : favorite
-            ? "Remover esta página dos favoritos."
-            : "Salvar esta página nos favoritos deste dispositivo.";
+            ? t("internet.favorite.removeHint")
+            : t("internet.favorite.addHint");
     }
 
     const toggle = slot.querySelector("[data-browser-favorites-toggle]");
     const label = slot.querySelector("[data-browser-favorites-label]");
     const list = slot.querySelector("[data-browser-favorites-list]");
     const count = favoriteSnapshot?.favorites.length ?? 0;
-    if (label) label.textContent = count > 0 ? `Favoritos · ${count}` : "Favoritos";
+    if (label) {
+      label.textContent = count > 0
+        ? t("internet.favorite.headingCount", { count })
+        : t("internet.favorites");
+    }
     if (toggle) {
       toggle.disabled = !favoritePort;
       toggle.setAttribute("aria-expanded", String(Boolean(favoritePort && favoritesExpanded)));
       toggle.title = !favoritePort
-        ? "Favoritos não estão disponíveis neste host."
+        ? t("internet.favorite.unavailable")
         : favoriteSnapshot?.persistence === "device"
-          ? "Favoritos salvos neste dispositivo."
-          : "Favoritos disponíveis somente nesta sessão.";
+          ? t("internet.favorite.savedDevice")
+          : t("internet.favorite.sessionOnly");
     }
     if (!list) return;
     list.hidden = !favoritePort || !favoritesExpanded;
@@ -796,7 +812,7 @@ export function mountInternetBrowserControls(
     if (!favoritePort || !favoritesExpanded) return;
     const favorites = favoriteSnapshot?.favorites ?? [];
     if (favorites.length === 0) {
-      list.append(node(documentObject, "div", "ordax-internet-tab-placeholder", "Nenhum favorito salvo."));
+      list.append(node(documentObject, "div", "ordax-internet-tab-placeholder", t("internet.favorite.empty")));
       return;
     }
     for (const entry of favorites) {
@@ -807,12 +823,12 @@ export function mountInternetBrowserControls(
       open.title = entry.url;
       const copy = node(documentObject, "span", "ordax-internet-page-copy");
       copy.append(node(documentObject, "strong", "", entry.title));
-      copy.append(node(documentObject, "small", "", displayHost(entry.url)));
+      copy.append(node(documentObject, "small", "", displayHost(entry.url, t("internet.tab.new"))));
       open.append(node(documentObject, "span", "", "★"), copy);
       const remove = node(documentObject, "button", "ordax-internet-favorite-remove", "×");
       remove.type = "button";
       remove.dataset.browserRemoveFavorite = entry.id;
-      remove.setAttribute("aria-label", `Remover ${entry.title} dos favoritos`);
+      remove.setAttribute("aria-label", t("internet.favorite.removeNamed", { title: entry.title }));
       row.append(open, remove);
       list.append(row);
     }
@@ -825,15 +841,19 @@ export function mountInternetBrowserControls(
     const entries = historySnapshot?.entries ?? [];
     const count = entries.length;
 
-    if (label) label.textContent = count > 0 ? `Histórico · ${count}` : "Histórico";
+    if (label) {
+      label.textContent = count > 0
+        ? t("internet.history.headingCount", { count })
+        : t("internet.history");
+    }
     if (toggle) {
       toggle.disabled = !historyPort;
       toggle.setAttribute("aria-expanded", String(Boolean(historyPort && historyExpanded)));
       toggle.title = !historyPort
-        ? "Histórico não está disponível neste host."
+        ? t("internet.history.unavailable")
         : historySnapshot?.persistence === "device"
-          ? "Histórico salvo neste dispositivo."
-          : "Histórico disponível somente nesta sessão.";
+          ? t("internet.history.savedDevice")
+          : t("internet.history.sessionOnly");
     }
     if (!list) return;
     list.hidden = !historyPort || !historyExpanded;
@@ -845,9 +865,13 @@ export function mountInternetBrowserControls(
       documentObject,
       "span",
       "",
-      historySnapshot?.persistence === "device" ? "Neste dispositivo" : "Nesta sessão",
+      t(
+        historySnapshot?.persistence === "device"
+          ? "internet.persistence.thisDevice"
+          : "internet.persistence.thisSession",
+      ),
     );
-    const clear = node(documentObject, "button", "ordax-internet-history-clear", "Limpar");
+    const clear = node(documentObject, "button", "ordax-internet-history-clear", t("internet.history.clear"));
     clear.type = "button";
     clear.dataset.browserClearHistory = "";
     clear.disabled = entries.length === 0;
@@ -855,7 +879,7 @@ export function mountInternetBrowserControls(
     list.append(header);
 
     if (entries.length === 0) {
-      list.append(node(documentObject, "div", "ordax-internet-tab-placeholder", "Nenhuma visita registrada."));
+      list.append(node(documentObject, "div", "ordax-internet-tab-placeholder", t("internet.history.empty")));
       return;
     }
 
@@ -948,7 +972,7 @@ export function mountInternetBrowserControls(
       const entry = historySnapshot?.entries.find((item) => item.id === openHistoryId);
       if (!entry || !snapshot.supported) return;
       const tab = activeTab();
-      message = "";
+      clearMessage();
       if (tab) {
         port.navigate(tab.id, entry.url);
       } else {
@@ -961,7 +985,7 @@ export function mountInternetBrowserControls(
     if (removeHistoryId) {
       if (!historyPort) return;
       historyPort.remove(removeHistoryId);
-      message = t("internet.history.removed");
+      setMessage("internet.history.removed");
       render();
       return;
     }
@@ -969,7 +993,7 @@ export function mountInternetBrowserControls(
     if (target.dataset.browserClearHistory !== undefined) {
       if (!historyPort) return;
       historyPort.clear();
-      message = t("internet.history.cleared");
+      setMessage("internet.history.cleared");
       render();
       return;
     }
@@ -986,7 +1010,7 @@ export function mountInternetBrowserControls(
       const favorite = favoriteSnapshot?.favorites.find((entry) => entry.id === openFavoriteId);
       if (!favorite || !snapshot.supported) return;
       const tab = activeTab();
-      message = "";
+      clearMessage();
       if (tab) {
         port.navigate(tab.id, favorite.url);
       } else {
@@ -999,7 +1023,7 @@ export function mountInternetBrowserControls(
     if (removeFavoriteId) {
       if (!favoritePort) return;
       favoritePort.remove(removeFavoriteId);
-      message = t("internet.favorite.removed");
+      setMessage("internet.favorite.removed");
       render();
       return;
     }
@@ -1010,9 +1034,10 @@ export function mountInternetBrowserControls(
       try {
         projectPort.recordOpened(projectId);
         selectedProjectId = projectId;
-        message = "";
+        clearMessage();
       } catch (error) {
-        message = error instanceof Error ? error.message : "Não foi possível abrir o contexto do projeto.";
+        if (error instanceof Error && error.message) setExternalMessage(error.message);
+        else setMessage("internet.project.openFailed");
       }
       render();
       focusProject(projectId);
@@ -1028,15 +1053,18 @@ export function mountInternetBrowserControls(
         referencePort.save({
           projectId: project.id,
           url,
-          title: tab.title || displayHost(url),
+          title: tab.title || displayHost(url, t("internet.tab.new")),
           note: noteDraftValue,
         });
         projectPort?.recordOpened(project.id);
-        message = referenceSnapshot?.persistence === "session"
-          ? "Referência salva para esta sessão."
-          : "Referência salva no projeto.";
+        setMessage(
+          referenceSnapshot?.persistence === "session"
+            ? "internet.reference.savedSession"
+            : "internet.reference.savedProject",
+        );
       } catch (error) {
-        message = error instanceof Error ? error.message : "Não foi possível salvar a referência.";
+        if (error instanceof Error && error.message) setExternalMessage(error.message);
+        else setMessage("internet.reference.saveFailed");
       }
       render();
       return;
@@ -1048,9 +1076,10 @@ export function mountInternetBrowserControls(
       try {
         referencePort.remove(removeReferenceId);
         noteDraftValue = "";
-        message = "Referência removida do projeto.";
+        setMessage("internet.reference.removed");
       } catch (error) {
-        message = error instanceof Error ? error.message : "Não foi possível remover a referência.";
+        if (error instanceof Error && error.message) setExternalMessage(error.message);
+        else setMessage("internet.reference.removeFailed");
       }
       render();
       return;
@@ -1073,7 +1102,7 @@ export function mountInternetBrowserControls(
     }
     if (target.dataset.browserNewTab !== undefined) {
       if (snapshot.tabs.length >= MAX_UI_TABS) {
-        message = t("internet.tab.limit");
+        setMessage("internet.tab.limit");
         render();
         return;
       }
@@ -1106,18 +1135,21 @@ export function mountInternetBrowserControls(
       try {
         if (existing) {
           favoritePort.remove(existing.id);
-          message = t("internet.favorite.removed");
+          setMessage("internet.favorite.removed");
         } else {
           favoritePort.save({
             url,
-            title: tab.title || displayHost(url),
+            title: tab.title || displayHost(url, t("internet.tab.new")),
           });
-          message = favoriteSnapshot?.persistence === "session"
-            ? "Favorito salvo para esta sessão."
-            : "Favorito salvo neste dispositivo.";
+          setMessage(
+            favoriteSnapshot?.persistence === "session"
+              ? "internet.favorite.savedSession"
+              : "internet.favorite.savedDeviceMessage",
+          );
         }
       } catch (error) {
-        message = error instanceof Error ? error.message : "Não foi possível atualizar os favoritos.";
+        if (error instanceof Error && error.message) setExternalMessage(error.message);
+        else setMessage("internet.favorite.updateFailed");
       }
       render();
     }
@@ -1190,10 +1222,10 @@ export function mountInternetBrowserControls(
     try {
       const url = normalizedAddress(input.value, t);
       if (!url) return;
-      message = "";
+      clearMessage();
       port.navigate(tab.id, url);
-    } catch (error) {
-      message = error instanceof Error ? error.message : t("internet.address.invalid");
+    } catch {
+      setMessage("internet.address.invalid");
       render();
     }
   };
