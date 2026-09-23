@@ -14,7 +14,7 @@ class UpdateStatusCopyTests(unittest.TestCase):
         self.assertIn("Reiniciar manualmente agora não conclui esta atualização", presentation)
         self.assertIn("A ativação automática ainda não está habilitada", presentation)
         self.assertIn("reiniciar manualmente não força a aplicação", presentation)
-        self.assertIn("Base pendente de ativação", presentation)
+        self.assertIn('"system.updates.boot.pendingActivation"', overview)
         self.assertNotIn(
             "o OrdaX fará a ativação e solicitará o reinício automaticamente",
             presentation,
