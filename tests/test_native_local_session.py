@@ -14,6 +14,8 @@ COMPOSITION = ROOT / "system/composition/native/main.mjs"
 FIRST_RUN = ROOT / "system/surface/ui/first-run.mjs"
 SETTINGS = ROOT / "system/surface/ui/settings-overview-controls.mjs"
 SETTINGS_I18N = ROOT / "system/services/i18n/catalog/settings.mjs"
+LOCK = ROOT / "system" / "surface" / "ui" / "local-session-lock.mjs"
+LOCAL_SESSION_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "local-session.mjs"
 
 spec = importlib.util.spec_from_file_location("ordax_native_local_session_test", HOST)
 host = importlib.util.module_from_spec(spec)
@@ -103,10 +105,21 @@ class NativeLocalSessionTests(unittest.TestCase):
         first_run = FIRST_RUN.read_text(encoding="utf-8")
         settings = SETTINGS.read_text(encoding="utf-8")
         settings_i18n = SETTINGS_I18N.read_text(encoding="utf-8")
+        lock = LOCK.read_text(encoding="utf-8")
+        local_session_i18n = LOCAL_SESSION_I18N.read_text(encoding="utf-8")
         self.assertIn('LOCAL_SESSION_SCHEMA = "ordax.local-session/1"', contract)
         self.assertIn('"/__ordax/native/local-session"', adapter)
         self.assertIn("createNativeLocalSession", composition)
-        self.assertIn("mountLocalSessionLock", composition)
+        self.assertIn("mountLocalSessionLock(root, localSession, surface)", composition)
+        self.assertIn("assertSurfaceRenderLifecycle", lock)
+        self.assertIn("localization.subscribe", lock)
+        self.assertIn("unsubscribeLocalization", lock)
+        self.assertIn('"localSession.lock.message.rateLimited"', lock)
+        self.assertIn('t("localSession.lock.title")', lock)
+        self.assertIn('"localSession.lock.title": "Session locked"', local_session_i18n)
+        self.assertIn('"localSession.lock.action.unlock": "Unlock"', local_session_i18n)
+        self.assertNotIn('"Sessão bloqueada"', lock)
+        self.assertNotIn('"PIN ou senha local incorreto."', lock)
         self.assertIn('"security"', first_run)
         self.assertIn("localSessionPort.configureCredential", first_run)
         self.assertIn('messageId: "settings.section.security"', settings)

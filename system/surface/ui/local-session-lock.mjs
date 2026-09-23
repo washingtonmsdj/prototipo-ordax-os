@@ -2,20 +2,25 @@ import {
   assertLocalSessionPort,
   validateLocalSessionSnapshot,
 } from "../../contracts/local-session.mjs";
+import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
 
 export function mountLocalSessionLock(
   root,
   localSession,
+  surfaceLifecycle,
   { documentObject = root?.ownerDocument ?? globalThis.document } = {},
 ) {
   if (!(root instanceof Element)) {
     throw new TypeError("Local session lock requires the Surface root Element");
   }
   const port = assertLocalSessionPort(localSession);
+  const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
   let snapshot = validateLocalSessionSnapshot(port.getSnapshot());
   let overlay = null;
   let pending = false;
-  let message = "";
+  let messageId = null;
   let destroyed = false;
   let previousInert = root.inert;
   let previousAriaHidden = root.getAttribute("aria-hidden");
@@ -32,7 +37,7 @@ export function mountLocalSessionLock(
     restoreRoot();
   };
 
-  const render = () => {
+  const render = ({ preserveSecret = false } = {}) => {
     if (destroyed) return;
     if (snapshot.state !== "locked") {
       removeOverlay();
@@ -51,6 +56,18 @@ export function mountLocalSessionLock(
       documentObject.body.append(overlay);
     }
 
+    const previousInput = preserveSecret
+      ? overlay.querySelector("[data-local-session-secret]")
+      : null;
+    const secretState = previousInput instanceof HTMLInputElement
+      ? {
+          value: previousInput.value,
+          selectionStart: previousInput.selectionStart,
+          selectionEnd: previousInput.selectionEnd,
+          focused: documentObject.activeElement === previousInput,
+        }
+      : null;
+
     overlay.replaceChildren();
     const card = documentObject.createElement("main");
     card.className = "ordax-local-session-lock-card";
@@ -59,16 +76,14 @@ export function mountLocalSessionLock(
     brand.textContent = "OrdaX";
     const title = documentObject.createElement("h1");
     title.id = "ordax-local-session-lock-title";
-    title.textContent = "Sessão bloqueada";
+    title.textContent = t("localSession.lock.title");
     const copy = documentObject.createElement("p");
-    copy.textContent =
-      "Digite seu PIN ou senha local para continuar. "
-      + "Este bloqueio protege a sessão em execução e não criptografa os arquivos do pendrive.";
+    copy.textContent = t("localSession.lock.description");
     const form = documentObject.createElement("form");
     form.className = "ordax-local-session-lock-form";
     form.dataset.localSessionUnlockForm = "";
     const label = documentObject.createElement("label");
-    label.textContent = "PIN ou senha local";
+    label.textContent = t("localSession.lock.secretLabel");
     const input = documentObject.createElement("input");
     input.type = "password";
     input.autocomplete = "current-password";
@@ -77,20 +92,40 @@ export function mountLocalSessionLock(
     input.required = true;
     input.dataset.localSessionSecret = "";
     input.disabled = pending;
+    if (secretState && !pending) {
+      input.value = secretState.value;
+      if (
+        secretState.selectionStart !== null
+        && secretState.selectionEnd !== null
+      ) {
+        input.setSelectionRange(
+          secretState.selectionStart,
+          secretState.selectionEnd,
+        );
+      }
+    }
     label.append(input);
     const button = documentObject.createElement("button");
     button.type = "submit";
-    button.textContent = pending ? "Verificando…" : "Desbloquear";
+    button.textContent = pending
+      ? t("localSession.lock.action.verifying")
+      : t("localSession.lock.action.unlock");
     button.disabled = pending;
     form.append(label, button);
     const status = documentObject.createElement("p");
     status.className = "ordax-local-session-lock-status";
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
-    status.textContent = message;
+    status.textContent = messageId ? t(messageId) : "";
     card.append(brand, title, copy, form, status);
     overlay.append(card);
-    queueMicrotask(() => input.focus());
+
+    queueMicrotask(() => {
+      if (destroyed || input.disabled) return;
+      if (!secretState || secretState.focused || !documentObject.activeElement) {
+        input.focus();
+      }
+    });
   };
 
   const onSubmit = (event) => {
@@ -103,20 +138,20 @@ export function mountLocalSessionLock(
     input.value = "";
     if (secret.length < 6) {
       secret = "";
-      message = "Digite pelo menos 6 caracteres.";
+      messageId = "localSession.lock.message.minLength";
       render();
       return;
     }
     pending = true;
-    message = "";
+    messageId = null;
     render();
     const operationSecret = secret;
     secret = "";
     void port.unlock(operationSecret).catch((error) => {
       if (destroyed) return;
-      message = error?.status === 429
-        ? "Muitas tentativas. Aguarde alguns segundos e tente novamente."
-        : "PIN ou senha local incorreto.";
+      messageId = error?.status === 429
+        ? "localSession.lock.message.rateLimited"
+        : "localSession.lock.message.incorrect";
     }).finally(() => {
       if (destroyed) return;
       pending = false;
@@ -125,10 +160,13 @@ export function mountLocalSessionLock(
   };
 
   documentObject.addEventListener("submit", onSubmit);
-  const unsubscribe = port.subscribe((next) => {
+  const unsubscribeSession = port.subscribe((next) => {
     snapshot = validateLocalSessionSnapshot(next);
-    if (snapshot.state !== "locked") message = "";
+    if (snapshot.state !== "locked") messageId = null;
     render();
+  });
+  const unsubscribeLocalization = localization.subscribe(() => {
+    render({ preserveSecret: true });
   });
   render();
 
@@ -136,7 +174,8 @@ export function mountLocalSessionLock(
     destroy() {
       if (destroyed) return;
       destroyed = true;
-      unsubscribe();
+      unsubscribeSession();
+      unsubscribeLocalization();
       documentObject.removeEventListener("submit", onSubmit);
       removeOverlay();
     },

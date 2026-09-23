@@ -117,6 +117,10 @@ test("English catalog contains primary Files, Settings and System entries", asyn
     new URL("../system/services/i18n/catalog/system.mjs", import.meta.url),
     "utf8",
   );
+  const localSessionCatalog = await readFile(
+    new URL("../system/services/i18n/catalog/local-session.mjs", import.meta.url),
+    "utf8",
+  );
 
   assert.match(filesCatalog, /"files\.location\.trash": "Trash"/);
   assert.match(filesCatalog, /"files\.recents\.clearHistory": "Clear history"/);
@@ -128,6 +132,8 @@ test("English catalog contains primary Files, Settings and System entries", asyn
   assert.match(settingsCatalog, /"settings\.security\.action\.lock": "Lock now"/);
   assert.match(settingsCatalog, /"settings\.security\.message\.changeFailed": "The local lock could not be changed\."/);
   assert.match(systemCatalog, /"system\.section\.diagnostics": "Diagnostics"/);
+  assert.match(localSessionCatalog, /"localSession\.lock\.title": "Session locked"/);
+  assert.match(localSessionCatalog, /"localSession\.lock\.message\.rateLimited": "Too many attempts\./);
 });
 
 test("Notes and Internet primary journeys use the shared localization owner", async () => {

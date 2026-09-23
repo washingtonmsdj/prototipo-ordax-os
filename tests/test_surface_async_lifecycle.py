@@ -202,5 +202,20 @@ class SurfaceAsyncLifecycleTests(unittest.TestCase):
 
 
 
+    def test_local_session_lock_locale_repaint_preserves_secret_only_transiently(self):
+        lock = self.read("local-session-lock.mjs")
+        self.assertIn("render({ preserveSecret: true })", lock)
+        self.assertIn("const previousInput = preserveSecret", lock)
+        self.assertIn("secretState", lock)
+        self.assertIn("input.value = secretState.value", lock)
+        self.assertIn('input.value = "";', lock)
+        self.assertIn("const operationSecret = secret;", lock)
+        self.assertIn('secret = "";', lock)
+        self.assertIn("unsubscribeLocalization()", lock)
+        for forbidden in ("localStorage", "sessionStorage", "preferences.set", "workspace"):
+            self.assertNotIn(forbidden, lock)
+
+
+
 if __name__ == "__main__":
     unittest.main()
