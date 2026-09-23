@@ -15,7 +15,7 @@ class LaunchLocaleOfferTests(unittest.TestCase):
             contract,
         )
         self.assertIn(
-            'FIRST_RUN_OFFERED_LOCALES = Object.freeze(["pt-BR", "en-US"])',
+            'FIRST_RUN_PUBLIC_MVP_LOCALES = Object.freeze(["pt-BR", "en-US"])',
             contract,
         )
         self.assertIn("const SUPPORTED_LOCALES = new Set(FIRST_RUN_SUPPORTED_LOCALES)", contract)
@@ -23,7 +23,7 @@ class LaunchLocaleOfferTests(unittest.TestCase):
 
     def test_oobe_and_regional_selector_offer_only_launch_complete_locales(self):
         regional = REGIONAL.read_text(encoding="utf-8")
-        self.assertIn("FIRST_RUN_OFFERED_LOCALES.map", regional)
+        self.assertIn("FIRST_RUN_PUBLIC_MVP_LOCALES.map", regional)
         self.assertIn("const LOCALES = new Set(FIRST_RUN_SUPPORTED_LOCALES)", regional)
         self.assertIn("Português (Brasil) e English", regional)
         self.assertIn("permanecem aceitos para compatibilidade", regional)
