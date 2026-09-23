@@ -46,9 +46,9 @@ This does **not** make `en-US` a complete Surface locale yet. Files now localize
 navigation, search, locale-aware sorting, listing, selection, common create/copy/
 rename/project forms, export/preview controls, Recents and recoverable Trash through
 the same owner. Settings and System localize their shared section navigation/header
-copy. Operational/error messages in Files, deeper Settings/System content, Account,
-Notes, Internet and several quick panels still contain PT-BR copy and remain in
-migration. Spanish, German and French
+copy. Account now consumes the shared catalog end to end. Operational/error messages in
+Files, deeper Settings/System content, Notes, Internet and several quick panels still
+contain PT-BR copy and remain in migration. Spanish, German and French
 continue to use explicit source-language fallback outside the already translated
 OOBE until their shared catalogs are implemented.
 
@@ -59,6 +59,7 @@ SURFACE_SHARED_SHELL_EN_US=PASS_SOURCE
 FILES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 FILES_FORMS_SORT_EXPORT_PREVIEW_EN_US=PASS_SOURCE
 SETTINGS_SYSTEM_NAV_EN_US=PASS_SOURCE
+ACCOUNT_EN_US=PASS_SOURCE
 SURFACE_COMPLETE_LOCALES=pt-BR
 SURFACE_EN_US_APP_CONTROLS=MIGRATING
 SURFACE_ES_ES=MIGRATING
