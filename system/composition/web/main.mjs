@@ -6,6 +6,7 @@ import { createWebPreferenceStore } from "../../adapters/web/preferences.mjs";
 import { createWebSurfaceHost } from "../../adapters/web/runtime.mjs";
 import { createWebWorkspaceStore } from "../../adapters/web/workspace.mjs";
 import { createWebSyncStateStore } from "../../adapters/web/sync-state.mjs";
+import { REGIONAL_LOCALE_PREFERENCE_ID } from "../../services/preferences/regional.mjs";
 import { validateAccountRuntime } from "../../services/account/runtime.mjs";
 import { createAppActivationChannel } from "../../services/apps/activation.mjs";
 import { listSystemComponents } from "../../apps/component-catalog.mjs";
@@ -26,7 +27,6 @@ import { mountSystemTrayQuickPanels } from "../../surface/ui/system-tray-quick-p
 const bootScreen = createSurfaceBootScreen(document);
 
 try {
-  bootScreen.setStage("Carregando superfície…");
 const root = document.querySelector("#ordax-root");
 if (!root) {
   throw new Error("OrdaX composition root is missing #ordax-root");
@@ -35,6 +35,10 @@ if (!root) {
 const host = createWebSurfaceHost(window);
 const browserSession = createWebBrowserSession();
 const preferenceStore = createWebPreferenceStore(window);
+bootScreen.setLocale(
+  preferenceStore.load()[REGIONAL_LOCALE_PREFERENCE_ID] ?? "pt-BR",
+);
+bootScreen.setStage("boot.loadingSurface");
 const localWorkspaceStore = createWebWorkspaceStore(window);
 const workspaceMetadata = createWorkspaceMetadataBridge(localWorkspaceStore);
 const workspaceStore = workspaceMetadata.store;
@@ -108,7 +112,7 @@ const systemOverviewControls = mountSystemOverviewControls(
 );
 
 componentManager.setCurrentHealth("surface-shell", "healthy");
-bootScreen.setStage("Carregando aplicativos…");
+bootScreen.setStage("boot.loadingApps");
 const notesComponent = await loadOptionalComponentRuntime({
   componentId: "notes",
   importer: () => import("../../apps/notes/runtime.mjs"),
@@ -163,6 +167,6 @@ window.addEventListener(
 );
 
 } catch (error) {
-  bootScreen.fail("Não foi possível iniciar a interface");
+  bootScreen.fail("boot.failed");
   console.error("OrdaX web composition failed", error);
 }
