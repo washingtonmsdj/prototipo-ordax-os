@@ -189,7 +189,10 @@ primary navigation/search/list/selection/Recents/Trash journey plus common forms
 locale-aware sorting, export and preview controls through the shared catalog.
 Settings/System cover their section navigation/header copy, and System now also derives
 its overview health/summary, memory and user-storage resource views, and the explicit sanitized diagnostic review from structured runtime state through the shared
-localization owner. Settings covers its Notifications policy/source and local-session
+localization owner. Settings now also covers Appearance, Accessibility, Regional preferences,
+physical keyboard layout and deep Network/Wi-Fi presentation in PT-BR/en-US through that same
+owner; async keyboard/Wi-Fi feedback stores semantic message IDs rather than rendered copy, and
+Wi-Fi credentials remain transient interaction state. Settings covers its Notifications policy/source and local-session
 Security sections end to end, and the Native live session lock rerenders through the same
 localization owner while keeping
 the entered secret only in transient repaint memory. Account covers its complete
@@ -225,6 +228,8 @@ BATTERY_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 NOTIFICATION_CENTER_EN_US=PASS_SOURCE
 FIRST_PARTY_UPDATE_NOTIFICATION_HISTORY_EN_US=PASS_SOURCE
 SURFACE_COMPLETE_LOCALES=pt-BR
+SETTINGS_DEEP_EN_US=PASS_SOURCE
+SETTINGS_ASYNC_MESSAGE_IDENTITIES=PASS_SOURCE
 SURFACE_EN_US_APP_CONTROLS=MIGRATING
 ```
 
