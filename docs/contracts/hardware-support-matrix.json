@@ -1,0 +1,204 @@
+{
+  "$schema": "prototype-ordax.hardware-support-matrix/1",
+  "status": "source-policy-defined",
+  "product_scope": "stable-mvp-usb-only",
+  "architecture": "x86_64",
+  "support_claim_policy": {
+    "driver_present_is_supported_hardware_claim": false,
+    "development_physical_evidence_generalizes_to_other_models": false,
+    "stable_mvp_support_requires_target_physical_proof": true,
+    "unknown_device_identity_must_not_be_promoted_to_model_family_support": true,
+    "unsupported_or_unproven_features_must_remain_explicit": true
+  },
+  "target_notebook_evidence": {
+    "scope": "single-owner-development-notebook",
+    "exact_vendor_model_recorded": false,
+    "evidence": "docs/evidence/physical-native-surface-2026-09-17.md",
+    "physically_proven": [
+      "uefi-usb-boot-development-path",
+      "drm-graphical-surface",
+      "physical-keyboard",
+      "physical-mouse-or-touchpad",
+      "native-restart",
+      "native-shutdown",
+      "network-and-git-development-path"
+    ],
+    "does_not_prove": [
+      "canonical-stable-mvp-boot",
+      "other-notebook-models",
+      "specific-wifi-chip-family",
+      "audio",
+      "suspend-resume",
+      "touchscreen",
+      "bluetooth",
+      "secure-boot"
+    ]
+  },
+  "required_mvp_capabilities": [
+    {
+      "id": "uefi-x86_64-usb-boot",
+      "requirement": "required",
+      "source_status": "implemented",
+      "ci_status": "proven-portable-qemu-and-media-contract",
+      "development_physical_status": "proven-target-notebook",
+      "stable_mvp_physical_status": "pending",
+      "support_scope": "target-specific-until-stable-proof"
+    },
+    {
+      "id": "usb-mass-storage-runtime",
+      "requirement": "required",
+      "source_status": "implemented",
+      "ci_status": "proven",
+      "development_physical_status": "proven-target-notebook",
+      "stable_mvp_physical_status": "pending",
+      "kernel_requirements": [
+        "CONFIG_USB=y",
+        "CONFIG_USB_STORAGE=y",
+        "CONFIG_USB_UAS=y",
+        "CONFIG_SCSI=y",
+        "CONFIG_BLK_DEV_SD=y"
+      ]
+    },
+    {
+      "id": "intel-drm-graphical-surface",
+      "requirement": "required-for-current-target",
+      "source_status": "implemented",
+      "ci_status": "kernel-prereqs-proven",
+      "development_physical_status": "proven-target-notebook",
+      "stable_mvp_physical_status": "pending",
+      "kernel_requirements": [
+        "CONFIG_DRM=y",
+        "CONFIG_DRM_SIMPLEDRM=y",
+        "CONFIG_DRM_I915=y"
+      ],
+      "claim_limit": "No generic Intel GPU family support is claimed until additional physical models are tested."
+    },
+    {
+      "id": "keyboard-primary-input",
+      "requirement": "required",
+      "source_status": "implemented",
+      "development_physical_status": "proven-target-notebook",
+      "stable_mvp_physical_status": "pending",
+      "kernel_requirements": [
+        "CONFIG_INPUT=y",
+        "CONFIG_INPUT_KEYBOARD=y",
+        "CONFIG_HID=y",
+        "CONFIG_USB_HID=y",
+        "CONFIG_INPUT_EVDEV=y"
+      ]
+    },
+    {
+      "id": "pointer-primary-input",
+      "requirement": "required",
+      "source_status": "implemented",
+      "development_physical_status": "proven-target-notebook-mouse-or-touchpad",
+      "stable_mvp_physical_status": "pending",
+      "kernel_requirements": [
+        "CONFIG_INPUT_MOUSE=y",
+        "CONFIG_MOUSE_PS2=y",
+        "CONFIG_I2C_HID=y",
+        "CONFIG_I2C_HID_ACPI=y",
+        "CONFIG_HID_MULTITOUCH=y"
+      ]
+    },
+    {
+      "id": "network-release-acquisition",
+      "requirement": "required",
+      "source_status": "implemented",
+      "development_physical_status": "proven-network-path-chip-unspecified",
+      "stable_mvp_physical_status": "pending",
+      "built_in_first_acquisition_paths": [
+        "e1000",
+        "e1000e",
+        "usb-cdc-ether",
+        "usb-cdc-ncm",
+        "usb-rndis-host"
+      ],
+      "kernel_requirements": [
+        "CONFIG_E1000=y",
+        "CONFIG_E1000E=y",
+        "CONFIG_USB_USBNET=y",
+        "CONFIG_USB_NET_CDCETHER=y",
+        "CONFIG_USB_NET_CDC_NCM=y",
+        "CONFIG_USB_NET_RNDIS_HOST=y"
+      ]
+    },
+    {
+      "id": "wifi-after-base-start",
+      "requirement": "mvp-product-capability",
+      "source_status": "baseline-driver-and-firmware-set",
+      "development_physical_status": "network-proven-but-adapter-family-not-recorded",
+      "stable_mvp_physical_status": "pending",
+      "module_basenames": [
+        "iwlwifi",
+        "iwlmvm",
+        "rtl8xxxu",
+        "mt76x2u",
+        "ath9k_htc"
+      ],
+      "firmware_packages": [
+        "linux-firmware-other",
+        "linux-firmware-rtlwifi",
+        "linux-firmware-mediatek",
+        "linux-firmware-ath9k_htc"
+      ],
+      "claim_limit": "Presence of these modules/firmware does not claim every adapter in the corresponding vendor families is supported."
+    }
+  ],
+  "optional_observed_capabilities": [
+    {
+      "id": "acpi-battery-status",
+      "source_status": "implemented",
+      "physical_status": "not-recorded-as-launch-proof",
+      "kernel_requirements": [
+        "CONFIG_POWER_SUPPLY=y",
+        "CONFIG_ACPI_AC=y",
+        "CONFIG_ACPI_BATTERY=y"
+      ]
+    }
+  ],
+  "not_claimed_for_mvp": [
+    {
+      "id": "audio",
+      "reason": "physical validation remains open and audio is not a first-USB functional prerequisite"
+    },
+    {
+      "id": "suspend-resume",
+      "reason": "explicitly remains a separate physical validation gate"
+    },
+    {
+      "id": "touchscreen",
+      "reason": "multitouch prerequisites exist but no target touchscreen proof is recorded"
+    },
+    {
+      "id": "bluetooth",
+      "reason": "not part of the pinned launch hardware proof"
+    },
+    {
+      "id": "webcam",
+      "reason": "not part of the pinned launch hardware proof"
+    },
+    {
+      "id": "secure-boot",
+      "reason": "canonical Secure Boot is not proven for the MVP"
+    },
+    {
+      "id": "amd-or-nvidia-accelerated-graphics",
+      "reason": "the pinned MVP kernel baseline only claims the current Intel DRM path"
+    },
+    {
+      "id": "arm64",
+      "reason": "the pinned MVP build and base are x86_64"
+    }
+  ],
+  "internal_storage_policy": {
+    "mvp_install_to_internal_disk": false,
+    "mvp_resize_or_partition_internal_disk": false,
+    "kernel_storage_drivers_may_exist_without_product_install_support": true
+  },
+  "gate_semantics": {
+    "SUPPORTED_HARDWARE_MATRIX": "PASS_SOURCE",
+    "CANONICAL_STABLE_TARGET_HARDWARE_PROOF": "PENDING_PHYSICAL",
+    "BROAD_HARDWARE_COMPATIBILITY": "NOT_CLAIMED"
+  }
+}
