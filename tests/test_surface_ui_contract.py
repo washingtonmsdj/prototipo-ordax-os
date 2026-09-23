@@ -64,6 +64,7 @@ SETTINGS_OVERVIEW_CONTROLS = SURFACE / "settings-overview-controls.mjs"
 SETTINGS_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "settings.mjs"
 SYSTEM_TRAY_QUICK_PANELS = SURFACE / "system-tray-quick-panels.mjs"
 NETWORK_QUICK_PANEL = SURFACE / "network-quick-panel.mjs"
+NETWORK_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "network.mjs"
 BATTERY_QUICK_PANEL = SURFACE / "battery-quick-panel.mjs"
 HOST_CONTRACT = ROOT / "system" / "contracts" / "surface-host.mjs"
 WEB_WORKFLOW = ROOT / ".github" / "workflows" / "surface-web-candidate.yml"
@@ -751,11 +752,16 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn("aria-expanded", controller)
         self.assertIn("assertNetworkManagementPort", network)
         self.assertIn("assertNetworkStatusPort", network)
-        self.assertIn('"Procurar redes"', network)
-        self.assertIn('"Conectar"', network)
-        self.assertIn('"Desconectar"', network)
-        self.assertIn('"Reconectar"', network)
-        self.assertIn('"Abrir Ajustes de rede"', network)
+        self.assertIn("assertSurfaceRenderLifecycle", network)
+        self.assertIn('t("network.quick.action.scan")', network)
+        self.assertIn('t("network.quick.action.connect")', network)
+        self.assertIn('t("network.quick.action.disconnect")', network)
+        self.assertIn('t("network.quick.action.reconnect")', network)
+        self.assertIn('t("network.quick.settings")', network)
+        network_i18n = NETWORK_I18N.read_text(encoding="utf-8")
+        self.assertIn('"network.quick.action.scan": "Procurar redes"', network_i18n)
+        self.assertIn('"network.quick.action.scan": "Find networks"', network_i18n)
+        self.assertIn('"network.quick.settings": "Open network settings"', network_i18n)
         self.assertIn('settings.dataset.appTarget = "network"', network)
         self.assertNotIn('"Esquecer"', network)
         self.assertIn('input.type = "password"', network)
