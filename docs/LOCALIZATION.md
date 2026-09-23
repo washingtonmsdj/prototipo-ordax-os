@@ -51,8 +51,10 @@ navigation/editor shell, projects/list state, core persistence status and consul
 Intelligence controls; Internet localizes its primary browser shell, tab navigation,
 address/search locale handling, project panel and key history/favorite states.
 Operational/error messages in Files, deeper Settings/System content, deeper Notes/
-Internet flows and several quick panels still contain PT-BR copy and remain in
-migration. Spanish, German and French
+Internet flows and quick panels other than the network panel still contain PT-BR copy
+and remain in migration. The network tray and Wi-Fi quick panel now consume structured
+message identities through the shared localization owner, including live locale changes
+without persisting credentials or duplicating network state. Spanish, German and French
 continue to use explicit source-language fallback outside the already translated
 OOBE until their shared catalogs are implemented.
 
@@ -66,6 +68,7 @@ SETTINGS_SYSTEM_NAV_EN_US=PASS_SOURCE
 ACCOUNT_EN_US=PASS_SOURCE
 NOTES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 INTERNET_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
+NETWORK_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
 SURFACE_COMPLETE_LOCALES=pt-BR
 SURFACE_EN_US_APP_CONTROLS=MIGRATING
 SURFACE_ES_ES=MIGRATING
