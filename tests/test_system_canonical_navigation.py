@@ -118,7 +118,7 @@ class SystemCanonicalNavigationTests(unittest.TestCase):
         self.assertIn(".ordax-system-navigation {", css)
         self.assertIn(".ordax-system-navigation-item", css)
         self.assertIn('overflow-x: auto', css)
-        self.assertIn("mountUpdateControls(root, updateWatcher, appActivation)", native)
+        self.assertIn("mountUpdateControls(root, updateWatcher, appActivation, surface)", native)
         self.assertIn("updateHistory,\n    appActivation,", native)
         self.assertIn("surface,\n  null,\n  appActivation,", web)
 
