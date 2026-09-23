@@ -128,16 +128,22 @@ function assertDiagnosticReviewController(controller) {
   return controller;
 }
 
-function formatTimestamp(value) {
-  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return "horário desconhecido";
-  return new Intl.DateTimeFormat("pt-BR", {
+function displayLocale(localization) {
+  return localization.getLocale() === "en-US" ? "en-US" : "pt-BR";
+}
+
+function formatTimestamp(value, localization) {
+  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) {
+    return localization.translate("system.diagnostics.review.time.unknown");
+  }
+  return new Intl.DateTimeFormat(displayLocale(localization), {
     timeZone: "America/Bahia",
     dateStyle: "short",
     timeStyle: "medium",
   }).format(new Date(value));
 }
 
-function formatBytes(bytes) {
+function formatBytes(bytes, localization) {
   if (!Number.isFinite(bytes) || bytes < 0) return "—";
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = bytes;
@@ -147,127 +153,162 @@ function formatBytes(bytes) {
     unit += 1;
   }
   const precision = unit >= 3 && value < 10 ? 1 : 0;
-  return `${value.toFixed(precision)} ${units[unit]}`;
+  const formatted = new Intl.NumberFormat(displayLocale(localization), {
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
+  }).format(value);
+  return `${formatted} ${units[unit]}`;
 }
 
-function sourcePresentation(entry) {
-  const label = SOURCE_LABELS[entry.id] ?? entry.id;
-  const statusLabel = SOURCE_STATUS_LABELS[entry.status] ?? entry.status;
+function translatedEnum(localization, map, value, fallbackId) {
+  const messageId = map[value];
+  return messageId
+    ? localization.translate(messageId)
+    : localization.translate(fallbackId, { value: String(value ?? "") });
+}
+
+function sourcePresentation(entry, localization) {
+  const t = localization.translate;
+  const labelId = SOURCE_MESSAGE_IDS[entry.id];
+  const statusId = SOURCE_STATUS_MESSAGE_IDS[entry.status];
+  const failureId = entry.failureCode ? FAILURE_MESSAGE_IDS[entry.failureCode] : null;
   return freeze({
     id: entry.id,
-    label,
+    label: labelId ? t(labelId) : entry.id,
     status: entry.status,
-    statusLabel,
-    detail: entry.failureCode
-      ? (FAILURE_LABELS[entry.failureCode] ?? entry.failureCode)
-      : entry.status === "unavailable"
-        ? "Esta fonte não está exposta neste modo."
-        : "Incluída na revisão local.",
+    statusLabel: statusId ? t(statusId) : entry.status,
+    detail: failureId
+      ? t(failureId)
+      : entry.failureCode
+        ? entry.failureCode
+        : entry.status === "unavailable"
+          ? t("system.diagnostics.review.sourceDetail.unavailable")
+          : t("system.diagnostics.review.sourceDetail.included"),
   });
 }
 
-function freshnessPresentation(freshness) {
+function freshnessPresentation(freshness, localization) {
+  const t = localization.translate;
   if (freshness === null || freshness === undefined) {
     return freeze({
       state: "unavailable",
-      label: "Atualidade indisponível",
-      detail: "Nenhuma observação de atualização foi incluída nesta revisão.",
+      label: t("system.diagnostics.review.freshness.unavailable"),
+      detail: t("system.diagnostics.review.freshness.unavailableDetail"),
     });
   }
   if (freshness.state === "fresh") {
     return freeze({
       state: "fresh",
-      label: "Observação recente",
-      detail: `Observação recebida há ${freshness.ageSeconds}s; limite desta leitura: ${freshness.maxAgeSeconds}s.`,
+      label: t("system.diagnostics.review.freshness.fresh"),
+      detail: t("system.diagnostics.review.freshness.freshDetail", {
+        age: freshness.ageSeconds,
+        max: freshness.maxAgeSeconds,
+      }),
     });
   }
   if (freshness.state === "stale") {
     return freeze({
       state: "stale",
-      label: "Observação antiga",
-      detail: `A observação tem ${freshness.ageSeconds}s; o limite desta leitura é ${freshness.maxAgeSeconds}s. Isso não prova falha do supervisor.`,
+      label: t("system.diagnostics.review.freshness.stale"),
+      detail: t("system.diagnostics.review.freshness.staleDetail", {
+        age: freshness.ageSeconds,
+        max: freshness.maxAgeSeconds,
+      }),
     });
   }
-  const reason = freshness.reason === "clock-skew"
-    ? "O relógio da observação não permite determinar a atualidade com segurança."
+  const reasonId = freshness.reason === "clock-skew"
+    ? "system.diagnostics.review.freshness.clockSkew"
     : freshness.reason === "invalid-checked-at"
-      ? "O horário publicado pela atualização é inválido."
-      : "A atualização não publicou horário suficiente para determinar atualidade.";
-  return freeze({ state: "unknown", label: "Atualidade desconhecida", detail: reason });
+      ? "system.diagnostics.review.freshness.invalidCheckedAt"
+      : "system.diagnostics.review.freshness.insufficient";
+  return freeze({
+    state: "unknown",
+    label: t("system.diagnostics.review.freshness.unknown"),
+    detail: t(reasonId),
+  });
 }
 
-function persistencePresentation(journal) {
+function persistencePresentation(journal, localization) {
+  const t = localization.translate;
   if (!journal) {
     return freeze({
       state: "unavailable",
-      label: "Eventos indisponíveis",
-      detail: "Nenhum journal diagnóstico válido foi incluído nesta revisão.",
+      label: t("system.diagnostics.review.persistence.unavailable"),
+      detail: t("system.diagnostics.review.persistence.unavailableDetail"),
     });
   }
   if (journal.persistenceStatus === "degraded") {
-    const reason = journal.persistenceErrorCode === "load-failed"
-      ? "A leitura persistente falhou; os eventos atuais podem estar apenas em memória."
-      : "A gravação persistente falhou; os eventos atuais continuam disponíveis em memória nesta execução.";
-    return freeze({ state: "degraded", label: "Persistência degradada", detail: reason });
+    const reasonId = journal.persistenceErrorCode === "load-failed"
+      ? "system.diagnostics.review.persistence.loadFailed"
+      : "system.diagnostics.review.persistence.writeFailed";
+    return freeze({
+      state: "degraded",
+      label: t("system.diagnostics.review.persistence.degraded"),
+      detail: t(reasonId),
+    });
   }
   if (journal.persistenceStatus === "session") {
     return freeze({
       state: "session",
-      label: "Somente nesta sessão",
-      detail: "Os eventos desta revisão não têm persistência durável no dispositivo.",
+      label: t("system.diagnostics.review.persistence.session"),
+      detail: t("system.diagnostics.review.persistence.sessionDetail"),
     });
   }
   return freeze({
     state: "device",
-    label: "Persistência no dispositivo",
-    detail: `Journal limitado aos ${journal.retentionLimit} eventos mais recentes.`,
+    label: t("system.diagnostics.review.persistence.device"),
+    detail: t("system.diagnostics.review.persistence.deviceDetail", {
+      limit: journal.retentionLimit,
+    }),
   });
 }
 
-function actionPresentation(snapshot) {
+function actionPresentation(snapshot, localization) {
+  const t = localization.translate;
   if (snapshot.phase === "preparing") {
-    return freeze({ kind: "progress", text: "Preparando uma revisão local e sanitizada…" });
+    return freeze({ kind: "progress", text: t("system.diagnostics.review.action.preparing") });
   }
   if (snapshot.phase === "copying") {
-    return freeze({ kind: "progress", text: "Copiando resumo sanitizado…" });
+    return freeze({ kind: "progress", text: t("system.diagnostics.review.action.copying") });
   }
   if (snapshot.phase === "exporting") {
-    return freeze({ kind: "progress", text: "Salvando a revisão confirmada em Downloads…" });
+    return freeze({ kind: "progress", text: t("system.diagnostics.review.action.exporting") });
   }
   const last = snapshot.lastResult;
   if (!last) return null;
   if (last.action === "prepare" && last.status === "ready") {
-    return freeze({
-      kind: "success",
-      text: "Revisão preparada localmente. Confira as fontes e os eventos antes de copiar ou salvar.",
-    });
+    return freeze({ kind: "success", text: t("system.diagnostics.review.action.prepared") });
   }
   if (last.action === "copy" && last.status === "copied") {
-    return freeze({ kind: "success", text: "Resumo sanitizado copiado." });
+    return freeze({ kind: "success", text: t("system.diagnostics.review.action.copied") });
   }
   if (last.action === "export" && last.status === "saved") {
-    return freeze({ kind: "success", text: "Diagnóstico salvo em Downloads." });
+    return freeze({ kind: "success", text: t("system.diagnostics.review.action.saved") });
   }
   if (last.action === "export" && last.status === "cancelled") {
-    return freeze({ kind: "neutral", text: "Salvamento cancelado. A revisão continua disponível." });
+    return freeze({ kind: "neutral", text: t("system.diagnostics.review.action.cancelled") });
   }
   if (last.code === "review-not-prepared") {
     return freeze({
       kind: "warning",
-      text: last.action === "copy"
-        ? "Prepare uma revisão antes de copiar o resumo sanitizado."
-        : "Prepare uma revisão antes de salvar o diagnóstico.",
+      text: t(last.action === "copy"
+        ? "system.diagnostics.review.action.notPreparedCopy"
+        : "system.diagnostics.review.action.notPreparedExport"),
     });
   }
-  const text = LAST_RESULT_LABELS[last.code] ?? "A operação de diagnóstico não foi concluída.";
-  return freeze({ kind: "warning", text });
+  const messageId = LAST_RESULT_MESSAGE_IDS[last.code];
+  return freeze({
+    kind: "warning",
+    text: t(messageId ?? "system.diagnostics.review.action.defaultFailure"),
+  });
 }
 
-function eventPresentation(event) {
+function eventPresentation(event, localization) {
+  const messageId = SEVERITY_MESSAGE_IDS[event.severity];
   return freeze({
     severity: event.severity,
-    severityLabel: SEVERITY_LABELS[event.severity] ?? event.severity,
-    occurredAt: formatTimestamp(event.occurredAt),
+    severityLabel: messageId ? localization.translate(messageId) : event.severity,
+    occurredAt: formatTimestamp(event.occurredAt, localization),
     component: event.component,
     eventCode: event.eventCode,
     correlationKey: event.correlationKey,
@@ -275,37 +316,55 @@ function eventPresentation(event) {
   });
 }
 
-export function createDiagnosticReviewPresentation(snapshotValue) {
+export function createDiagnosticReviewPresentation(snapshotValue, localizationValue) {
   const snapshot = requireControllerState(snapshotValue);
+  const localization = assertLocalizationPort(localizationValue);
+  const t = localization.translate;
   const document = snapshot.document;
   const review = document?.review ?? null;
   const report = review?.report ?? null;
   const sources = review
-    ? review.manifest.sources.map(sourcePresentation)
+    ? review.manifest.sources.map((entry) => sourcePresentation(entry, localization))
     : [];
   const journal = report?.journal ?? null;
   const events = journal
-    ? [...journal.events].reverse().map(eventPresentation)
+    ? [...journal.events].reverse().map((event) => eventPresentation(event, localization))
     : [];
 
   const update = report?.update
     ? freeze({
       delivery: report.update.deliveryNumber
-        ? deliveryLabel(report.update.deliveryNumber)
-        : "Entrega não informada",
-      status: updateStatusLabel(report.update.status),
-      phase: readableUpdatePhase(report.update.phase),
+        ? t("system.diagnostics.review.update.delivery", { value: report.update.deliveryNumber })
+        : t("system.diagnostics.review.update.deliveryUnknown"),
+      status: translatedEnum(
+        localization,
+        UPDATE_STATUS_MESSAGE_IDS,
+        report.update.status,
+        "system.diagnostics.review.update.status.unknown",
+      ),
+      phase: translatedEnum(
+        localization,
+        UPDATE_PHASE_MESSAGE_IDS,
+        report.update.phase,
+        "system.diagnostics.review.update.phase.unknown",
+      ),
       checkedAt: report.update.checkedAt && report.update.checkedAt !== "unknown"
-        ? formatUpdateTimestamp(report.update.checkedAt)
-        : "Não informado",
+        ? formatTimestamp(report.update.checkedAt, localization)
+        : t("system.diagnostics.review.update.checkedUnknown"),
       lastError: report.update.lastError || "",
     })
     : null;
 
   const metrics = report?.metrics
     ? freeze({
-      memory: `${formatBytes(report.metrics.memoryAvailableBytes)} disponível de ${formatBytes(report.metrics.memoryTotalBytes)}`,
-      storage: `${formatBytes(report.metrics.userStorageFreeBytes)} livre de ${formatBytes(report.metrics.userStorageTotalBytes)}`,
+      memory: t("system.diagnostics.review.metrics.memory", {
+        available: formatBytes(report.metrics.memoryAvailableBytes, localization),
+        total: formatBytes(report.metrics.memoryTotalBytes, localization),
+      }),
+      storage: t("system.diagnostics.review.metrics.storage", {
+        free: formatBytes(report.metrics.userStorageFreeBytes, localization),
+        total: formatBytes(report.metrics.userStorageTotalBytes, localization),
+      }),
       uptimeSeconds: report.metrics.uptimeSeconds,
     })
     : null;
@@ -321,42 +380,44 @@ export function createDiagnosticReviewPresentation(snapshotValue) {
     phase: snapshot.phase,
     exportAvailable: snapshot.exportAvailable,
     copyAvailable: snapshot.copyAvailable,
-    action: actionPresentation(snapshot),
+    action: actionPresentation(snapshot, localization),
     prepare: freeze({
-      label: snapshot.phase === "preparing" ? "Preparando…" : "Preparar nova revisão",
+      label: t(snapshot.phase === "preparing"
+        ? "system.diagnostics.review.button.preparing"
+        : "system.diagnostics.review.button.prepare"),
       disabled: snapshot.phase === "preparing"
         || snapshot.phase === "copying"
         || snapshot.phase === "exporting",
     }),
     copy: freeze({
-      label: snapshot.phase === "copying"
-        ? "Copiando…"
+      label: t(snapshot.phase === "copying"
+        ? "system.diagnostics.review.button.copying"
         : snapshot.copyAvailable
-          ? "Copiar resumo sanitizado"
-          : "Copiar indisponível",
+          ? "system.diagnostics.review.button.copy"
+          : "system.diagnostics.review.button.copyUnavailable"),
       disabled: snapshot.phase !== "ready" || !snapshot.copyAvailable,
       visible: document !== null,
     }),
     export: freeze({
-      label: snapshot.phase === "exporting"
-        ? "Salvando…"
+      label: t(snapshot.phase === "exporting"
+        ? "system.diagnostics.review.button.saving"
         : snapshot.exportAvailable
-          ? "Salvar em Downloads"
-          : "Salvar indisponível",
+          ? "system.diagnostics.review.button.save"
+          : "system.diagnostics.review.button.saveUnavailable"),
       disabled: snapshot.phase !== "ready" || !snapshot.exportAvailable,
       visible: document !== null,
     }),
     review: review
       ? freeze({
-        generatedAt: formatTimestamp(review.generatedAt),
+        generatedAt: formatTimestamp(review.generatedAt, localization),
         fileName: document.fileName,
         hasFailures: review.manifest.hasFailures,
         sources: freeze(sources),
-        freshness: freshnessPresentation(review.observations.updateFreshness),
+        freshness: freshnessPresentation(review.observations.updateFreshness, localization),
         update,
         metrics,
         history,
-        persistence: persistencePresentation(journal),
+        persistence: persistencePresentation(journal, localization),
         eventCount: journal?.eventCount ?? null,
         events: freeze(events),
       })
