@@ -3,6 +3,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTROLS = ROOT / "system" / "apps" / "internet" / "ui" / "browser-controls.mjs"
+INTERNET_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "internet.mjs"
 CSS = ROOT / "system" / "apps" / "internet" / "internet.css"
 NATIVE_MAIN = ROOT / "system" / "composition" / "native" / "main.mjs"
 WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.mjs"
@@ -69,9 +70,11 @@ class InternetHistoryContractTests(unittest.TestCase):
     def test_history_controls_are_real_and_accessible(self):
         controls = self.text(CONTROLS)
         css = self.text(CSS)
-        self.assertIn('"NAVEGAÇÃO"', controls)
-        self.assertIn('"Histórico"', controls)
-        self.assertIn('"Limpar"', controls)
+        i18n = self.text(INTERNET_I18N)
+        self.assertIn('t("internet.navigation.heading")', controls)
+        self.assertIn('t("internet.history")', controls)
+        self.assertIn('"internet.navigation.heading": "NAVIGATION"', i18n)
+        self.assertIn('"internet.history": "History"', i18n)
         self.assertIn('aria-expanded', controls)
         self.assertIn('aria-label', controls)
         self.assertIn('ordax-internet-history-list', css)
