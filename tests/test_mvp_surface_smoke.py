@@ -339,6 +339,9 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
         self.assertTrue(summary["runtime_surface_matches_source"])
         self.assertTrue(summary["has_last_error"])
         self.assertTrue(summary["health_token_present"])
+        self.assertEqual(summary["recovery_state"], "unavailable")
+        self.assertEqual(summary["recovery_source"], "none")
+        self.assertFalse(summary["rollback_eligible"])
         serialized = json.dumps(summary)
         self.assertNotIn("very-secret-token", serialized)
         self.assertNotIn("private diagnostic detail", serialized)
@@ -353,6 +356,29 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
         bad_duration = dict(payload, lastApplyDurationSeconds=3601)
         with self.assertRaises(ValueError):
             proof.validate_update_status(bad_duration)
+
+        valid_recovery = dict(
+            payload,
+            recoveryState="available",
+            recoverySource="portable-state",
+            currentReleaseSha="a" * 40,
+            knownGoodReleaseSha="b" * 40,
+            candidateReleaseSha="c" * 40,
+            recoveryRejectedSha="d" * 40,
+            rollbackEligible=True,
+        )
+        recovery_summary = proof.validate_update_status(valid_recovery)
+        self.assertEqual(recovery_summary["recovery_state"], "available")
+        self.assertEqual(recovery_summary["recovery_source"], "portable-state")
+        self.assertTrue(recovery_summary["rollback_eligible"])
+        self.assertTrue(recovery_summary["has_recovery_candidate"])
+        self.assertTrue(recovery_summary["has_recovery_rejected"])
+        self.assertNotIn("a" * 40, json.dumps(recovery_summary))
+        self.assertNotIn("b" * 40, json.dumps(recovery_summary))
+
+        invalid_recovery = dict(valid_recovery, knownGoodReleaseSha="not-a-sha")
+        with self.assertRaises(ValueError):
+            proof.validate_update_status(invalid_recovery)
 
     def test_compare_accepts_only_same_clean_boot_source_and_updater_identity(self):
         baseline = self._comparison_report(label="baseline")
