@@ -171,10 +171,10 @@
         {
           "source_path": "bootstrap/release-acquisition/ordax-release-agent",
           "target_path": "/ordax/bootstrap/release-acquisition/ordax-release-agent",
-          "sha256": "721f8a3fcec1ccfd2dd75c4d633ff2efd960909287c5e11fcf9abf19e5372740",
+          "sha256": "550df685679f1bf15a636729960fe6fc3ffc1afda1a346214ce96716f7170a66",
           "mode": "0755",
           "logical_owner": "bootstrap-release-acquisition",
-          "reason": "Static Linux amd64 release agent with immutable v1, portable v2/v3, signed trust-transition v1, inspect/materialize/verify/activation support; physical activation remains separately gated"
+          "reason": "Static Linux amd64 release agent with immutable v1, portable v2/v3/v4, signed trust-transition v1, inspect/materialize/verify/activation support; existing older seed hashes remain migration inputs and physical activation remains separately gated"
         }
       ]
     },
