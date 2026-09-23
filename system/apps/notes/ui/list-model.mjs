@@ -29,9 +29,9 @@ export function firstNotesBodyLine(body, emptyLabel = "Nota sem conteúdo") {
     .find(Boolean) ?? emptyLabel;
 }
 
-export function noteMatchesQuery(note, query) {
+export function noteMatchesQuery(note, query, locale = "pt-BR") {
   if (!query) return true;
-  const normalizedQuery = String(query).toLocaleLowerCase("pt-BR");
+  const normalizedQuery = String(query).toLocaleLowerCase(locale);
   const haystack = [
     note.title,
     note.body,
@@ -42,11 +42,11 @@ export function noteMatchesQuery(note, query) {
       reference.href,
       reference.path ?? "",
     ]),
-  ].join("\n").toLocaleLowerCase("pt-BR");
+  ].join("\n").toLocaleLowerCase(locale);
   return haystack.includes(normalizedQuery);
 }
 
-export function visibleNotes(documentState, mode, query, newestFirst = true) {
+export function visibleNotes(documentState, mode, query, newestFirst = true, locale = "pt-BR") {
   let items = [...documentState.notes];
   if (mode === "trash") {
     items = items.filter((note) => note.deletedAt !== null);
@@ -62,6 +62,6 @@ export function visibleNotes(documentState, mode, query, newestFirst = true) {
   }
 
   return items
-    .filter((note) => noteMatchesQuery(note, query))
+    .filter((note) => noteMatchesQuery(note, query, locale))
     .sort((a, b) => newestFirst ? b.updatedAt - a.updatedAt : a.updatedAt - b.updatedAt);
 }

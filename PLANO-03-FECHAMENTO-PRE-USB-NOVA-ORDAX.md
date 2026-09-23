@@ -158,13 +158,12 @@ Precisa estar implementado e provado em source/CI antes da escrita física.
    - decidir e documentar se o MVP permite sessão sem PIN/senha e qual é o comportamento
      de bloqueio nesse caso.
 
-3. **Idiomas oferecidos pelo OOBE coerentes com a Surface.**
+3. **Idiomas oferecidos pelo OOBE coerentes com a Surface. — PASS_SOURCE**
    - PT-BR permanece fonte;
-   - en-US, es-ES, de-DE e fr-FR já são oferecidos no primeiro uso;
-   - antes do USB público, a seleção não pode levar a uma Surface principal
-     significativamente misturada com português;
-   - ou se completa a cobertura essencial dos cinco idiomas, ou se reduz
-     explicitamente a lista oferecida. Não anunciar cobertura falsa.
+   - o MVP público oferece somente PT-BR e en-US, ambos completos na Surface compartilhada;
+   - es-ES, de-DE e fr-FR continuam aceitos em estados persistidos e mantêm o OOBE traduzido, mas ficam ocultos dos seletores públicos até a Surface correspondente atingir o mesmo padrão;
+   - a seleção pública não leva mais a uma Surface principal significativamente misturada com português;
+   - não anunciar cobertura falsa.
 
 4. **Arquivos: fechar jornada cotidiana mínima. — PASS_SOURCE**
    - `ordax.file-space/11` mantém list/create/read/rename/copy/move/import/export e preview;
@@ -378,7 +377,7 @@ O gate é de produto/source. Ele **não** substitui:
 ### P1 — experiência cotidiana
 
 4. Arquivos: remoção segura/lixeira. — **PASS_SOURCE**
-5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE. — **IN_PROGRESS**: owner + shell inglês `PASS_SOURCE`; Arquivos cobre jornada primária, formulários comuns, ordenação, exportação e preview em inglês `PASS_SOURCE`; navegação de Ajustes/Sistema, resumo/health, leituras de memória/armazenamento, detalhes/histórico de Atualizações, componentes/versões/Sobre, capacidades/Intelligence e revisão diagnóstica sanitizada de Sistema, Ajustes → Aparência/Acessibilidade/Idioma e região/teclado/rede, Ajustes → Notificações, Ajustes → Segurança/sessão local, lock screen Native e Conta completa também `PASS_SOURCE`; jornada de Notas agora cobre também file picker/referências/checklist/prompts/estatísticas/Intelligence profundamente em inglês `PASS_SOURCE`; Internet agora cobre contexto de projeto, home, referências, favoritos/histórico e feedback operacional profundamente em inglês `PASS_SOURCE`; trays + quick panels de rede/bateria e Central de Notificações agora `PASS_SOURCE`; histórico first-party de updates usa apresentação semântica rerenderizável via `ordax.notifications/3`; o painel de rede continua sem persistir credenciais; mensagens operacionais/profundas restantes de Arquivos e cópia residual da Surface ainda estão em migração
+5. Cobertura real de idioma da Surface para os idiomas oferecidos no OOBE. — **PASS_SOURCE**: PT-BR e en-US são os únicos idiomas oferecidos pelo MVP público e ambos cobrem shell, Home, boot screen, Arquivos profundo, Ajustes, Sistema, Conta, Notas, Internet, trays/quick panels e Central de Notificações pelo mesmo `ordax.localization/1`; feedback first-party assíncrono relevante usa identidade semântica rerenderizável; o painel de rede continua sem persistir credenciais; es-ES/de-DE/fr-FR ficam preservados somente para compatibilidade/OOBE e rollout futuro, sem claim de Surface completa
 6. Diagnóstico/recovery em Sistema. — **PASS_SOURCE**: controller diagnóstico Native agora é composto de verdade e Sistema exibe recovery read-only a partir dos marcadores reais de `current`, `known-good`, candidato/transação e entrada local de recovery; prova física continua B
 7. Inventário mínimo/suporte de hardware. — **PASS_SOURCE** via `hardware-support-matrix/1`; prova física do hardware-alvo Stable continua B
 
