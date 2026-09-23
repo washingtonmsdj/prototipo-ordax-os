@@ -54,7 +54,7 @@ export function notesParentLogicalPath(path) {
   return parts.length ? `/${parts.join("/")}` : "/";
 }
 
-export function createNotesFilePicker({ fileSpace = null } = {}) {
+export function createNotesFilePicker({ fileSpace = null, openFolderError = "Não foi possível abrir esta pasta." } = {}) {
   const port = fileSpace === null ? null : assertFileSpacePort(fileSpace);
   let state = initialState(port !== null);
   let generation = 0;
@@ -125,7 +125,7 @@ export function createNotesFilePicker({ fileSpace = null } = {}) {
       commit({
         listing: null,
         pending: false,
-        error: "Não foi possível abrir esta pasta.",
+        error: openFolderError,
       });
       return false;
     }
