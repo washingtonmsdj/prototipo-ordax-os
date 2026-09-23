@@ -31,12 +31,12 @@ function iconButton(documentObject, glyph, label, action) {
   return button;
 }
 
-function normalizedAddress(value) {
+function normalizedAddress(value, t) {
   const input = value.trim();
   if (!input) return "";
   if (/^https?:\/\//i.test(input)) return input;
   if (!/\s/.test(input) && input.includes(".")) return "https:" + "//" + input;
-  throw new TypeError("Digite um endereço web, por exemplo: example.org");
+  throw new TypeError(t("internet.address.invalidExample"));
 }
 
 function displayHost(url) {
@@ -48,9 +48,9 @@ function displayHost(url) {
   }
 }
 
-function formatHistoryVisit(value) {
+function formatHistoryVisit(value, locale = "pt-BR") {
   try {
-    return new Intl.DateTimeFormat("pt-BR", {
+    return new Intl.DateTimeFormat(locale, {
       day: "2-digit",
       month: "2-digit",
       hour: "2-digit",
@@ -61,18 +61,18 @@ function formatHistoryVisit(value) {
   }
 }
 
-function normalizedTabQuery(value) {
-  return value.trim().toLocaleLowerCase("pt-BR");
+function normalizedTabQuery(value, locale = "pt-BR") {
+  return value.trim().toLocaleLowerCase(locale);
 }
 
-function tabMatchesQuery(tab, query) {
+function tabMatchesQuery(tab, query, locale = "pt-BR") {
   if (!query) return true;
   return [tab.title, displayHost(tab.url), tab.url]
     .filter(Boolean)
-    .some((value) => value.toLocaleLowerCase("pt-BR").includes(query));
+    .some((value) => value.toLocaleLowerCase(locale).includes(query));
 }
 
-function createSidebar(documentObject) {
+function createSidebar(documentObject, t) {
   const sidebar = node(documentObject, "aside", "ordax-internet-sidebar");
   sidebar.setAttribute("aria-label", "Organização da navegação");
   const workspace = node(documentObject, "button", "ordax-internet-workspace");
@@ -153,7 +153,7 @@ function createSidebar(documentObject) {
   return sidebar;
 }
 
-function createToolbar(documentObject) {
+function createToolbar(documentObject, t) {
   const toolbar = node(documentObject, "div", "ordax-internet-toolbar");
   toolbar.setAttribute("role", "toolbar");
   toolbar.setAttribute("aria-label", "Navegação da Internet");
@@ -183,7 +183,7 @@ function createToolbar(documentObject) {
   return toolbar;
 }
 
-function createHome(documentObject, supported, reason) {
+function createHome(documentObject, supported, reason, t) {
   const home = node(documentObject, "div", "ordax-internet-home");
   home.dataset.browserHome = "";
   home.append(node(documentObject, "span", "ordax-internet-home-mark", "○"));
@@ -215,7 +215,7 @@ function createHome(documentObject, supported, reason) {
   return home;
 }
 
-function createProjectPanel(documentObject) {
+function createProjectPanel(documentObject, t) {
   const panel = node(documentObject, "aside", "ordax-internet-project-panel");
   panel.id = PROJECT_PANEL_ID;
   panel.setAttribute("aria-label", "Contexto do projeto");
@@ -285,17 +285,17 @@ function createProjectPanel(documentObject) {
   return panel;
 }
 
-function createView(documentObject, snapshot) {
+function createView(documentObject, snapshot, t) {
   const view = node(documentObject, "div", "ordax-internet-view");
   view.dataset.ordaxInternetView = "";
-  const toolbar = createToolbar(documentObject);
+  const toolbar = createToolbar(documentObject, t);
   const body = node(documentObject, "div", "ordax-internet-body");
   const center = node(documentObject, "main", "ordax-internet-center");
   const viewport = node(documentObject, "div", "ordax-internet-viewport");
   viewport.dataset.browserViewport = "";
-  viewport.append(createHome(documentObject, snapshot.supported, snapshot.reason));
+  viewport.append(createHome(documentObject, snapshot.supported, snapshot.reason, t));
   center.append(viewport);
-  body.append(createSidebar(documentObject), center, createProjectPanel(documentObject));
+  body.append(createSidebar(documentObject, t), center, createProjectPanel(documentObject, t));
   view.append(toolbar, body);
   return view;
 }
@@ -314,6 +314,9 @@ export function mountInternetBrowserControls(
   if (!(root instanceof Element)) throw new TypeError("Internet controls require a Surface root Element");
   const port = assertBrowserSessionPort(browserSession);
   const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
+  const localization = lifecycle.localization;
+  const t = localization.translate;
+  const locale = () => localization.getLocale();
   const projectPort = projects === null ? null : assertProjectCatalogPort(projects);
   const referencePort = projectReferences === null
     ? null
@@ -397,8 +400,8 @@ export function mountInternetBrowserControls(
   };
 
   const visibleTabs = () => {
-    const query = normalizedTabQuery(tabQuery);
-    return snapshot.tabs.filter((tab) => tabMatchesQuery(tab, query));
+    const query = normalizedTabQuery(tabQuery, locale());
+    return snapshot.tabs.filter((tab) => tabMatchesQuery(tab, query, locale()));
   };
 
   const findTabButton = (slot, tabId) => [...(slot?.querySelectorAll("[data-browser-tab-id]") ?? [])]
@@ -450,7 +453,7 @@ export function mountInternetBrowserControls(
 
     handledSurfaceTarget = target;
     try {
-      const url = normalizedAddress(target);
+      const url = normalizedAddress(target, t);
       if (!url) return;
       const tab = activeTab();
       message = "";
@@ -462,7 +465,7 @@ export function mountInternetBrowserControls(
     } catch (error) {
       message = error instanceof Error
         ? error.message
-        : "Não foi possível abrir o endereço recebido.";
+        : t("internet.address.invalid");
     }
   };
 
@@ -481,7 +484,7 @@ export function mountInternetBrowserControls(
 
     const focusedTabId = documentObject.activeElement?.dataset?.browserTabId ?? null;
     tabs.replaceChildren();
-    const query = normalizedTabQuery(tabQuery);
+    const query = normalizedTabQuery(tabQuery, locale());
     const filteredTabs = visibleTabs();
     const activeVisible = filteredTabs.some((tab) => tab.id === snapshot.activeTabId);
     for (const tab of filteredTabs) {
@@ -1180,12 +1183,12 @@ export function mountInternetBrowserControls(
     const tab = activeTab();
     if (!input || !tab) return;
     try {
-      const url = normalizedAddress(input.value);
+      const url = normalizedAddress(input.value, t);
       if (!url) return;
       message = "";
       port.navigate(tab.id, url);
     } catch (error) {
-      message = error instanceof Error ? error.message : "Endereço inválido.";
+      message = error instanceof Error ? error.message : t("internet.address.invalid");
       render();
     }
   };
