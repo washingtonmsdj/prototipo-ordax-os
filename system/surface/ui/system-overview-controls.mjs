@@ -140,15 +140,15 @@ function validSystemSection(value) {
   return SYSTEM_SECTIONS.some((section) => section.id === value);
 }
 
-const CAPABILITY_LABELS = Object.freeze({
-  "network.https": "Rede HTTPS",
-  "network.status": "Estado local de rede",
-  "network.management": "Gerenciamento de Wi-Fi",
-  "system.boot-control": "Energia do dispositivo",
-  "filesystem.user-space": "Espaço local do usuário",
-  "system.metrics": "Métricas do dispositivo",
-  "power.status": "Estado da bateria",
-  "intelligence.system": "Ordax Intelligence",
+const CAPABILITY_MESSAGE_IDS = Object.freeze({
+  "network.https": "system.capabilities.networkHttps",
+  "network.status": "system.capabilities.networkStatus",
+  "network.management": "system.capabilities.networkManagement",
+  "system.boot-control": "system.capabilities.bootControl",
+  "filesystem.user-space": "system.capabilities.userSpace",
+  "system.metrics": "system.capabilities.systemMetrics",
+  "power.status": "system.capabilities.powerStatus",
+  "intelligence.system": "system.capabilities.intelligence",
 });
 
 function node(documentObject, tag, className, text) {
@@ -986,25 +986,20 @@ export function mountSystemOverviewControls(
     const versionHeading = node(documentObject, "div", "ordax-system-section-heading");
     const versionHeadingCopy = node(documentObject, "div");
     versionHeadingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Versão do produto"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.about.version.kicker")),
       node(documentObject, "h4", "ordax-system-section-title", productVersionLabel()),
     );
     versionHeading.append(versionHeadingCopy);
     versionSection.append(versionHeading);
     versionSection.append(
-      node(
-        documentObject,
-        "p",
-        "ordax-system-section-copy",
-        "A versão do produto identifica o marco geral. Cada componente possui identidade própria. Durante o desenvolvimento, apps podem evoluir diretamente pelo Git; slots assinados ficam reservados para distribuição de produção.",
-      ),
+      node(documentObject, "p", "ordax-system-section-copy", t("system.about.version.policy")),
       node(
         documentObject,
         "p",
         "ordax-system-section-copy",
         PRODUCT_VERSION.stableRelease
-          ? "Este marco é uma versão estável do produto."
-          : "Canal de protótipo: v1.0 permanece reservado para o produto estável.",
+          ? t("system.about.version.stable")
+          : t("system.about.version.prototype"),
       ),
     );
     view.append(versionSection);
@@ -1013,32 +1008,24 @@ export function mountSystemOverviewControls(
     const deliveryHeading = node(documentObject, "div", "ordax-system-section-heading");
     const deliveryHeadingCopy = node(documentObject, "div");
     deliveryHeadingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Identidade da entrega"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.about.delivery.kicker")),
       node(
         documentObject,
         "h4",
         "ordax-system-section-title",
-        updateSnapshot?.deliveryNumber ? deliveryLabel(updateSnapshot.deliveryNumber) : "Entrega não informada",
+        updateSnapshot?.deliveryNumber
+          ? localizedDelivery(updateSnapshot.deliveryNumber)
+          : t("system.about.delivery.unavailable"),
       ),
     );
     deliveryHeading.append(deliveryHeadingCopy);
     deliverySection.append(deliveryHeading);
     deliverySection.append(
-      node(
-        documentObject,
-        "p",
-        "ordax-system-section-copy",
-        "Entrega é o número humano do que pode chegar ao notebook; não é número de PR nem versão comercial do OrdaX. O SHA identifica exatamente o build.",
-      ),
+      node(documentObject, "p", "ordax-system-section-copy", t("system.about.delivery.policy")),
     );
     if (!updateSnapshot?.deliveryNumber) {
       deliverySection.append(
-        node(
-          documentObject,
-          "p",
-          "ordax-system-placeholder",
-          "Este host não informa uma identidade técnica de entrega. As versões dos componentes permanecem disponíveis separadamente.",
-        ),
+        node(documentObject, "p", "ordax-system-placeholder", t("system.about.delivery.hostUnavailable")),
       );
     }
     view.append(deliverySection);
@@ -1047,20 +1034,15 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Componentes"),
-      node(documentObject, "h4", "ordax-system-section-title", "Versões e isolamento"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.about.components.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.about.components.title")),
     );
     heading.append(headingCopy);
     section.append(heading);
 
     if (!componentSnapshot) {
       section.append(
-        node(
-          documentObject,
-          "p",
-          "ordax-system-placeholder",
-          "O Component Manager não está disponível nesta composição.",
-        ),
+        node(documentObject, "p", "ordax-system-placeholder", t("system.about.components.unavailable")),
       );
       view.append(section);
       return;
@@ -1072,8 +1054,8 @@ export function mountSystemOverviewControls(
         "p",
         "ordax-system-section-copy",
         componentSnapshot.persistence === "device"
-          ? "Estado de componentes e saúde persistido neste dispositivo."
-          : "Catálogo disponível; estado de componentes permanece somente nesta sessão.",
+          ? t("system.about.components.persistence.device")
+          : t("system.about.components.persistence.session"),
       ),
     );
 
@@ -1094,30 +1076,33 @@ export function mountSystemOverviewControls(
         documentObject,
         "small",
         "ordax-system-component-health",
-        `Saúde: ${componentHealthLabel(state.currentHealth)} · falha isolada em ${manifest.failureDomain}`,
+        t("system.about.components.health", {
+          health: componentHealthLabel(state.currentHealth),
+          domain: manifest.failureDomain,
+        }),
       );
       item.append(title, identity, health);
 
       if (independentUpdate) {
-        const slots = node(
-          documentObject,
-          "small",
-          "ordax-system-component-slots",
-          `Anterior: ${state.previousVersion ? `v${state.previousVersion}` : "—"} · Pendente: ${state.pendingVersion ? `v${state.pendingVersion}` : "—"}`,
-        );
-        item.append(slots);
-      } else {
         item.append(
           node(
             documentObject,
             "small",
             "ordax-system-component-slots",
-            manifest.releaseMode === "base-ab"
-              ? "Rollback pertence aos slots A/B da Base."
-              : manifest.releaseMode === "git-app"
-                ? "Desenvolvimento: esta versão do app chega diretamente pelo Git, sem slot de produção."
-                : "Ainda acompanha a entrega conjunta; rollback individual permanece bloqueado.",
+            t("system.about.components.previousPending", {
+              previous: state.previousVersion ? `v${state.previousVersion}` : "—",
+              pending: state.pendingVersion ? `v${state.pendingVersion}` : "—",
+            }),
           ),
+        );
+      } else {
+        const detailId = manifest.releaseMode === "base-ab"
+          ? "system.about.components.detail.baseAb"
+          : manifest.releaseMode === "git-app"
+            ? "system.about.components.detail.gitApp"
+            : "system.about.components.detail.bundled";
+        item.append(
+          node(documentObject, "small", "ordax-system-component-slots", t(detailId)),
         );
       }
       list.append(item);
@@ -1220,21 +1205,24 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Contrato"),
-      node(documentObject, "h4", "ordax-system-section-title", "Capacidades desta execução"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.capabilities.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.capabilities.title")),
     );
     heading.append(headingCopy);
     section.append(heading);
 
     const list = node(documentObject, "div", "ordax-system-capabilities");
     if (hostSnapshot.capabilityIds.length === 0) {
-      list.append(node(documentObject, "p", "ordax-system-placeholder", "Nenhuma capacidade adicional declarada."));
+      list.append(
+        node(documentObject, "p", "ordax-system-placeholder", t("system.capabilities.empty")),
+      );
     } else {
       for (const capabilityId of hostSnapshot.capabilityIds) {
         const item = node(documentObject, "div", "ordax-system-capability");
+        const messageId = CAPABILITY_MESSAGE_IDS[capabilityId] ?? null;
         item.append(
           node(documentObject, "span", "ordax-system-capability-dot"),
-          node(documentObject, "strong", "", CAPABILITY_LABELS[capabilityId] ?? capabilityId),
+          node(documentObject, "strong", "", messageId ? t(messageId) : capabilityId),
           node(documentObject, "small", "", capabilityId),
         );
         list.append(item);
@@ -1249,34 +1237,37 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Intelligence"),
-      node(documentObject, "h4", "ordax-system-section-title", "Explicação local do estado"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.intelligence.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.intelligence.title")),
     );
     const action = node(
       documentObject,
       "button",
       "ordax-system-action",
-      intelligencePending ? "Explicando…" : "Explicar estado",
+      intelligencePending
+        ? t("system.intelligence.action.explaining")
+        : t("system.intelligence.action.explain"),
     );
     action.type = "button";
     action.dataset.systemIntelligenceExplain = "";
     const ready = intelligenceSnapshot?.state === "ready";
     action.disabled = !ready || intelligencePending;
     action.title = ready
-      ? "Usar Ordax Intelligence para explicar somente os sinais locais exibidos por Sistema"
-      : "Ordax Intelligence não está pronta nesta execução";
+      ? t("system.intelligence.action.readyTitle")
+      : t("system.intelligence.action.unavailableTitle");
     heading.append(headingCopy, action);
     section.append(heading);
 
-    const stateLabel = intelligenceSnapshot === null
-      ? "Não exposta neste modo"
+    const stateMessageId = intelligenceSnapshot === null
+      ? "system.intelligence.state.unavailable"
       : intelligenceSnapshot.state === "ready"
-        ? "Pronta"
+        ? "system.intelligence.state.ready"
         : intelligenceSnapshot.state === "busy"
-          ? "Ocupada"
+          ? "system.intelligence.state.busy"
           : intelligenceSnapshot.state === "degraded"
-            ? "Degradada"
-            : "Com erro";
+            ? "system.intelligence.state.degraded"
+            : "system.intelligence.state.error";
+    const stateLabel = t(stateMessageId);
     const detail = intelligenceSnapshot?.modelId
       ? `${stateLabel} · ${intelligenceSnapshot.modelId}`
       : stateLabel;
@@ -1285,7 +1276,7 @@ export function mountSystemOverviewControls(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        `Estado: ${detail}. Esta consulta é local, somente leitura e não executa ações no dispositivo.`,
+        t("system.intelligence.status", { detail }),
       ),
     );
 
@@ -1294,7 +1285,7 @@ export function mountSystemOverviewControls(
         documentObject,
         "p",
         intelligenceAnswer ? "ordax-system-message" : "ordax-system-warning",
-        intelligenceMessage,
+        t(intelligenceMessage),
       );
       message.setAttribute("role", "status");
       message.setAttribute("aria-live", "polite");
@@ -1304,9 +1295,9 @@ export function mountSystemOverviewControls(
       const answer = node(documentObject, "article", "ordax-system-history-item");
       answer.dataset.state = "info";
       answer.append(
-        node(documentObject, "strong", "", "Explicação da Ordax Intelligence"),
+        node(documentObject, "strong", "", t("system.intelligence.answerTitle")),
         node(documentObject, "p", "ordax-system-section-copy", intelligenceAnswer),
-        node(documentObject, "small", "", "Fonte: snapshot local de Sistema · autoridade: nenhuma"),
+        node(documentObject, "small", "", t("system.intelligence.source")),
       );
       section.append(answer);
     }
@@ -1481,7 +1472,7 @@ export function mountSystemOverviewControls(
     ) {
       intelligencePending = true;
       intelligenceAnswer = "";
-      intelligenceMessage = "Analisando somente os sinais locais exibidos por Sistema…";
+      intelligenceMessage = "system.intelligence.progress";
       replaceView();
       void explainSystemStateWithIntelligence(intelligencePort, {
         surface: hostSnapshot,
@@ -1489,10 +1480,10 @@ export function mountSystemOverviewControls(
       }).then((response) => {
         if (destroyed) return;
         intelligenceAnswer = response.text;
-        intelligenceMessage = "Explicação local concluída. Nenhuma ação foi executada.";
+        intelligenceMessage = "system.intelligence.success";
       }).catch(() => {
         if (destroyed) return;
-        intelligenceMessage = "Não foi possível obter uma explicação local nesta execução.";
+        intelligenceMessage = "system.intelligence.failed";
       }).finally(() => {
         if (destroyed) return;
         intelligencePending = false;
