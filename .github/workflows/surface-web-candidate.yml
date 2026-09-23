@@ -67,6 +67,7 @@ on:
       - 'tests/test_surface_ui_contract.py'
       - 'tests/test_surface_async_lifecycle.py'
       - 'tests/test_native_network_management.py'
+      - 'tests/test_native_power_status.py'
       - 'tests/test_surface_boot_screen.py'
       - 'tests/test_surface_web_builder.py'
       - 'tests/test_surface_preferences.mjs'
@@ -195,6 +196,7 @@ on:
       - 'tests/test_surface_ui_contract.py'
       - 'tests/test_surface_async_lifecycle.py'
       - 'tests/test_native_network_management.py'
+      - 'tests/test_native_power_status.py'
       - 'tests/test_surface_boot_screen.py'
       - 'tests/test_surface_web_builder.py'
       - 'tests/test_surface_preferences.mjs'
@@ -351,6 +353,7 @@ jobs:
           python -m unittest tests.test_surface_ui_contract -v
           python -m unittest tests.test_surface_async_lifecycle -v
           python -m unittest tests.test_native_network_management -v
+          python -m unittest tests.test_native_power_status -v
           python -m unittest tests.test_surface_boot_screen -v
           python -m unittest tests.test_surface_web_builder -v
           python -m unittest tests.test_recent_files_ui_contract -v
