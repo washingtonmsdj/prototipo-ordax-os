@@ -467,8 +467,13 @@ jobs:
           assert proof['candidate_pid1_default_changed'] is False
           assert proof['network_required_for_first_boot'] is False
           assert proof['guest_disk']['retained'] is False
+          assert proof['artifacts']['release_manifest_schema'] == 4
+          assert isinstance(proof['artifacts']['local_ai_runtime_sha256'], str)
+          assert len(proof['artifacts']['local_ai_runtime_sha256']) == 64
+          assert 'ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED' in proof['serial_markers']
+          assert any(marker.startswith('ORDAX_LOCAL_AI_RUNTIME_SHA256=') for marker in proof['serial_markers'])
           assert all(proof['checks'].values())
-          print('PORTABLE_V2_QEMU_DIRECT_KERNEL_BOOT=PASS')
+          print('PORTABLE_V4_QEMU_DIRECT_KERNEL_BOOT=PASS')
           print('PORTABLE_V2_UEFI_BOOT_PROVEN=NO')
           print('PORTABLE_V2_PHYSICAL_BOOT_PROVEN=NO')
           print('PORTABLE_V2_PUBLIC_PROMOTION=NO')
@@ -514,9 +519,14 @@ jobs:
           assert proof['physical_write_authorized'] is False
           assert proof['public_physical_promotion_allowed'] is False
           assert proof['guest_disk']['retained'] is False
-          print('PORTABLE_V3_QEMU_ONE_SHOT_FALLBACK=PASS')
-          print('PORTABLE_V3_QEMU_COLD_HEALTH_COMMIT_PROVEN=NO')
-          print('PORTABLE_V3_PHYSICAL_BOOT_PROVEN=NO')
+          assert proof['artifacts']['release_manifest_schema'] == 4
+          assert isinstance(proof['artifacts']['local_ai_runtime_sha256'], str)
+          assert 'ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=4' in proof['serial_markers']
+          assert 'ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=3' in proof['serial_markers']
+          assert 'ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED' in proof['serial_markers']
+          print('PORTABLE_V4_TO_V3_QEMU_ONE_SHOT_FALLBACK=PASS')
+          print('PORTABLE_V4_QEMU_COLD_HEALTH_COMMIT_PROVEN=NO')
+          print('PORTABLE_V4_PHYSICAL_BOOT_PROVEN=NO')
           PY
 
       - name: Build pinned systemd-boot for portable UEFI proof
@@ -570,8 +580,13 @@ jobs:
           assert proof['physical_write_authorized'] is False
           assert proof['guest_disk']['retained'] is False
           assert proof['ovmf_vars']['retained'] is False
+          assert proof['artifacts']['release_manifest_schema'] == 4
+          assert isinstance(proof['artifacts']['local_ai_runtime_sha256'], str)
+          assert len(proof['artifacts']['local_ai_runtime_sha256']) == 64
+          assert 'ORDAX_LOCAL_AI_RUNTIME_HANDOFF=VERIFIED' in proof['serial_markers']
+          assert any(marker.startswith('ORDAX_LOCAL_AI_RUNTIME_SHA256=') for marker in proof['serial_markers'])
           assert all(proof['checks'].values())
-          print('PORTABLE_V2_QEMU_UEFI_BOOT=PASS')
+          print('PORTABLE_V4_QEMU_UEFI_BOOT=PASS')
           print('PORTABLE_V2_SECURE_BOOT_PROVEN=NO')
           print('PORTABLE_V2_PHYSICAL_BOOT_PROVEN=NO')
           print('PORTABLE_V2_PUBLIC_PROMOTION=NO')
