@@ -43,7 +43,7 @@ class IntelligenceProductConsumerTests(unittest.TestCase):
         self.assertIn("assertIntelligencePort", ui)
         self.assertIn("explainSystemStateWithIntelligence", ui)
         self.assertIn("systemIntelligenceExplain", ui)
-        self.assertIn("autoridade: nenhuma", ui)
+        self.assertIn('t("system.intelligence.answer.provenance")', ui)
         self.assertIn('"ordax-system-local-snapshot"', actions)
         self.assertIn('intent: "diagnose"', actions)
         self.assertNotIn("local-ai", ui)
