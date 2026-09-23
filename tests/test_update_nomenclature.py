@@ -103,7 +103,7 @@ class UpdateNomenclatureTests(unittest.TestCase):
         self.assertIn('t("system.overview.card.delivery")', overview)
         self.assertIn('t("system.about.delivery.kicker")', overview)
         self.assertIn('t("system.about.delivery.description")', overview)
-        self.assertIn('"Distribuição conjunta"', overview)
+        self.assertIn('"system.components.releaseMode.bundled"', overview)
         self.assertIn('"system.components.releaseMode.baseAb"', overview)
         self.assertIn('"system.components.version.detail.bundled"', overview)
         self.assertNotIn("Versão global", overview)
