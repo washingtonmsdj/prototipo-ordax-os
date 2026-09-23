@@ -200,6 +200,11 @@ const COMPONENT_HEALTH_MESSAGE_IDS = Object.freeze({
   unknown: "system.components.health.unknown",
 });
 
+const COMPONENT_STAGE_MESSAGE_IDS = Object.freeze({
+  beta: "system.components.stage.beta",
+  stable: "system.components.stage.stable",
+});
+
 const COMPONENT_CHANNEL_MESSAGE_IDS = Object.freeze({
   "system-base": "system.components.channel.systemBase",
   "system-bundle": "system.components.channel.systemBundle",
@@ -889,33 +894,40 @@ export function mountSystemOverviewControls(
     view.append(section);
   };
 
-  const componentReleaseLabel = (mode) => ({
-    "base-ab": "Base A/B",
-    "component-slot": "Slot independente",
-    "git-app": "App via Git",
-    bundled: "Distribuição conjunta",
-  }[mode] ?? mode);
+  const localizedMappedValue = (messages, value) => {
+    const messageId = messages[value];
+    return messageId ? t(messageId) : String(value ?? "");
+  };
 
-  const componentKindLabel = (kind) => ({
-    base: "Base",
-    shell: "Shell",
-    service: "Serviço",
-    app: "App",
-  }[kind] ?? kind);
+  const componentReleaseLabel = (mode) =>
+    localizedMappedValue(COMPONENT_RELEASE_MODE_MESSAGE_IDS, mode);
 
-  const componentHealthLabel = (health) => ({
-    healthy: "Saudável",
-    failed: "Falha",
-    unknown: "Não observado",
-  }[health] ?? health);
+  const componentKindLabel = (kind) =>
+    localizedMappedValue(COMPONENT_KIND_MESSAGE_IDS, kind);
+
+  const componentHealthLabel = (health) =>
+    localizedMappedValue(COMPONENT_HEALTH_MESSAGE_IDS, health);
+
+  const componentFailureDomainLabel = (domain) =>
+    localizedMappedValue(COMPONENT_FAILURE_DOMAIN_MESSAGE_IDS, domain);
+
+  const componentTitleLabel = (id, fallback) => {
+    const messageId = COMPONENT_TITLE_MESSAGE_IDS[id];
+    return messageId ? t(messageId) : fallback;
+  };
+
+  const componentChannelLabel = (channel) => {
+    const messageId = COMPONENT_CHANNEL_MESSAGE_IDS[channel?.id];
+    return messageId ? t(messageId) : String(channel?.label ?? channel?.id ?? "");
+  };
 
   const renderComponentUpdateScopes = (view) => {
     const section = node(documentObject, "section", "ordax-system-section");
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Escopo"),
-      node(documentObject, "h4", "ordax-system-section-title", "OrdaX e aplicativos"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.components.scope.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.components.scope.title")),
     );
     heading.append(headingCopy);
     section.append(heading);
@@ -926,7 +938,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-placeholder",
-          "O catálogo de componentes não está disponível nesta composição.",
+          t("system.components.unavailable"),
         ),
       );
       view.append(section);
@@ -939,20 +951,20 @@ export function mountSystemOverviewControls(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        "A versão de cada componente e o canal que o entrega são informações separadas. Apps Beta podem ter versão própria mesmo quando ainda atualizam junto com o OrdaX ou, no ambiente de desenvolvimento, diretamente pelo Git.",
+        t("system.components.scope.description"),
       ),
       node(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        "Esta tela descreve os canais realmente habilitados; ela não representa uma Loja nem libera atualização independente de produção quando o componente ainda não usa slot assinado.",
+        t("system.components.scope.productionBoundary"),
       ),
     );
 
-    const renderScope = (title, components, scopeId) => {
+    const renderScope = (titleMessageId, components, scopeId) => {
       const group = node(documentObject, "div", "ordax-system-history");
       group.dataset.updateScope = scopeId;
-      group.append(node(documentObject, "h5", "ordax-system-history-title", title));
+      group.append(node(documentObject, "h5", "ordax-system-history-title", t(titleMessageId)));
       const list = node(documentObject, "div", "ordax-system-version-grid");
 
       for (const component of components) {
@@ -960,35 +972,44 @@ export function mountSystemOverviewControls(
         item.dataset.componentId = component.id;
         item.dataset.releaseMode = component.releaseMode;
         item.dataset.updateChannel = component.updateChannel.id;
-        const maturity = component.versionStage === "beta"
-          ? " · Beta"
-          : component.versionStage === "stable"
-            ? " · Estável"
-            : "";
+        const maturityMessageId = COMPONENT_STAGE_MESSAGE_IDS[component.versionStage];
+        const maturity = maturityMessageId ? t(maturityMessageId) : "";
         item.append(
-          node(documentObject, "strong", "", component.title),
+          node(documentObject, "strong", "", componentTitleLabel(component.id, component.title)),
           node(
             documentObject,
             "span",
             "",
-            `v${component.version}${maturity} · ${component.updateChannel.label}`,
+            t("system.components.versionLine", {
+              version: component.version,
+              maturity,
+              channel: componentChannelLabel(component.updateChannel),
+            }),
           ),
           node(
             documentObject,
             "small",
             "ordax-system-component-health",
-            `Saúde: ${componentHealthLabel(component.health)}`,
+            t("system.components.healthLine", {
+              health: componentHealthLabel(component.health),
+            }),
           ),
         );
 
-        const detail = component.releaseMode === "base-ab"
-          ? "A Base usa o ciclo A/B do OrdaX; não é um app independente."
-          : component.releaseMode === "component-slot"
-            ? "Atualização independente exige pacote assinado, saúde, promoção e rollback."
-            : component.releaseMode === "git-app"
-              ? "Canal de desenvolvimento via Git; não é o atualizador de produção do app."
-              : "Atualiza junto com a entrega do OrdaX; rollback individual não está habilitado.";
-        item.append(node(documentObject, "small", "ordax-system-component-slots", detail));
+        const detailMessageId = {
+          "base-ab": "system.components.scope.detail.baseAb",
+          "component-slot": "system.components.scope.detail.componentSlot",
+          "git-app": "system.components.scope.detail.gitApp",
+          bundled: "system.components.scope.detail.bundled",
+        }[component.releaseMode] ?? "system.components.scope.detail.bundled";
+        item.append(
+          node(
+            documentObject,
+            "small",
+            "ordax-system-component-slots",
+            t(detailMessageId),
+          ),
+        );
 
         if (component.independentUpdate) {
           item.append(
@@ -996,7 +1017,10 @@ export function mountSystemOverviewControls(
               documentObject,
               "small",
               "ordax-system-component-slots",
-              `Anterior: ${component.previousVersion ? `v${component.previousVersion}` : "—"} · Pendente: ${component.pendingVersion ? `v${component.pendingVersion}` : "—"}`,
+              t("system.components.slots", {
+                previous: component.previousVersion ? `v${component.previousVersion}` : "—",
+                pending: component.pendingVersion ? `v${component.pendingVersion}` : "—",
+              }),
             ),
           );
         }
@@ -1006,16 +1030,18 @@ export function mountSystemOverviewControls(
       section.append(group);
     };
 
-    renderScope("OrdaX e sistema", scopes.system, "system");
-    renderScope("Aplicativos", scopes.applications, "applications");
+    renderScope("system.components.scope.system", scopes.system, "system");
+    renderScope("system.components.scope.applications", scopes.applications, "applications");
     section.append(
       node(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        scopes.persistence === "device"
-          ? "Estado de componentes e saúde persistido neste dispositivo."
-          : "Catálogo disponível; estado de componentes permanece somente nesta sessão.",
+        t(
+          scopes.persistence === "device"
+            ? "system.components.persistence.device"
+            : "system.components.persistence.session",
+        ),
       ),
     );
     view.append(section);
@@ -1026,7 +1052,7 @@ export function mountSystemOverviewControls(
     const versionHeading = node(documentObject, "div", "ordax-system-section-heading");
     const versionHeadingCopy = node(documentObject, "div");
     versionHeadingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Versão do produto"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.about.productVersion.kicker")),
       node(documentObject, "h4", "ordax-system-section-title", productVersionLabel()),
     );
     versionHeading.append(versionHeadingCopy);
@@ -1036,15 +1062,15 @@ export function mountSystemOverviewControls(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        "A versão do produto identifica o marco geral. Cada componente possui identidade própria. Durante o desenvolvimento, apps podem evoluir diretamente pelo Git; slots assinados ficam reservados para distribuição de produção.",
+        t("system.about.productVersion.description"),
       ),
       node(
         documentObject,
         "p",
         "ordax-system-section-copy",
         PRODUCT_VERSION.stableRelease
-          ? "Este marco é uma versão estável do produto."
-          : "Canal de protótipo: v1.0 permanece reservado para o produto estável.",
+          ? t("system.about.productVersion.stable")
+          : t("system.about.productVersion.prototype"),
       ),
     );
     view.append(versionSection);
@@ -1053,12 +1079,14 @@ export function mountSystemOverviewControls(
     const deliveryHeading = node(documentObject, "div", "ordax-system-section-heading");
     const deliveryHeadingCopy = node(documentObject, "div");
     deliveryHeadingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Identidade da entrega"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.about.delivery.kicker")),
       node(
         documentObject,
         "h4",
         "ordax-system-section-title",
-        updateSnapshot?.deliveryNumber ? deliveryLabel(updateSnapshot.deliveryNumber) : "Entrega não informada",
+        updateSnapshot?.deliveryNumber
+          ? t("system.overview.delivery.number", { value: updateSnapshot.deliveryNumber })
+          : t("system.about.delivery.unavailableTitle"),
       ),
     );
     deliveryHeading.append(deliveryHeadingCopy);
@@ -1068,7 +1096,7 @@ export function mountSystemOverviewControls(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        "Entrega é o número humano do que pode chegar ao notebook; não é número de PR nem versão comercial do OrdaX. O SHA identifica exatamente o build.",
+        t("system.about.delivery.description"),
       ),
     );
     if (!updateSnapshot?.deliveryNumber) {
@@ -1077,7 +1105,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-placeholder",
-          "Este host não informa uma identidade técnica de entrega. As versões dos componentes permanecem disponíveis separadamente.",
+          t("system.about.delivery.unavailable"),
         ),
       );
     }
@@ -1087,8 +1115,8 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Componentes"),
-      node(documentObject, "h4", "ordax-system-section-title", "Versões e isolamento"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.components.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.components.versionsTitle")),
     );
     heading.append(headingCopy);
     section.append(heading);
@@ -1099,7 +1127,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-placeholder",
-          "O Component Manager não está disponível nesta composição.",
+          t("system.components.managerUnavailable"),
         ),
       );
       view.append(section);
@@ -1111,9 +1139,11 @@ export function mountSystemOverviewControls(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        componentSnapshot.persistence === "device"
-          ? "Estado de componentes e saúde persistido neste dispositivo."
-          : "Catálogo disponível; estado de componentes permanece somente nesta sessão.",
+        t(
+          componentSnapshot.persistence === "device"
+            ? "system.components.persistence.device"
+            : "system.components.persistence.session",
+        ),
       ),
     );
 
@@ -1123,40 +1153,57 @@ export function mountSystemOverviewControls(
       const item = node(documentObject, "div", "ordax-system-version-item");
       item.dataset.componentId = manifest.id;
       item.dataset.releaseMode = manifest.releaseMode;
-      const title = node(documentObject, "strong", "", manifest.title);
+      const title = node(
+        documentObject,
+        "strong",
+        "",
+        componentTitleLabel(manifest.id, manifest.title),
+      );
       const identity = node(
         documentObject,
         "span",
         "",
-        `${componentKindLabel(manifest.kind)} · v${state.currentVersion} · ${componentReleaseLabel(manifest.releaseMode)}`,
+        t("system.components.identityLine", {
+          kind: componentKindLabel(manifest.kind),
+          version: state.currentVersion,
+          release: componentReleaseLabel(manifest.releaseMode),
+        }),
       );
       const health = node(
         documentObject,
         "small",
         "ordax-system-component-health",
-        `Saúde: ${componentHealthLabel(state.currentHealth)} · falha isolada em ${manifest.failureDomain}`,
+        t("system.components.healthFailureDomain", {
+          health: componentHealthLabel(state.currentHealth),
+          domain: componentFailureDomainLabel(manifest.failureDomain),
+        }),
       );
       item.append(title, identity, health);
 
       if (independentUpdate) {
-        const slots = node(
-          documentObject,
-          "small",
-          "ordax-system-component-slots",
-          `Anterior: ${state.previousVersion ? `v${state.previousVersion}` : "—"} · Pendente: ${state.pendingVersion ? `v${state.pendingVersion}` : "—"}`,
-        );
-        item.append(slots);
-      } else {
         item.append(
           node(
             documentObject,
             "small",
             "ordax-system-component-slots",
-            manifest.releaseMode === "base-ab"
-              ? "Rollback pertence aos slots A/B da Base."
-              : manifest.releaseMode === "git-app"
-                ? "Desenvolvimento: esta versão do app chega diretamente pelo Git, sem slot de produção."
-                : "Ainda acompanha a entrega conjunta; rollback individual permanece bloqueado.",
+            t("system.components.slots", {
+              previous: state.previousVersion ? `v${state.previousVersion}` : "—",
+              pending: state.pendingVersion ? `v${state.pendingVersion}` : "—",
+            }),
+          ),
+        );
+      } else {
+        const detailMessageId = manifest.releaseMode === "base-ab"
+          ? "system.components.version.detail.baseAb"
+          : manifest.releaseMode === "git-app"
+            ? "system.components.version.detail.gitApp"
+            : "system.components.version.detail.bundled";
+        item.append(
+          node(
+            documentObject,
+            "small",
+            "ordax-system-component-slots",
+            t(detailMessageId),
           ),
         );
       }
@@ -1165,6 +1212,7 @@ export function mountSystemOverviewControls(
     section.append(list);
     view.append(section);
   };
+
   const renderHistory = (view) => {
     if (!historyPort) return;
     const section = node(documentObject, "section", "ordax-system-section");
