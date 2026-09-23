@@ -161,3 +161,42 @@ test("Notes and Internet primary journeys use the shared localization owner", as
   assert.match(internetCatalog, /"internet\.action\.newTab": "New tab"/);
   assert.match(internetCatalog, /"internet\.project\.currentPage": "Current page"/);
 });
+
+test("Network tray and quick panel consume the shared localization owner", async () => {
+  const quick = await readFile(
+    new URL("../system/surface/ui/network-quick-panel.mjs", import.meta.url),
+    "utf8",
+  );
+  const tray = await readFile(
+    new URL("../system/surface/ui/network-tray-controls.mjs", import.meta.url),
+    "utf8",
+  );
+  const catalog = await readFile(
+    new URL("../system/services/i18n/catalog/network.mjs", import.meta.url),
+    "utf8",
+  );
+
+  for (const source of [quick, tray]) {
+    assert.match(source, /assertSurfaceRenderLifecycle/);
+    assert.match(source, /const localization = lifecycle\.localization/);
+    assert.match(source, /const t = localization\.translate/);
+    assert.match(source, /localization\.subscribe/);
+    assert.match(source, /unsubscribeLocalization/);
+  }
+  assert.match(quick, /networkManagementActionMessageId/);
+  assert.match(quick, /networkManagementFailureMessageId/);
+  assert.match(quick, /network\.quick\.passwordLabel/);
+  assert.match(tray, /labelMessageId/);
+  assert.match(tray, /titleMessageId/);
+  assert.match(catalog, /"network\.quick\.action\.scan": "Find networks"/);
+  assert.match(catalog, /"network\.management\.error\.generic": "The Wi-Fi action could not be completed/);
+  assert.doesNotMatch(
+    quick,
+    /Procurar redes|Conectado|Conectada|Senha de|Abrir Ajustes de rede|Digite a senha/,
+  );
+  assert.doesNotMatch(
+    tray,
+    /Rede indisponível|Nenhuma interface de rede observada|Rede por cabo conectada|Dados antigos/,
+  );
+});
+
