@@ -493,14 +493,14 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Uso do dispositivo"),
-      node(documentObject, "h4", "ordax-system-section-title", "Memória"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.resources.memory.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.resources.memory.title")),
     );
     const refresh = node(
       documentObject,
       "button",
       "ordax-system-action",
-      metricsPending ? "Atualizando…" : "Atualizar leitura",
+      metricsPending ? t("system.resources.action.refreshing") : t("system.resources.action.refresh"),
     );
     refresh.type = "button";
     refresh.dataset.systemOverviewRefresh = "";
@@ -516,9 +516,9 @@ export function mountSystemOverviewControls(
           "ordax-system-placeholder",
           metricsPort
             ? metricsPending
-              ? "Lendo recursos do dispositivo…"
-              : (metricsMessage || "Aguardando leitura local.")
-            : "Este host não expõe métricas locais de memória.",
+              ? t("system.resources.memory.reading")
+              : (metricsMessage || t("system.resources.waiting"))
+            : t("system.resources.memory.unavailable"),
         ),
       );
       view.append(section);
@@ -531,7 +531,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-warning",
-          `Leitura antiga · a tentativa atual falhou. Última leitura recebida pela Surface às ${formatObservationReceivedAt(metricsLastSuccessAt)}.`,
+          t("system.resources.stale", { time: formatObservationReceivedAt(metricsLastSuccessAt) }),
         ),
       );
     }
@@ -539,9 +539,9 @@ export function mountSystemOverviewControls(
     const memoryUsed = metricsSnapshot.memoryTotalBytes - metricsSnapshot.memoryAvailableBytes;
     const resourceGrid = node(documentObject, "div", "ordax-system-resource-grid");
     appendMetricCard(documentObject, resourceGrid, {
-      label: "Memória em uso",
+      label: t("system.resources.memory.used"),
       value: formatBytes(memoryUsed),
-      detail: `${formatBytes(metricsSnapshot.memoryAvailableBytes)} disponível de ${formatBytes(metricsSnapshot.memoryTotalBytes)}`,
+      detail: t("system.resources.memory.availableOf", { available: formatBytes(metricsSnapshot.memoryAvailableBytes), total: formatBytes(metricsSnapshot.memoryTotalBytes) }),
       progress: ratio(memoryUsed, metricsSnapshot.memoryTotalBytes),
     });
     section.append(resourceGrid);
@@ -554,14 +554,14 @@ export function mountSystemOverviewControls(
     const heading = node(documentObject, "div", "ordax-system-section-heading");
     const headingCopy = node(documentObject, "div");
     headingCopy.append(
-      node(documentObject, "span", "ordax-system-section-kicker", "Armazenamento"),
-      node(documentObject, "h4", "ordax-system-section-title", "Espaço do usuário"),
+      node(documentObject, "span", "ordax-system-section-kicker", t("system.resources.storage.kicker")),
+      node(documentObject, "h4", "ordax-system-section-title", t("system.resources.storage.title")),
     );
     const refresh = node(
       documentObject,
       "button",
       "ordax-system-action",
-      metricsPending ? "Atualizando…" : "Atualizar leitura",
+      metricsPending ? t("system.resources.action.refreshing") : t("system.resources.action.refresh"),
     );
     refresh.type = "button";
     refresh.dataset.systemOverviewRefresh = "";
@@ -577,9 +577,9 @@ export function mountSystemOverviewControls(
           "ordax-system-placeholder",
           metricsPort
             ? metricsPending
-              ? "Lendo armazenamento do usuário…"
-              : (metricsMessage || "Aguardando leitura local.")
-            : "Este host não expõe a capacidade do espaço do usuário.",
+              ? t("system.resources.storage.reading")
+              : (metricsMessage || t("system.resources.waiting"))
+            : t("system.resources.storage.unavailable"),
         ),
       );
       view.append(section);
@@ -592,7 +592,7 @@ export function mountSystemOverviewControls(
           documentObject,
           "p",
           "ordax-system-warning",
-          `Leitura antiga · a tentativa atual falhou. Última leitura recebida pela Surface às ${formatObservationReceivedAt(metricsLastSuccessAt)}.`,
+          t("system.resources.stale", { time: formatObservationReceivedAt(metricsLastSuccessAt) }),
         ),
       );
     }
@@ -600,9 +600,9 @@ export function mountSystemOverviewControls(
     const storageUsed = metricsSnapshot.userStorageTotalBytes - metricsSnapshot.userStorageFreeBytes;
     const resourceGrid = node(documentObject, "div", "ordax-system-resource-grid");
     appendMetricCard(documentObject, resourceGrid, {
-      label: "Espaço usado",
+      label: t("system.resources.storage.used"),
       value: formatBytes(storageUsed),
-      detail: `${formatBytes(metricsSnapshot.userStorageFreeBytes)} livre de ${formatBytes(metricsSnapshot.userStorageTotalBytes)}`,
+      detail: t("system.resources.storage.freeOf", { free: formatBytes(metricsSnapshot.userStorageFreeBytes), total: formatBytes(metricsSnapshot.userStorageTotalBytes) }),
       progress: ratio(storageUsed, metricsSnapshot.userStorageTotalBytes),
     });
     section.append(resourceGrid);
@@ -611,7 +611,7 @@ export function mountSystemOverviewControls(
         documentObject,
         "p",
         "ordax-system-section-copy",
-        "Esta leitura cobre somente o espaço persistente do usuário exposto pelo host. Não representa o disco físico inteiro.",
+        t("system.resources.storage.scope"),
       ),
     );
     if (metricsMessage) section.append(node(documentObject, "p", "ordax-system-message", metricsMessage));
