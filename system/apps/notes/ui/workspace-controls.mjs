@@ -340,7 +340,7 @@ export function mountNotesWorkspaceControls(
   let intelligencePending = false;
   let intelligenceNoteId = null;
   let intelligenceResult = "";
-  let intelligenceError = "";
+  let intelligenceErrorMessageId = null;
 
   const currentNote = () => {
     const id = state.document.selectedNoteId;
@@ -372,7 +372,7 @@ export function mountNotesWorkspaceControls(
       return true;
     } catch {
       const status = mountedSlot?.querySelector(".ordax-notes-save-status");
-      if (status) status.textContent = "Não foi possível salvar esta edição";
+      if (status) status.textContent = t("notes.editor.saveFailed");
       return false;
     }
   };
@@ -392,10 +392,10 @@ export function mountNotesWorkspaceControls(
     try {
       const payload = captureEditorPayload();
       if (!payload) return false;
-      if (status) status.textContent = "Salvando…";
+      if (status) status.textContent = t("notes.editor.saving");
       return editorSave.schedule(note.id, payload);
     } catch {
-      if (status) status.textContent = "Não foi possível preparar esta edição";
+      if (status) status.textContent = t("notes.editor.prepareFailed");
       return false;
     }
   };
@@ -502,16 +502,16 @@ export function mountNotesWorkspaceControls(
     const list = view.querySelector(".ordax-notes-list");
     list.replaceChildren();
     for (const note of items) {
-      const row = button(documentObject, "ordax-notes-row", `Abrir ${note.title || "nota sem título"}`, "select-note", "");
+      const row = button(documentObject, "ordax-notes-row", t("notes.note.open", { title: note.title || t("notes.note.untitledLower") }), "select-note", "");
       row.dataset.noteId = note.id;
       row.dataset.active = String(note.id === state.document.selectedNoteId);
       const icon = node(documentObject, "span", "ordax-notes-row-icon", note.favorite ? "★" : "▤");
       const copy = node(documentObject, "span", "ordax-notes-row-copy");
       copy.append(
-        node(documentObject, "strong", "", note.title || "Sem título"),
-        node(documentObject, "small", "", firstNotesBodyLine(note.body)),
+        node(documentObject, "strong", "", note.title || t("notes.note.untitled")),
+        node(documentObject, "small", "", firstNotesBodyLine(note.body, t("notes.note.emptyBody"))),
       );
-      const time = node(documentObject, "time", "ordax-notes-row-time", formatNotesRelativeTime(note.updatedAt));
+      const time = node(documentObject, "time", "ordax-notes-row-time", formatNotesRelativeTime(note.updatedAt, Date.now(), { locale: localization.getLocale(), nowLabel: t("notes.time.now"), yesterdayLabel: t("notes.time.yesterday") }));
       row.append(icon, copy, time);
       list.append(row);
     }
@@ -545,17 +545,17 @@ export function mountNotesWorkspaceControls(
       if (preview?.status === "ready" && preview.url) {
         const image = node(documentObject, "img", "ordax-notes-inline-image-preview");
         image.src = preview.url;
-        image.alt = reference.title || "Imagem relacionada à nota";
+        image.alt = reference.title || t("notes.image.relatedAlt");
         image.loading = "lazy";
         image.decoding = "async";
         image.draggable = false;
         frame.append(image);
       } else {
         const message = !imagePreviewCache.available
-          ? "Prévia disponível no OrdaX Native."
+          ? t("notes.image.previewNative")
           : preview?.status === "failed"
-            ? "Não foi possível carregar a prévia. O arquivo continua relacionado."
-            : "Carregando imagem…";
+            ? t("notes.image.previewFailed")
+            : t("notes.image.loading");
         frame.append(node(documentObject, "span", "ordax-notes-inline-image-placeholder", message));
         if (!preview && imagePreviewCache.available) {
           void imagePreviewCache.ensure(
@@ -579,17 +579,17 @@ export function mountNotesWorkspaceControls(
       const caption = node(documentObject, "figcaption", "ordax-notes-inline-image-caption");
       const copy = node(documentObject, "span", "ordax-notes-inline-image-copy");
       copy.append(
-        node(documentObject, "strong", "", reference.title || "Imagem"),
-        node(documentObject, "small", "", reference.path || "Arquivo local"),
+        node(documentObject, "strong", "", reference.title || t("notes.image.fallbackTitle")),
+        node(documentObject, "small", "", reference.path || t("notes.file.local")),
       );
       const actions = node(documentObject, "span", "ordax-notes-inline-image-actions");
       if (activationPort && reference.path) {
         const open = button(
           documentObject,
           "ordax-notes-inline-image-action",
-          "Abrir localização da imagem no Arquivos",
+          t("notes.image.openLocation"),
           "open-file-reference",
-          "Abrir no Arquivos",
+          t("notes.file.openInFiles"),
         );
         open.dataset.filePath = reference.path;
         actions.append(open);
@@ -597,9 +597,9 @@ export function mountNotesWorkspaceControls(
       const remove = button(
         documentObject,
         "ordax-notes-inline-image-action ordax-notes-inline-image-remove",
-        "Remover imagem da nota",
+        t("notes.image.remove"),
         "remove-reference",
-        "Remover",
+        t("notes.action.remove"),
       );
       remove.dataset.referenceId = reference.id;
       remove.disabled = readOnly;
@@ -625,7 +625,7 @@ export function mountNotesWorkspaceControls(
       checkbox.disabled = readOnly;
       checkbox.dataset.taskId = task.id;
       checkbox.dataset.notesTaskDone = "";
-      checkbox.setAttribute("aria-label", `Marcar “${task.text}” como concluído`);
+      checkbox.setAttribute("aria-label", t("notes.task.markDone", { text: task.text }));
       const text = node(documentObject, "input", "ordax-notes-task-text");
       text.type = "text";
       text.value = task.text;
@@ -633,11 +633,11 @@ export function mountNotesWorkspaceControls(
       text.readOnly = readOnly;
       text.dataset.taskId = task.id;
       text.dataset.notesTaskText = "";
-      text.setAttribute("aria-label", "Texto do item");
+      text.setAttribute("aria-label", t("notes.task.textAria"));
       const remove = button(
         documentObject,
         "ordax-notes-task-remove",
-        `Remover item ${task.text}`,
+        t("notes.task.remove", { text: task.text }),
         "remove-task",
         "×",
       );
