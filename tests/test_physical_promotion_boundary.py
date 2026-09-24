@@ -286,6 +286,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             "'canonical_v4_release_source_commit': auth['release_binding']['source_commit']",
             workflow,
         )
+        self.assertIn("'writer_source_commit': os.environ['GITHUB_SHA']", workflow)
 
     def test_repository_v4_media_scope_requires_canonical_release_proof_before_owner_authorization(self):
         auth = json.loads(
