@@ -98,5 +98,17 @@
     "physical_write_authorized": false,
     "physical_write_performed": false,
     "canonical_envelope_url_required": true
+  },
+  "physical_authorization_handoff": {
+    "canonical_release_proof_required": true,
+    "canonical_release_proof_path": "docs/evidence/canonical-v4-release-proof.json",
+    "proof_binding_tool": "tools/creator/bind_canonical_v4_release_proof.py",
+    "authorization_contract": "docs/contracts/physical-write-authorization.json",
+    "authorization_contract_schema": "prototype-ordax.physical-write-authorization/3",
+    "owner_authorization_preflight": "tools/creator/authorize_physical_write.py check",
+    "proof_must_be_bound_before_owner_authorization": true,
+    "physical_target_selection_performed": false,
+    "physical_write_authorized": false,
+    "physical_write_performed": false
   }
 }

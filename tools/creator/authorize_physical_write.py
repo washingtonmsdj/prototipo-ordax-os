@@ -31,11 +31,12 @@ assert _spec.loader is not None
 _spec.loader.exec_module(promotion)
 
 AUTH_PATH = Path("docs/contracts/physical-write-authorization.json")
-AUTH_SCHEMA = "prototype-ordax.physical-write-authorization/2"
+AUTH_SCHEMA = "prototype-ordax.physical-write-authorization/3"
 RESULT_SCHEMA = "prototype-ordax.physical-owner-authorization/1"
 EXPECTED_REPOSITORY = "washingtonmsdj/prototipo-ordax-os"
 EXPECTED_SCOPE = "first-real-stable-mvp-usb-proof"
 PRE_TRUST_STATUS = "blocked-canonical-trust-pending"
+PRE_RELEASE_STATUS = "blocked-canonical-v4-release-proof-pending"
 BLOCKED_STATUS = "blocked-explicit-physical-authorization-pending"
 AUTHORIZED_STATUS = "authorized"
 CONFIRMATION = "AUTHORIZE_FIRST_REAL_STABLE_MVP_USB_PROOF"
@@ -80,7 +81,7 @@ def _load_authorization(repo_root: Path) -> tuple[dict[str, Any], bytes, int]:
         raise AuthorizationError("authorization repository is incompatible")
     if contract.get("scope") != EXPECTED_SCOPE:
         raise AuthorizationError("authorization scope is incompatible")
-    if contract.get("status") not in (PRE_TRUST_STATUS, BLOCKED_STATUS):
+    if contract.get("status") not in (PRE_TRUST_STATUS, PRE_RELEASE_STATUS, BLOCKED_STATUS):
         raise AuthorizationError(
             "authorization contract is not in a supported pre-consent state"
         )
@@ -115,6 +116,10 @@ def prepare_authorization(repo_root: Path) -> dict[str, Any]:
         )
     if status.get("physical_authorization_bindings_resolved") is not True:
         raise AuthorizationError("physical authorization bindings are not resolved")
+    if status.get("canonical_v4_release_proof_valid") is not True:
+        raise AuthorizationError("canonical v4 release proof is not valid")
+    if status.get("canonical_v4_release_binding_resolved") is not True:
+        raise AuthorizationError("canonical v4 release binding is not resolved")
     context_sha = status.get("computed_authorization_context_sha256")
     if not isinstance(context_sha, str) or len(context_sha) != 64:
         raise AuthorizationError("physical authorization source context is unavailable")
@@ -147,6 +152,15 @@ def prepare_authorization(repo_root: Path) -> dict[str, Any]:
         "authorization_context_sha256": context_sha,
         "authorization_context_file_count": status.get(
             "authorization_context_file_count"
+        ),
+        "canonical_v4_release_proof_sha256": status.get(
+            "canonical_v4_release_proof_sha256"
+        ),
+        "canonical_v4_release_source_commit": status.get(
+            "canonical_v4_release_source_commit"
+        ),
+        "canonical_v4_release_envelope_url": status.get(
+            "canonical_v4_release_envelope_url"
         ),
         "confirmation": CONFIRMATION,
         "physical_device_touched": False,
@@ -251,6 +265,9 @@ def apply_authorization(
         "release_sequence": plan["release_sequence"],
         "authorized_contract_sha256": plan["authorized_contract_sha256"],
         "authorization_context_sha256": plan["authorization_context_sha256"],
+        "canonical_v4_release_proof_sha256": plan["canonical_v4_release_proof_sha256"],
+        "canonical_v4_release_source_commit": plan["canonical_v4_release_source_commit"],
+        "canonical_v4_release_envelope_url": plan["canonical_v4_release_envelope_url"],
         "physical_device_touched": False,
         "writer_invoked": False,
         "candidate_materialized": False,

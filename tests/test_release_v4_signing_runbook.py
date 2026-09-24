@@ -185,6 +185,24 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
         self.assertFalse(contract["canonical_release_proof_boundary"]["physical_write_performed"])
         self.assertTrue(contract["next_boundary"]["canonical_proof_step_implemented"])
         self.assertTrue(contract["next_boundary"]["physical_media_authority_separate"])
+        handoff = contract["physical_authorization_handoff"]
+        self.assertTrue(handoff["canonical_release_proof_required"])
+        self.assertEqual(
+            handoff["canonical_release_proof_path"],
+            "docs/evidence/canonical-v4-release-proof.json",
+        )
+        self.assertEqual(
+            handoff["proof_binding_tool"],
+            "tools/creator/bind_canonical_v4_release_proof.py",
+        )
+        self.assertEqual(
+            handoff["authorization_contract_schema"],
+            "prototype-ordax.physical-write-authorization/3",
+        )
+        self.assertTrue(handoff["proof_must_be_bound_before_owner_authorization"])
+        self.assertFalse(handoff["physical_target_selection_performed"])
+        self.assertFalse(handoff["physical_write_authorized"])
+        self.assertFalse(handoff["physical_write_performed"])
 
     def test_bundle_and_pipeline_identify_v4_as_mvp_path(self):
         bundle = BUNDLE_DOC.read_text(encoding="utf-8")

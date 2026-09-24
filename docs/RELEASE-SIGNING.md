@@ -88,6 +88,22 @@ handoff that says the operator-controlled canonical signing proof and canonical 
 proof refer to exactly the same Stable v4 release. Fresh v4 physical-media authorization remains a
 separate later gate.
 
+Before owner authorization can even be preflighted, copy/bind that **public** aggregate receipt into
+the repository through the non-destructive Creator boundary:
+
+```powershell
+python tools/creator/bind_canonical_v4_release_proof.py <path-to-canonical-v4-release-proof.json>
+```
+
+The binder requires the pinned canonical public trust, the exact three v4 artifacts, stable HTTPS
+envelope identity, matching manifest/envelope digests and safe false activation/physical flags. It
+copies only the public proof receipt to `docs/evidence/canonical-v4-release-proof.json`, binds the
+receipt SHA-256 plus source commit/manifest/envelope identity into physical-authorization schema v3,
+and advances only to `blocked-explicit-physical-authorization-pending`. It never selects a target,
+authorizes a write, invokes the writer or materializes a physical candidate. After binding, run
+`python tools/creator/authorize_physical_write.py check`; fresh owner consent remains a separate,
+later decision.
+
 ## Private-key boundary
 
 The private key:
