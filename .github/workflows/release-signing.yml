@@ -54,6 +54,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $paths = @(
+            'tools/release-signing/windows/Preflight-PortableV4-Canonical.ps1',
             'tools/release-signing/windows/3-Prepare-PortableV4-SigningHandoff.ps1',
             'tools/release-signing/windows/4-Sign-Initial-OrdaXRelease.ps1',
             'tools/release-signing/windows/5-Verify-PortableV4-SignedHandoff.ps1'
@@ -74,6 +75,64 @@ jobs:
             }
           }
           Write-Host 'PORTABLE_V4_SIGNING_RUNBOOK_POWERSHELL_PARSE=PASS'
+
+      - name: Exercise canonical v4 operator preflight
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $work = Join-Path $env:RUNNER_TEMP 'canonical-v4-preflight-test'
+          New-Item -ItemType Directory -Force -Path $work | Out-Null
+
+          $files = @(
+            'system.erofs',
+            'native-surface-runtime.erofs',
+            'local-ai-runtime.erofs',
+            'ordax-release-manifest.exe',
+            'ordax-release-signing.exe',
+            'ordax-release-agent.exe',
+            'private.pem'
+          )
+          foreach ($name in $files) {
+            "fixture-$name" | Set-Content -LiteralPath (Join-Path $work $name) -Encoding UTF8
+          }
+          @{
+            '$schema' = 'prototype-ordax.release-trust/1'
+            key_id = 'ordax-prototype-release-v1'
+            public_key_base64 = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+          } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'trust.json') -Encoding UTF8
+          @{
+            '$schema' = 'prototype-ordax.local-ai-source-lock/1'
+          } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'source-lock.json') -Encoding UTF8
+
+          $args = @{
+            SystemImagePath = Join-Path $work 'system.erofs'
+            SurfaceRuntimePath = Join-Path $work 'native-surface-runtime.erofs'
+            LocalAiRuntimePath = Join-Path $work 'local-ai-runtime.erofs'
+            LocalAiSourceLockPath = Join-Path $work 'source-lock.json'
+            SourceCommit = '0123456789abcdef0123456789abcdef01234567'
+            SystemArtifactUrl = 'https://releases.example.invalid/system.erofs'
+            SurfaceArtifactUrl = 'https://releases.example.invalid/native-surface-runtime.erofs'
+            LocalAiArtifactUrl = 'https://releases.example.invalid/local-ai-runtime.erofs'
+            ManifestToolPath = Join-Path $work 'ordax-release-manifest.exe'
+            SignerPath = Join-Path $work 'ordax-release-signing.exe'
+            ReleaseAgentPath = Join-Path $work 'ordax-release-agent.exe'
+            TrustPath = Join-Path $work 'trust.json'
+            PrivateKeyPath = Join-Path $work 'private.pem'
+          }
+          & ./tools/release-signing/windows/Preflight-PortableV4-Canonical.ps1 @args
+
+          $failedClosed = $false
+          try {
+            $args.SystemArtifactUrl = 'https://releases.example.invalid/system.erofs?temporary=1'
+            & ./tools/release-signing/windows/Preflight-PortableV4-Canonical.ps1 @args
+          } catch {
+            $failedClosed = $true
+          }
+          if (-not $failedClosed) { throw 'preflight accepted an unstable artifact URL' }
+
+          Write-Host 'CANONICAL_V4_OPERATOR_PREFLIGHT_TEST=PASS'
+          Write-Host 'PRIVATE_KEY_CONTENT_USED=NO'
+          Write-Host 'PHYSICAL_WRITE_AUTHORIZED=NO'
 
       - name: Exercise canonical v4 proof receipt aggregator
         shell: pwsh
