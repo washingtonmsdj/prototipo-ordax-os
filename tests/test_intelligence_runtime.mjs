@@ -69,6 +69,20 @@ test("Ordax Intelligence is a system contract with zero implicit mutation author
   intelligence.dispose();
 });
 
+test("Ordax Intelligence refuses new work after dispose", async () => {
+  let generated = false;
+  const intelligence = createIntelligenceRuntime({
+    inferencePort: inferencePort({ onGenerate: () => { generated = true; } }),
+  });
+  intelligence.dispose();
+
+  await assert.rejects(
+    () => intelligence.respond({ prompt: "não execute" }),
+    /runtime is disposed/,
+  );
+  assert.equal(generated, false);
+});
+
 test("Ordax Intelligence consumes bounded provenance-bearing context through local inference", async () => {
   let generated = null;
   const intelligence = createIntelligenceRuntime({
