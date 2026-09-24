@@ -113,7 +113,8 @@
       "directory_fsync_required": true,
       "rejected_identity_persisted": true,
       "runtime_copy_path": "/run/ordax/bootstrap-tools/ordax-portable-state",
-      "runtime_copy_survives_switch_root": true
+      "runtime_copy_survives_switch_root": true,
+      "outer_filesystem_sync_owner": "portable-pid1-after-selection"
     },
     "activation_state_reader_installed": true,
     "portable_mount_helper": {
@@ -248,7 +249,10 @@
       "activation_helper_retained_after_switch_root": true,
       "release_manifest_v4_supported": true,
       "local_ai_runtime_verified_handoff": true,
-      "local_ai_runtime_failure_boot_critical": false
+      "local_ai_runtime_failure_boot_critical": false,
+      "activation_state_outer_sync_required": true,
+      "activation_state_durable_marker": "ORDAX_PORTABLE_ACTIVATION_STATE_DURABLE=YES",
+      "activation_state_durable_marker_after_sync": true
     },
     "mount_security_flags": true,
     "mount_security_flags_busybox_selector": "CONFIG_FEATURE_MOUNT_FLAGS=y",
