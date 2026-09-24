@@ -71,8 +71,8 @@ func validatePortablePhysicalApplyRequestPolicy(request PortablePhysicalApplyReq
 	if request.DestructiveAuthorization != PortableDestructiveAuthorizationToken(confirmed, planSHA) {
 		return Target{}, "", errors.New("portable physical apply blocked: destructive authorization does not match current target and plan")
 	}
-	if len(request.Sources) != 15 {
-		return Target{}, "", fmt.Errorf("portable physical apply requires exactly 15 sources; got=%d", len(request.Sources))
+	if len(request.Sources) != 17 {
+		return Target{}, "", fmt.Errorf("portable physical apply requires exactly 17 sources; got=%d", len(request.Sources))
 	}
 
 	expected := map[string]creatorcore.PortableApplicationOperation{}
@@ -81,8 +81,8 @@ func validatePortablePhysicalApplyRequestPolicy(request PortablePhysicalApplyReq
 			expected[op.ArtifactID] = op
 		}
 	}
-	if len(expected) != 15 {
-		return Target{}, "", errors.New("portable physical apply plan does not contain exactly 15 materializations")
+	if len(expected) != 17 {
+		return Target{}, "", errors.New("portable physical apply plan does not contain exactly 17 materializations")
 	}
 	seen := map[string]bool{}
 	for _, source := range request.Sources {
