@@ -185,6 +185,8 @@ canonical public trust
 
 The v4 physical plan adds `local-ai-runtime-image` and `local-ai-runtime-ref` to the previous 15-artifact shape; the previous authorization context is intentionally not reusable. There is no target-sized whole-disk RAW image in this final path. Canonical publisher trust is now pinned, but owner consent is deliberately **not reachable** until the operator-controlled canonical v4 signing/materialization flow has produced its aggregate public receipt.
 
+The target-specific Portable media/application plan must use the **canonical release source commit** bound by `physical-write-authorization.json -> release_binding.source_commit`. The physical writer binary records its own build/Git commit separately as writer provenance and must never substitute that writer SHA for the release SHA. `prepare-portable` and `apply-portable` fail closed unless the plan source commit matches the embedded canonical release source commit, and the v4 path requires exactly 17 artifact sources.
+
 Bind that receipt non-destructively first:
 
 ```text
