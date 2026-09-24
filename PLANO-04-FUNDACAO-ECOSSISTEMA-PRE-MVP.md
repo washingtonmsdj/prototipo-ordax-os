@@ -1,6 +1,6 @@
 # OrdaX — parte 4: fundação de ecossistema pré-MVP
 
-**Estado:** início de implementação em source.  
+**Estado:** fundação source/backend implementada; runtime público/comercial ainda desativado.  
 **Objetivo:** preparar o primeiro MVP para evoluir para produto gratuito + serviços pagos sem reescrever identidade, Intelligence, apps ou projetos depois do lançamento.
 
 Este plano não adiciona cobrança ao MVP e não reabre instalação Native. Ele adiciona fronteiras que são caras de corrigir depois que contas e dados reais existirem.
@@ -160,7 +160,7 @@ O Control Plane de desenvolvimento existente não pode reutilizar suas credencia
 
 ## 6. Supabase dedicado
 
-O projeto Supabase `ordax-control-plane` é o candidato atual porque está isolado do banco comercial legado.
+O projeto Supabase `ordax-control-plane` é o alvo dedicado atual. O schema inicial já foi aplicado e validado; login público continua desativado.
 
 A camada de produto precisa permanecer provider-neutral:
 
@@ -182,39 +182,43 @@ Schema inicial:
 - `ordax_profile_packs`;
 - `ordax_space_profile_packs`;
 - `ordax_memory_items`;
-- `ordax_memory_embeddings`.
+- `ordax_memory_embeddings`;
+- `ordax_project_connections`.
 
 Todas as tabelas expostas usam RLS. Tokens de GitHub/OpenAI/xAI não entram nessas tabelas públicas.
+
+Mutações de recursos sujeitos a quota/entitlement são **server-authoritative**: cliente autenticado não pode criar/alterar diretamente Spaces, memberships, memória cloud, conexões de projeto, packs ou grants pelo Data API. Isso impede bypass futuro de planos. O backend/gateway OrdaX deverá aplicar quota, entitlement, auditoria e aprovação antes da mutação.
 
 ## 7. Sequência
 
 ### P0 — antes do MVP público
 
-1. contratos de Spaces/Profile Packs/entitlements;
-2. memória provider-neutral;
-3. model-router provider-neutral;
-4. schema dedicado no `ordax-control-plane`;
-5. identidade Supabase dedicada conectada ao gateway OrdaX;
-6. limites de segurança para MCP de produto;
-7. manter o primeiro Stable USB e seus gates físicos independentes.
+1. contratos de Spaces/Profile Packs/entitlements — **PASS_SOURCE**;
+2. memória provider-neutral — **PASS_SOURCE CONTRACT + BACKEND SCHEMA**;
+3. model-router provider-neutral — **PASS_SOURCE**;
+4. schema dedicado no `ordax-control-plane` — **PASS_APPLIED**;
+5. alvo Supabase dedicado selecionado no gateway/contrato de identidade — **PASS_SOURCE**, login público ainda fail-closed;
+6. limites de segurança para MCP de produto — **PASS_SOURCE BOUNDARY**;
+7. mutações de produto server-authoritative — **PASS_APPLIED**;
+8. manter o primeiro Stable USB e seus gates físicos independentes — **PRESERVADO**.
 
 ### P1 — após a fundação, sem bloquear o primeiro USB físico
 
-8. UI mínima de Spaces;
-9. memória local real com revisão/apagar;
-10. primeiro Profile Pack interno (Developer) como prova;
-11. catálogo de packs;
-12. primeiro app externo assinado de teste.
+9. UI mínima de Spaces;
+10. memória local real com revisão/apagar;
+11. primeiro Profile Pack interno (Developer) ativado como prova;
+12. catálogo de packs consumível pela Surface;
+13. primeiro app externo assinado de teste.
 
 ### P2 — pós-MVP inicial
 
-13. GitHub App público do OrdaX;
-14. Product MCP Gateway para ChatGPT/Grok;
-15. sync/cloud memory;
-16. compartilhamento de Space;
-17. pack Legal/Advocacia com pipeline de fontes oficiais;
-18. Store pública;
-19. billing/plan bundles.
+14. GitHub App público do OrdaX;
+15. Product MCP Gateway para ChatGPT/Grok;
+16. sync/cloud memory;
+17. compartilhamento de Space;
+18. pack Legal/Advocacia com pipeline de fontes oficiais;
+19. Store pública;
+20. billing/plan bundles.
 
 ## 8. Regra de fechamento de escopo
 
