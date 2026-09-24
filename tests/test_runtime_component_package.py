@@ -80,7 +80,8 @@ class RuntimeComponentPackageTests(unittest.TestCase):
         self.assertFalse(policy["publish_allowed"])
         self.assertFalse(policy["rollback_slot_activation_available"])
         self.assertEqual(policy["internet_release_mode"], "git-app")
-        self.assertIn("pending probation", policy["next_gate"])
+        self.assertFalse(policy["pending_probation_loader_available"])
+        self.assertFalse(policy["runtime_health_bridge_available"])
 
     def test_internet_metadata_comes_from_canonical_component_manifest(self):
         builder = load_builder()
