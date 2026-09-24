@@ -421,3 +421,37 @@ func TestReleaseDescriptorRejectsDirectActivation(t *testing.T) {
 		t.Fatal("direct activation was accepted")
 	}
 }
+
+func TestCrossAppOwnerPackageIsRejected(t *testing.T) {
+	dir := t.TempDir()
+	packagePath, manifestHash, packageHash, packageSize := writePackage(
+		t,
+		dir,
+		"system/apps/notes/runtime.mjs",
+	)
+	releasePath, _ := writeRelease(t, dir, packagePath, manifestHash, packageHash, packageSize)
+	privatePath := filepath.Join(dir, "private-cross-app.pem")
+	trustPath := filepath.Join(dir, "trust-cross-app.json")
+	if _, err := generateKey(privatePath, trustPath, "runtime-components-cross-app-test-1"); err != nil {
+		t.Fatal(err)
+	}
+	envelopePath := filepath.Join(dir, "envelope-cross-app.json")
+	if _, err := signRelease(
+		releasePath,
+		privatePath,
+		trustPath,
+		envelopePath,
+		"runtime-components-cross-app-test-1",
+	); err != nil {
+		t.Fatal(err)
+	}
+	_, _, _, err := stageComponent(
+		envelopePath,
+		trustPath,
+		packagePath,
+		filepath.Join(dir, "slots"),
+	)
+	if err == nil || !strings.Contains(err.Error(), "another component owner") {
+		t.Fatalf("cross-app owner error = %v", err)
+	}
+}
