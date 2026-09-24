@@ -248,7 +248,7 @@ class PublicReleaseTrustPromotionTests(unittest.TestCase):
             self.assertIsNone(authorization["authorization_context_sha256"])
             self.assertEqual(
                 authorization["status"],
-                "blocked-explicit-physical-authorization-pending",
+                "blocked-canonical-v4-release-proof-pending",
             )
             self.assertEqual(
                 set(authorization["bindings"]),
@@ -257,9 +257,33 @@ class PublicReleaseTrustPromotionTests(unittest.TestCase):
                     "release_trust_sha256",
                     "portable_usb_contract_sha256",
                     "creator_portable_media_contract_sha256",
+                    "canonical_v4_release_proof_sha256",
                 },
             )
-            self.assertTrue(all(authorization["bindings"].values()))
+            self.assertIsNone(
+                authorization["bindings"]["canonical_v4_release_proof_sha256"]
+            )
+            for key in (
+                "minimal_bootstrap_sha256",
+                "release_trust_sha256",
+                "portable_usb_contract_sha256",
+                "creator_portable_media_contract_sha256",
+            ):
+                self.assertRegex(
+                    authorization["bindings"][key],
+                    r"^[0-9a-f]{64}$",
+                )
+            self.assertEqual(
+                authorization["release_binding"],
+                {
+                    "proof_path": "docs/evidence/canonical-v4-release-proof.json",
+                    "proof_schema": "prototype-ordax.portable-v4-canonical-release-proof/1",
+                    "source_commit": None,
+                    "canonical_envelope_url": None,
+                    "release_manifest_sha256": None,
+                    "release_envelope_sha256": None,
+                },
+            )
             self.assertGreaterEqual(run.call_count, 2)
 
     @mock.patch.object(promotion.subprocess, "run")
