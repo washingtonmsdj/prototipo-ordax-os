@@ -1,0 +1,74 @@
+{
+  "$schema": "prototype-ordax.device-agent/1",
+  "status": "pre-mvp-foundation",
+  "product_name": "OrdaX Device Agent",
+  "historical_incubation_repository": "washingtonmsdj/mcp-blender",
+  "purpose": "provide one typed local capability runtime for Projects, Web control and external MCP clients",
+  "source_and_update": {
+    "github_remains_first_class": true,
+    "main_is_active_integration_line": true,
+    "fast_forward_update": true,
+    "fail_closed_update": true,
+    "external_bootstrap_recovery": true,
+    "legacy_entrypoints_preserved_during_migration": true
+  },
+  "project_model": {
+    "git_required": false,
+    "github_required": false,
+    "local_projects_supported": true,
+    "github_projects_supported": true,
+    "hybrid_projects_supported": true,
+    "project_registration_is_authorization_boundary": true
+  },
+  "interfaces": {
+    "ordax_projects_app": true,
+    "ordax_web": true,
+    "product_mcp": true,
+    "same_action_gateway_required": true,
+    "parallel_web_control_backend_forbidden": true
+  },
+  "adapters": {
+    "initial": [
+      "files",
+      "git",
+      "blender",
+      "unity"
+    ],
+    "versioned_independently": true,
+    "capability_discovery_required": true,
+    "compiled_does_not_imply_available": true
+  },
+  "github": {
+    "direct_external_ai_connector_supported": true,
+    "direct_connector_is_separate_from_ordax_mcp": true,
+    "direct_connector_does_not_grant_ordax_memory": true,
+    "direct_connector_does_not_grant_local_device_control": true,
+    "ordax_account_connection_preferred_for_product_integration": "github-app",
+    "selected_repository_scope_required": true
+  },
+  "remote_authorization": {
+    "account_scope": true,
+    "space_scope": true,
+    "project_scope": true,
+    "device_scope": true,
+    "capability_scope": true,
+    "read_write_separated": true,
+    "write_requires_explicit_approval": true,
+    "audit_required": true
+  },
+  "forbidden": [
+    "generic-remote-shell-by-default",
+    "raw-disk",
+    "release-signing-key",
+    "cross-space-memory",
+    "unscoped-github-account",
+    "implicit-admin",
+    "client-side-entitlement-authority"
+  ],
+  "mvp_boundary": {
+    "boot_dependency": false,
+    "local_ai_dependency": false,
+    "physical_usb_gate_changed": false,
+    "ci_or_qemu_counts_as_physical_proof": false
+  }
+}
