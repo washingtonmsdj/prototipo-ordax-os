@@ -90,20 +90,52 @@ class StableReleaseActivationTransactionTests(unittest.TestCase):
         self.assertNotIn("check_stable_signed_update", portable_update)
         self.assertNotIn("activate-exact", portable_update)
 
-    def test_portable_v3_update_is_materialized_then_armed_for_one_shot_boot(self):
+    def test_portable_update_selects_v3_or_v4_then_arms_one_shot_boot(self):
         text = SUPERVISOR.read_text(encoding="utf-8")
         check = function_body(text, "check_stable_portable_update")
+        verify = function_body(text, "portable_release_is_verified")
+        materialize = function_body(text, "portable_materialize_release")
 
         self.assertIn('"$STABLE_RELEASE_AGENT" inspect', check)
-        self.assertIn('"$STABLE_RELEASE_AGENT" materialize-portable-v3', check)
-        self.assertIn('--expected-commit "$remote_sha"', check)
-        self.assertIn('portable_release_is_verified "$remote_sha"', check)
+        self.assertIn("manifest_schema", check)
+        self.assertIn('portable_release_schema_supported "$remote_manifest_schema"', check)
+        self.assertIn('portable_release_is_verified "$remote_sha" "$remote_manifest_schema"', check)
+        self.assertIn(
+            'portable_materialize_release "$remote_sha" "$remote_manifest_schema" "$channel_url"',
+            check,
+        )
+        self.assertIn("verify-portable-v3-exact", verify)
+        self.assertIn("verify-portable-v4-exact", verify)
+        self.assertIn("materialize-portable-v3", materialize)
+        self.assertIn("materialize-portable-v4", materialize)
+        self.assertIn("materialized-portable-v3", materialize)
+        self.assertIn("materialized-portable-v4", materialize)
+        self.assertIn('--expected-commit "$expected_sha"', materialize)
         self.assertIn('portable_prepare_candidate "$remote_sha"', check)
         self.assertIn('write_state_value "$STAGED_RELEASE_FILE" "$remote_sha"', check)
         self.assertIn("candidate-armed signed-release", check)
         self.assertIn("portable_reboot_now", check)
         self.assertNotIn("git ", check.lower())
         self.assertNotIn("activate-exact", check)
+
+    def test_portable_v4_current_blocks_remote_v3_downgrade(self):
+        text = SUPERVISOR.read_text(encoding="utf-8")
+        self.assertIn(
+            'PORTABLE_RELEASE_MANIFEST_SCHEMA=${ORDAX_RELEASE_MANIFEST_SCHEMA:-}',
+            text,
+        )
+        check = function_body(text, "check_stable_portable_update")
+        self.assertIn('[ "$PORTABLE_RELEASE_MANIFEST_SCHEMA" = "4" ]', check)
+        self.assertIn(
+            '[ "$remote_manifest_schema" != "prototype-ordax.release-manifest/4" ]',
+            check,
+        )
+        self.assertIn('"portable-release-schema-downgrade-blocked"', check)
+        downgrade = check.index('"portable-release-schema-downgrade-blocked"')
+        materialize = check.index(
+            'portable_materialize_release "$remote_sha" "$remote_manifest_schema" "$channel_url"'
+        )
+        self.assertLess(downgrade, materialize)
 
     def test_portable_candidate_commits_only_after_cold_health(self):
         text = SUPERVISOR.read_text(encoding="utf-8")
