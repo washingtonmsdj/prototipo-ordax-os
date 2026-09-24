@@ -118,7 +118,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         creator_portable = {
             "$schema": "prototype-ordax.creator-portable-media-plan/1",
             "product_scope": "stable-mvp-usb-only",
-            "artifact_count": 15,
+            "artifact_count": 17,
             "partitions": ["ORDAX-ESP", "ORDAX-DATA"],
             "physical_write_authorized": False,
             "physical_device_paths_allowed": False,
@@ -139,9 +139,9 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
                     "write-exact-two-partition-gpt",
                     "format-ORDAX-ESP-fat32",
                     "format-ORDAX-DATA-exfat",
-                    "materialize-15-exact-artifacts",
+                    "materialize-17-exact-artifacts",
                     "flush-and-sync",
-                    "readback-sha256-and-size-for-15-artifacts",
+                    "readback-sha256-and-size-for-17-artifacts",
                     "verify-gpt-filesystems-labels-and-capacity",
                 ],
             },
@@ -150,7 +150,23 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
                 "image_artifact_id": "surface-runtime-image",
                 "reference_artifact_id": "surface-runtime-ref",
                 "content_addressed": True,
-                "release_manifest_schema": "prototype-ordax.release-manifest/3",
+                "release_manifest_schema": "prototype-ordax.release-manifest/4",
+                "physical_write_authorized": False,
+            },
+            "local_ai_runtime_preseed": {
+                "implemented": True,
+                "image_artifact_id": "local-ai-runtime-image",
+                "reference_artifact_id": "local-ai-runtime-ref",
+                "image_target": "/.ordax/ai-runtimes/sha256/<runtime-sha256>/local-ai-runtime.erofs",
+                "reference_target": "/.ordax/releases/<source_commit>/local-ai-runtime.sha256",
+                "content_addressed": True,
+                "release_manifest_schema": "prototype-ordax.release-manifest/4",
+                "physical_write_authorized": False,
+            },
+            "physical_writer_v2": {
+                "exact_operation_count": 39,
+                "exact_artifact_count": 17,
+                "readback_sha256_and_size_per_artifact": True,
                 "physical_write_authorized": False,
             },
         }
@@ -214,18 +230,41 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             workflow,
         )
 
-    def test_repository_stable_mvp_authorization_records_exact_owner_consent_without_target(self):
+    def test_repository_v4_media_scope_requires_fresh_owner_authorization(self):
         auth = json.loads(
             (ROOT / "docs/contracts/physical-write-authorization.json").read_text(
                 encoding="utf-8"
             )
         )
-        self.assertEqual(auth["status"], "authorized")
-        self.assertTrue(auth["physical_write_allowed"])
-        self.assertTrue(auth["explicit_owner_authorization"])
-        self.assertRegex(auth["authorization_context_sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(
+            auth["status"],
+            "blocked-explicit-physical-authorization-pending",
+        )
+        self.assertFalse(auth["physical_write_allowed"])
+        self.assertFalse(auth["explicit_owner_authorization"])
+        self.assertIsNone(auth["authorization_context_sha256"])
         self.assertEqual(auth["scope"], "first-real-stable-mvp-usb-proof")
         self.assertEqual(auth["release_sequence"], 1)
+        self.assertTrue(
+            auth["requirements"]["writer_requires_exact_17_artifact_readback"]
+        )
+        self.assertNotIn(
+            "writer_requires_exact_15_artifact_readback",
+            auth["requirements"],
+        )
+        status = promotion.evaluate(ROOT)
+        self.assertFalse(status["ready"])
+        self.assertTrue(
+            status["pre_authorization_ready"],
+            status["pre_authorization_blockers"],
+        )
+        self.assertTrue(status["physical_authorization_bindings_resolved"])
+        self.assertEqual(
+            status["authorization_blockers"],
+            ["explicit-physical-write-authorization-missing"],
+        )
+        self.assertTrue(status["owner_authorization_required"])
+        self.assertFalse(status["authorized_candidate_materialization_allowed"])
         for forbidden in ("physical_path", "device_path", "disk_number", "volume_id"):
             self.assertNotIn(forbidden, auth)
 
