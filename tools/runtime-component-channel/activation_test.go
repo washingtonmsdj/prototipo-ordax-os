@@ -214,6 +214,53 @@ func addActivationCandidate(
 	return release, slot
 }
 
+func promotePendingState(root, componentID, trustPath string) (activationState, error) {
+	state, err := readActivationState(root, componentID)
+	if err != nil {
+		return activationState{}, err
+	}
+	if state.Pending == nil {
+		return activationState{}, errors.New("test helper: no pending slot")
+	}
+	return promotePendingStateAtRevision(
+		root,
+		componentID,
+		*state.Pending,
+		state.Revision,
+		trustPath,
+	)
+}
+
+func rejectPendingState(root, componentID string, identity slotIdentity) (activationState, error) {
+	state, err := readActivationState(root, componentID)
+	if err != nil {
+		return activationState{}, err
+	}
+	return rejectPendingStateAtRevision(
+		root,
+		componentID,
+		identity,
+		state.Revision,
+	)
+}
+
+func rollbackCurrentState(root, componentID, trustPath string) (activationState, error) {
+	state, err := readActivationState(root, componentID)
+	if err != nil {
+		return activationState{}, err
+	}
+	if state.Current == nil {
+		return activationState{}, errors.New("test helper: no current slot")
+	}
+	return rollbackCurrentStateAtRevision(
+		root,
+		componentID,
+		*state.Current,
+		state.Revision,
+		trustPath,
+	)
+}
+
 func TestActivationRejectsBundledReleaseMode(t *testing.T) {
 	fixture := makeFixture(t)
 	root := filepath.Join(fixture.dir, "slots")
@@ -790,6 +837,234 @@ func TestPendingHealthRejectsNonPositiveExpectedRevision(t *testing.T) {
 			&expected,
 		); err == nil || !strings.Contains(err.Error(), "revision must be positive") {
 			t.Fatalf("expected revision %d error = %v", expected, err)
+		}
+	}
+}
+
+
+func TestPromotionRequiresExactDecisionRevisionAndIdentity(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("1", 40))
+	armed, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := identityFromRelease(fixture.release)
+	healthy, err := recordPendingHealth(
+		fixture.root,
+		"internet",
+		identity,
+		"healthy",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if healthy.Revision != armed.Revision+1 {
+		t.Fatalf("healthy revision = %d, armed = %d", healthy.Revision, armed.Revision)
+	}
+
+	if _, err := promotePendingStateAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		armed.Revision,
+		fixture.trustPath,
+	); err == nil || !strings.Contains(err.Error(), "revision is stale") {
+		t.Fatalf("stale promotion revision error = %v", err)
+	}
+
+	wrong := slotIdentity{Version: identity.Version, SourceCommit: strings.Repeat("f", 40)}
+	if _, err := promotePendingStateAtRevision(
+		fixture.root,
+		"internet",
+		wrong,
+		healthy.Revision,
+		fixture.trustPath,
+	); err == nil || !strings.Contains(err.Error(), "identity does not match") {
+		t.Fatalf("wrong promotion identity error = %v", err)
+	}
+
+	promoted, err := promotePendingStateAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		healthy.Revision,
+		fixture.trustPath,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if promoted.Revision != healthy.Revision+1 || !sameSlotIdentity(promoted.Current, &identity) {
+		t.Fatalf("promoted state = %+v", promoted)
+	}
+
+	retry, err := promotePendingStateAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		healthy.Revision,
+		fixture.trustPath,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retry.Revision != promoted.Revision || !sameSlotIdentity(retry.Current, &identity) {
+		t.Fatalf("idempotent promotion retry changed state: %+v", retry)
+	}
+}
+
+func TestRejectionRequiresExactDecisionRevisionAndIsIdempotent(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("2", 40))
+	armed, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := identityFromRelease(fixture.release)
+
+	if _, err := rejectPendingStateAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		armed.Revision+1,
+	); err == nil || !strings.Contains(err.Error(), "revision is stale") {
+		t.Fatalf("future rejection revision error = %v", err)
+	}
+
+	rejected, err := rejectPendingStateAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		armed.Revision,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rejected.Revision != armed.Revision+1 || !sameSlotIdentity(rejected.Rejected, &identity) {
+		t.Fatalf("rejected state = %+v", rejected)
+	}
+
+	retry, err := rejectPendingStateAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		armed.Revision,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retry.Revision != rejected.Revision || !sameSlotIdentity(retry.Rejected, &identity) {
+		t.Fatalf("idempotent rejection retry changed state: %+v", retry)
+	}
+}
+
+func TestRollbackRequiresExactCurrentIdentityAndRevision(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("3", 40))
+	armed, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := identityFromRelease(fixture.release)
+	healthy, err := recordPendingHealth(
+		fixture.root,
+		"internet",
+		identity,
+		"healthy",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	promoted, err := promotePendingStateAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		healthy.Revision,
+		fixture.trustPath,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if promoted.Revision != armed.Revision+2 {
+		t.Fatalf("promoted revision = %d", promoted.Revision)
+	}
+
+	if _, err := rollbackCurrentStateAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		promoted.Revision-1,
+		fixture.trustPath,
+	); err == nil || !strings.Contains(err.Error(), "revision is stale") {
+		t.Fatalf("stale rollback revision error = %v", err)
+	}
+
+	wrong := slotIdentity{Version: identity.Version, SourceCommit: strings.Repeat("e", 40)}
+	if _, err := rollbackCurrentStateAtRevision(
+		fixture.root,
+		"internet",
+		wrong,
+		promoted.Revision,
+		fixture.trustPath,
+	); err == nil || !strings.Contains(err.Error(), "identity does not match") {
+		t.Fatalf("wrong rollback identity error = %v", err)
+	}
+
+	rolled, err := rollbackCurrentStateAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		promoted.Revision,
+		fixture.trustPath,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rolled.Revision != promoted.Revision+1 || rolled.Current != nil || !sameSlotIdentity(rolled.Rejected, &identity) {
+		t.Fatalf("rolled state = %+v", rolled)
+	}
+
+	retry, err := rollbackCurrentStateAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		promoted.Revision,
+		fixture.trustPath,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retry.Revision != rolled.Revision || !sameSlotIdentity(retry.Rejected, &identity) {
+		t.Fatalf("idempotent rollback retry changed state: %+v", retry)
+	}
+}
+
+func TestStateActionCommandsRequireExactRevisionAndIdentity(t *testing.T) {
+	for name, invoke := range map[string]func([]string) error{
+		"promote": promoteStateCommand,
+		"reject": rejectPendingCommand,
+		"rollback": rollbackStateCommand,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := invoke([]string{"--component", "internet"}); err == nil ||
+				!strings.Contains(err.Error(), "requires") {
+				t.Fatalf("incomplete command error = %v", err)
+			}
+		})
+	}
+}
+
+func TestStateActionsRejectNonPositiveExpectedRevision(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("4", 40))
+	if _, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root); err != nil {
+		t.Fatal(err)
+	}
+	identity := identityFromRelease(fixture.release)
+	for _, revision := range []int64{0, -1} {
+		if _, err := rejectPendingStateAtRevision(
+			fixture.root,
+			"internet",
+			identity,
+			revision,
+		); err == nil || !strings.Contains(err.Error(), "expected revision must be positive") {
+			t.Fatalf("revision %d error = %v", revision, err)
 		}
 	}
 }
