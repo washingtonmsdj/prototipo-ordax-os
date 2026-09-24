@@ -196,16 +196,19 @@ These are product/source gates. They never imply target selection, UAC, destruct
 consent or physical-write authority.
 
 
-The source-controlled preflight distinguishes two states without weakening the boundary:
+The source-controlled preflight distinguishes three boundaries without weakening the destructive gate:
 
-- `pre_authorization_ready=true`: canonical trust, bootstrap, Portable layout and writer policy are internally consistent, but **no destructive candidate may be materialized yet**;
-- `ready=true`: the separate physical-write authorization contract is explicitly authorized and its exact trust/bootstrap/Portable bindings match current source.
+- while the canonical v4 aggregate proof is missing or unbound, `pre_authorization_ready=false` and owner consent is not reachable;
+- after `canonical-v4-release-proof.json` is validated and bound to the exact trust/source commit/manifest/envelope/artifact identities, `pre_authorization_ready=true` may expose the separate owner-consent preflight, but **no destructive candidate may be materialized yet**;
+- `ready=true` exists only after explicit owner authorization and exact trust/bootstrap/Portable/canonical-release-proof bindings all match current source.
 
 `pre_authorization_ready` is diagnostic only. It never implies `physical_write_allowed`, never creates a writer artifact, and never substitutes for target-specific confirmation or UAC at execution time.
 
-The Stable/MVP physical payload is now a 17-artifact `release-manifest/4` shape. Moving from the earlier 15-artifact v3 writer invalidates any authorization bound to the old writer/context. The authorization contract therefore returns to explicit-owner-consent pending until the new v4 bindings and source context are reviewed; this source transition never carries destructive consent forward automatically.
+The Stable/MVP physical payload is now a 17-artifact `release-manifest/4` shape. Moving from the earlier 15-artifact v3 writer invalidates any authorization bound to the old writer/context. The authorization contract therefore returns first to `blocked-canonical-v4-release-proof-pending`; this source transition never carries destructive consent forward automatically.
 
-The source-controlled `tools/creator/authorize_physical_write.py` command removes manual JSON editing from the later consent step. Its `check` mode is read-only. Its `authorize` mode is permitted only after pre-authorization readiness and exact bindings are proven, requires the exact Stable/MVP scope + release sequence + explicit authorization phrase, and changes only the authorization contract. It never opens a physical device or invokes the writer.
+The operator-controlled signing flow must first produce `canonical-v4-release-proof.json` from the verified signed handoff plus canonical HTTPS materialization receipt. The non-destructive `tools/creator/bind_canonical_v4_release_proof.py` command validates that public receipt against the pinned trust, requires exact v4 artifact identities and safe false physical/activation flags, copies only the public receipt into `docs/evidence/`, and binds its SHA-256/source commit/manifest/envelope identity into authorization schema v3. Only that successful binding advances the contract to `blocked-explicit-physical-authorization-pending`.
+
+The source-controlled `tools/creator/authorize_physical_write.py` command removes manual JSON editing from the later consent step. Its `check` mode is read-only and now refuses to proceed unless the canonical v4 proof is valid and exactly bound. Its `authorize` mode is permitted only after pre-authorization readiness and exact bindings are proven, requires the exact Stable/MVP scope + release sequence + explicit authorization phrase, and changes only the authorization contract. Neither proof binding nor owner authorization opens a physical device or invokes the writer.
 
 Before write:
 
