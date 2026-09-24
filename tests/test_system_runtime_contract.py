@@ -252,6 +252,7 @@ class SystemRuntimeContractTests(unittest.TestCase):
         self.assertIn("component_slot_read_available", server)
         self.assertIn("resolve_component_slot", server)
         self.assertIn("read_component_runtime_file", server)
+        self.assertIn('{"component", "state", "version", "sourceCommit", "path"}', server)
         self.assertIn("--component-channel-bin /srv/ordax-system/bin/ordax-runtime-component-channel", launcher)
         self.assertIn("--component-trust /srv/ordax-system/trust/runtime-components-ed25519.json", launcher)
         self.assertIn("--component-slot-root /var/lib/ordax/components", launcher)
