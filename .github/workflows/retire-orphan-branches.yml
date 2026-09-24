@@ -113,7 +113,7 @@ jobs:
           print(f"RETIREMENT_PRECHECK=PASS count={len(plan)}")
           PY
 
-          python <<'PY'
+          REPOSITORY="$REPOSITORY" TEMP_DIR="$temp_dir" python <<'PY'
           import json
           import os
           import subprocess
