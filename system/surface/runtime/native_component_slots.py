@@ -275,11 +275,15 @@ def read_component_runtime_file(
     trust_path: str,
     component_id: str,
     state: str,
+    version: str,
+    source_commit: str,
     requested_path: str,
     slot_root: str = DEFAULT_SLOT_ROOT,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> bytes:
     _validate_request(component_id, state, requested_path)
+    if not _SEMVER_RE.fullmatch(version) or not _SHA40_RE.fullmatch(source_commit):
+        raise ComponentSlotRequestError("invalid runtime component slot identity")
     return _run_helper(
         helper_path,
         [
@@ -290,6 +294,10 @@ def read_component_runtime_file(
             trust_path,
             "--state",
             state,
+            "--version",
+            version,
+            "--source-commit",
+            source_commit,
             "--path",
             requested_path,
             "--root",
