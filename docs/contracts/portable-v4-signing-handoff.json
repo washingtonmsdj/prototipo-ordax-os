@@ -27,7 +27,8 @@
     "prepare_script": "tools/release-signing/windows/3-Prepare-PortableV4-SigningHandoff.ps1",
     "sign_script": "tools/release-signing/windows/4-Sign-Initial-OrdaXRelease.ps1",
     "verify_script": "tools/release-signing/windows/5-Verify-PortableV4-SignedHandoff.ps1",
-    "materialize_verify_script": "tools/release-signing/windows/6-Materialize-Verify-PortableV4-Canonical.ps1"
+    "materialize_verify_script": "tools/release-signing/windows/6-Materialize-Verify-PortableV4-Canonical.ps1",
+    "canonical_proof_verify_script": "tools/release-signing/windows/7-Verify-PortableV4-Canonical-Proof.ps1"
   },
   "prepare_boundary": {
     "private_key_accepted": false,
@@ -65,7 +66,9 @@
     "release_agent_verify_portable_v4_exact_required": true,
     "physical_media_authority_separate": true,
     "canonical_materialization_verification_step": "tools/release-signing/windows/6-Materialize-Verify-PortableV4-Canonical.ps1",
-    "canonical_materialization_step_implemented": true
+    "canonical_materialization_step_implemented": true,
+    "canonical_proof_verification_step": "tools/release-signing/windows/7-Verify-PortableV4-Canonical-Proof.ps1",
+    "canonical_proof_step_implemented": true
   },
   "canonical_materialization_receipt_schema": "prototype-ordax.portable-v4-canonical-materialization-verification/1",
   "canonical_materialization_boundary": {
@@ -78,6 +81,20 @@
     "release_activated": false,
     "publication_performed_by_this_step": false,
     "physical_target_selection_performed": false,
+    "physical_write_performed": false
+  },
+  "canonical_release_proof_receipt_schema": "prototype-ordax.portable-v4-canonical-release-proof/1",
+  "canonical_release_proof_boundary": {
+    "signed_handoff_receipt_required": true,
+    "canonical_materialization_receipt_required": true,
+    "exact_expected_commit_required": true,
+    "canonical_trust_sha256_must_match_both_receipts": true,
+    "manifest_sha256_must_match_both_receipts": true,
+    "envelope_sha256_must_match_both_receipts": true,
+    "artifact_sha256_must_match_both_receipts": true,
+    "release_activated": false,
+    "physical_target_selection_performed": false,
+    "physical_write_authorized": false,
     "physical_write_performed": false
   }
 }
