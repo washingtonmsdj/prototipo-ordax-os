@@ -265,7 +265,11 @@ class SystemRuntimeContractTests(unittest.TestCase):
         self.assertIn("stdin=subprocess.DEVNULL", adapter)
         self.assertNotIn("shell=True", adapter)
         self.assertNotIn("promote-state", adapter)
-        self.assertNotIn("record-health", adapter)
+        self.assertIn("record_component_pending_health", adapter)
+        self.assertNotIn("record_component_pending_health", server)
+        self.assertNotIn("promote-state", adapter)
+        self.assertNotIn("reject-pending", adapter)
+        self.assertNotIn("rollback-state", adapter)
         self.assertNotIn("rollback-state", adapter)
 
     def test_native_restart_has_sync_and_kernel_fallback_without_weakening_shutdown(self):
