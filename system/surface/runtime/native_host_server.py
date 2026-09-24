@@ -3197,7 +3197,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                 return
             if set(query) not in (
                 {"component", "state"},
-                {"component", "state", "path"},
+                {"component", "state", "version", "sourceCommit", "path"},
             ):
                 self._empty(400)
                 return
@@ -3207,6 +3207,8 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             component_id = query["component"][0]
             state = query["state"][0]
             requested_path = query.get("path", [None])[0]
+            version = query.get("version", [None])[0]
+            source_commit = query.get("sourceCommit", [None])[0]
             try:
                 with self.server.component_slot_lock:
                     if requested_path is None:
@@ -3236,6 +3238,8 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                         trust_path=self.server.component_trust_path,
                         component_id=component_id,
                         state=state,
+                        version=version,
+                        source_commit=source_commit,
                         requested_path=requested_path,
                         slot_root=self.server.component_slot_root,
                     )
