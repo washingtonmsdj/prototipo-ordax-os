@@ -64,7 +64,7 @@ func portableExecutionFixture(t *testing.T) (PortableApplicationPlan, []Portable
 	if err != nil {
 		t.Fatal(err)
 	}
-	sources := make([]PortableApplicationSource, 0, 15)
+	sources := make([]PortableApplicationSource, 0, 17)
 	for _, op := range plan.Operations {
 		if op.Kind != "materialize-artifact" {
 			continue
@@ -85,7 +85,7 @@ func portableExecutionFixture(t *testing.T) (PortableApplicationPlan, []Portable
 	}
 }
 
-func TestExecutePortableApplicationRunsExact35OperationPolicy(t *testing.T) {
+func TestExecutePortableApplicationRunsExact39OperationPolicy(t *testing.T) {
 	plan, sources, grant := portableExecutionFixture(t)
 	runtime := &portableExecutorFakeRuntime{}
 	receipt, err := ExecutePortableApplication(plan, sources, grant, runtime)
@@ -94,20 +94,20 @@ func TestExecutePortableApplicationRunsExact35OperationPolicy(t *testing.T) {
 	}
 	if receipt.Schema != PortableApplicationExecutionReceiptSchema ||
 		receipt.Status != "pass" ||
-		receipt.OperationCount != 35 ||
-		receipt.MaterializedArtifacts != 15 ||
-		receipt.ReadbackArtifacts != 15 ||
+		receipt.OperationCount != 39 ||
+		receipt.MaterializedArtifacts != 17 ||
+		receipt.ReadbackArtifacts != 17 ||
 		receipt.WholeDiskRawImageUsed {
 		t.Fatalf("unexpected execution receipt: %#v", receipt)
 	}
-	if len(runtime.events) != 35 {
-		t.Fatalf("runtime event count=%d want=35", len(runtime.events))
+	if len(runtime.events) != 39 {
+		t.Fatalf("runtime event count=%d want=39", len(runtime.events))
 	}
 	if runtime.events[0] != "gpt" ||
 		runtime.events[1] != "format:ORDAX-ESP" ||
 		runtime.events[2] != "format:ORDAX-DATA" ||
-		runtime.events[18] != "flush" ||
-		runtime.events[34] != "verify-layout" {
+		runtime.events[20] != "flush" ||
+		runtime.events[38] != "verify-layout" {
 		t.Fatalf("unexpected operation order: %#v", runtime.events)
 	}
 }
