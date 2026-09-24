@@ -36,6 +36,24 @@ class SurfaceRuntimeSourceContractTests(unittest.TestCase):
             contract["promotion_blockers"],
         )
 
+    def test_current_lock_refresh_is_bound_to_ci_drift_evidence(self):
+        contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+        self.assertEqual(contract["apk_package_lock"]["libexpat"], "2.8.5-r0")
+        refresh = contract["lock_refresh"]
+        self.assertEqual(refresh["status"], "reviewed-candidate-lock-refresh")
+        self.assertEqual(refresh["detected_by_qemu_run_id"], 35984825646)
+        self.assertEqual(refresh["discovery_run_id"], 35987297472)
+        self.assertEqual(refresh["resolved_package_count"], 253)
+        self.assertEqual(refresh["missing"], [])
+        self.assertEqual(refresh["extra"], [])
+        self.assertEqual(
+            refresh["changed"],
+            [{"name": "libexpat", "from": "2.8.4-r0", "to": "2.8.5-r0"}],
+        )
+        self.assertFalse(refresh["physical_artifact_created"])
+        self.assertFalse(refresh["physical_write_authorized"])
+        self.assertTrue(refresh["reproducibility_reproof_required"])
+
     def test_candidate_reuses_exact_stable_base_alpine_identity(self):
         contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
         stable = json.loads((ROOT / "bootstrap/stable-base/source.json").read_text(encoding="utf-8"))
