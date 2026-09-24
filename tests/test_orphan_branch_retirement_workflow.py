@@ -37,6 +37,12 @@ class OrphanBranchRetirementWorkflowTests(unittest.TestCase):
         self.assertIn("RETIREMENT_PRECHECK=FAIL", self.workflow)
         self.assertIn("RETIREMENT_PRECHECK=PASS", self.workflow)
 
+    def test_archive_phase_receives_retirement_plan_environment(self):
+        self.assertIn(
+            'REPOSITORY="$REPOSITORY" TEMP_DIR="$temp_dir" python <<\'PY\'',
+            self.workflow,
+        )
+
     def test_archive_tag_is_verified_before_branch_delete(self):
         verify_index = self.workflow.index("archive tag verification failed")
         delete_index = self.workflow.index('"--method", "DELETE"')
