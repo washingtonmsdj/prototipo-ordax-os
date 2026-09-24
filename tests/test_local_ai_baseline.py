@@ -33,6 +33,7 @@ class LocalAiBaselineTests(unittest.TestCase):
                 "$schema": "prototype-ordax.local-ai-benchmark/1",
                 "engineId": "llama.cpp",
                 "modelId": "qwen-test",
+                "api_path": "/v1/chat/completions",
                 "summary": {
                     "median_latency_ms": 250.0,
                     "median_wall_tokens_per_second": 12.5,
@@ -58,6 +59,7 @@ class LocalAiBaselineTests(unittest.TestCase):
         self.assertEqual(result["$schema"], "prototype-ordax.local-ai-baseline/1")
         self.assertTrue(result["hardware"]["runtime_compatible"])
         self.assertEqual(result["benchmark"]["modelId"], "qwen-test")
+        self.assertEqual(result["benchmark"]["api_path"], "/v1/chat/completions")
         self.assertFalse(result["comparison_policy"]["release_gate"])
         self.assertFalse(result["comparison_policy"]["runtime_bytes_modified"])
         self.assertTrue(result["comparison_policy"]["single_variable_tuning_required"])
@@ -91,12 +93,22 @@ class LocalAiBaselineTests(unittest.TestCase):
             with self.assertRaisesRegex(BASELINE.BaselineError, "incompatible result"):
                 BASELINE.build_baseline()
 
+    def test_rejects_non_product_benchmark_api_path(self):
+        hardware, benchmark = self.modules()
+        result = benchmark.benchmark()
+        result["api_path"] = "/completion"
+        benchmark.benchmark = lambda *args, **kwargs: result
+        with patch.object(BASELINE, "load_module", side_effect=[hardware, benchmark]):
+            with self.assertRaisesRegex(BASELINE.BaselineError, "product inference API path"):
+                BASELINE.build_baseline()
+
     def test_rejects_promotional_or_tuned_benchmark_result(self):
         hardware, benchmark = self.modules()
         benchmark.benchmark = lambda *args, **kwargs: {
             "$schema": "prototype-ordax.local-ai-benchmark/1",
             "engineId": "llama.cpp",
             "modelId": "qwen-test",
+            "api_path": "/v1/chat/completions",
             "summary": {
                 "median_latency_ms": 250.0,
                 "median_wall_tokens_per_second": 12.5,
