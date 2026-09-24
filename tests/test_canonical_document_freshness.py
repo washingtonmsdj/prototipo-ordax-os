@@ -202,7 +202,7 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertEqual(promotion["DEVELOPMENT_DEVICE_GIT_HOT_UPDATE"], "PASS_PHYSICAL_DEVELOPMENT_USB")
         self.assertEqual(
             promotion["STABLE_DEVICE_RELEASE_OR_DELTA_UPDATE"],
-            "PASS_CI_PORTABLE_V3_FAILURE_FALLBACK_PENDING_COLD_HEALTH_AND_PHYSICAL",
+            "PASS_SOURCE_PORTABLE_V4_LIFECYCLE_WITH_V3_FALLBACK_BASELINE_PENDING_COLD_HEALTH_AND_PHYSICAL",
         )
         self.assertEqual(
             promotion["STABLE_HEALTH_READINESS"],
@@ -251,6 +251,9 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         )
         self.assertIn("PORTABLE_V3_UPDATE_ACTIVATION_PHYSICAL_PROOF=NO", current)
         self.assertIn("PORTABLE_V3_ONE_SHOT_ACTIVATION=PASS_CI_DISPOSABLE_FAILURE_FALLBACK", promotion)
+        self.assertIn("PORTABLE_V4_QEMU_UEFI_BOOT_PROOF=PASS_CI_NON_PHYSICAL", promotion)
+        self.assertIn("current Portable Stable/MVP path is `release-manifest/4`", promotion)
+        self.assertNotIn("Portable v3 source path now stages through the official signed channel", promotion)
         self.assertIn("KNOWN_GOOD_PERSISTED=PENDING_PHYSICAL", promotion)
         self.assertIn("ROLLBACK=PENDING_PHYSICAL", promotion)
         self.assertNotIn("portable-v2-activation-not-connected", current)
