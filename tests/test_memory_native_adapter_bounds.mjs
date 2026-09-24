@@ -17,6 +17,17 @@ function emptySnapshotPayload() {
   });
 }
 
+function pendingUntilAbort(options = {}) {
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(new Error("aborted"));
+    if (options.signal?.aborted) {
+      abort();
+      return;
+    }
+    options.signal?.addEventListener("abort", abort, { once: true });
+  });
+}
+
 test("Native memory HTTP envelope ceiling matches the host six-times snapshot policy", () => {
   assert.equal(
     MAX_NATIVE_MEMORY_ENVELOPE_BYTES,
@@ -76,6 +87,65 @@ test("Native memory GET requires the exact response envelope shape", async () =>
     }),
     /response shape is invalid/,
   );
+});
+
+test("Native memory GET timeout covers a stalled response body", async () => {
+  await assert.rejects(
+    () => createNativeMemoryStore({
+      async fetch() {
+        return {
+          ok: true,
+          headers: { get() { return null; } },
+          body: {
+            getReader() {
+              return {
+                read() { return new Promise(() => {}); },
+                async cancel() {},
+              };
+            },
+          },
+        };
+      },
+    }, { requestTimeoutMs: 100 }),
+    /memory load timed out after 100ms/,
+  );
+});
+
+test("Native memory POST timeout is surfaced by flush after one bounded retry", async () => {
+  let postCalls = 0;
+  const store = await createNativeMemoryStore({
+    async fetch(url, options = {}) {
+      if (options.method === "GET") {
+        return {
+          ok: true,
+          async json() { return { payload: null }; },
+        };
+      }
+      postCalls += 1;
+      return pendingUntilAbort(options);
+    },
+  }, { requestTimeoutMs: 100 });
+
+  store.save({ $schema: MEMORY_SNAPSHOT_SCHEMA, items: [] });
+  await assert.rejects(
+    () => store.flush(),
+    /memory persistence timed out after 100ms/,
+  );
+  assert.equal(postCalls, 2);
+});
+
+test("Native memory rejects an invalid request timeout before touching the endpoint", async () => {
+  let fetchCalls = 0;
+  await assert.rejects(
+    () => createNativeMemoryStore({
+      async fetch() {
+        fetchCalls += 1;
+        return { ok: true, async json() { return { payload: null }; } };
+      },
+    }, { requestTimeoutMs: 99 }),
+    /request timeout/,
+  );
+  assert.equal(fetchCalls, 0);
 });
 
 test("Native memory POST remains within the host envelope ceiling for a valid snapshot", async () => {
