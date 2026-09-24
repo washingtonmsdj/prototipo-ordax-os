@@ -42,7 +42,9 @@
     "migration_auto_apply_allowed": false,
     "gateway_contract": "docs/contracts/public-identity-gateway.json",
     "gateway_entrypoint": "services/public-identity/gateway.py:application",
-    "gateway_core_implemented": true
+    "gateway_core_implemented": true,
+    "auth_hardening_contract": "docs/contracts/public-auth-hardening.json",
+    "public_auth_enabled": false
   },
   "supabase_candidate": {
     "status": "dedicated-target-schema-prepared",
