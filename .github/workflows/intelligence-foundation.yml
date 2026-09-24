@@ -39,6 +39,7 @@ on:
       - 'tests/test_local_ai_response_lifecycle.mjs'
       - 'tests/test_local_ai_model_rediscovery.mjs'
       - 'tests/test_local_ai_baseline.py'
+      - 'tests/test_local_ai_baseline_compare.py'
       - 'tests/test_local_ai_benchmark.py'
       - 'tests/test_local_ai_hardware_probe.py'
       - 'tests/test_memory_runtime.mjs'
@@ -90,6 +91,7 @@ on:
       - 'tests/test_local_ai_response_lifecycle.mjs'
       - 'tests/test_local_ai_model_rediscovery.mjs'
       - 'tests/test_local_ai_baseline.py'
+      - 'tests/test_local_ai_baseline_compare.py'
       - 'tests/test_local_ai_benchmark.py'
       - 'tests/test_local_ai_hardware_probe.py'
       - 'tests/test_memory_runtime.mjs'
@@ -143,6 +145,7 @@ jobs:
           python -m py_compile system/surface/runtime/native_memory_endpoint.py
           python -m py_compile system/surface/runtime/native_host_server.py
           python -m py_compile tools/local-ai-baseline/report.py
+          python -m py_compile tools/local-ai-baseline/compare.py
           python -m py_compile tools/local-ai-benchmark/benchmark.py
           python -m py_compile tools/local-ai-hardware-probe/probe.py
           node --check system/composition/native/main.mjs
@@ -173,6 +176,7 @@ jobs:
           node --test tests/test_memory_store_adapters.mjs
           node --test tests/test_memory_native_adapter_bounds.mjs
           python -m unittest tests.test_local_ai_baseline -v
+          python -m unittest tests.test_local_ai_baseline_compare -v
           python -m unittest tests.test_local_ai_benchmark -v
           python -m unittest tests.test_local_ai_hardware_probe -v
           python -m unittest tests.test_memory_native_state -v
