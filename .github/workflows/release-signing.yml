@@ -58,6 +58,7 @@ jobs:
             'tools/release-signing/windows/4-Sign-Initial-OrdaXRelease.ps1',
             'tools/release-signing/windows/5-Verify-PortableV4-SignedHandoff.ps1'
             'tools/release-signing/windows/6-Materialize-Verify-PortableV4-Canonical.ps1'
+            'tools/release-signing/windows/7-Verify-PortableV4-Canonical-Proof.ps1'
           )
           foreach ($path in $paths) {
             $tokens = $null
