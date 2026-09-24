@@ -18,6 +18,7 @@ LEGAL_PACK = ROOT / "system" / "profile-packs" / "legal-br" / "manifest.json"
 DEVELOPER_PACK = ROOT / "system" / "profile-packs" / "developer" / "manifest.json"
 MIGRATION_1 = ROOT / "infra" / "supabase" / "product" / "migrations" / "0001_product_foundation.sql"
 MIGRATION_3 = ROOT / "infra" / "supabase" / "product" / "migrations" / "0003_spaces_single_profile_pack_owner.sql"
+MIGRATION_4 = ROOT / "infra" / "supabase" / "product" / "migrations" / "0004_server_authoritative_mutations.sql"
 
 
 class PreMvpEcosystemFoundationTests(unittest.TestCase):
@@ -145,6 +146,27 @@ class PreMvpEcosystemFoundationTests(unittest.TestCase):
         self.assertIn("revoke update on table public.ordax_spaces from authenticated", sql)
         self.assertIn("grant update (name, state, metadata)", sql)
         self.assertNotIn("owner_user_id)", sql)
+
+    def test_scoped_product_mutations_are_server_authoritative(self):
+        sql = MIGRATION_4.read_text(encoding="utf-8").lower()
+        for table in (
+            "ordax_spaces",
+            "ordax_space_members",
+            "ordax_memory_items",
+            "ordax_memory_embeddings",
+            "ordax_project_connections",
+            "ordax_space_profile_packs",
+            "ordax_entitlement_grants",
+            "ordax_profile_packs",
+        ):
+            self.assertIn(
+                f"revoke insert, update, delete on table public.{table} from authenticated",
+                sql,
+            )
+        self.assertIn(
+            "grant update (display_name) on table public.ordax_accounts to authenticated",
+            sql,
+        )
 
 
 if __name__ == "__main__":
