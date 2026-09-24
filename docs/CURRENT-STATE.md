@@ -166,6 +166,27 @@ FIRST_STABLE_MVP_USB_WRITE=HOLD_CANONICAL_V4_RELEASE_PROOF
 PHYSICAL_WRITE_AUTHORITY=CANONICAL_V4_RELEASE_PROOF_THEN_FRESH_OWNER_AUTHORIZATION_REQUIRED
 ```
 
+### Pre-MVP ecosystem foundation
+
+A separate product-domain foundation is now defined before public accounts carry real data. The account model distinguishes one OrdaX identity from **Spaces** and versioned **Profile Packs**; the initial Developer and Legal-BR packs are draft descriptors only and do not activate professional-domain behavior. Billing, prices and commercial tier names remain undefined. A provisional two-private-Space default exists only as an internal capacity foundation and is not a public commercial claim.
+
+Persistent Intelligence memory is now specified as OrdaX-owned through `ordax.memory/1`, with device/account/space/project/session scopes, provenance, user review/edit/delete requirements and a derived/rebuildable semantic index. `ordax.model-router/1` prepares future OpenAI/xAI adapters while requiring explicit external egress; Local AI remains the offline baseline and no inference provider owns persistent memory.
+
+The dedicated Supabase project `ordax-control-plane` is the selected pre-MVP backend target for the product schema. The source-controlled migrations under `infra/supabase/product/` have been applied: `ordax_accounts`, Spaces/membership, server-authoritative entitlement grants, versioned Profile Packs, memory metadata + pgvector embeddings and project-connection metadata all use RLS. The older duplicate `ordax_profiles` migration was removed so Auth has one OrdaX product bootstrap owner. This does **not** enable public login: the public identity gateway remains fail-closed pending same-origin deployment, Auth hardening and legal readiness.
+
+A Product MCP boundary is also specified separately from the owner/development Control Plane. Future ChatGPT/Grok clients authenticate to OrdaX OAuth, then receive only account/Space/project-scoped tools. GitHub is a separate connection, preferably through a GitHub App restricted to selected repositories; upstream GitHub credentials are never returned to the external model. Public Product MCP deployment, mutating tools, connectors and automations remain post-MVP functionality.
+
+This foundation does not change the current physical release gate:
+
+```text
+ECOSYSTEM_FOUNDATION=PASS_SOURCE_BACKEND_SCHEMA_PREPARED
+PUBLIC_IDENTITY=DISABLED_FAIL_CLOSED
+BILLING=NO
+PUBLIC_STORE=NO
+PRODUCT_MCP_DEPLOYED=NO
+FIRST_STABLE_MVP_USB_WRITE=HOLD_CANONICAL_V4_RELEASE_PROOF
+```
+
 ### System diagnostics and recovery presentation
 
 Sistema now composes the existing Native diagnostic-review owner instead of passing a
