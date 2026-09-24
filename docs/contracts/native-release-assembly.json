@@ -1,5 +1,5 @@
 {
-  "$schema": "prototype-ordax.native-release-assembly/1",
+  "$schema": "prototype-ordax.native-release-assembly/2",
   "status": "canonical-build-recipe",
   "recipe": "tools/native-release-assembly/build.py",
   "source_inputs": [
@@ -7,7 +7,9 @@
     "tools/creator/go.mod",
     "tools/creator/core/",
     "tools/creator/host/linux/",
-    "tools/creator/cmd/ordax-creator-native-targets/"
+    "tools/creator/cmd/ordax-creator-native-targets/",
+    "tools/runtime-component-channel/go.mod",
+    "tools/runtime-component-channel/*.go"
   ],
   "target": {
     "os": "linux",
@@ -16,24 +18,42 @@
   },
   "output": {
     "staged_system_root": "<out>/system",
-    "helper_path": "system/bin/ordax-native-install-targets",
+    "helper_paths": [
+      "system/bin/ordax-native-install-targets",
+      "system/bin/ordax-runtime-component-channel"
+    ],
     "provenance_path": "system/.ordax/native-release-tools.json",
     "final_artifact_owner": "tools/release-bundle",
     "final_artifact": "system.tar"
   },
-  "helper": {
-    "role": "native-install-read-only-target-discovery",
-    "physical_apply_implemented": false,
-    "physical_apply_authorized": false,
-    "sha256_required": true,
-    "size_required": true,
-    "mode": "0755"
-  },
+  "helpers": [
+    {
+      "path": "system/bin/ordax-native-install-targets",
+      "role": "native-install-read-only-target-discovery",
+      "physical_apply_implemented": false,
+      "physical_apply_authorized": false,
+      "component_publish_authorized": false,
+      "sha256_required": true,
+      "size_required": true,
+      "mode": "0755"
+    },
+    {
+      "path": "system/bin/ordax-runtime-component-channel",
+      "role": "runtime-component-verifier-and-activation-state-owner",
+      "private_signing_key_access": false,
+      "component_publish_authorized": false,
+      "runtime_slot_serving_authorized": false,
+      "sha256_required": true,
+      "size_required": true,
+      "mode": "0755"
+    }
+  ],
   "release_policy": {
     "separate_download_channel": false,
     "runtime_compilation_allowed": false,
     "end_user_toolchain_required": false,
     "covered_by_system_tar_signature": true,
-    "canonical_release_protocol_unchanged": true
+    "canonical_release_protocol_unchanged": true,
+    "component_trust_domain_remains_separate": true
   }
 }
