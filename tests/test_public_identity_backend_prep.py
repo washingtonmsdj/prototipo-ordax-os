@@ -9,6 +9,7 @@ SERVICE_README = ROOT / "services" / "public-identity" / "README.md"
 SUPABASE_ROOT = ROOT / "infra" / "supabase" / "identity"
 PREFLIGHT = SUPABASE_ROOT / "preflight.sql"
 PRODUCT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "0001_product_foundation.sql"
+AUTH_HARDENING = ROOT / "docs" / "contracts" / "public-auth-hardening.json"
 
 
 class PublicIdentityBackendPrepTests(unittest.TestCase):
@@ -32,6 +33,21 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         self.assertIn("POST /auth/logout", text)
         self.assertIn("HttpOnly", text)
         self.assertNotIn("service_role", text.lower())
+
+    def test_public_auth_hardening_keeps_login_fail_closed(self):
+        hardening = json.loads(AUTH_HARDENING.read_text(encoding="utf-8"))
+        self.assertEqual(hardening["status"], "public-auth-disabled-hardening-pending")
+        self.assertEqual(
+            hardening["current_observation"]["leaked_password_protection"],
+            "disabled-warn",
+        )
+        self.assertFalse(hardening["current_observation"]["public_login_enabled"])
+        self.assertTrue(
+            hardening["rules"]["public_login_must_fail_closed_until_all_required_gates_pass"]
+        )
+        self.assertTrue(
+            hardening["required_before_public_login"]["leaked_password_protection_enabled"]
+        )
 
     def test_supabase_preflight_is_read_only(self):
         sql = PREFLIGHT.read_text(encoding="utf-8").lower()
