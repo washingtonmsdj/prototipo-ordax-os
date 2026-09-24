@@ -124,6 +124,10 @@ export function createIntelligenceRuntime({ inferencePort, modelRouterPort = nul
   const listeners = new Set();
   let destroyed = false;
 
+  const assertAlive = () => {
+    if (destroyed) throw new Error("Ordax Intelligence runtime is disposed");
+  };
+
   const publish = (next) => {
     if (destroyed) return;
     snapshot = fromInference(next);
@@ -145,6 +149,7 @@ export function createIntelligenceRuntime({ inferencePort, modelRouterPort = nul
       return () => listeners.delete(listener);
     },
     async respond(value) {
+      assertAlive();
       const request = validateIntelligenceRequest(value);
       if (snapshot.state !== "ready") {
         throw new Error("Ordax Intelligence local inference is not ready");
