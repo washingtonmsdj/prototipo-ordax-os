@@ -183,6 +183,33 @@ test("Intelligence maps intent to provider-neutral model purpose", async () => {
   intelligence.dispose();
 });
 
+test("Intelligence revalidates injected router output before inference", async () => {
+  let generated = false;
+  const router = Object.freeze({
+    schema: MODEL_ROUTER_PORT_SCHEMA,
+    route() {
+      return {
+        provider: "local",
+        engineId: "llama.cpp",
+        modelId: "qwen-small",
+        purpose: "untrusted-purpose",
+        egressApproved: false,
+      };
+    },
+  });
+  const intelligence = createIntelligenceRuntime({
+    inferencePort: inferencePort({ onGenerate: () => { generated = true; } }),
+    modelRouterPort: router,
+  });
+
+  await assert.rejects(
+    () => intelligence.respond({ prompt: "teste" }),
+    /provider\/purpose is invalid/,
+  );
+  assert.equal(generated, false);
+  intelligence.dispose();
+});
+
 test("Intelligence refuses external model execution in MVP", async () => {
   const router = Object.freeze({
     schema: MODEL_ROUTER_PORT_SCHEMA,
