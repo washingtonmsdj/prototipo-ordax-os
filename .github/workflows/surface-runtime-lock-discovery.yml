@@ -159,6 +159,7 @@ jobs:
           test ! -e "$work/build-b/native-surface-runtime.erofs"
 
       - name: Upload proof metadata only
+        if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: surface-runtime-candidate-${{ github.event.pull_request.head.sha || github.sha }}
