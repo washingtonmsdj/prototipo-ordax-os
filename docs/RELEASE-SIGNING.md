@@ -29,6 +29,28 @@ ordax-release-signing sign \
 
 The versioned pre-publication boundary is `docs/contracts/portable-v4-signing-handoff.json`; scripts 3/4/5 and their receipts must remain consistent with that contract.
 
+Before preparing the public signing handoff, the operator may run the read-only
+canonical v4 preflight:
+
+```powershell
+.\Preflight-PortableV4-Canonical.ps1 \
+  -SystemImagePath <system.erofs> \
+  -SurfaceRuntimePath <native-surface-runtime.erofs> \
+  -LocalAiRuntimePath <local-ai-runtime.erofs> \
+  -LocalAiSourceLockPath <source-lock.json> \
+  -SourceCommit <40-hex-commit> \
+  -SystemArtifactUrl <stable-https-url> \
+  -SurfaceArtifactUrl <stable-https-url> \
+  -LocalAiArtifactUrl <stable-https-url>
+```
+
+The preflight validates the three public artifacts, source-lock, canonical public trust,
+operator tooling, exact source-commit syntax, stable HTTPS URLs and that the configured
+private-key path is a non-empty regular non-reparse file outside the public tooling
+directory. It does **not** read the private-key contents, derive a public key, sign,
+publish, materialize, activate, select a device or authorize/write physical media.
+Cryptographic private-key/trust matching remains enforced by the real signer in step 4.
+
 Before the canonical private key is touched, the Windows operator tooling can prepare a
 public-only signing directory:
 

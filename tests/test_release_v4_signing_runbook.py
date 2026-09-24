@@ -2,6 +2,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+PREFLIGHT_SCRIPT = ROOT / "tools/release-signing/windows/Preflight-PortableV4-Canonical.ps1"
 PREPARE_SCRIPT = ROOT / "tools/release-signing/windows/3-Prepare-PortableV4-SigningHandoff.ps1"
 SIGN_SCRIPT = ROOT / "tools/release-signing/windows/4-Sign-Initial-OrdaXRelease.ps1"
 VERIFY_SCRIPT = ROOT / "tools/release-signing/windows/5-Verify-PortableV4-SignedHandoff.ps1"
@@ -19,6 +20,28 @@ HANDOFF_CONTRACT = ROOT / "docs/contracts/portable-v4-signing-handoff.json"
 
 
 class ReleaseV4SigningRunbookTests(unittest.TestCase):
+    def test_canonical_v4_operator_preflight_is_read_only_and_stable_url_only(self):
+        script = PREFLIGHT_SCRIPT.read_text(encoding="utf-8")
+        for marker in (
+            "PORTABLE_V4_CANONICAL_OPERATOR_PREFLIGHT=PASS",
+            "PRIVATE_KEY_CONTENT_READ_BY_PREFLIGHT=NO",
+            "SIGNATURE_CREATED=NO",
+            "RELEASE_PUBLISHED=NO",
+            "RELEASE_ACTIVATED=NO",
+            "PHYSICAL_TARGET_SELECTED=NO",
+            "PHYSICAL_WRITE_AUTHORIZED=NO",
+            "PHYSICAL_WRITE_PERFORMED=NO",
+            "stable public HTTPS URL without credentials, query or fragment",
+            "prototype-ordax.release-trust/1",
+            "prototype-ordax.local-ai-source-lock/1",
+        ):
+            self.assertIn(marker, script)
+        self.assertNotIn("ordax-release-signing.exe sign", script)
+        self.assertNotIn("materialize-portable-v4", script)
+        self.assertNotIn("activate-exact", script)
+        self.assertNotIn("PhysicalDrive", script)
+        self.assertNotIn("Get-Content -LiteralPath $PrivateKeyPath", script)
+
     def test_public_v4_handoff_preparer_never_accepts_private_material(self):
         script = PREPARE_SCRIPT.read_text(encoding="utf-8")
         self.assertIn("--manifest-schema', '4'", script)

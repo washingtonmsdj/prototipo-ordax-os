@@ -388,8 +388,9 @@ O gate é de produto/source. Ele **não** substitui:
 8. Handoff v4 com AI real. — **PASS_SOURCE**; materialização/assinatura Stable real ainda pendente.
 9. Materialização v4 com bytes reais + assinatura efêmera + regressão QEMU/UEFI v4. — **PASS_CI_NON_PROMOTIONAL**; a assinatura/materialização canônica Stable continua pendente e CI não substitui a prova física.
 10. Creator físico alinhado ao payload Stable v4. — **PASS_SOURCE_CANDIDATE**: plano final passa de 15 para 17 artefatos e de 35 para 39 operações, incluindo `local-ai-runtime.erofs` content-addressed + `local-ai-runtime.sha256`; consentimento físico anterior fica inválido por contexto.
-11. Gate proof-before-consent. — **PASS_SOURCE**: promoção física exige `canonical-v4-release-proof.json` real, validado contra trust/commit/manifest/envelope/3 artefatos e vinculado por SHA-256 antes de `pre_authorization_ready`; o receipt real ainda está **PENDING_OPERATOR_EXECUTION**.
-12. Somente depois do proof canônico vinculado, novo consentimento explícito e demais gates físicos, voltar ao primeiro USB Stable/MVP físico.
+11. Preflight canônico v4 do operador. — **PASS_SOURCE_READ_ONLY**: valida artefatos públicos, source-lock, trust, tooling, commit, URLs HTTPS estáveis e metadados do caminho da chave privada sem ler o PEM, assinar, publicar, materializar ou tocar mídia física.
+12. Gate proof-before-consent. — **PASS_SOURCE**: promoção física exige `canonical-v4-release-proof.json` real, validado contra trust/commit/manifest/envelope/3 artefatos e vinculado por SHA-256 antes de `pre_authorization_ready`; o receipt real ainda está **PENDING_OPERATOR_EXECUTION**.
+13. Somente depois do proof canônico vinculado, novo consentimento explícito e demais gates físicos, voltar ao primeiro USB Stable/MVP físico.
 
 ---
 
