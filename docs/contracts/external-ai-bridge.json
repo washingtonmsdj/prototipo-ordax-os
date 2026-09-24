@@ -1,0 +1,50 @@
+{
+  "$schema": "prototype-ordax.external-ai-bridge/1",
+  "status": "pre-mvp-foundation",
+  "purpose": "allow user-authorized AI clients to access OrdaX projects through scoped MCP tools",
+  "transport": "mcp",
+  "authentication": {
+    "user_authenticates_to_ordax": true,
+    "oauth_2_1_required_for_remote_clients": true,
+    "pkce_required_for_public_clients": true,
+    "external_ai_account_is_not_ordax_identity": true,
+    "development_owner_mcp_credentials_reusable_for_end_users": false
+  },
+  "authorization": {
+    "account_scope": true,
+    "space_scope": true,
+    "project_scope": true,
+    "read_and_write_are_distinct": true,
+    "write_requires_explicit_capability_and_approval": true,
+    "token_is_bound_to_user_and_client": true,
+    "revocation_required": true
+  },
+  "project_sources": {
+    "local_ordax_project_supported": true,
+    "github_supported": true,
+    "github_connection_is_separate_from_ordax_login": true,
+    "preferred_github_integration": "github-app",
+    "repository_allowlist_required": true,
+    "github_token_exposed_to_external_ai": false
+  },
+  "initial_tool_classes": [
+    "spaces.list",
+    "projects.list",
+    "project.read-context",
+    "memory.search-authorized",
+    "artifacts.list"
+  ],
+  "future_mutating_tool_classes": [
+    "project.write-file",
+    "project.create-branch",
+    "project.propose-change"
+  ],
+  "forbidden": [
+    "generic-shell",
+    "raw-disk",
+    "release-signing-key",
+    "cross-user-memory",
+    "unscoped-github-account",
+    "implicit-admin"
+  ]
+}
