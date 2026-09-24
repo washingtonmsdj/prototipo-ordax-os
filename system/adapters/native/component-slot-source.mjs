@@ -1,7 +1,7 @@
+import { validateComponentId } from "../../contracts/component-manifest.mjs";
 import {
   COMPONENT_SLOT_SOURCE_SCHEMA,
   assertComponentSlotSource,
-  validateComponentId,
   validateComponentSlotResolution,
   validateComponentSlotState,
 } from "../../contracts/component-slot-source.mjs";
