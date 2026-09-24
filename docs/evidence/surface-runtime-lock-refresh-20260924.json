@@ -1,0 +1,46 @@
+{
+  "$schema": "prototype-ordax.surface-runtime-lock-refresh-evidence/1",
+  "status": "pass-ci-non-physical",
+  "observed_date": "2026-09-24",
+  "source_commit": "0c96b4cfaf0053f167daca3be919b32df85cec66",
+  "workflow": {
+    "name": "Surface Runtime Candidate",
+    "run_id": 35987503252,
+    "job_id": 107593513161,
+    "artifact_id": 10802712775,
+    "artifact_name": "surface-runtime-candidate-0c96b4cfaf0053f167daca3be919b32df85cec66",
+    "artifact_archive_sha256": "de77ca510abfc2947cbfa1bd9667574e54811fbe871e8fd2a53495ba0c957085"
+  },
+  "lock_refresh": {
+    "triggering_qemu_run_id": 35984825646,
+    "drift_discovery_run_id": 35987297472,
+    "drift_discovery_artifact_id": 10801779514,
+    "package_count_before": 253,
+    "package_count_after": 253,
+    "missing": [],
+    "extra": [],
+    "changed": [
+      {
+        "name": "libexpat",
+        "from": "2.8.4-r0",
+        "to": "2.8.5-r0"
+      }
+    ],
+    "revalidation_status": "verified-pinned-lock"
+  },
+  "reproducibility": {
+    "repeat_digest_passed": true,
+    "tree_manifest_sha256": "1f5cee6b8d570f85ac22233768c89c98f09842034a7897e5ec83f9d03952a29a",
+    "normalized_tar_sha256": "1164f5a1b39492767be21a39ec6b3a455b5e02e76a60140993c8996b55f15b2e",
+    "erofs_sha256": "54eb1665e808fcf726bbf49e93985eed4b3608f38e0a519d9b41350ddfcd84b7",
+    "erofs_size": 1051987968,
+    "build_a_equals_build_b": true
+  },
+  "promotion": {
+    "physical_artifact_authorized": false,
+    "physical_write_authorized": false,
+    "physical_usb_boot_proven": false,
+    "secure_boot_proven": false,
+    "public_promotion_allowed": false
+  }
+}
