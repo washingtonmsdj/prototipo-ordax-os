@@ -153,8 +153,8 @@ WINDOWS_NATIVE_HOST_TESTS=PASS
 WINDOWS_PROTOTYPE_TOOLKIT=PASS
 PORTABLE_PHYSICAL_WRITER=PASS_TAGGED_INTERNAL
 PORTABLE_PHYSICAL_WRITER_LAYOUT=ORDAX-ESP_FAT32_PLUS_ORDAX-DATA_EXFAT
-PORTABLE_PHYSICAL_WRITER_OPERATION_COUNT=35
-PORTABLE_PHYSICAL_WRITER_ARTIFACT_COUNT=15
+PORTABLE_PHYSICAL_WRITER_OPERATION_COUNT=39
+PORTABLE_PHYSICAL_WRITER_ARTIFACT_COUNT=17
 PORTABLE_PHYSICAL_WRITER_PER_ARTIFACT_READBACK=SHA256_PLUS_SIZE
 PORTABLE_PHYSICAL_WRITER_WHOLE_DISK_RAW=NO
 PORTABLE_PHYSICAL_WRITER_UAC_REQUIRED=YES
@@ -166,7 +166,7 @@ PHYSICAL_WRITE_AUTHORIZED=NO
 
 The target helper may accept Win32 removable or fixed media only when the mapped PhysicalDrive reports USB transport. The physical disk hosting the running Windows installation is always excluded. Target confirmation recomputes the token from the current identity instead of trusting a stored token. The Windows adapter re-proves target identity on exact raw-device handles, maps every Windows volume through physical extents and rejects cross-disk/spanned ownership.
 
-The final Portable writer now reuses the hardened Windows destructive boundary but no longer depends on a target-sized whole-disk RAW image. Creator Core owns the exact 35-operation plan: write a two-partition GPT, format `ORDAX-ESP` as FAT32 and `ORDAX-DATA` as exFAT, materialize 15 exact artifacts, flush, re-read all 15 artifacts by SHA-256+size, and verify final geometry/labels/capacity. The tagged Windows runtime revalidates the USB identity during destructive phases, requires UAC elevation, holds source artifact handles during apply, syncs each destination, and fails closed on the first mismatch.
+The final Portable writer now reuses the hardened Windows destructive boundary but no longer depends on a target-sized whole-disk RAW image. Creator Core owns the exact 39-operation plan: write a two-partition GPT, format `ORDAX-ESP` as FAT32 and `ORDAX-DATA` as exFAT, materialize 17 exact artifacts including the content-addressed Local AI runtime plus its release reference, flush, re-read all 17 artifacts by SHA-256+size, and verify final geometry/labels/capacity. The tagged Windows runtime revalidates the USB identity during destructive phases, requires UAC elevation, holds source artifact handles during apply, syncs each destination, and fails closed on the first mismatch.
 
 CI proves both sides of this boundary: the normal Windows build excludes the tagged destructive files and the public `ordax-creator.exe` does not depend on `tools/creator/host/windows`; separately, native Windows CI compiles/tests the tagged Portable writer and proves its unbound `prepare-portable`/`apply-portable` commands remain unauthorized. The implementation is therefore present without becoming a public capability: `public_physical_apply_implemented=false` and `physical_write_authorized=false` remain mandatory until canonical trust and the separate physical-promotion contract are resolved.
 
@@ -201,6 +201,8 @@ The source-controlled preflight distinguishes two states without weakening the b
 - `ready=true`: the separate physical-write authorization contract is explicitly authorized and its exact trust/bootstrap/Portable bindings match current source.
 
 `pre_authorization_ready` is diagnostic only. It never implies `physical_write_allowed`, never creates a writer artifact, and never substitutes for target-specific confirmation or UAC at execution time.
+
+The Stable/MVP physical payload is now a 17-artifact `release-manifest/4` shape. Moving from the earlier 15-artifact v3 writer invalidates any authorization bound to the old writer/context. The authorization contract therefore returns to explicit-owner-consent pending until the new v4 bindings and source context are reviewed; this source transition never carries destructive consent forward automatically.
 
 The source-controlled `tools/creator/authorize_physical_write.py` command removes manual JSON editing from the later consent step. Its `check` mode is read-only. Its `authorize` mode is permitted only after pre-authorization readiness and exact bindings are proven, requires the exact Stable/MVP scope + release sequence + explicit authorization phrase, and changes only the authorization contract. It never opens a physical device or invokes the writer.
 
