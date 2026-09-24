@@ -118,6 +118,14 @@ class ComponentTrustToolkitTests(unittest.TestCase):
         self.assertIn("recovery toolkit/policy bytes do not match provenance", FINALIZER)
         self.assertIn("operator-ceremony-pending", FINALIZER)
 
+    def test_ceremony_scripts_have_single_canonical_body(self):
+        self.assertEqual(INITIALIZER.count("[CmdletBinding()]"), 1)
+        self.assertEqual(INITIALIZER.count("COMPONENT_TRUST_INITIALIZATION=PASS"), 1)
+        self.assertEqual(INITIALIZER.count("Refusing key generation without explicit -GenerateKey"), 1)
+        self.assertEqual(FINALIZER.count("[CmdletBinding()]"), 1)
+        self.assertEqual(FINALIZER.count("COMPONENT_TRUST_RECOVERY=PASS"), 1)
+        self.assertEqual(FINALIZER.count("READY_TO_PIN_PUBLIC_ANCHOR=YES"), 1)
+
     def test_windows_ci_parses_both_scripts(self):
         self.assertIn("runs-on: windows-latest", WORKFLOW)
         self.assertIn("Initialize-OrdaXComponentTrust.ps1", WORKFLOW)
