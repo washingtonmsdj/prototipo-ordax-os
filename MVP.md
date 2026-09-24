@@ -150,8 +150,9 @@ Store, Mobile completo, Native em disco, sync cloud, federação, perfis profiss
 tools/agentes mutáveis de IA permanecem pós-MVP salvo decisão arquitetural posterior.
 
 ```text
-PRE_USB_NOVA_ORDAX_AUDIT=REQUIRED
-FIRST_STABLE_MVP_USB_WRITE=HOLD_UNTIL_FUNCTIONAL_CLOSURE
+PRE_USB_NOVA_ORDAX_AUDIT=PASS_SOURCE
+CANONICAL_V4_RELEASE_PROOF=PENDING_OPERATOR_EXECUTION
+FIRST_STABLE_MVP_USB_WRITE=HOLD_CANONICAL_V4_RELEASE_PROOF
 ```
 
 ## 6. Gates do MVP público
@@ -281,10 +282,10 @@ Estado atual do caminho v2:
 - writer físico Portable: implementado apenas no backend interno/tagged e continua inacessível ao Creator público;
 - boot físico Stable/MVP v2/v3: não provado;
 - Secure Boot: não provado;
-- canonical release trust público: pendente;
+- canonical release trust público: **PASS** — anchor Ed25519 canônico pinado; o gate pendente é o aggregate receipt real `canonical-v4-release-proof.json` + binding ao commit/manifest/envelope exatos;
 - Native continua fora do MVP.
 
-A mídia transitória atual continua apenas como caminho de validação de hardware. A prova QEMU/UEFI do runtime v3 já está fechada; não habilitar o writer público antes de **trust canônico, autorização física separada e prova física do USB Stable/MVP**.
+A mídia transitória atual continua apenas como caminho de validação de hardware. O trust público canônico já está resolvido e o caminho Stable/MVP atual é v4. Não habilitar o writer público antes de **prova canônica v4 assinada/materializável, binding do receipt, nova autorização física explícita e prova física do USB Stable/MVP**.
 
 ## 9. Site público e rotas
 
@@ -330,22 +331,22 @@ Conta online e PIN/senha local do dispositivo são responsabilidades diferentes.
 
 ## 11.1 Idiomas do lançamento
 
-O primeiro uso Native oferece **pt-BR, en-US, es-ES, de-DE e fr-FR**. Essa cobertura é do OOBE; não chamar inglês, espanhol, alemão ou francês de “Surface completa” enquanto telas/apps ainda tiverem texto fixo em português. A prioridade de migração do restante do produto é: inglês primeiro, espanhol em seguida, depois alemão e francês. PT-BR permanece idioma-fonte e padrão inicial.
+O MVP público oferece **pt-BR e en-US** nos seletores de primeiro uso e da Surface; ambos possuem cobertura compartilhada no source atual. **es-ES, de-DE e fr-FR** permanecem preservados como locales de compatibilidade/OOBE e rollout futuro, mas ficam ocultos dos seletores públicos até atingirem a mesma cobertura da Surface. PT-BR permanece idioma-fonte e padrão inicial.
 
 ## 12. Ordem recomendada de lançamento
 
 ```text
-1. fechar boot-counting/provenance
-2. fechar trust de release
-3. promover Creator físico para USB
-4. gerar primeira mídia Stable/MVP
-5. validar boot/recovery USB em hardware suportado
-6. validar OOBE/primeiro uso, inclusive rede opcional e modo sem conta
-7. validar apps principais
-8. fechar canal oficial de update sem Git
-9. conectar Conta OrdaX real sem torná-la requisito de boot
-10. fechar legal/publicação
-11. publicar MVP USB-only
+1. executar a assinatura/publicação controlada da release Stable v4 e produzir `canonical-v4-release-proof.json`
+2. validar e vincular o receipt ao trust, source commit, manifest, envelope e três artefatos v4
+3. obter nova autorização explícita do owner para o contexto atual de 17 artefatos / 39 operações
+4. selecionar/revalidar o USB real, passar UAC e confirmação destrutiva específica do alvo
+5. gerar a primeira mídia Stable/MVP física
+6. validar UEFI, rede, assinatura, Surface, OOBE e apps no hardware suportado
+7. validar cold-health -> known-good e o rollback/recovery offline físicos
+8. executar o smoke físico estruturado da Surface com FAIL=0
+9. fechar Secure Boot ou registrar explicitamente a política de suporte do MVP sem alegar prova inexistente
+10. conectar Conta OrdaX real apenas se o portal público for ativado, sem torná-la requisito de boot
+11. fechar legal/publicação e publicar o MVP USB-only
 ```
 
 Native permanece em trilha técnica pós-MVP, sem bloquear a sequência.
