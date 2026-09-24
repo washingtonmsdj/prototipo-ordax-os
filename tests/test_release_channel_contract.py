@@ -128,11 +128,28 @@ class ReleaseChannelContractTest(unittest.TestCase):
         self.assertEqual(activation["runtime_layout"], "portable-v2")
         self.assertEqual(activation["discovery_command"], "ordax-release-agent inspect")
         self.assertEqual(
+            activation["manifest_schema"],
+            "prototype-ordax.release-manifest/4",
+        )
+        self.assertEqual(
             activation["materialization_command"],
-            "ordax-release-agent materialize-portable-v3",
+            "ordax-release-agent materialize-portable-v4",
         )
         self.assertEqual(
             activation["exact_verification_command"],
+            "ordax-release-agent verify-portable-v4-exact",
+        )
+        self.assertTrue(activation["local_ai_runtime_required"])
+        self.assertTrue(activation["inspect_manifest_schema_drives_materializer"])
+        self.assertTrue(activation["pre_v4_current_may_accept_v3"])
+        self.assertTrue(activation["pre_v4_current_may_upgrade_to_v4"])
+        self.assertFalse(activation["v4_to_v3_downgrade_allowed"])
+        self.assertEqual(
+            activation["v3_compatibility_materialization_command"],
+            "ordax-release-agent materialize-portable-v3",
+        )
+        self.assertEqual(
+            activation["v3_compatibility_exact_verification_command"],
             "ordax-release-agent verify-portable-v3-exact",
         )
         self.assertEqual(activation["activation_state_helper"], "ordax-portable-state")
