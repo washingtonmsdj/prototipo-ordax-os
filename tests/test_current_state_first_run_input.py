@@ -114,7 +114,7 @@ class CurrentStateFirstRunInputTests(unittest.TestCase):
     def test_physical_authorization_is_fail_closed_after_v4_writer_scope_change(self):
         self.assertEqual(
             self.authorization["status"],
-            "blocked-explicit-physical-authorization-pending",
+            "blocked-canonical-v4-release-proof-pending",
         )
         self.assertFalse(self.authorization["physical_write_allowed"])
         self.assertFalse(self.authorization["explicit_owner_authorization"])
@@ -130,8 +130,14 @@ class CurrentStateFirstRunInputTests(unittest.TestCase):
             ]
         )
         self.assertIn("PHYSICAL_AUTHORIZATION_ELIGIBLE=YES", self.current)
+        self.assertIn("CANONICAL_V4_RELEASE_PROOF=PENDING_OPERATOR_EXECUTION", self.current)
+        self.assertIn("CANONICAL_V4_RELEASE_PROOF_BINDING=PENDING", self.current)
         self.assertIn(
-            "PHYSICAL_WRITE_AUTHORIZED=NO_FRESH_V4_OWNER_AUTHORIZATION_PENDING",
+            "PHYSICAL_OWNER_AUTHORIZATION_REACHABLE=NO_CANONICAL_V4_RELEASE_PROOF_PENDING",
+            self.current,
+        )
+        self.assertIn(
+            "PHYSICAL_WRITE_AUTHORIZED=NO_CANONICAL_V4_RELEASE_PROOF_PENDING",
             self.current,
         )
         self.assertIn("PHYSICAL_TARGET_SELECTED=NO", self.current)
