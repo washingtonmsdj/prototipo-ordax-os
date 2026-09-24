@@ -56,11 +56,17 @@ class RuntimeComponentPackageTests(unittest.TestCase):
         self.assertFalse(policy["whole_os_release_trust_may_be_implicitly_reused"])
         self.assertEqual(policy["native_slot_root"], "/var/lib/ordax/components")
         self.assertTrue(policy["immutable_slot_staging_available"])
+        self.assertTrue(policy["activation_state_machine_available"])
+        self.assertTrue(policy["activation_state_atomic_current_previous_pending_rejected"])
+        self.assertTrue(policy["activation_state_revalidates_signed_slots"])
+        self.assertTrue(policy["activation_state_requires_component_slot_release_mode"])
+        self.assertFalse(policy["native_slot_serving_available"])
         self.assertFalse(policy["slot_activation_available"])
         self.assertFalse(policy["pending_health_promotion_available"])
         self.assertFalse(policy["publish_allowed"])
         self.assertFalse(policy["rollback_slot_activation_available"])
         self.assertEqual(policy["internet_release_mode"], "git-app")
+        self.assertIn("Native current-slot serving/import", policy["next_gate"])
 
     def test_internet_metadata_comes_from_canonical_component_manifest(self):
         builder = load_builder()
