@@ -264,6 +264,7 @@ jobs:
               portable-usb-v2.json \
               creator-portable-media-plan.json \
               physical-write-authorization.json \
+              canonical-v4-release-proof.json \
               provenance.json \
               > SHA256SUMS
           )
