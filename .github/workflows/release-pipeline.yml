@@ -7,6 +7,7 @@ on:
       - 'system/**'
       - 'tools/release-bundle/**'
       - 'tools/native-release-assembly/**'
+      - 'tools/runtime-component-channel/**'
       - 'tools/creator/go.mod'
       - 'tools/creator/core/native_install*.go'
       - 'tools/creator/host/linux/**'
@@ -24,6 +25,7 @@ on:
       - 'system/**'
       - 'tools/release-bundle/**'
       - 'tools/native-release-assembly/**'
+      - 'tools/runtime-component-channel/**'
       - 'tools/creator/go.mod'
       - 'tools/creator/core/native_install*.go'
       - 'tools/creator/host/linux/**'
@@ -83,6 +85,7 @@ jobs:
           python tools/native-release-assembly/build.py verify --root "$source_b" | tee "$work/verify-b.json"
 
           cmp "$source_a/system/bin/ordax-native-install-targets" "$source_b/system/bin/ordax-native-install-targets"
+          cmp "$source_a/system/bin/ordax-runtime-component-channel" "$source_b/system/bin/ordax-runtime-component-channel"
           cmp "$source_a/system/.ordax/native-release-tools.json" "$source_b/system/.ordax/native-release-tools.json"
 
           "$bundle" --root "$source_a" --out "$work/system-a.tar"
@@ -98,6 +101,7 @@ jobs:
                   'system/surface/entrypoint': 0o755,
                   'system/surface/bin/ordax-surface': 0o755,
                   'system/bin/ordax-native-install-targets': 0o755,
+                  'system/bin/ordax-runtime-component-channel': 0o755,
                   'system/.ordax/native-release-tools.json': 0o644,
               }
               members = {member.name: member for member in archive.getmembers()}
@@ -112,16 +116,24 @@ jobs:
                   .read()
                   .decode('utf-8')
               )
-              assert provenance['$schema'] == 'prototype-ordax.native-release-assembly/1'
+              assert provenance['$schema'] == 'prototype-ordax.native-release-assembly/2'
               assert provenance['physical_apply_authorized'] is False
-              assert len(provenance['injected_tools']) == 1
-              tool = provenance['injected_tools'][0]
-              assert tool['path'] == 'system/bin/ordax-native-install-targets'
-              assert tool['role'] == 'native-install-read-only-target-discovery'
-              assert tool['physical_apply_authorized'] is False
+              assert provenance['component_publish_authorized'] is False
+              assert len(provenance['injected_tools']) == 2
+              tools = {tool['path']: tool for tool in provenance['injected_tools']}
+              install = tools['system/bin/ordax-native-install-targets']
+              assert install['role'] == 'native-install-read-only-target-discovery'
+              assert install['physical_apply_authorized'] is False
+              assert install['component_publish_authorized'] is False
+              component = tools['system/bin/ordax-runtime-component-channel']
+              assert component['role'] == 'runtime-component-verifier-and-activation-state-owner'
+              assert component['physical_apply_authorized'] is False
+              assert component['component_publish_authorized'] is False
           print('NATIVE_RELEASE_ASSEMBLY=PASS')
           print('REAL_SYSTEM_BUNDLE=PASS')
           print('NATIVE_INSTALL_HELPER_SIGNING_SCOPE=SYSTEM_TAR')
+          print('RUNTIME_COMPONENT_VERIFIER_SIGNING_SCOPE=SYSTEM_TAR')
+          print('RUNTIME_COMPONENT_PUBLISH_AUTHORIZED=NO')
           print('NATIVE_INSTALL_PHYSICAL_APPLY_AUTHORIZED=NO')
           PY
 
