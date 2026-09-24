@@ -29,5 +29,10 @@
   "rollback_slot_activation_available": false,
   "publish_allowed": false,
   "internet_release_mode": "git-app",
-  "next_gate": "Native slot serving/import plus pending runtime health promotion with atomic current/previous rollback"
+  "next_gate": "Native current-slot serving/import plus trusted runtime-health bridge, then promotion/rollback activation proof",
+  "activation_state_machine_available": true,
+  "activation_state_atomic_current_previous_pending_rejected": true,
+  "activation_state_revalidates_signed_slots": true,
+  "activation_state_requires_component_slot_release_mode": true,
+  "native_slot_serving_available": false
 }
