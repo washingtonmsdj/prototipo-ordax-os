@@ -111,7 +111,7 @@ $SurfaceArtifactUrl = Get-StableHttpsUrl $SurfaceArtifactUrl 'SurfaceArtifactUrl
 $LocalAiArtifactUrl = Get-StableHttpsUrl $LocalAiArtifactUrl 'LocalAiArtifactUrl'
 
 $trust = Get-JsonObject $TrustPath 'canonical public trust'
-if ([string]$trust.schema -cne 'prototype-ordax.release-trust/1') {
+if ([string]$trust.'$schema' -cne 'prototype-ordax.release-trust/1') {
     throw 'Canonical public trust schema is invalid.'
 }
 if ([string]$trust.key_id -cne 'ordax-prototype-release-v1') {
@@ -122,7 +122,7 @@ if ([string]::IsNullOrWhiteSpace([string]$trust.public_key_base64)) {
 }
 
 $lock = Get-JsonObject $LocalAiSourceLockPath 'local AI source lock'
-if ([string]$lock.schema -cne 'ordax.local-ai/1') {
+if ([string]$lock.'$schema' -cne 'prototype-ordax.local-ai-source-lock/1') {
     throw 'Local AI source lock schema is invalid.'
 }
 
