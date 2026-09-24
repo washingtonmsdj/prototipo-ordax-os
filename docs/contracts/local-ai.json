@@ -38,6 +38,7 @@
     "available_states_require_complete_identity": true,
     "configured_model_id_remains_fixed": true,
     "dynamic_model_is_rediscovered_on_each_probe": true,
+    "dynamic_model_discovery_requires_exactly_one_model": true,
     "dynamic_model_is_rediscovered_after_inference_failure": true,
     "failed_generation_is_not_silently_retried_after_rediscovery": true,
     "malformed_model_discovery_fails_closed": true,
