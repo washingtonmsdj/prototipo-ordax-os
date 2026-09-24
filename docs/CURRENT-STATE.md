@@ -108,7 +108,7 @@ CANONICAL_SYSTEM_RUNTIME_COMPLETE=NO
 ```
 
 
-The canonical prototype trust ceremony and public handoff are complete. The eligible toolkit bound to `2172eb6a18430910afd036199ec492ad63dc185d` passed read-only preflight; canonical Ed25519 key material was generated locally, independent public derivation matched, the proof signature passed, recovery was verified from a distinct restored copy, and the recovered signing envelope passed public verification. The exact public anchor is pinned in Git and the minimal-bootstrap trust binding remains resolved. An earlier owner authorization existed for the first Stable/MVP USB proof, release sequence 1, but it was bound to the previous 15-artifact physical-writer context. The Stable/MVP v4 payload now contains 17 exact artifacts, adding the content-addressed Local AI runtime plus its release reference, so that prior consent is deliberately invalidated and the source-controlled authorization contract is back at `blocked-explicit-physical-authorization-pending` with `physical_write_allowed=false`. No USB is selected or erasable; fresh owner consent, live target revalidation, Windows UAC and target-specific destructive confirmation remain separate later gates. The local PEM remains a controlled prototype signing backend rather than the intended long-term production custody model; independent off-device custody and managed non-exportable KMS/HSM remain broad-distribution hardening requirements, with signed trust rotation required before broad public distribution.
+The canonical prototype trust ceremony and public handoff are complete. The eligible toolkit bound to `2172eb6a18430910afd036199ec492ad63dc185d` passed read-only preflight; canonical Ed25519 key material was generated locally, independent public derivation matched, the proof signature passed, recovery was verified from a distinct restored copy, and the recovered signing envelope passed public verification. The exact public anchor is pinned in Git and the minimal-bootstrap trust binding remains resolved. An earlier owner authorization existed for the first Stable/MVP USB proof, release sequence 1, but it was bound to the previous 15-artifact physical-writer context. The Stable/MVP v4 payload now contains 17 exact artifacts, adding the content-addressed Local AI runtime plus its release reference, so that prior consent is deliberately invalidated and the source-controlled authorization contract now fails closed at `blocked-canonical-v4-release-proof-pending` with `physical_write_allowed=false`; only after the canonical v4 proof is executed and bound may it advance to `blocked-explicit-physical-authorization-pending`. No USB is selected or erasable; fresh owner consent, live target revalidation, Windows UAC and target-specific destructive confirmation remain separate later gates. The local PEM remains a controlled prototype signing backend rather than the intended long-term production custody model; independent off-device custody and managed non-exportable KMS/HSM remain broad-distribution hardening requirements, with signed trust rotation required before broad public distribution.
 
 The first formal human product version is **OrdaX Prototype v0.1.0**. Product version, Entrega, Git SHA and component/app versions are separate identities: v0.1.0 identifies the prototype product milestone, Entrega identifies the notebook-facing delivery sequence, the SHA remains the exact technical build identity, and each component may evolve its own SemVer. First-party apps on the `0.x` line are **Beta**; `1.0.0` remains reserved for the first stable release of each app. Internet is currently `0.3.0 Beta` and Notes is `0.4.0 Beta`, both using `git-app` in Owner/Development. Arquivos, Ajustes, Conta and Sistema are `0.1.0 Beta` and remain `bundled`. A component having its own version does not mean it already has a production-independent update channel: `git-app` is a development delivery mode, while production-independent activation remains gated behind the signed `component-slot` path with pending health, promotion and rollback. Product v1.0 remains reserved for the stable product rather than being inferred from prototype maturity, component versions or delivery count.
 
@@ -133,7 +133,13 @@ context instead of widening it. Source/CI work may continue, but destructive aut
 cannot even reach owner-consent preflight until the operator-controlled canonical v4
 signing/materialization sequence has produced `canonical-v4-release-proof.json` and that
 public receipt has been validated and bound to the authorization contract. Only then may
-fresh owner consent be evaluated for the exact 17-artifact v4 release.
+fresh owner consent be evaluated for the exact 17-artifact v4 release. The physical Creator
+now keeps writer/tooling provenance separate from release identity: the writer embeds its own
+Git SHA as provenance plus the canonical v4 release source commit from
+`physical-write-authorization.json -> release_binding.source_commit`. Target-specific
+Portable media/application plans must use that canonical release commit, and
+`prepare-portable`/`apply-portable` fail closed unless it matches; the v4 writer accepts
+exactly 17 canonical artifact sources, never the previous 15-source shape.
 
 ```text
 PRE_USB_NOVA_ORDAX_AUDIT=PASS
@@ -150,6 +156,9 @@ RECOVERY_STATUS_PHYSICAL_PROOF=PENDING_PHYSICAL
 SUPPORTED_HARDWARE_MATRIX=PASS_SOURCE
 CANONICAL_STABLE_TARGET_HARDWARE_PROOF=PENDING_PHYSICAL
 CANONICAL_V4_OPERATOR_PREFLIGHT=PASS_SOURCE_READ_ONLY
+CREATOR_PORTABLE_WRITER_RELEASE_SOURCE_BINDING=PASS_SOURCE
+CREATOR_PORTABLE_WRITER_ARTIFACT_SOURCE_COUNT=17
+CREATOR_WRITER_SOURCE_PROVENANCE_SEPARATE=YES
 CANONICAL_V4_RELEASE_PROOF=PENDING_OPERATOR_EXECUTION
 CANONICAL_V4_RELEASE_PROOF_BINDING=PENDING
 PHYSICAL_OWNER_AUTHORIZATION_REACHABLE=NO_CANONICAL_V4_RELEASE_PROOF_PENDING

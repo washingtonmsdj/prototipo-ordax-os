@@ -171,6 +171,19 @@ jobs:
           creator_sha="$(sha256sum docs/contracts/creator-portable-media-plan.json | cut -d' ' -f1)"
           proof_sha="$(sha256sum docs/evidence/canonical-v4-release-proof.json | cut -d' ' -f1)"
           auth_sha="$(sha256sum docs/contracts/physical-write-authorization.json | cut -d' ' -f1)"
+          release_source_commit="$(python - <<'PY'
+import json, pathlib
+auth = json.loads(pathlib.Path('docs/contracts/physical-write-authorization.json').read_text(encoding='utf-8'))
+release_binding = auth.get('release_binding')
+if not isinstance(release_binding, dict):
+    raise SystemExit('canonical v4 release binding is missing')
+value = release_binding.get('source_commit')
+if not isinstance(value, str) or len(value) != 40:
+    raise SystemExit('canonical v4 release source commit is missing')
+int(value, 16)
+print(value)
+PY
+)"
 
           python - \
             docs/contracts/physical-write-authorization.json \
@@ -218,12 +231,12 @@ jobs:
           pushd tools/creator >/dev/null
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
             go build -trimpath -buildvcs=false -tags ordax_raw_backend \
-              -ldflags="-s -w -X main.buildSourceCommit=$GITHUB_SHA -X main.buildCanonicalTrustSHA256=$trust_sha -X main.buildManifestSHA256=$minimal_sha -X main.buildPortableUSBContractSHA256=$portable_sha -X main.buildCreatorPortableContractSHA256=$creator_sha -X main.buildPhysicalWriteAuthorized=YES" \
+              -ldflags="-s -w -X main.buildSourceCommit=$GITHUB_SHA -X main.buildReleaseSourceCommit=$release_source_commit -X main.buildCanonicalTrustSHA256=$trust_sha -X main.buildManifestSHA256=$minimal_sha -X main.buildPortableUSBContractSHA256=$portable_sha -X main.buildCreatorPortableContractSHA256=$creator_sha -X main.buildPhysicalWriteAuthorized=YES" \
               -o "$out/ordax-creator-physical-test.exe" \
               ./cmd/ordax-creator-physical-test
           popd >/dev/null
 
-          for binding in "$trust_sha" "$minimal_sha" "$portable_sha" "$creator_sha"; do
+          for binding in "$release_source_commit" "$trust_sha" "$minimal_sha" "$portable_sha" "$creator_sha"; do
             strings "$out/ordax-creator-physical-test.exe" | grep -F "$binding" >/dev/null
           done
 
@@ -239,6 +252,7 @@ jobs:
               '$schema': 'prototype-ordax.physical-write-candidate/2',
               'status': 'authorized-candidate-not-published',
               'source_commit': os.environ['GITHUB_SHA'],
+              'writer_source_commit': os.environ['GITHUB_SHA'],
               'release_sequence': release_sequence,
               'consumer_key_setup_required': False,
               'development_channel': False,
