@@ -5,8 +5,10 @@ ROOT = Path(__file__).resolve().parents[1]
 PREPARE_SCRIPT = ROOT / "tools/release-signing/windows/3-Prepare-PortableV4-SigningHandoff.ps1"
 SIGN_SCRIPT = ROOT / "tools/release-signing/windows/4-Sign-Initial-OrdaXRelease.ps1"
 VERIFY_SCRIPT = ROOT / "tools/release-signing/windows/5-Verify-PortableV4-SignedHandoff.ps1"
+MATERIALIZE_SCRIPT = ROOT / "tools/release-signing/windows/6-Materialize-Verify-PortableV4-Canonical.ps1"
 SIGN_CMD = ROOT / "tools/release-signing/windows/4-Sign-Initial-OrdaXRelease.cmd"
 VERIFY_CMD = ROOT / "tools/release-signing/windows/5-Verify-PortableV4-SignedHandoff.cmd"
+MATERIALIZE_CMD = ROOT / "tools/release-signing/windows/6-Materialize-Verify-PortableV4-Canonical.cmd"
 SIGNING_WORKFLOW = ROOT / ".github/workflows/release-signing.yml"
 SIGNING_DOC = ROOT / "docs/RELEASE-SIGNING.md"
 BUNDLE_DOC = ROOT / "docs/RELEASE-BUNDLE.md"
@@ -43,7 +45,10 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
         self.assertIn("ordax-release-agent.exe", script)
         self.assertIn("5-Verify-PortableV4-SignedHandoff.ps1", script)
         self.assertIn("5-Verify-PortableV4-SignedHandoff.cmd", script)
+        self.assertIn("6-Materialize-Verify-PortableV4-Canonical.ps1", script)
+        self.assertIn("6-Materialize-Verify-PortableV4-Canonical.cmd", script)
         self.assertIn("Copy-VerifiedFile $ReleaseAgentPath", script)
+        self.assertIn("Copy-VerifiedFile $MaterializeScriptPath", script)
         self.assertNotIn("PrivateKeyPath", script)
 
     def test_post_sign_verification_uses_agent_and_never_materializes_or_activates(self):
@@ -59,15 +64,34 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
         self.assertNotIn("install ", script)
         self.assertNotIn("PrivateKeyPath", script)
 
+    def test_canonical_materialization_step_is_exact_non_activating_and_non_physical(self):
+        script = MATERIALIZE_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("materialize-portable-v4", script)
+        self.assertIn("verify-portable-v4-exact", script)
+        self.assertIn("ExpectedCommit must be an exact lowercase 40-hex Git commit.", script)
+        self.assertIn("Materialization root must be empty", script)
+        self.assertIn("stable public HTTPS URL without query or fragment", script)
+        self.assertIn("prototype-ordax.portable-v4-canonical-materialization-verification/1", script)
+        self.assertIn("RELEASE_ACTIVATED=NO", script)
+        self.assertIn("PHYSICAL_TARGET_SELECTED=NO", script)
+        self.assertIn("PHYSICAL_WRITE_PERFORMED=NO", script)
+        self.assertNotIn("activate-exact", script)
+        self.assertNotIn("ordax-portable-state", script)
+        self.assertNotIn("PhysicalDrive", script)
+        self.assertNotIn("PrivateKeyPath", script)
+
     def test_windows_launchers_do_not_advertise_legacy_v1_publication(self):
         sign_cmd = SIGN_CMD.read_text(encoding="utf-8")
         verify_cmd = VERIFY_CMD.read_text(encoding="utf-8")
+        materialize_cmd = MATERIALIZE_CMD.read_text(encoding="utf-8")
         self.assertNotIn("system.tar", sign_cmd)
         self.assertIn("tres artefatos v4", sign_cmd)
         self.assertIn("5-Verify-PortableV4-SignedHandoff.cmd", sign_cmd)
         self.assertIn("NAO publica", verify_cmd)
         self.assertIn("NAO seleciona pendrive", verify_cmd)
         self.assertIn("NAO escreve midia fisica", verify_cmd)
+        self.assertNotIn("ExecutionPolicy Bypass", materialize_cmd)
+        self.assertIn("6-Materialize-Verify-PortableV4-Canonical.ps1", materialize_cmd)
 
     def test_signing_tooling_publishes_windows_release_agent_for_operator_verification(self):
         workflow = SIGNING_WORKFLOW.read_text(encoding="utf-8")
@@ -79,7 +103,8 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
         self.assertIn("For v4", text)
         self.assertIn("local-ai-runtime.erofs", text)
         self.assertIn("ordax.local-ai/1", text)
-        self.assertIn("operator-controlled signing/materialization run using the canonical private key", text)
+        self.assertIn("operator-controlled canonical sequence outside Git", text)
+        self.assertIn("6-Materialize-Verify-PortableV4-Canonical.ps1", text)
         self.assertIn("does not authorize publication, activation or physical-media writes", text)
 
     def test_signing_handoff_contract_keeps_pre_publication_boundary_explicit(self):
@@ -103,7 +128,18 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
         self.assertFalse(contract["post_sign_verify_boundary"]["publication_performed"])
         self.assertFalse(contract["post_sign_verify_boundary"]["activation_performed"])
         self.assertFalse(contract["post_sign_verify_boundary"]["physical_write_performed"])
+        self.assertEqual(
+            contract["canonical_materialization_receipt_schema"],
+            "prototype-ordax.portable-v4-canonical-materialization-verification/1",
+        )
+        self.assertTrue(contract["canonical_materialization_boundary"]["official_release_agent_materialize_portable_v4_required"])
+        self.assertTrue(contract["canonical_materialization_boundary"]["official_release_agent_verify_portable_v4_exact_required"])
+        self.assertFalse(contract["canonical_materialization_boundary"]["release_activated"])
+        self.assertFalse(contract["canonical_materialization_boundary"]["physical_target_selection_performed"])
+        self.assertFalse(contract["canonical_materialization_boundary"]["physical_write_performed"])
         self.assertTrue(contract["next_boundary"]["release_agent_materialize_portable_v4_required"])
+        self.assertTrue(contract["next_boundary"]["release_agent_verify_portable_v4_exact_required"])
+        self.assertTrue(contract["next_boundary"]["canonical_materialization_step_implemented"])
         self.assertTrue(contract["next_boundary"]["physical_media_authority_separate"])
 
     def test_bundle_and_pipeline_identify_v4_as_mvp_path(self):
