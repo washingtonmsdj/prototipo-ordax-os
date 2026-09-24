@@ -53,6 +53,7 @@ SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
 STABLE_ROOT=${ORDAX_STABLE_ROOT:-/ordax}
 STABLE_LAYOUT=${ORDAX_STABLE_LAYOUT:-legacy-tree}
 PORTABLE_BOOT_SLOT=${ORDAX_BOOT_SLOT:-}
+PORTABLE_RELEASE_MANIFEST_SCHEMA=${ORDAX_RELEASE_MANIFEST_SCHEMA:-}
 PORTABLE_ROOT=${ORDAX_PORTABLE_ROOT:-/ordax-data/.ordax}
 PORTABLE_STATE_ROOT=${ORDAX_PORTABLE_STATE_ROOT:-/state}
 PORTABLE_STATE_HELPER=${ORDAX_PORTABLE_STATE_HELPER:-/run/ordax/bootstrap-tools/ordax-portable-state}
@@ -1679,12 +1680,37 @@ portable_rejected_sha() {
     "$PORTABLE_STATE_HELPER" "$PORTABLE_STATE_ROOT" rejected 2>/dev/null
 }
 
+portable_release_schema_supported() {
+    case "${1:-}" in
+        prototype-ordax.release-manifest/3|prototype-ordax.release-manifest/4)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 portable_release_is_verified() {
     expected_sha=$1
+    manifest_schema=$2
     is_sha "$expected_sha" || return 1
+
+    case "$manifest_schema" in
+        prototype-ordax.release-manifest/3)
+            portable_verify_subcommand=verify-portable-v3-exact
+            ;;
+        prototype-ordax.release-manifest/4)
+            portable_verify_subcommand=verify-portable-v4-exact
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
     rm -f "$PORTABLE_VERIFY_RECEIPT"
     if ! /bin/busybox timeout -k 5 "$STABLE_ACTIVATION_TIMEOUT" \
-        "$STABLE_RELEASE_AGENT" verify-portable-v3-exact \
+        "$STABLE_RELEASE_AGENT" "$portable_verify_subcommand" \
         --trust "$STABLE_TRUST_FILE" \
         --root "$PORTABLE_ROOT" \
         --repository washingtonmsdj/prototipo-ordax-os \
@@ -1698,6 +1724,48 @@ portable_release_is_verified() {
     verify_sha=$(stable_receipt_string "$PORTABLE_VERIFY_RECEIPT" source_commit || true)
     rm -f "$PORTABLE_VERIFY_RECEIPT"
     [ "$verify_status" = "verified" ] && [ "$verify_sha" = "$expected_sha" ]
+}
+
+portable_materialize_release() {
+    expected_sha=$1
+    manifest_schema=$2
+    channel_url=$3
+    is_sha "$expected_sha" || return 1
+
+    case "$manifest_schema" in
+        prototype-ordax.release-manifest/3)
+            portable_materialize_subcommand=materialize-portable-v3
+            portable_materialize_status=materialized-portable-v3
+            ;;
+        prototype-ordax.release-manifest/4)
+            portable_materialize_subcommand=materialize-portable-v4
+            portable_materialize_status=materialized-portable-v4
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    rm -f "$PORTABLE_MATERIALIZE_RECEIPT"
+    if ! /bin/busybox timeout -k 5 "$STABLE_MATERIALIZE_TIMEOUT" \
+        "$STABLE_RELEASE_AGENT" "$portable_materialize_subcommand" \
+        --envelope-url "$channel_url" \
+        --trust "$STABLE_TRUST_FILE" \
+        --root "$PORTABLE_ROOT" \
+        --repository washingtonmsdj/prototipo-ordax-os \
+        --expected-commit "$expected_sha" \
+        >"$PORTABLE_MATERIALIZE_RECEIPT" 2>>"$UPDATE_LOG"
+    then
+        rm -f "$PORTABLE_MATERIALIZE_RECEIPT"
+        return 1
+    fi
+
+    materialize_status=$(stable_receipt_string "$PORTABLE_MATERIALIZE_RECEIPT" status || true)
+    materialized_sha=$(stable_receipt_string "$PORTABLE_MATERIALIZE_RECEIPT" source_commit || true)
+    rm -f "$PORTABLE_MATERIALIZE_RECEIPT"
+    [ "$materialize_status" = "$portable_materialize_status" ] &&
+        [ "$materialized_sha" = "$expected_sha" ] &&
+        portable_release_is_verified "$expected_sha" "$manifest_schema"
 }
 
 portable_prepare_candidate() {
@@ -1779,10 +1847,22 @@ check_stable_portable_update() {
 
     inspect_status=$(stable_receipt_string "$STABLE_INSPECT_RECEIPT" status || true)
     remote_sha=$(stable_receipt_string "$STABLE_INSPECT_RECEIPT" source_commit || true)
+    remote_manifest_schema=$(stable_receipt_string "$STABLE_INSPECT_RECEIPT" manifest_schema || true)
     rm -f "$STABLE_INSPECT_RECEIPT"
-    if [ "$inspect_status" != "verified" ] || ! is_sha "$remote_sha"; then
+    if [ "$inspect_status" != "verified" ] ||
+       ! is_sha "$remote_sha" ||
+       ! portable_release_schema_supported "$remote_manifest_schema"
+    then
         set_update_context error "" "" "stable-release-inspect-invalid"
         write_update_state "$current" remote-error signed-release
+        return 0
+    fi
+
+    if [ "$PORTABLE_RELEASE_MANIFEST_SCHEMA" = "4" ] &&
+       [ "$remote_manifest_schema" != "prototype-ordax.release-manifest/4" ]
+    then
+        set_update_context blocked "$remote_sha" "" "portable-release-schema-downgrade-blocked"
+        write_update_state "$current" blocked signed-release
         return 0
     fi
 
@@ -1809,32 +1889,10 @@ check_stable_portable_update() {
     set_update_context materializing "$remote_sha" "$attempt_id" ""
     write_update_state "$current" updating signed-release
 
-    if ! portable_release_is_verified "$remote_sha"; then
-        rm -f "$PORTABLE_MATERIALIZE_RECEIPT"
-        if ! /bin/busybox timeout -k 5 "$STABLE_MATERIALIZE_TIMEOUT" \
-            "$STABLE_RELEASE_AGENT" materialize-portable-v3 \
-            --envelope-url "$channel_url" \
-            --trust "$STABLE_TRUST_FILE" \
-            --root "$PORTABLE_ROOT" \
-            --repository washingtonmsdj/prototipo-ordax-os \
-            --expected-commit "$remote_sha" \
-            >"$PORTABLE_MATERIALIZE_RECEIPT" 2>>"$UPDATE_LOG"
-        then
-            rm -f "$PORTABLE_MATERIALIZE_RECEIPT"
+    if ! portable_release_is_verified "$remote_sha" "$remote_manifest_schema"; then
+        if ! portable_materialize_release "$remote_sha" "$remote_manifest_schema" "$channel_url"; then
             record_elapsed_seconds "$stage_started" "$LAST_STAGE_DURATION_FILE"
-            set_update_context error "$remote_sha" "$attempt_id" "portable-v3-materialize-failed"
-            write_update_state "$current" stage-error signed-release
-            return 0
-        fi
-        materialize_status=$(stable_receipt_string "$PORTABLE_MATERIALIZE_RECEIPT" status || true)
-        materialized_sha=$(stable_receipt_string "$PORTABLE_MATERIALIZE_RECEIPT" source_commit || true)
-        rm -f "$PORTABLE_MATERIALIZE_RECEIPT"
-        if [ "$materialize_status" != "materialized-portable-v3" ] ||
-           [ "$materialized_sha" != "$remote_sha" ] ||
-           ! portable_release_is_verified "$remote_sha"
-        then
-            record_elapsed_seconds "$stage_started" "$LAST_STAGE_DURATION_FILE"
-            set_update_context error "$remote_sha" "$attempt_id" "portable-v3-materialize-invalid"
+            set_update_context error "$remote_sha" "$attempt_id" "portable-release-materialize-failed"
             write_update_state "$current" stage-error signed-release
             return 0
         fi
