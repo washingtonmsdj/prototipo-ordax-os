@@ -137,6 +137,26 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         ):
             self.assertNotIn(stale, document)
 
+    def test_current_stable_docs_make_v4_canonical_and_v3_compatibility(self):
+        current = CURRENT_STATE.read_text(encoding="utf-8")
+        bootstrap = MINIMAL_USB_BOOTSTRAP.read_text(encoding="utf-8")
+
+        self.assertIn(
+            "current Stable/MVP candidate uses signed `release-manifest/4`",
+            current,
+        )
+        self.assertIn("release-manifest/3` remains a verified compatibility baseline", current)
+        self.assertIn("PORTABLE_RELEASE_MANIFEST_V4_SIGN_VERIFY=PASS_CI_CURRENT_MVP", current)
+        self.assertIn("PORTABLE_RELEASE_OFFLINE_EXACT_VERIFY=PASS_CI_V2_V3_V4", current)
+        self.assertNotIn(
+            "current Stable/MVP candidate uses signed `release-manifest/3`",
+            current,
+        )
+
+        self.assertIn("current Stable/MVP release shape is release-manifest v4", bootstrap)
+        self.assertIn("v4 disposable boot plus fallback are now PASS_CI", bootstrap)
+        self.assertNotIn("A signed/materialized v4 disposable boot proof is still pending.", bootstrap)
+
     def test_version_identity_is_not_confused_with_independent_delivery(self):
         contract = json.loads(UPDATE_CONTRACT.read_text(encoding="utf-8"))
         component = contract["component_version"]
@@ -182,7 +202,7 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertEqual(promotion["DEVELOPMENT_DEVICE_GIT_HOT_UPDATE"], "PASS_PHYSICAL_DEVELOPMENT_USB")
         self.assertEqual(
             promotion["STABLE_DEVICE_RELEASE_OR_DELTA_UPDATE"],
-            "PASS_CI_PORTABLE_V3_FAILURE_FALLBACK_PENDING_COLD_HEALTH_AND_PHYSICAL",
+            "PASS_SOURCE_PORTABLE_V4_LIFECYCLE_WITH_V3_FALLBACK_BASELINE_PENDING_COLD_HEALTH_AND_PHYSICAL",
         )
         self.assertEqual(
             promotion["STABLE_HEALTH_READINESS"],
@@ -231,6 +251,9 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         )
         self.assertIn("PORTABLE_V3_UPDATE_ACTIVATION_PHYSICAL_PROOF=NO", current)
         self.assertIn("PORTABLE_V3_ONE_SHOT_ACTIVATION=PASS_CI_DISPOSABLE_FAILURE_FALLBACK", promotion)
+        self.assertIn("PORTABLE_V4_QEMU_UEFI_BOOT_PROOF=PASS_CI_NON_PHYSICAL", promotion)
+        self.assertIn("current Portable Stable/MVP path is `release-manifest/4`", promotion)
+        self.assertNotIn("Portable v3 source path now stages through the official signed channel", promotion)
         self.assertIn("KNOWN_GOOD_PERSISTED=PENDING_PHYSICAL", promotion)
         self.assertIn("ROLLBACK=PENDING_PHYSICAL", promotion)
         self.assertNotIn("portable-v2-activation-not-connected", current)
