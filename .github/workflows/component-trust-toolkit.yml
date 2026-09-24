@@ -1,0 +1,239 @@
+name: Component Trust Toolkit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/runtime-component-channel/**'
+      - 'docs/contracts/runtime-component-package.json'
+      - 'docs/contracts/runtime-component-trust-policy.json'
+      - 'docs/COMPONENT-TRUST-CEREMONY.md'
+      - '.github/workflows/component-trust-toolkit.yml'
+  pull_request:
+    paths:
+      - 'tools/runtime-component-channel/**'
+      - 'docs/contracts/runtime-component-package.json'
+      - 'docs/contracts/runtime-component-trust-policy.json'
+      - 'docs/COMPONENT-TRUST-CEREMONY.md'
+      - '.github/workflows/component-trust-toolkit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  toolkit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+          cache: false
+
+      - name: Test runtime component channel
+        run: |
+          set -euo pipefail
+          (cd tools/runtime-component-channel && go test -count=1 ./...)
+
+      - name: Build Windows component trust toolkit
+        run: |
+          set -euo pipefail
+          out="$PWD/out/component-trust-toolkit"
+          mkdir -p "$out"
+          (
+            cd tools/runtime-component-channel
+            CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
+              go build -trimpath -buildvcs=false -ldflags='-s -w' \
+              -o ../../out/component-trust-toolkit/ordax-runtime-component-channel.exe .
+          )
+          cp tools/runtime-component-channel/windows/1-Verify-OrdaXComponentTrustToolkit.cmd "$out/"
+          cp tools/runtime-component-channel/windows/2-Initialize-OrdaXComponentTrust.cmd "$out/"
+          cp tools/runtime-component-channel/windows/3-Verify-OrdaXComponentTrustRecovery.cmd "$out/"
+          cp tools/runtime-component-channel/windows/Initialize-OrdaXComponentTrust.ps1 "$out/"
+          cp tools/runtime-component-channel/windows/Complete-OrdaXComponentTrust.ps1 "$out/"
+
+      - name: Emit hashes and provenance
+        run: |
+          set -euo pipefail
+          out="$PWD/out/component-trust-toolkit"
+          (
+            cd "$out"
+            sha256sum \
+              ordax-runtime-component-channel.exe \
+              1-Verify-OrdaXComponentTrustToolkit.cmd \
+              2-Initialize-OrdaXComponentTrust.cmd \
+              3-Verify-OrdaXComponentTrustRecovery.cmd \
+              Initialize-OrdaXComponentTrust.ps1 \
+              Complete-OrdaXComponentTrust.ps1 \
+              > SHA256SUMS
+          )
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, subprocess
+
+          root = pathlib.Path('out/component-trust-toolkit')
+          def digest(name):
+              return hashlib.sha256((root / name).read_bytes()).hexdigest()
+
+          contract_path = pathlib.Path('docs/contracts/runtime-component-package.json')
+          contract = json.loads(contract_path.read_text(encoding='utf-8'))
+
+          prerequisites = {
+              'signed_slot_staging_available': (
+                  contract.get('status') == 'signed-slot-staging'
+                  and contract.get('immutable_slot_staging_available') is True
+              ),
+              'activation_state_machine_available': (
+                  contract.get('activation_state_machine_available') is True
+                  and contract.get('activation_state_atomic_current_previous_pending_rejected') is True
+                  and contract.get('activation_state_revalidates_signed_slots') is True
+              ),
+              'verified_runtime_read_available': (
+                  contract.get('verified_runtime_file_read_available') is True
+                  and contract.get('runtime_file_read_revalidates_slot_and_hash') is True
+              ),
+              'native_read_broker_available': (
+                  contract.get('native_loopback_verified_read_broker_implemented') is True
+                  and contract.get('native_loopback_broker_read_only') is True
+                  and contract.get('native_loopback_broker_requires_signed_system_helper') is True
+                  and contract.get('native_loopback_broker_requires_component_trust') is True
+              ),
+              'trust_domains_separate': (
+                  contract.get('whole_os_release_trust_may_be_implicitly_reused') is False
+              ),
+              'production_activation_still_blocked': (
+                  contract.get('slot_activation_available') is False
+                  and contract.get('pending_health_promotion_available') is False
+                  and contract.get('rollback_slot_activation_available') is False
+                  and contract.get('publish_allowed') is False
+                  and contract.get('canonical_component_trust_anchor_pinned') is False
+              ),
+          }
+
+          canonical_main_push = (
+              os.environ['GITHUB_REPOSITORY'] == 'washingtonmsdj/prototipo-ordax-os'
+              and os.environ['GITHUB_EVENT_NAME'] == 'push'
+              and os.environ['GITHUB_REF'] == 'refs/heads/main'
+          )
+
+          data = {
+              '$schema': 'prototype-ordax.component-trust-toolkit/1',
+              'status': 'candidate',
+              'source_commit': os.environ['GITHUB_SHA'],
+              'source_repository': os.environ['GITHUB_REPOSITORY'],
+              'source_ref': os.environ['GITHUB_REF'],
+              'source_event': os.environ['GITHUB_EVENT_NAME'],
+              'key_id': 'ordax-runtime-components-v1',
+              'canonical_component_trust_ceremony_eligible': (
+                  canonical_main_push and all(prerequisites.values())
+              ),
+              'canonical_component_trust_prerequisites': prerequisites,
+              'go_version': subprocess.check_output(['go', 'version'], text=True).strip(),
+              'private_key_included': False,
+              'canonical_public_trust_included': False,
+              'key_generation_requires_local_user_action': True,
+              'whole_os_release_key_reuse_allowed': False,
+              'components': {
+                  'component_signer': {
+                      'name': 'ordax-runtime-component-channel.exe',
+                      'sha256': digest('ordax-runtime-component-channel.exe'),
+                  },
+                  'trust_initializer': {
+                      'name': 'Initialize-OrdaXComponentTrust.ps1',
+                      'sha256': digest('Initialize-OrdaXComponentTrust.ps1'),
+                  },
+                  'trust_recovery_finalizer': {
+                      'name': 'Complete-OrdaXComponentTrust.ps1',
+                      'sha256': digest('Complete-OrdaXComponentTrust.ps1'),
+                  },
+              },
+          }
+          (root / 'provenance.json').write_text(
+              json.dumps(data, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
+      - name: Assert toolkit is public-only and fail-closed
+        run: |
+          set -euo pipefail
+          out="$PWD/out/component-trust-toolkit"
+          test -z "$(find "$out" -type f \( -iname '*.pem' -o -iname '*.key' -o -iname '*.p12' -o -iname '*.pfx' \) -print -quit)"
+          python3 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path('out/component-trust-toolkit')
+          provenance = json.loads((root / 'provenance.json').read_text(encoding='utf-8'))
+          assert provenance['private_key_included'] is False
+          assert provenance['canonical_public_trust_included'] is False
+          assert provenance['key_generation_requires_local_user_action'] is True
+          assert provenance['whole_os_release_key_reuse_allowed'] is False
+          assert provenance['source_repository'] == os.environ['GITHUB_REPOSITORY']
+          assert provenance['source_ref'] == os.environ['GITHUB_REF']
+          assert provenance['source_event'] == os.environ['GITHUB_EVENT_NAME']
+          prerequisites = provenance['canonical_component_trust_prerequisites']
+          assert set(prerequisites) == {
+              'signed_slot_staging_available',
+              'activation_state_machine_available',
+              'verified_runtime_read_available',
+              'native_read_broker_available',
+              'trust_domains_separate',
+              'production_activation_still_blocked',
+          }
+          assert all(isinstance(value, bool) for value in prerequisites.values())
+          canonical_main_push = (
+              os.environ['GITHUB_REPOSITORY'] == 'washingtonmsdj/prototipo-ordax-os'
+              and os.environ['GITHUB_EVENT_NAME'] == 'push'
+              and os.environ['GITHUB_REF'] == 'refs/heads/main'
+          )
+          expected = canonical_main_push and all(prerequisites.values())
+          assert provenance['canonical_component_trust_ceremony_eligible'] is expected
+          print('COMPONENT_TRUST_TOOLKIT_SECRET_MATERIAL=NONE')
+          print('COMPONENT_TRUST_TOOLKIT_CANONICAL_KEY_INCLUDED=NO')
+          print('COMPONENT_TRUST_TOOLKIT_KEY_GENERATION_LOCAL_ONLY=YES')
+          PY
+
+      - name: Upload component trust toolkit
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ordax-component-trust-toolkit-${{ github.sha }}
+          path: out/component-trust-toolkit/
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-parse:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Parse component trust PowerShell natively
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($path in @(
+            'tools/runtime-component-channel/windows/Initialize-OrdaXComponentTrust.ps1',
+            'tools/runtime-component-channel/windows/Complete-OrdaXComponentTrust.ps1'
+          )) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $path),
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -ne 0) {
+              throw "PowerShell parse failed for ${path}: $($errors | Out-String)"
+            }
+          }
+          Write-Host 'COMPONENT_TRUST_POWERSHELL_PARSE=PASS'
