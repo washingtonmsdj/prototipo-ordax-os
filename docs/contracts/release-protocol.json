@@ -69,7 +69,8 @@
     "portable_usb_v2_erofs_requires_new_manifest_schema": true,
     "portable_usb_v2_candidate_must_not_mutate_manifest_v1": true,
     "portable_usb_v2_candidate_contract": "docs/contracts/portable-release-image.json",
-    "surface_runtime_multi_artifact_requires_manifest_v3": true
+    "surface_runtime_multi_artifact_requires_manifest_v3": true,
+    "local_ai_runtime_multi_artifact_requires_manifest_v4": true
   },
   "owners": {
     "generator": "tools/release-manifest",
@@ -236,7 +237,7 @@
     "acquisition_agent_support": true,
     "materialization_support": true,
     "activation_support": false,
-    "boot_handoff_support": false,
+    "boot_handoff_support": true,
     "production_publication_allowed": false,
     "channel_inspection_support": true,
     "materialization_command": "ordax-release-agent materialize-portable-v4",
@@ -259,6 +260,13 @@
     "real_local_ai_runtime_artifact_built": true,
     "real_local_ai_runtime_ci_reproducible": true,
     "canonical_signed_stable_materialization_proven": false,
-    "physical_stable_mvp_boot_proven": false
+    "physical_stable_mvp_boot_proven": false,
+    "supervisor_update_lifecycle_support": true,
+    "supervisor_inspect_manifest_schema_required": true,
+    "pre_v4_current_may_use_v3_compatibility": true,
+    "v4_to_v3_downgrade_allowed": false,
+    "candidate_activation_owner": "ordax-portable-state",
+    "candidate_cold_health_required": true,
+    "failed_candidate_rollback_offline": true
   }
 }
