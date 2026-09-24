@@ -221,7 +221,7 @@ func (r *portableWindowsRuntime) Materialize(op creatorcore.PortableApplicationO
 }
 
 func (r *portableWindowsRuntime) Flush() error {
-	if len(r.synced) != 15 { return fmt.Errorf("Portable flush before all 15 artifacts were synced: %d", len(r.synced)) }
+	if len(r.synced) != 17 { return fmt.Errorf("Portable flush before all 17 artifacts were synced: %d", len(r.synced)) }
 	return nil
 }
 
