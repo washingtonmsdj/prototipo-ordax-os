@@ -15,7 +15,8 @@ if errorlevel 1 (
 )
 echo.
 echo VERIFICACAO_PORTABLE_V4=CONCLUIDA
-echo Revise signed-handoff-verification.json antes da etapa de publicacao/materializacao.
+echo Revise signed-handoff-verification.json antes da publicacao.
+echo Depois da publicacao HTTPS revisada, execute 6-Materialize-Verify-PortableV4-Canonical.cmd.
 echo.
 pause
 endlocal
