@@ -19,6 +19,7 @@ import (
 
 var (
 	buildSourceCommit            = "UNRESOLVED"
+	buildReleaseSourceCommit     = "UNRESOLVED"
 	buildCanonicalTrustSHA256    = "UNRESOLVED"
 	buildManifestSHA256          = "UNRESOLVED"
 	buildSeedImageSHA256               = "UNRESOLVED"
@@ -42,6 +43,7 @@ func (values *stringListFlag) Set(value string) error {
 
 type buildBinding struct {
 	SourceCommit            string `json:"source_commit"`
+	ReleaseSourceCommit     string `json:"release_source_commit"`
 	CanonicalTrustSHA256    string `json:"canonical_trust_sha256"`
 	ManifestSHA256          string `json:"manifest_sha256"`
 	SeedImageSHA256                 string `json:"seed_image_sha256"`
@@ -64,12 +66,14 @@ func binding() buildBinding {
 	size, _ := strconv.ParseInt(buildSeedImageSize, 10, 64)
 	authorized := buildPhysicalWriteAuthorized == "YES"
 	ready := validLowerHex(buildSourceCommit, 20) &&
+		validLowerHex(buildReleaseSourceCommit, 20) &&
 		validLowerHex(buildCanonicalTrustSHA256, sha256.Size) &&
 		validLowerHex(buildManifestSHA256, sha256.Size) &&
 		validLowerHex(buildSeedImageSHA256, sha256.Size) &&
 		size > 0 && authorized
 	return buildBinding{
 		SourceCommit: buildSourceCommit,
+		ReleaseSourceCommit: buildReleaseSourceCommit,
 		CanonicalTrustSHA256: buildCanonicalTrustSHA256,
 		ManifestSHA256: buildManifestSHA256,
 		SeedImageSHA256: buildSeedImageSHA256,
@@ -162,6 +166,7 @@ func runTargets() error {
 
 func portableBindingReady(b buildBinding) bool {
 	return validLowerHex(b.SourceCommit, 20) &&
+		validLowerHex(b.ReleaseSourceCommit, 20) &&
 		validLowerHex(b.CanonicalTrustSHA256, sha256.Size) &&
 		validLowerHex(b.PortableUSBContractSHA256, sha256.Size) &&
 		validLowerHex(b.CreatorPortableContractSHA256, sha256.Size) &&
@@ -210,8 +215,8 @@ func portableSourcesFromFlags(plan creatorcore.PortableApplicationPlan, specs []
 			expected[op.ArtifactID] = op
 		}
 	}
-	if len(expected) != 15 || len(specs) != 15 {
-		return nil, fmt.Errorf("Portable apply requires exactly 15 canonical artifact sources")
+	if len(expected) != 17 || len(specs) != 17 {
+		return nil, fmt.Errorf("Portable apply requires exactly 17 canonical artifact sources")
 	}
 	seen := map[string]bool{}
 	sources := make([]windowsadapter.PortablePhysicalArtifactSource, 0, len(specs))
@@ -254,8 +259,8 @@ func runPreparePortable(args []string) error {
 	if err != nil {
 		return err
 	}
-	if plan.SourceCommit != b.SourceCommit {
-		return fmt.Errorf("Portable application plan source_commit does not match authorized build")
+	if plan.SourceCommit != b.ReleaseSourceCommit {
+		return fmt.Errorf("Portable application plan source_commit does not match authorized canonical release")
 	}
 	if plan.TargetBytes != target.PhysicalDiskBytes {
 		return fmt.Errorf("Portable application plan capacity does not match confirmed USB target")
@@ -278,7 +283,7 @@ func runPreparePortable(args []string) error {
 		ApplicationPlanSHA256:planSHA,
 		DestructiveAuthorization:token,
 		WholeDiskRawImageRequired:false,
-		Next:"request UAC elevation and invoke apply-portable with the exact same plan, 15 sources, confirmation token and authorization token",
+		Next:"request UAC elevation and invoke apply-portable with the exact same plan, 17 sources, confirmation token and authorization token",
 	})
 }
 
@@ -290,19 +295,19 @@ func runApplyPortable(args []string) error {
 	authorize := fs.String("authorize", "", "destructive authorization emitted by prepare-portable")
 	progressLog := fs.String("progress-log", "", "optional JSON progress path")
 	var sourceSpecs stringListFlag
-	fs.Var(&sourceSpecs, "source", "canonical artifact source in artifact-id=path form; repeat exactly 15 times")
+	fs.Var(&sourceSpecs, "source", "canonical artifact source in artifact-id=path form; repeat exactly 17 times")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if *confirm == "" || *planPath == "" || *authorize == "" || fs.NArg() != 0 {
-		return fmt.Errorf("apply-portable requires --confirm, --plan, --authorize and exactly 15 --source values")
+		return fmt.Errorf("apply-portable requires --confirm, --plan, --authorize and exactly 17 --source values")
 	}
 	plan, err := loadPortableApplicationPlan(*planPath)
 	if err != nil {
 		return err
 	}
-	if plan.SourceCommit != b.SourceCommit {
-		return fmt.Errorf("Portable application plan source_commit does not match authorized build")
+	if plan.SourceCommit != b.ReleaseSourceCommit {
+		return fmt.Errorf("Portable application plan source_commit does not match authorized canonical release")
 	}
 	sources, err := portableSourcesFromFlags(plan, sourceSpecs)
 	if err != nil {
