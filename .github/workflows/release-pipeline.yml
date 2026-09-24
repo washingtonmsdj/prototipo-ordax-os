@@ -480,18 +480,22 @@ jobs:
                   'docs/contracts/physical-write-authorization.json'
               ).read_text(encoding='utf-8')
           )
-          assert authorization['status'] == 'authorized'
-          assert authorization['explicit_owner_authorization'] is True
-          assert authorization['physical_write_allowed'] is True
-          assert len(authorization['authorization_context_sha256']) == 64
+          assert authorization['$schema'] == 'prototype-ordax.physical-write-authorization/3'
+          assert authorization['status'] == 'blocked-canonical-v4-release-proof-pending'
+          assert authorization['explicit_owner_authorization'] is False
+          assert authorization['physical_write_allowed'] is False
+          assert authorization['authorization_context_sha256'] is None
+          assert authorization['bindings']['canonical_v4_release_proof_sha256'] is None
+          assert authorization['release_binding']['source_commit'] is None
           print('CANONICAL_TRUST_ANCHOR=YES')
           print('CANONICAL_TRUST_WORKING_REPOSITORY_VALIDATED=PASS')
-          print('EXPLICIT_OWNER_PHYSICAL_AUTHORIZATION=YES')
+          print('CANONICAL_V4_RELEASE_PROOF=PENDING')
+          print('EXPLICIT_OWNER_PHYSICAL_AUTHORIZATION=NO')
           PY
 
-          # Public-trust promotion itself is a pre-consent ceremony. Prove that
-          # historical transition in an isolated repository copy rather than
-          # rewriting or weakening the already-authorized working repository.
+          # Public-trust promotion itself is a pre-proof/pre-consent ceremony.
+          # Prove that historical transition in an isolated repository copy rather
+          # than rewriting or weakening the current fail-closed working repository.
           sandbox="$RUNNER_TEMP/public-trust-promotion-repository"
           mkdir -p "$sandbox"
           git archive --format=tar HEAD | tar -xf - -C "$sandbox"
@@ -499,10 +503,17 @@ jobs:
           import json, pathlib, sys
           path = pathlib.Path(sys.argv[1])
           authorization = json.loads(path.read_text(encoding='utf-8'))
-          authorization['status'] = 'blocked-explicit-physical-authorization-pending'
+          authorization['status'] = 'blocked-canonical-trust-pending'
           authorization['explicit_owner_authorization'] = False
           authorization['physical_write_allowed'] = False
           authorization['authorization_context_sha256'] = None
+          authorization['bindings']['canonical_v4_release_proof_sha256'] = None
+          authorization['release_binding'].update({
+              'source_commit': None,
+              'canonical_envelope_url': None,
+              'release_manifest_sha256': None,
+              'release_envelope_sha256': None,
+          })
           path.write_text(json.dumps(authorization, indent=2) + '\n', encoding='utf-8')
           PY
 
@@ -572,10 +583,13 @@ jobs:
                   encoding='utf-8'
               )
           )
-          assert authorization['status'] == 'blocked-explicit-physical-authorization-pending'
+          assert authorization['$schema'] == 'prototype-ordax.physical-write-authorization/3'
+          assert authorization['status'] == 'blocked-canonical-v4-release-proof-pending'
           assert authorization['explicit_owner_authorization'] is False
           assert authorization['physical_write_allowed'] is False
           assert authorization['authorization_context_sha256'] is None
+          assert authorization['bindings']['canonical_v4_release_proof_sha256'] is None
+          assert authorization['release_binding']['source_commit'] is None
 
           print('PUBLIC_TRUST_PROMOTION_APPLY=PASS')
           print('PROMOTED_REPOSITORY_VALIDATED=PASS')
