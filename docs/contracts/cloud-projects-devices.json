@@ -1,0 +1,62 @@
+{
+  "$schema": "prototype-ordax.cloud-projects-devices/1",
+  "status": "pre-mvp-foundation",
+  "domain": {
+    "backend_name": "OrdaX Cloud",
+    "current_backend_adapter": "supabase",
+    "supabase_is_user_visible_identity": false,
+    "same_account_model_for_os_web_mobile": true
+  },
+  "projects": {
+    "first_class_project_identity": true,
+    "space_scoped": true,
+    "sources": [
+      "local",
+      "github",
+      "hybrid",
+      "cloud-content"
+    ],
+    "github_is_optional": true,
+    "local_path_stored_in_cloud": false,
+    "local_device_binding_uses_opaque_ref": true,
+    "provider_tokens_stored_in_public_product_tables": false
+  },
+  "devices": {
+    "product_registry_is_separate_from_engineering_control_plane": true,
+    "presence_is_separate_from_device_identity": true,
+    "device_credentials_stored_in_public_registry": false,
+    "space_sharing_requires_explicit_binding": true,
+    "offline_device_is_honestly_reported": true
+  },
+  "remote_access": {
+    "clients": [
+      "ordax-web",
+      "ordax-mobile",
+      "product-mcp"
+    ],
+    "same_action_gateway": true,
+    "grant_scope": [
+      "account",
+      "space",
+      "project",
+      "device",
+      "capability",
+      "read-write-mode"
+    ],
+    "write_requires_explicit_approval": true,
+    "generic_shell_grant_supported": false,
+    "raw_disk_grant_supported": false,
+    "release_signing_key_grant_supported": false
+  },
+  "storage": {
+    "all_local_files_uploaded_by_default": false,
+    "github_code_duplicated_to_supabase_by_default": false,
+    "cloud_file_sync_is_opt_in": true,
+    "memory_cloud_is_separate_from_project_file_sync": true
+  },
+  "authority": {
+    "authenticated_clients_can_read_authorized_rows": true,
+    "authenticated_clients_can_directly_mutate_scoped_resources": false,
+    "server_gateway_enforces_entitlements_and_audit": true
+  }
+}
