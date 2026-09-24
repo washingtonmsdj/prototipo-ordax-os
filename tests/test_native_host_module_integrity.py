@@ -5,6 +5,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 HOST = ROOT / "system" / "surface" / "runtime" / "native_host_server.py"
 REQUEST_BOUNDARY = ROOT / "system" / "surface" / "runtime" / "native_request_boundary.py"
+COMPONENT_SLOTS = ROOT / "system" / "surface" / "runtime" / "native_component_slots.py"
 SPLIT_CORE = ROOT / "system" / "surface" / "runtime" / "native_host_server_core.py"
 
 
@@ -44,7 +45,9 @@ class NativeHostModuleIntegrityTests(unittest.TestCase):
         self.assertNotIn("native_host_server_core", source)
         self.assertNotIn("import *", source)
         self.assertTrue(REQUEST_BOUNDARY.is_file(), REQUEST_BOUNDARY)
+        self.assertTrue(COMPONENT_SLOTS.is_file(), COMPONENT_SLOTS)
         self.assertIn("from native_request_boundary import expected_surface_authority, request_is_trusted", source)
+        self.assertIn("from native_component_slots import (", source)
         self.assertIn("def _request_is_trusted(self)", source)
         for method in ("do_GET", "do_POST", "do_OPTIONS"):
             method_node = next(

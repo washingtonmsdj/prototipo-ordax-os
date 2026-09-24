@@ -679,3 +679,29 @@ func TestCurrentBundledFallbackIsNotExposedAsSlotBytes(t *testing.T) {
 		t.Fatalf("bundled runtime read error = %v", err)
 	}
 }
+
+
+func TestFailedPendingRuntimeCannotBeRead(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("a", 40))
+	if _, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root); err != nil {
+		t.Fatal(err)
+	}
+	identity := identityFromRelease(fixture.release)
+	if _, err := recordPendingHealth(
+		fixture.root,
+		"internet",
+		identity,
+		"failed",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readVerifiedRuntimeFile(
+		fixture.root,
+		"internet",
+		fixture.trustPath,
+		"pending",
+		"system/apps/internet/runtime.mjs",
+	); err == nil || !strings.Contains(err.Error(), "failed pending slot") {
+		t.Fatalf("failed pending runtime read error = %v", err)
+	}
+}
