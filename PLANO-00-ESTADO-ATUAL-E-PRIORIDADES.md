@@ -80,11 +80,11 @@ A falha histórica `ORDAX-ESP partition not found` de um head antigo foi superad
 
 O que permanece aberto é de outra classe: trust canônico, autorização pública de escrita, boot físico Stable/MVP no USB final, Secure Boot e validação gráfica integrada em hardware. Se um contrato de evidência ficar atrás do source, reconciliar a evidência com o último commit realmente provado; não reconstruir o handoff que já existe.
 
-### P0 — trust canônico de release
+### P0 — trust canônico resolvido; fechar proof canônico v4
 
-A infraestrutura para cerimônia, promoção do trust público, verificação e recuperação já existe no repositório. O bloqueio não deve ser “resolvido” gerando uma chave privada dentro do Git, CI ou USB.
+A infraestrutura de cerimônia, promoção do trust público, verificação e recuperação já está resolvida para o primeiro protótipo controlado. O anchor Ed25519 canônico de SHA-256 `d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250` está pinado, o recovery criptográfico passou e o full-bootstrap canonical-trust proof está fechado. A chave privada continua fora de Git, CI e USB.
 
-A prova one-shot/rejected já passou em CI e continua sendo pré-requisito obrigatório da primeira identidade canônica. O Windows Prototype Toolkit produzido pelo push canônico da main em `2172eb6a18430910afd036199ec492ad63dc185d` / run `35617567458` foi inspecionado e os passos locais 1, 2 e 3 foram concluídos pelo operador em 2026-09-21. O recovery criptográfico por caminho distinto passou, o handoff público foi revalidado e o anchor Ed25519 canônico de SHA-256 `d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250` está pinado no repositório. O minimal bootstrap ficou byte-complete e a autorização física está apenas elegível, ainda sem consentimento do owner e sem escrita destrutiva. A cópia criptografada redundante atual continua no mesmo host; backup off-device permanece obrigatório antes de distribuição pública ampla, mas não bloqueia o primeiro protótipo controlado. A chave local segue como backend controlado de protótipo, não custódia final de produção; KMS/HSM gerenciado fica como evolução provider-neutral, enquanto rotação assinada é obrigatória antes de distribuição pública ampla.
+O bloqueio atual é mais específico: a release Stable/MVP v4 real precisa ser assinada/publicada no ambiente controlado, materializada/verificada pelo caminho oficial e gerar o aggregate receipt `canonical-v4-release-proof.json`. Esse receipt deve ser validado e vinculado ao trust, source commit, manifest, envelope e três artefatos antes de o novo consentimento físico ficar alcançável. O consentimento anterior de 15 artefatos é stale porque o writer atual possui 17 artefatos / 39 operações. Backup off-device continua obrigatório antes de distribuição pública ampla, mas não bloqueia o primeiro protótipo controlado; KMS/HSM gerenciado permanece evolução provider-neutral.
 
 ### P0 — prova Stable/MVP integrada
 
@@ -110,7 +110,7 @@ Os planos longos registram capacidades herdadas como referência de produto, mas
 |---|---|---|
 | C01 Arquivos | **ENTRA no núcleo do MVP** | Operações locais principais já existem. Fechar somente falhas reais de uso/smoke; lixeira, miniaturas e associações avançadas não bloqueiam lançamento. |
 | C02 Rede/Wi-Fi | **ENTRA e é requisito do MVP** | Ajustes → Rede e painel rápido existem; falta prova Stable/MVP no hardware-alvo e correção somente de gaps reproduzidos. |
-| C03 Sessão local / lock | **ENTRA apenas no recorte local de segurança** | Não introduzir conta cloud para resolver lock. Se lock/unlock for exposto no MVP, precisa de autoridade local real; não deve deslocar os P0 de USB/trust. |
+| C03 Sessão local / lock | **ENTRA no recorte local de segurança** | `ordax.local-session/1` + lock Native/offline estão PASS_SOURCE, independentes de conta cloud; falta prova física Stable/MVP. |
 | C04 Workspace/projetos | **JÁ HÁ recorte suficiente; não é gate** | Áreas, janelas, Recentes e catálogo local de Projetos existem. Continuidade avançada fica posterior. |
 | C05 Checkpoints de sessão | **PÓS-MVP** | Não bloquear o lançamento por restauração completa de rota/documento/posição/rascunho. |
 | C06 Home contextual | **NÃO BLOQUEIA** | Melhorias de “continuar trabalho” são P1/P2; não criar outro shell. |
@@ -123,7 +123,7 @@ Os planos longos registram capacidades herdadas como referência de produto, mas
 | C13 Store | **PÓS-MVP** | Não deslocar P0/P1. |
 | C14 Perfis profissionais | **PÓS-MVP** | Fora do lançamento básico. |
 | C15 Objetos/proveniência de produto | **PÓS-MVP** | Fora do lançamento básico. |
-| C16 IA nativa | **PÓS-MVP** | Não criar dependência de IA para o sistema funcionar. |
+| C16 IA nativa | **ENTRA como capability do sistema** | Ordax Intelligence + backend local fazem parte do Stable/MVP v4. A IA continua degradável e não bloqueia boot/Surface; tools/agentes mutáveis permanecem pós-MVP. |
 | C17 Conectores/automações | **PÓS-MVP** | Fora do lançamento básico. |
 | C18 Diagnóstico/exportação | **ENTRA no recorte local útil** | Revisão/exportação sanitizada já existe; evoluir somente lacunas concretas de fonte/retenção/prova. |
 | C19 Controle remoto | **PÓS-MVP** | Rescue/observação existentes não viram controle remoto genérico. |
@@ -132,10 +132,10 @@ Os planos longos registram capacidades herdadas como referência de produto, mas
 | C22 Build/cache/retenção | **ENGENHARIA, não feature do MVP** | Otimizar CI quando medido; não recompilar kernel por mudança administrativa sem dependência real. |
 | C23/C24 Intelligence/Lab/federação | **PÓS-MVP** | Fora da trilha de lançamento. |
 | C25 Navegador/produtividade | **Internet básico ENTRA; office/editor amplo NÃO** | O app Internet é parte dos apps principais do MVP; suíte de produtividade completa não é gate. |
-| C26 Onboarding/notificações/acessibilidade | **ENTRA no básico de produto** | Acessibilidade real já avançou; primeiro uso e notificações só entram quando sustentados por contratos reais. |
+| C26 Onboarding/notificações/acessibilidade | **ENTRA no básico de produto** | OOBE persistente, rota sem conta e localização pública pt-BR/en-US estão PASS_SOURCE; notificações/acessibilidade seguem somente onde há contratos reais. Falta prova física Stable/MVP. |
 | C27 Backup/histórico pessoal | **PÓS-MVP** | Não confundir backup de dados com rollback/known-good do sistema, que é P0. |
 
-Portanto, do legado, os itens que ainda merecem atenção **antes do MVP** são principalmente: C02 no hardware real, C07 no recorte de compatibilidade suportada, C18 somente onde houver gap real, C20, C21 no caminho USB/recovery e o recorte básico de C26. C01/C04 já possuem implementação suficiente para não serem reconstruídos. C08 só sobe de prioridade quando identidade real for habilitada no portal. O restante não deve atrasar o primeiro Stable/MVP USB.
+Portanto, do legado, os itens que ainda merecem atenção **antes do MVP** são principalmente as provas físicas de C02/C03/C07/C16/C20/C21/C26 no Stable/MVP e qualquer gap C18 realmente reproduzido. C01/C04 já possuem implementação suficiente para não serem reconstruídos. C08 só sobe de prioridade quando identidade real for habilitada no portal. O restante não deve atrasar o primeiro Stable/MVP USB.
 
 ## 3. Regra para trabalho paralelo
 
