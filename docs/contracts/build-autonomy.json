@@ -110,12 +110,18 @@
     "native_helper_source": [
       "tools/creator/core/",
       "tools/creator/host/linux/",
-      "tools/creator/cmd/ordax-creator-native-targets/"
+      "tools/creator/cmd/ordax-creator-native-targets/",
+      "tools/runtime-component-channel/"
     ],
     "helper_built_by_ci": true,
     "helper_compiled_on_end_user_device": false,
     "helper_covered_by_signed_system_tar": true,
     "final_bundle_owner": "tools/release-bundle",
-    "separate_helper_release_channel": false
+    "separate_helper_release_channel": false,
+    "helper_outputs": [
+      "system/bin/ordax-native-install-targets",
+      "system/bin/ordax-runtime-component-channel"
+    ],
+    "component_helper_publish_authorized": false
   }
 }

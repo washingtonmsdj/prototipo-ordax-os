@@ -56,7 +56,6 @@ var (
 
 var forbiddenPackagePrefixes = []string{
 	"system/adapters/",
-	"system/apps/",
 	"system/composition/",
 	"system/surface/runtime/",
 }
@@ -569,6 +568,15 @@ func safePackagePath(value string) (string, error) {
 	return value, nil
 }
 
+func componentOwnedPackagePath(path, componentID string) bool {
+	for _, root := range []string{"system/apps/", "system/components/"} {
+		if strings.HasPrefix(path, root) {
+			return strings.HasPrefix(path, root+componentID+"/")
+		}
+	}
+	return true
+}
+
 func validatePackageManifest(manifest componentPackageManifest, release releaseDescriptor) error {
 	if manifest.Schema != packageSchema || manifest.Status != "candidate" {
 		return errors.New("unsupported runtime component package manifest")
@@ -598,7 +606,8 @@ func validatePackageManifest(manifest componentPackageManifest, release releaseD
 	if err != nil {
 		return err
 	}
-	if !strings.HasPrefix(entrypoint, "system/components/"+manifest.Component.ID+"/") {
+	if !strings.HasPrefix(entrypoint, "system/components/"+manifest.Component.ID+"/") &&
+		!strings.HasPrefix(entrypoint, "system/apps/"+manifest.Component.ID+"/") {
 		return errors.New("runtime component package entrypoint ownership is invalid")
 	}
 	if len(manifest.Files) == 0 || len(manifest.Files) > maxFiles {
@@ -610,6 +619,9 @@ func validatePackageManifest(manifest componentPackageManifest, release releaseD
 		path, err := safePackagePath(record.Path)
 		if err != nil {
 			return err
+		}
+		if !componentOwnedPackagePath(path, manifest.Component.ID) {
+			return errors.New("runtime component package crossed into another component owner")
 		}
 		if _, exists := seen[path]; exists {
 			return errors.New("runtime component package file paths must be unique")
@@ -1221,7 +1233,7 @@ func verifySlotCommand(args []string) error {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: ordax-runtime-component-channel <generate-key|derive-trust|sign|verify-envelope|stage|verify-slot> [options]")
+	fmt.Fprintln(os.Stderr, "usage: ordax-runtime-component-channel <generate-key|derive-trust|sign|verify-envelope|stage|verify-slot|arm-pending|record-health|promote-state|reject-pending|rollback-state|resolve-current|resolve-pending|read-runtime-file|status> [options]")
 }
 
 func main() {
@@ -1243,6 +1255,24 @@ func main() {
 		err = stageCommand(os.Args[2:])
 	case "verify-slot":
 		err = verifySlotCommand(os.Args[2:])
+	case "arm-pending":
+		err = armPendingCommand(os.Args[2:])
+	case "record-health":
+		err = recordHealthCommand(os.Args[2:])
+	case "promote-state":
+		err = promoteStateCommand(os.Args[2:])
+	case "reject-pending":
+		err = rejectPendingCommand(os.Args[2:])
+	case "rollback-state":
+		err = rollbackStateCommand(os.Args[2:])
+	case "resolve-current":
+		err = resolveCurrentCommand(os.Args[2:])
+	case "resolve-pending":
+		err = resolvePendingCommand(os.Args[2:])
+	case "read-runtime-file":
+		err = readRuntimeFileCommand(os.Args[2:])
+	case "status":
+		err = activationStatusCommand(os.Args[2:])
 	default:
 		usage()
 		os.Exit(2)
