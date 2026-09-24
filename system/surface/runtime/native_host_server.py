@@ -28,6 +28,14 @@ if _RUNTIME_DIR not in sys.path:
     sys.path.insert(0, _RUNTIME_DIR)
 
 from native_request_boundary import expected_surface_authority, request_is_trusted
+from native_component_slots import (
+    ComponentSlotRequestError,
+    ComponentSlotUnavailableError,
+    ComponentSlotVerificationError,
+    component_slot_reader_available,
+    read_component_runtime_file,
+    resolve_component_slot,
+)
 
 SESSION_PATH = "/__ordax/native/session"
 POWER_PATH = "/__ordax/native/power"
@@ -56,6 +64,10 @@ NETWORK_STATUS_PATH = "/__ordax/native/network-status"
 NETWORK_MANAGEMENT_PATH = "/__ordax/native/network-management"
 UPDATE_HISTORY_PATH = "/__ordax/native/update-history"
 NATIVE_INSTALL_TARGETS_PATH = "/__ordax/native/native-install-targets"
+COMPONENT_RUNTIME_PATH = "/__ordax/native/component-runtime"
+DEFAULT_COMPONENT_CHANNEL_BIN = "/srv/ordax-system/bin/ordax-runtime-component-channel"
+DEFAULT_COMPONENT_TRUST_PATH = "/srv/ordax-system/trust/runtime-components-ed25519.json"
+DEFAULT_COMPONENT_SLOT_ROOT = "/var/lib/ordax/components"
 UPDATE_STATE_FILE = "/run/ordax-update/state.json"
 HEALTH_STATE_FILE = "/run/ordax-update/healthy-sha"
 PREFERENCES_FILE = "/var/lib/ordax/preferences.json"
@@ -2952,6 +2964,9 @@ class NativeHostServer(ThreadingHTTPServer):
         product_mode: str | None = None,
         distribution_profile: str = "owner-development",
         native_install_capability: str = "disabled",
+        component_channel_bin: str = DEFAULT_COMPONENT_CHANNEL_BIN,
+        component_trust_path: str = DEFAULT_COMPONENT_TRUST_PATH,
+        component_slot_root: str = DEFAULT_COMPONENT_SLOT_ROOT,
     ):
         super().__init__(server_address, handler_class)
         self.power_token = secrets.token_urlsafe(32)
@@ -2989,6 +3004,16 @@ class NativeHostServer(ThreadingHTTPServer):
         )
         self.native_install_token = (
             secrets.token_urlsafe(32) if self.native_install_available else ""
+        )
+        self.component_channel_bin = component_channel_bin
+        self.component_trust_path = component_trust_path
+        self.component_slot_root = component_slot_root
+        self.component_slot_lock = threading.Lock()
+        self.component_slot_read_available = component_slot_reader_available(
+            helper_path=self.component_channel_bin,
+            trust_path=self.component_trust_path,
+            distribution_profile=self.distribution_profile,
+            product_mode=self.product_mode,
         )
 
 
@@ -3073,7 +3098,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if not self._request_is_trusted():
             return
         parsed_path = urlsplit(self.path).path
-        if parsed_path in {SESSION_PATH, FILES_PATH, TRASH_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, RECOVERY_STATUS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
+        if parsed_path in {SESSION_PATH, FILES_PATH, TRASH_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, RECOVERY_STATUS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, COMPONENT_RUNTIME_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
         if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH, LOCAL_SESSION_PATH} and self.client_address[0] != "127.0.0.1":
@@ -3157,6 +3182,98 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                 return
             self._write_json(200, snapshot)
             return
+        if parsed_path == COMPONENT_RUNTIME_PATH:
+            if not self.server.component_slot_read_available:
+                self._empty(404)
+                return
+            try:
+                query = parse_qs(
+                    urlsplit(self.path).query,
+                    keep_blank_values=True,
+                    strict_parsing=True,
+                )
+            except ValueError:
+                self._empty(400)
+                return
+            if set(query) not in (
+                {"component", "state"},
+                {"component", "state", "path"},
+            ):
+                self._empty(400)
+                return
+            if any(len(values) != 1 for values in query.values()):
+                self._empty(400)
+                return
+            component_id = query["component"][0]
+            state = query["state"][0]
+            requested_path = query.get("path", [None])[0]
+            try:
+                with self.server.component_slot_lock:
+                    if requested_path is None:
+                        resolution = resolve_component_slot(
+                            helper_path=self.server.component_channel_bin,
+                            trust_path=self.server.component_trust_path,
+                            component_id=component_id,
+                            state=state,
+                            slot_root=self.server.component_slot_root,
+                        )
+                        self._write_json(
+                            200,
+                            {
+                                "componentId": resolution.component_id,
+                                "state": resolution.state,
+                                "source": resolution.source,
+                                "revision": resolution.revision,
+                                "version": resolution.version,
+                                "sourceCommit": resolution.source_commit,
+                                "entrypoint": resolution.entrypoint,
+                                "pendingHealth": resolution.pending_health,
+                            },
+                        )
+                        return
+                    payload = read_component_runtime_file(
+                        helper_path=self.server.component_channel_bin,
+                        trust_path=self.server.component_trust_path,
+                        component_id=component_id,
+                        state=state,
+                        requested_path=requested_path,
+                        slot_root=self.server.component_slot_root,
+                    )
+            except ComponentSlotRequestError:
+                self._empty(400)
+                return
+            except ComponentSlotUnavailableError as exc:
+                print(
+                    f"ordax-native-host: component slot reader unavailable: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._empty(503)
+                return
+            except ComponentSlotVerificationError as exc:
+                print(
+                    f"ordax-native-host: component slot verification failed safely: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._empty(409)
+                return
+            mime = "application/octet-stream"
+            if requested_path.endswith((".mjs", ".js")):
+                mime = "text/javascript; charset=utf-8"
+            elif requested_path.endswith(".css"):
+                mime = "text/css; charset=utf-8"
+            elif requested_path.endswith(".json"):
+                mime = "application/json; charset=utf-8"
+            self.send_response(200)
+            self.send_header("Content-Type", mime)
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+
         if parsed_path == UPDATE_HISTORY_PATH:
             self._write_json(200, read_update_history())
             return
@@ -3286,6 +3403,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                     "productMode": self.server.product_mode,
                     "nativeInstallAvailable": self.server.native_install_available,
                     "nativeInstallToken": self.server.native_install_token,
+                    "componentSlotReadAvailable": self.server.component_slot_read_available,
                     "supportedActions": list(self.server.supported_actions),
                 },
             )
@@ -3882,6 +4000,9 @@ def parse_args() -> argparse.Namespace:
         choices=("disabled", "post-mvp-preview"),
     )
     parser.add_argument("--telemetry-config", default="")
+    parser.add_argument("--component-channel-bin", default=DEFAULT_COMPONENT_CHANNEL_BIN)
+    parser.add_argument("--component-trust", default=DEFAULT_COMPONENT_TRUST_PATH)
+    parser.add_argument("--component-slot-root", default=DEFAULT_COMPONENT_SLOT_ROOT)
     return parser.parse_args()
 
 
@@ -3918,6 +4039,9 @@ def main() -> int:
         product_mode=args.product_mode,
         distribution_profile=args.distribution_profile,
         native_install_capability=args.native_install_capability,
+        component_channel_bin=args.component_channel_bin,
+        component_trust_path=args.component_trust,
+        component_slot_root=args.component_slot_root,
     )
     telemetry_started = start_telemetry_heartbeat(args.telemetry_config)
     print(
