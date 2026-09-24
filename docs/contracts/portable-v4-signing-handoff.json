@@ -1,0 +1,67 @@
+{
+  "$schema": "prototype-ordax.portable-v4-signing-handoff-contract/1",
+  "status": "canonical-pre-publication-signing-boundary",
+  "manifest_schema": "prototype-ordax.release-manifest/4",
+  "envelope_schema": "prototype-ordax.release-envelope/1",
+  "trust_schema": "prototype-ordax.release-trust/1",
+  "prepare_receipt_schema": "prototype-ordax.portable-v4-signing-handoff/1",
+  "post_sign_verification_receipt_schema": "prototype-ordax.portable-v4-signed-handoff-verification/1",
+  "canonical_artifacts": [
+    {
+      "name": "system.erofs",
+      "role": "system-image"
+    },
+    {
+      "name": "native-surface-runtime.erofs",
+      "role": "surface-runtime"
+    },
+    {
+      "name": "local-ai-runtime.erofs",
+      "role": "local-ai-runtime"
+    }
+  ],
+  "owners": {
+    "manifest_generator": "tools/release-manifest",
+    "signer": "tools/release-signing",
+    "verifier": "bootstrap/release-acquisition",
+    "prepare_script": "tools/release-signing/windows/3-Prepare-PortableV4-SigningHandoff.ps1",
+    "sign_script": "tools/release-signing/windows/4-Sign-Initial-OrdaXRelease.ps1",
+    "verify_script": "tools/release-signing/windows/5-Verify-PortableV4-SignedHandoff.ps1"
+  },
+  "prepare_boundary": {
+    "private_key_accepted": false,
+    "https_artifact_urls_required": true,
+    "exact_artifact_copy_sha256_verified": true,
+    "canonical_public_trust_included": true,
+    "official_signer_included": true,
+    "official_release_agent_included": true,
+    "publication_performed": false,
+    "activation_performed": false,
+    "physical_write_performed": false
+  },
+  "sign_boundary": {
+    "canonical_private_key_external_to_handoff": true,
+    "private_key_public_component_must_match_trust": true,
+    "signed_payload_is_exact_manifest_bytes": true,
+    "publication_performed": false,
+    "activation_performed": false,
+    "physical_write_performed": false
+  },
+  "post_sign_verify_boundary": {
+    "official_release_agent_verify_envelope_required": true,
+    "signed_payload_must_match_local_manifest_bytes": true,
+    "local_artifact_sha256_and_size_must_match_signed_manifest": true,
+    "network_access_required": false,
+    "portable_materialization_performed": false,
+    "publication_performed": false,
+    "activation_performed": false,
+    "physical_target_selection_performed": false,
+    "physical_write_performed": false
+  },
+  "next_boundary": {
+    "canonical_https_publication_review_required": true,
+    "release_agent_materialize_portable_v4_required": true,
+    "release_agent_verify_portable_v4_exact_required": true,
+    "physical_media_authority_separate": true
+  }
+}

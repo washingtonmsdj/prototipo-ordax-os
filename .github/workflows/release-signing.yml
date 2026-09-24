@@ -46,6 +46,30 @@ jobs:
       - name: Test canonical v4 signing runbook contract
         run: python3 -m unittest tests.test_release_v4_signing_runbook -v
 
+      - name: Parse Windows v4 signing runbook
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $paths = @(
+            'tools/release-signing/windows/3-Prepare-PortableV4-SigningHandoff.ps1',
+            'tools/release-signing/windows/4-Sign-Initial-OrdaXRelease.ps1',
+            'tools/release-signing/windows/5-Verify-PortableV4-SignedHandoff.ps1'
+          )
+          foreach ($path in $paths) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path -LiteralPath $path),
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -ne 0) {
+              $errors | ForEach-Object { Write-Error $_.Message }
+              throw "PowerShell parse failed: $path"
+            }
+          }
+          Write-Host 'PORTABLE_V4_SIGNING_RUNBOOK_POWERSHELL_PARSE=PASS'
+
       - name: Build signer and verifier candidates
         run: |
           set -euo pipefail
@@ -65,6 +89,9 @@ jobs:
             CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
               go build -trimpath -buildvcs=false -ldflags='-s -w' \
               -o ../../out/release-signing/ordax-release-agent-linux-amd64 .
+            CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
+              go build -trimpath -buildvcs=false -ldflags='-s -w' \
+              -o ../../out/release-signing/ordax-release-agent-windows-amd64.exe .
           )
 
       - name: Prove signer and release agent protocol compatibility
@@ -152,5 +179,6 @@ jobs:
           path: |
             out/release-signing/ordax-release-signing-linux-amd64
             out/release-signing/ordax-release-signing-windows-amd64.exe
+            out/release-signing/ordax-release-agent-windows-amd64.exe
           if-no-files-found: error
           retention-days: 14

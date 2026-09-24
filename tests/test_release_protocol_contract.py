@@ -172,7 +172,10 @@ class ReleaseProtocolContractTests(unittest.TestCase):
         self.assertFalse(portable["boot_handoff_support"])
         self.assertFalse(portable["production_publication_allowed"])
         self.assertFalse(portable["physical_write_authority_granted"])
-        self.assertFalse(portable["real_local_ai_runtime_artifact_built"])
+        self.assertTrue(portable["real_local_ai_runtime_artifact_built"])
+        self.assertTrue(portable["real_local_ai_runtime_ci_reproducible"])
+        self.assertFalse(portable["canonical_signed_stable_materialization_proven"])
+        self.assertFalse(portable["physical_stable_mvp_boot_proven"])
 
         acquisition = self.read_source(ACQUISITION)
         signing = self.read_source(SIGNING)
