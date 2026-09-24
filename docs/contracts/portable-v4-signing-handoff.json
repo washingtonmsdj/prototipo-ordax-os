@@ -81,7 +81,8 @@
     "release_activated": false,
     "publication_performed_by_this_step": false,
     "physical_target_selection_performed": false,
-    "physical_write_performed": false
+    "physical_write_performed": false,
+    "canonical_envelope_url_recorded": true
   },
   "canonical_release_proof_receipt_schema": "prototype-ordax.portable-v4-canonical-release-proof/1",
   "canonical_release_proof_boundary": {
@@ -95,6 +96,7 @@
     "release_activated": false,
     "physical_target_selection_performed": false,
     "physical_write_authorized": false,
-    "physical_write_performed": false
+    "physical_write_performed": false,
+    "canonical_envelope_url_required": true
   }
 }
