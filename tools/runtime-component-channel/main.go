@@ -1221,7 +1221,7 @@ func verifySlotCommand(args []string) error {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: ordax-runtime-component-channel <generate-key|derive-trust|sign|verify-envelope|stage|verify-slot> [options]")
+	fmt.Fprintln(os.Stderr, "usage: ordax-runtime-component-channel <generate-key|derive-trust|sign|verify-envelope|stage|verify-slot|arm-pending|record-health|promote-state|reject-pending|rollback-state|resolve-current|status> [options]")
 }
 
 func main() {
@@ -1243,6 +1243,20 @@ func main() {
 		err = stageCommand(os.Args[2:])
 	case "verify-slot":
 		err = verifySlotCommand(os.Args[2:])
+	case "arm-pending":
+		err = armPendingCommand(os.Args[2:])
+	case "record-health":
+		err = recordHealthCommand(os.Args[2:])
+	case "promote-state":
+		err = promoteStateCommand(os.Args[2:])
+	case "reject-pending":
+		err = rejectPendingCommand(os.Args[2:])
+	case "rollback-state":
+		err = rollbackStateCommand(os.Args[2:])
+	case "resolve-current":
+		err = resolveCurrentCommand(os.Args[2:])
+	case "status":
+		err = activationStatusCommand(os.Args[2:])
 	default:
 		usage()
 		os.Exit(2)
