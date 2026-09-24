@@ -469,3 +469,49 @@ func TestActivationLockAndCorruptStateFailClosed(t *testing.T) {
 		t.Fatal("corrupt activation state unexpectedly loaded")
 	}
 }
+
+func TestFailedPendingCannotBecomeHealthyWithoutRejection(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("a", 40))
+	if _, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root); err != nil {
+		t.Fatal(err)
+	}
+	identity := identityFromRelease(fixture.release)
+	state, err := recordPendingHealth(
+		fixture.root,
+		"internet",
+		identity,
+		"failed",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.PendingHealth != "failed" {
+		t.Fatalf("pending health = %q", state.PendingHealth)
+	}
+	if _, err := recordPendingHealth(
+		fixture.root,
+		"internet",
+		identity,
+		"healthy",
+	); err == nil || !strings.Contains(err.Error(), "must be rejected") {
+		t.Fatalf("failed -> healthy error = %v", err)
+	}
+	if _, err := promotePendingState(fixture.root, "internet", fixture.trustPath); err == nil {
+		t.Fatal("failed candidate unexpectedly promoted")
+	}
+}
+
+func TestRejectedIdentityCannotBeRearmed(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("b", 40))
+	if _, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root); err != nil {
+		t.Fatal(err)
+	}
+	identity := identityFromRelease(fixture.release)
+	if _, err := rejectPendingState(fixture.root, "internet", identity); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root); err == nil ||
+		!strings.Contains(err.Error(), "previously rejected") {
+		t.Fatalf("rearm rejected candidate error = %v", err)
+	}
+}
