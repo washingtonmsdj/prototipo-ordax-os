@@ -75,6 +75,103 @@ jobs:
           }
           Write-Host 'PORTABLE_V4_SIGNING_RUNBOOK_POWERSHELL_PARSE=PASS'
 
+      - name: Exercise canonical v4 proof receipt aggregator
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $work = Join-Path $env:RUNNER_TEMP 'canonical-v4-proof-test'
+          New-Item -ItemType Directory -Force -Path $work | Out-Null
+          $commit = '0123456789abcdef0123456789abcdef01234567'
+          $trust = Join-Path $work 'release-ed25519.json'
+          '{"schema":"test-trust"}' | Set-Content -LiteralPath $trust -Encoding UTF8
+          $trustSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $trust).Hash.ToLowerInvariant()
+          $manifestSha = 'a' * 64
+          $envelopeSha = 'b' * 64
+          $systemSha = 'c' * 64
+          $surfaceSha = 'd' * 64
+          $aiSha = 'e' * 64
+
+          $signed = [ordered]@{
+            schema = 'prototype-ordax.portable-v4-signed-handoff-verification/1'
+            source_commit = $commit
+            release_manifest_sha256 = $manifestSha
+            release_envelope_sha256 = $envelopeSha
+            canonical_trust_sha256 = $trustSha
+            artifacts = [ordered]@{
+              'system.erofs' = [ordered]@{ sha256 = $systemSha; size = 11 }
+              'native-surface-runtime.erofs' = [ordered]@{ sha256 = $surfaceSha; size = 22 }
+              'local-ai-runtime.erofs' = [ordered]@{ sha256 = $aiSha; size = 33 }
+            }
+            signature_verified_by_release_agent = $true
+            signed_payload_matches_manifest_bytes = $true
+            local_artifacts_match_signed_manifest = $true
+            release_published = $false
+            release_activated = $false
+            portable_materialization_performed = $false
+            physical_target_selected = $false
+            physical_write_authorized_by_this_step = $false
+            physical_write_performed = $false
+          }
+          $materialized = [ordered]@{
+            schema = 'prototype-ordax.portable-v4-canonical-materialization-verification/1'
+            source_commit = $commit
+            canonical_trust_sha256 = $trustSha
+            release_manifest_sha256 = $manifestSha
+            release_envelope_sha256 = $envelopeSha
+            artifacts = [ordered]@{
+              'system.erofs' = $systemSha
+              'native-surface-runtime.erofs' = $surfaceSha
+              'local-ai-runtime.erofs' = $aiSha
+            }
+            release_agent_materialize_portable_v4 = $true
+            release_agent_verify_portable_v4_exact = $true
+            current_pointer_created = $false
+            known_good_pointer_created = $false
+            candidate_created = $false
+            activation_transaction_created = $false
+            release_activated = $false
+            physical_target_selected = $false
+            physical_write_authorized_by_this_step = $false
+            physical_write_performed = $false
+          }
+
+          $signedPath = Join-Path $work 'signed.json'
+          $materializedPath = Join-Path $work 'materialized.json'
+          $proofPath = Join-Path $work 'proof.json'
+          $signed | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $signedPath -Encoding UTF8
+          $materialized | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $materializedPath -Encoding UTF8
+
+          & ./tools/release-signing/windows/7-Verify-PortableV4-Canonical-Proof.ps1 `
+            -ExpectedCommit $commit `
+            -SignedHandoffReceiptPath $signedPath `
+            -MaterializationReceiptPath $materializedPath `
+            -TrustPath $trust `
+            -ReceiptPath $proofPath
+
+          $proof = Get-Content -LiteralPath $proofPath -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ($proof.schema -cne 'prototype-ordax.portable-v4-canonical-release-proof/1') { throw 'proof schema mismatch' }
+          if ($proof.source_commit -cne $commit) { throw 'proof source commit mismatch' }
+          if ($proof.canonical_trust_sha256 -cne $trustSha) { throw 'proof trust mismatch' }
+          if ($proof.physical_write_authorized -ne $false -or $proof.physical_write_performed -ne $false) {
+            throw 'proof unexpectedly grants physical authority'
+          }
+
+          $materialized.artifacts.'system.erofs' = 'f' * 64
+          $tamperedPath = Join-Path $work 'materialized-tampered.json'
+          $materialized | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $tamperedPath -Encoding UTF8
+          $failedClosed = $false
+          try {
+            & ./tools/release-signing/windows/7-Verify-PortableV4-Canonical-Proof.ps1 `
+              -ExpectedCommit $commit `
+              -SignedHandoffReceiptPath $signedPath `
+              -MaterializationReceiptPath $tamperedPath `
+              -TrustPath $trust `
+              -ReceiptPath (Join-Path $work 'tampered-proof.json')
+          } catch {
+            $failedClosed = $true
+          }
+          if (-not $failedClosed) { throw 'tampered materialization receipt was accepted' }
+
       - name: Build signer and verifier candidates
         run: |
           set -euo pipefail
