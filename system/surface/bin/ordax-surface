@@ -1269,6 +1269,9 @@ export ORDAX_SURFACE_MODE=native-graphical
     --product-mode "$PRODUCT_MODE" \
     --distribution-profile "$DISTRIBUTION_PROFILE" \
     --native-install-capability "$NATIVE_INSTALL_CAPABILITY" \
+    --component-channel-bin /srv/ordax-system/bin/ordax-runtime-component-channel \
+    --component-trust /srv/ordax-system/trust/runtime-components-ed25519.json \
+    --component-slot-root /var/lib/ordax/components \
     --telemetry-config /srv/ordax-system/services/telemetry/relay.json \
     >"$HTTP_LOG" 2>&1 &
 HTTP_PID=$!

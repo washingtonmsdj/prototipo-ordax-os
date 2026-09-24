@@ -373,12 +373,15 @@ func resolveRuntimeSlot(root, componentID, trustPath, target string) (activation
 }
 
 func readVerifiedRuntimeFile(root, componentID, trustPath, target, requestedPath string) ([]byte, error) {
-	_, slot, manifest, bundled, err := resolveRuntimeSlot(root, componentID, trustPath, target)
+	state, slot, manifest, bundled, err := resolveRuntimeSlot(root, componentID, trustPath, target)
 	if err != nil {
 		return nil, err
 	}
 	if bundled {
 		return nil, errors.New("runtime component current source is bundled")
+	}
+	if target == "pending" && state.PendingHealth == "failed" {
+		return nil, errors.New("runtime component failed pending slot is not runtime-readable")
 	}
 	requested, err := safePackagePath(requestedPath)
 	if err != nil {
