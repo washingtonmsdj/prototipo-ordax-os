@@ -29,7 +29,7 @@
   "rollback_slot_activation_available": false,
   "publish_allowed": false,
   "internet_release_mode": "git-app",
-  "next_gate": "Add separate system-owned promotion/rejection policy after internal probation health is recorded; Internet remains git-app and component-slot publication/activation stay blocked until canonical component trust is pinned and promotion rollback proof passes",
+  "next_gate": "After canonical component trust is pinned, add a separate Native promotion/rejection executor that consumes only system policy decisions; keep Internet git-app and production slot activation blocked until promote+rollback proof passes",
   "activation_state_machine_available": true,
   "activation_state_atomic_current_previous_pending_rejected": true,
   "activation_state_revalidates_signed_slots": true,
@@ -91,5 +91,14 @@
   "runtime_health_bridge_promotes_candidate": false,
   "runtime_health_bridge_rejects_candidate": false,
   "runtime_health_bridge_rolls_back_candidate": false,
-  "runtime_health_bridge_records_exact_pending_revision": true
+  "runtime_health_bridge_records_exact_pending_revision": true,
+  "component_promotion_policy_available": true,
+  "component_promotion_policy_owner": "system/services/components/promotion-policy.mjs",
+  "component_promotion_policy_executes_actions": false,
+  "component_promotion_policy_failed_health_action": "reject",
+  "component_promotion_policy_unknown_health_action": "hold",
+  "component_promotion_policy_requires_component_slot_for_promote": true,
+  "component_promotion_policy_requires_canonical_trust_for_promote": true,
+  "component_promotion_policy_requires_activation_gate_for_promote": true,
+  "component_promotion_policy_healthy_git_app_action": "hold"
 }

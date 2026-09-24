@@ -111,6 +111,19 @@ class RuntimeComponentPackageTests(unittest.TestCase):
         self.assertFalse(policy["runtime_health_bridge_rejects_candidate"])
         self.assertFalse(policy["runtime_health_bridge_rolls_back_candidate"])
         self.assertTrue(policy["runtime_health_bridge_records_exact_pending_revision"])
+        self.assertTrue(policy["component_promotion_policy_available"])
+        self.assertEqual(
+            policy["component_promotion_policy_owner"],
+            "system/services/components/promotion-policy.mjs",
+        )
+        self.assertFalse(policy["component_promotion_policy_executes_actions"])
+        self.assertEqual(policy["component_promotion_policy_failed_health_action"], "reject")
+        self.assertEqual(policy["component_promotion_policy_unknown_health_action"], "hold")
+        self.assertTrue(policy["component_promotion_policy_requires_component_slot_for_promote"])
+        self.assertTrue(policy["component_promotion_policy_requires_canonical_trust_for_promote"])
+        self.assertTrue(policy["component_promotion_policy_requires_activation_gate_for_promote"])
+        self.assertEqual(policy["component_promotion_policy_healthy_git_app_action"], "hold")
+        self.assertFalse(policy["pending_health_promotion_available"])
         self.assertTrue(policy["promotion_requires_exact_revision"])
         self.assertTrue(policy["promotion_requires_exact_pending_identity"])
         self.assertTrue(policy["promotion_idempotent_same_decision"])
