@@ -33,7 +33,10 @@ class LocalAiBaselineTests(unittest.TestCase):
                 "$schema": "prototype-ordax.local-ai-benchmark/1",
                 "engineId": "llama.cpp",
                 "modelId": "qwen-test",
-                "summary": {"median_wall_tokens_per_second": 12.5},
+                "summary": {
+                    "median_latency_ms": 250.0,
+                    "median_wall_tokens_per_second": 12.5,
+                },
                 "release_gate": False,
                 "tuning_applied": False,
             }
@@ -75,6 +78,34 @@ class LocalAiBaselineTests(unittest.TestCase):
         hardware, benchmark = self.modules(benchmark_error=RuntimeError("backend unavailable"))
         with patch.object(BASELINE, "load_module", side_effect=[hardware, benchmark]):
             with self.assertRaisesRegex(BASELINE.BaselineError, "benchmark failed: backend unavailable"):
+                BASELINE.build_baseline()
+
+    def test_rejects_incompatible_hardware_schema(self):
+        hardware, benchmark = self.modules()
+        hardware.probe_system = lambda: {
+            "$schema": "prototype-ordax.local-ai-hardware-probe/999",
+            "runtime_compatible": True,
+            "start_blockers": [],
+        }
+        with patch.object(BASELINE, "load_module", side_effect=[hardware, benchmark]):
+            with self.assertRaisesRegex(BASELINE.BaselineError, "incompatible result"):
+                BASELINE.build_baseline()
+
+    def test_rejects_promotional_or_tuned_benchmark_result(self):
+        hardware, benchmark = self.modules()
+        benchmark.benchmark = lambda *args, **kwargs: {
+            "$schema": "prototype-ordax.local-ai-benchmark/1",
+            "engineId": "llama.cpp",
+            "modelId": "qwen-test",
+            "summary": {
+                "median_latency_ms": 250.0,
+                "median_wall_tokens_per_second": 12.5,
+            },
+            "release_gate": True,
+            "tuning_applied": True,
+        }
+        with patch.object(BASELINE, "load_module", side_effect=[hardware, benchmark]):
+            with self.assertRaisesRegex(BASELINE.BaselineError, "non-promotional and untuned"):
                 BASELINE.build_baseline()
 
 
