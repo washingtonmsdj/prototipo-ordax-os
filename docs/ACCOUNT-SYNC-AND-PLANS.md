@@ -16,6 +16,18 @@ Native
 
 The account owns identity, entitlements and synchronized user state. A device owns only device-local state and secrets.
 
+## Spaces and professional Profile Packs
+
+The account profile identifies the user. **Spaces** organize contexts of work, projects, memory and future collaboration.
+
+A professional profile such as Developer, Creator, Business or Legal is modeled as a versioned **Profile Pack applied to a Space**, not as another user identity and not as another operating system.
+
+Profile Pack categories are not paid merely because of their name. Future plans may monetize measurable ecosystem value such as additional active Spaces, shared membership, cloud memory/history, sync/backup capacity, external-model compute, connectors, automations and support.
+
+The pre-MVP foundation carries a **provisional two-private-Space default** for the free experience. This is a product-capacity default, not a frozen price or final commercial tier.
+
+Profile Packs may compose apps, templates, knowledge-source policy and Intelligence defaults, but they cannot grant privileges, bypass app signature verification or bypass entitlement checks.
+
 ## Cross-device continuity — future architecture
 
 Cross-device synchronization is **not an active MVP capability**. Web, Mobile, synchronization, backup and continuity may be communicated only as **Em breve** until real services exist.
