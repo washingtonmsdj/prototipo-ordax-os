@@ -36,6 +36,17 @@ class BranchHygieneWorkflowTests(unittest.TestCase):
             self.text,
         )
 
+    def test_closed_unmerged_prune_requires_exact_closed_head_and_no_open_pr(self):
+        self.assertIn("latest_closed_unmerged = {}", self.text)
+        self.assertIn('if pr.get("merged_at") or not head_repo:', self.text)
+        self.assertIn(
+            'preserve = {"main", "ordax-rescue"} | open_heads',
+            self.text,
+        )
+        self.assertIn('if current_sha != closed_head_sha:', self.text)
+        self.assertIn("changed_after_close.append(ref)", self.text)
+        self.assertIn("Deleted closed-unmerged branch: $ref", self.text)
+
     def test_general_prune_deletes_only_fully_contained_heads(self):
         self.assertIn('if int(compare.get("ahead_by", 1)) == 0:', self.text)
         self.assertIn("candidates.append(ref)", self.text)
