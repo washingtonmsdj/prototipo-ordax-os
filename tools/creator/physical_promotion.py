@@ -11,13 +11,16 @@ from pathlib import Path
 import re
 import stat
 from typing import Any
+from urllib.parse import urlsplit
 
-AUTH_SCHEMA = "prototype-ordax.physical-write-authorization/2"
+AUTH_SCHEMA = "prototype-ordax.physical-write-authorization/3"
 MINIMAL_SCHEMA = "prototype-ordax.minimal-bootstrap/4"
 TRUST_POLICY_SCHEMA = "prototype-ordax.release-trust-policy/1"
 TRUST_SCHEMA = "prototype-ordax.release-trust/1"
 PORTABLE_USB_SCHEMA = "prototype-ordax.portable-usb-v2/1"
 CREATOR_PORTABLE_SCHEMA = "prototype-ordax.creator-portable-media-plan/1"
+CANONICAL_V4_PROOF_SCHEMA = "prototype-ordax.portable-v4-canonical-release-proof/1"
+CANONICAL_V4_PROOF_PATH = Path("docs/evidence/canonical-v4-release-proof.json")
 KEY_ID = "ordax-prototype-release-v1"
 REPOSITORY = "washingtonmsdj/prototipo-ordax-os"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -32,6 +35,7 @@ AUTHORIZATION_CONTEXT_PATTERNS = (
     ".github/workflows/physical-write-promotion.yml",
     "tools/creator/physical_promotion.py",
     "tools/creator/authorize_physical_write.py",
+    "tools/creator/bind_canonical_v4_release_proof.py",
     "tools/creator/go.*",
     "tools/creator/core/*.go",
     "tools/creator/host/windows/*.go",
@@ -43,6 +47,7 @@ AUTHORIZATION_CONTEXT_PATTERNS = (
 
 REQUIRED_AUTHORIZATION_REQUIREMENTS = {
     "canonical_public_trust_pinned",
+    "canonical_v4_release_proof_bound",
     "minimal_bootstrap_all_artifacts_resolved",
     "minimal_bootstrap_remains_non_destructive",
     "portable_usb_contract_canonical",
@@ -159,6 +164,97 @@ def _add(blockers: list[str], condition: bool, label: str) -> None:
         blockers.append(label)
 
 
+def _canonical_v4_release_proof(
+    repo_root: Path,
+    expected_trust_sha256: str | None,
+) -> tuple[bool, dict[str, Any] | None, str | None]:
+    path = repo_root.resolve() / CANONICAL_V4_PROOF_PATH
+    try:
+        metadata = path.lstat()
+    except OSError:
+        return False, None, None
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+        return False, None, None
+    try:
+        proof = load_json(path)
+    except PromotionError:
+        return False, None, None
+
+    source_commit = proof.get("source_commit")
+    canonical_url = proof.get("canonical_envelope_url")
+    trust_sha = proof.get("canonical_trust_sha256")
+    manifest_sha = proof.get("release_manifest_sha256")
+    envelope_sha = proof.get("release_envelope_sha256")
+    signed_receipt_sha = proof.get("signed_handoff_receipt_sha256")
+    material_receipt_sha = proof.get("canonical_materialization_receipt_sha256")
+    artifacts = proof.get("artifacts")
+
+    url_ok = False
+    if isinstance(canonical_url, str):
+        try:
+            parsed = urlsplit(canonical_url)
+            url_ok = all(
+                [
+                    parsed.scheme == "https",
+                    bool(parsed.hostname),
+                    parsed.username is None,
+                    parsed.password is None,
+                    parsed.query == "",
+                    parsed.fragment == "",
+                ]
+            )
+        except ValueError:
+            url_ok = False
+
+    artifact_names = {
+        "system.erofs",
+        "native-surface-runtime.erofs",
+        "local-ai-runtime.erofs",
+    }
+    artifacts_ok = isinstance(artifacts, dict) and set(artifacts) == artifact_names
+    if artifacts_ok:
+        for name in sorted(artifact_names):
+            entry = artifacts.get(name)
+            size = entry.get("size") if isinstance(entry, dict) else None
+            sha = entry.get("sha256") if isinstance(entry, dict) else None
+            if (
+                not isinstance(entry, dict)
+                or HEX64.fullmatch(str(sha or "")) is None
+                or isinstance(size, bool)
+                or not isinstance(size, int)
+                or size <= 0
+            ):
+                artifacts_ok = False
+                break
+
+    valid = all(
+        [
+            proof.get("schema") == CANONICAL_V4_PROOF_SCHEMA,
+            isinstance(source_commit, str)
+            and re.fullmatch(r"[0-9a-f]{40}", source_commit) is not None,
+            url_ok,
+            isinstance(expected_trust_sha256, str),
+            trust_sha == expected_trust_sha256,
+            HEX64.fullmatch(str(manifest_sha or "")) is not None,
+            HEX64.fullmatch(str(envelope_sha or "")) is not None,
+            HEX64.fullmatch(str(signed_receipt_sha or "")) is not None,
+            HEX64.fullmatch(str(material_receipt_sha or "")) is not None,
+            artifacts_ok,
+            proof.get("signed_handoff_verified") is True,
+            proof.get("canonical_materialization_verified") is True,
+            proof.get("release_activated") is False,
+            proof.get("physical_target_selected") is False,
+            proof.get("physical_write_authorized") is False,
+            proof.get("physical_write_performed") is False,
+        ]
+    )
+    return (
+        valid,
+        proof if valid else None,
+        sha256_file(path) if valid else None,
+    )
+
+
 def _portable_contract_ok(portable: dict[str, Any]) -> bool:
     partitions = portable.get("partitions")
     if not isinstance(partitions, list) or len(partitions) != 2:
@@ -272,6 +368,7 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
     portable_path = root / "docs/contracts/portable-usb-v2.json"
     creator_portable_path = root / "docs/contracts/creator-portable-media-plan.json"
     trust_path = root / "bootstrap/trust/release-ed25519.json"
+    canonical_v4_proof_path = root / CANONICAL_V4_PROOF_PATH
 
     auth = load_json(auth_path)
     minimal = load_json(minimal_path)
@@ -386,6 +483,15 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
                 )
         _add(blockers, trust_group_ok, "minimal-bootstrap-trust-binding-invalid")
 
+    canonical_v4_proof_valid, canonical_v4_proof, canonical_v4_proof_sha = (
+        _canonical_v4_release_proof(root, trust_sha)
+    )
+    _add(
+        blockers,
+        canonical_v4_proof_valid,
+        "canonical-v4-release-proof-missing-or-invalid",
+    )
+
     minimal_sha = sha256_file(minimal_path)
     portable_sha = sha256_file(portable_path)
     creator_portable_sha = sha256_file(creator_portable_path)
@@ -425,6 +531,7 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
             "release_trust_sha256": trust_sha,
             "portable_usb_contract_sha256": portable_sha,
             "creator_portable_media_contract_sha256": creator_portable_sha,
+            "canonical_v4_release_proof_sha256": canonical_v4_proof_sha,
         }
         bindings_resolved = (
             set(bindings) == set(expected_bindings)
@@ -438,6 +545,36 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
         blockers,
         bindings_resolved,
         "physical-authorization-bindings-unresolved",
+    )
+
+    release_binding = auth.get("release_binding")
+    release_binding_resolved = False
+    if isinstance(release_binding, dict) and canonical_v4_proof is not None:
+        release_binding_resolved = (
+            set(release_binding)
+            == {
+                "proof_path",
+                "proof_schema",
+                "source_commit",
+                "canonical_envelope_url",
+                "release_manifest_sha256",
+                "release_envelope_sha256",
+            }
+            and release_binding.get("proof_path") == CANONICAL_V4_PROOF_PATH.as_posix()
+            and release_binding.get("proof_schema") == CANONICAL_V4_PROOF_SCHEMA
+            and release_binding.get("source_commit")
+            == canonical_v4_proof.get("source_commit")
+            and release_binding.get("canonical_envelope_url")
+            == canonical_v4_proof.get("canonical_envelope_url")
+            and release_binding.get("release_manifest_sha256")
+            == canonical_v4_proof.get("release_manifest_sha256")
+            and release_binding.get("release_envelope_sha256")
+            == canonical_v4_proof.get("release_envelope_sha256")
+        )
+    _add(
+        blockers,
+        release_binding_resolved,
+        "canonical-v4-release-binding-unresolved",
     )
 
     blockers = sorted(set(blockers))
@@ -466,6 +603,11 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
         "owner_authorization_required": pre_authorization_ready and not ready,
         "authorized_candidate_materialization_allowed": ready,
         "physical_authorization_bindings_resolved": bindings_resolved,
+        "canonical_v4_release_proof_valid": canonical_v4_proof_valid,
+        "canonical_v4_release_proof_sha256": canonical_v4_proof_sha,
+        "canonical_v4_release_binding_resolved": release_binding_resolved,
+        "canonical_v4_release_source_commit": canonical_v4_proof.get("source_commit") if canonical_v4_proof else None,
+        "canonical_v4_release_envelope_url": canonical_v4_proof.get("canonical_envelope_url") if canonical_v4_proof else None,
         "computed_authorization_context_sha256": authorization_context_sha,
         "authorization_context_file_count": authorization_context_file_count,
         "authorization_context_matches_current_source": (
@@ -478,6 +620,7 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
             "release_trust_sha256": trust_sha,
             "portable_usb_contract_sha256": portable_sha,
             "creator_portable_media_contract_sha256": creator_portable_sha,
+            "canonical_v4_release_proof_sha256": canonical_v4_proof_sha,
         },
         "release_sequence": release_sequence if sequence_ok else None,
         "portable_layout_authority": "tools/creator/core/portable_media.go",
