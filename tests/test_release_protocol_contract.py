@@ -169,7 +169,14 @@ class ReleaseProtocolContractTests(unittest.TestCase):
         self.assertTrue(portable["verified_runtime_reuse"])
         self.assertTrue(portable["offline_exact_verification_support"])
         self.assertFalse(portable["activation_support"])
-        self.assertFalse(portable["boot_handoff_support"])
+        self.assertTrue(portable["boot_handoff_support"])
+        self.assertTrue(portable["supervisor_update_lifecycle_support"])
+        self.assertTrue(portable["supervisor_inspect_manifest_schema_required"])
+        self.assertTrue(portable["pre_v4_current_may_use_v3_compatibility"])
+        self.assertFalse(portable["v4_to_v3_downgrade_allowed"])
+        self.assertEqual(portable["candidate_activation_owner"], "ordax-portable-state")
+        self.assertTrue(portable["candidate_cold_health_required"])
+        self.assertTrue(portable["failed_candidate_rollback_offline"])
         self.assertFalse(portable["production_publication_allowed"])
         self.assertFalse(portable["physical_write_authority_granted"])
         self.assertTrue(portable["real_local_ai_runtime_artifact_built"])
@@ -306,6 +313,7 @@ class ReleaseProtocolContractTests(unittest.TestCase):
         self.assertTrue(rules["new_release_schema_requires_acquisition_agent_support"])
         self.assertTrue(rules["new_release_schema_requires_cross_component_regression"])
         self.assertTrue(rules["new_trust_transition_requires_explicit_protocol"])
+        self.assertTrue(rules["local_ai_runtime_multi_artifact_requires_manifest_v4"])
 
     def test_protocol_owners_are_single_named_boundaries(self):
         owners = self.load_contract()["owners"]
