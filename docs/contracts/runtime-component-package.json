@@ -29,7 +29,7 @@
   "rollback_slot_activation_available": false,
   "publish_allowed": false,
   "internet_release_mode": "git-app",
-  "next_gate": "Pin canonical runtime-component public trust, then connect the probation result to a Native health recorder for the exact pending identity; promotion/rejection remain separate authority",
+  "next_gate": "Expose a narrowly scoped Native health bridge for trusted system probation receipts; promotion/rejection remain separate authority",
   "activation_state_machine_available": true,
   "activation_state_atomic_current_previous_pending_rejected": true,
   "activation_state_revalidates_signed_slots": true,
@@ -62,5 +62,8 @@
   "relative_module_imports_preserve_identity_namespace": true,
   "pending_probation_loader_promotes_candidate": false,
   "pending_probation_loader_mutates_component_state": false,
-  "pending_probation_loader_requires_unknown_pending_health": true
+  "pending_probation_loader_requires_unknown_pending_health": true,
+  "pending_health_record_requires_exact_revision": true,
+  "pending_health_record_idempotent_same_receipt": true,
+  "pending_health_record_rejects_stale_receipt": true
 }
