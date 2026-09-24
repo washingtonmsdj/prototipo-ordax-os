@@ -27,7 +27,7 @@ type PortableApplicationSource struct {
 }
 
 // PortableApplicationRuntime is the only host-specific boundary needed to
-// execute the canonical 35-operation plan. Implementations must not replan
+// execute the canonical 39-operation plan. Implementations must not replan
 // geometry, target paths, artifact order, digests, or sizes.
 type PortableApplicationRuntime interface {
 	WriteGPT(partitions []PortableApplicationPartition, targetBytes uint64) error
@@ -96,9 +96,9 @@ func validatePortableApplicationPlanForExecution(plan PortableApplicationPlan) e
 		}
 	}
 
-	const artifactCount = 15
+	const artifactCount = 17
 	if len(plan.Operations) != 3+artifactCount+1+artifactCount+1 {
-		return fmt.Errorf("portable application execution requires 35 operations; got=%d", len(plan.Operations))
+		return fmt.Errorf("portable application execution requires 39 operations; got=%d", len(plan.Operations))
 	}
 	expectedPrefix := []struct {
 		kind string
@@ -169,7 +169,7 @@ func validatePortableApplicationPlanForExecution(plan PortableApplicationPlan) e
 		readbacks[op.ArtifactID] = op
 	}
 	if len(materialized) != artifactCount || len(readbacks) != artifactCount {
-		return errors.New("portable application does not bind exactly 15 artifact materializations and readbacks")
+		return errors.New("portable application does not bind exactly 17 artifact materializations and readbacks")
 	}
 
 	finalIndex := len(plan.Operations) - 1
@@ -184,8 +184,8 @@ func validatePortableApplicationPlanForExecution(plan PortableApplicationPlan) e
 }
 
 func sourceMapForPortableExecution(plan PortableApplicationPlan, sources []PortableApplicationSource) (map[string]PortableApplicationSource, error) {
-	if len(sources) != 15 {
-		return nil, fmt.Errorf("portable application execution requires exactly 15 sources; got=%d", len(sources))
+	if len(sources) != 17 {
+		return nil, fmt.Errorf("portable application execution requires exactly 17 sources; got=%d", len(sources))
 	}
 	expected := map[string]PortableApplicationOperation{}
 	for _, op := range plan.Operations {
