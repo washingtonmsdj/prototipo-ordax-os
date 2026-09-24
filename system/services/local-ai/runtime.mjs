@@ -59,6 +59,20 @@ function discoveredModelId(value) {
   }
 }
 
+function singleDiscoveredModelId(payload) {
+  const models = payload?.data;
+  if (
+    !Array.isArray(models)
+    || models.length !== 1
+    || !models[0]
+    || typeof models[0] !== "object"
+    || Array.isArray(models[0])
+  ) {
+    return null;
+  }
+  return discoveredModelId(models[0].id);
+}
+
 function declaredContentLength(response) {
   const raw = response?.headers?.get?.("content-length");
   if (typeof raw !== "string" || !/^\d+$/.test(raw.trim())) return null;
@@ -259,7 +273,7 @@ export function createLocalAiRuntime({
       LOCAL_AI_MAX_MODEL_DISCOVERY_BYTES,
     );
     if (!response.ok) return null;
-    return discoveredModelId(payload?.data?.[0]?.id);
+    return singleDiscoveredModelId(payload);
   };
 
   const revalidateAfterInferenceFailure = async () => {
