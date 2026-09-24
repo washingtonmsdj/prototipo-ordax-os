@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import sys
 from pathlib import Path
 import unittest
 
@@ -11,6 +12,7 @@ CONTRACT_PATH = ROOT / "docs" / "contracts" / "product-project-gateway.json"
 spec = importlib.util.spec_from_file_location("ordax_product_project_gateway", GATEWAY_PATH)
 gateway_module = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
+sys.modules[spec.name] = gateway_module
 spec.loader.exec_module(gateway_module)
 
 ProductProjectGateway = gateway_module.ProductProjectGateway
