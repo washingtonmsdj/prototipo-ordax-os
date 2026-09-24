@@ -93,7 +93,24 @@ class RuntimeComponentPackageTests(unittest.TestCase):
         self.assertFalse(policy["pending_probation_loader_promotes_candidate"])
         self.assertFalse(policy["pending_probation_loader_mutates_component_state"])
         self.assertTrue(policy["pending_probation_loader_requires_unknown_pending_health"])
-        self.assertFalse(policy["runtime_health_bridge_available"])
+        self.assertTrue(policy["runtime_health_bridge_available"])
+        self.assertEqual(policy["runtime_health_bridge_owner"], "ordax_browser_host")
+        self.assertEqual(
+            policy["runtime_health_bridge_transport"],
+            "native-webkit-message-nonce",
+        )
+        self.assertEqual(
+            policy["runtime_health_bridge_probe_registry"],
+            "system/services/components/probation-orchestrator.mjs",
+        )
+        self.assertEqual(policy["runtime_health_bridge_supported_components"], ["internet"])
+        self.assertEqual(policy["runtime_health_bridge_probe_mode"], "import-contract")
+        self.assertTrue(policy["runtime_health_bridge_requires_host_nonce"])
+        self.assertFalse(policy["runtime_health_bridge_exposed_over_http"])
+        self.assertFalse(policy["runtime_health_bridge_promotes_candidate"])
+        self.assertFalse(policy["runtime_health_bridge_rejects_candidate"])
+        self.assertFalse(policy["runtime_health_bridge_rolls_back_candidate"])
+        self.assertTrue(policy["runtime_health_bridge_records_exact_pending_revision"])
         self.assertTrue(policy["promotion_requires_exact_revision"])
         self.assertTrue(policy["promotion_requires_exact_pending_identity"])
         self.assertTrue(policy["promotion_idempotent_same_decision"])

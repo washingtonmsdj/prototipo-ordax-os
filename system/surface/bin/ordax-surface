@@ -1285,6 +1285,8 @@ START_URI="http://127.0.0.1:8765/composition/native/index.html?source=$SOURCE_SH
     /usr/bin/seatd-launch -- /usr/bin/cage -s -- \
     /usr/bin/python3 /srv/ordax-system/surface/runtime/ordax_browser_host.py \
     --start-uri "$START_URI" --profile-root /var/lib/ordax-user/browser \
+    --component-channel-bin /srv/ordax-system/bin/ordax-runtime-component-channel \
+    --component-slot-root /var/lib/ordax/components \
     >"$HOST_LOG" 2>&1 &
 GRAPHICS_PID=$!
 host_rc=0
