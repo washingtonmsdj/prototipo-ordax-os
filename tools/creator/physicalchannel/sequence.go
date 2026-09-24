@@ -88,11 +88,11 @@ func ReleaseSequence(installed Installed) (int64, error) {
 	if provenance.PortableApplicationPlanSchema != "prototype-ordax.portable-application-plan/1" {
 		return 0, errors.New("physical provenance Portable application plan schema is invalid")
 	}
-	if provenance.PortableApplicationOperationCount != 35 {
-		return 0, errors.New("physical provenance Portable operation count must be 35")
+	if provenance.PortableApplicationOperationCount != 39 {
+		return 0, errors.New("physical provenance Portable operation count must be 39")
 	}
-	if provenance.PortableArtifactCount != 15 {
-		return 0, errors.New("physical provenance Portable artifact count must be 15")
+	if provenance.PortableArtifactCount != 17 {
+		return 0, errors.New("physical provenance Portable artifact count must be 17")
 	}
 	if !provenance.PerArtifactReadbackSHA256Size {
 		return 0, errors.New("physical provenance must require per-artifact SHA-256 and size readback")
