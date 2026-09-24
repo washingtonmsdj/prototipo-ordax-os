@@ -139,6 +139,45 @@ class NativeComponentSlotTests(unittest.TestCase):
         self.assertEqual(resolution.entrypoint, "system/apps/internet/runtime.mjs")
         self.assertEqual(resolution.slot, slot_path)
 
+    def test_component_module_path_binds_exact_identity_and_package_path(self):
+        commit = "7" * 40
+        request = slots.parse_component_module_path(
+            "/__ordax/native/component-module/internet/pending/0.4.0/"
+            + commit
+            + "/system/apps/internet/runtime.mjs"
+        )
+        self.assertEqual(request.component_id, "internet")
+        self.assertEqual(request.state, "pending")
+        self.assertEqual(request.version, "0.4.0")
+        self.assertEqual(request.source_commit, commit)
+        self.assertEqual(
+            request.requested_path,
+            "system/apps/internet/runtime.mjs",
+        )
+
+    def test_component_module_path_rejects_encoded_or_traversal_forms(self):
+        commit = "7" * 40
+        bad = (
+            "/__ordax/native/component-module/internet/pending/0.4.0/"
+            + commit
+            + "/system/apps/internet/%2e%2e/runtime.mjs",
+            "/__ordax/native/component-module/internet/pending/0.4.0/"
+            + commit
+            + "/system/apps/../runtime.mjs",
+            "/__ordax/native/component-module/internet/pending/not-semver/"
+            + commit
+            + "/system/apps/internet/runtime.mjs",
+            "/__ordax/native/component-module/internet/pending/0.4.0/not-a-sha/"
+            "system/apps/internet/runtime.mjs",
+            "/__ordax/native/component-module/notes/pending/0.4.0/"
+            + commit
+            + "/system/apps/notes/runtime.mjs",
+        )
+        for path in bad:
+            with self.subTest(path=path):
+                with self.assertRaises(slots.ComponentSlotRequestError):
+                    slots.parse_component_module_path(path)
+
     def test_runtime_file_read_uses_fixed_argv_and_returns_only_verified_stdout(self):
         payload = b'export const componentRuntime = { schema: "ordax.component-runtime/1" };\n'
         completed = subprocess.CompletedProcess([], 0, stdout=payload, stderr=b"")
