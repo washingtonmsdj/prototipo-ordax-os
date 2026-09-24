@@ -1,0 +1,34 @@
+{
+  "$schema": "prototype-ordax.public-auth-hardening/1",
+  "status": "public-auth-disabled-hardening-pending",
+  "target": {
+    "provider": "supabase",
+    "project_name": "ordax-control-plane",
+    "project_ref": "eobcxuyvhkvdmkbaihwh"
+  },
+  "required_before_public_login": {
+    "leaked_password_protection_enabled": true,
+    "password_policy_reviewed": true,
+    "email_confirmation_policy_reviewed": true,
+    "redirect_allowlist_reviewed": true,
+    "same_origin_session_owner_deployed": true,
+    "secure_http_only_cookie_policy": true,
+    "csrf_state_change_protection": true,
+    "auth_rate_limits_reviewed": true,
+    "account_recovery_flow_tested": true,
+    "session_revocation_tested": true,
+    "privacy_terms_ready": true
+  },
+  "current_observation": {
+    "source": "supabase-security-advisor",
+    "observed_date": "2026-09-24",
+    "leaked_password_protection": "disabled-warn",
+    "public_login_enabled": false
+  },
+  "rules": {
+    "public_login_must_fail_closed_until_all_required_gates_pass": true,
+    "service_role_key_in_browser_allowed": false,
+    "provider_tokens_in_ordax_memory_allowed": false,
+    "provider_secrets_in_public_product_tables_allowed": false
+  }
+}
