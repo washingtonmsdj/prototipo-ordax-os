@@ -10,6 +10,8 @@ $ErrorActionPreference = 'Stop'
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Signer = Join-Path $ScriptRoot 'ordax-runtime-component-channel.exe'
 $FinalizerPath = $MyInvocation.MyCommand.Path
+$PolicyPath = Join-Path $ScriptRoot 'component-trust-policy.json'
+$CeremonyDocPath = Join-Path $ScriptRoot 'COMPONENT-TRUST-CEREMONY.md'
 $KeyId = 'ordax-runtime-components-v1'
 
 if ([string]::IsNullOrWhiteSpace($ToolkitProvenancePath)) {
@@ -45,6 +47,8 @@ function Assert-OutsideToolkit([string]$Path, [string]$Label) {
 Assert-RegularFile $Signer 'component signer'
 Assert-RegularFile $ToolkitProvenancePath 'toolkit provenance'
 Assert-RegularFile $FinalizerPath 'component trust recovery finalizer'
+Assert-RegularFile $PolicyPath 'component trust policy'
+Assert-RegularFile $CeremonyDocPath 'component trust ceremony document'
 Assert-RegularFile $PrimaryPrivateKeyPath 'primary component private key'
 Assert-RegularFile $RecoveredPrivateKeyPath 'recovered component private key'
 Assert-OutsideToolkit $PrimaryPrivateKeyPath 'Primary private key'
@@ -71,10 +75,28 @@ if ($SourceCommit -notmatch '^[0-9a-f]{40}$') {
 }
 $ExpectedSignerSha = [string]$Provenance.components.component_signer.sha256
 $ExpectedFinalizerSha = [string]$Provenance.components.trust_recovery_finalizer.sha256
+$ExpectedPolicySha = [string]$Provenance.policy_sha256
+$ExpectedCeremonyDocSha = [string]$Provenance.ceremony_doc_sha256
 $ActualSignerSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $Signer).Hash.ToLowerInvariant()
 $ActualFinalizerSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $FinalizerPath).Hash.ToLowerInvariant()
-if ($ActualSignerSha -ne $ExpectedSignerSha -or $ActualFinalizerSha -ne $ExpectedFinalizerSha) {
-    throw 'Component trust recovery toolkit bytes do not match provenance.'
+$ActualPolicySha = (Get-FileHash -Algorithm SHA256 -LiteralPath $PolicyPath).Hash.ToLowerInvariant()
+$ActualCeremonyDocSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $CeremonyDocPath).Hash.ToLowerInvariant()
+if ($ActualSignerSha -ne $ExpectedSignerSha -or
+    $ActualFinalizerSha -ne $ExpectedFinalizerSha -or
+    $ActualPolicySha -ne $ExpectedPolicySha -or
+    $ActualCeremonyDocSha -ne $ExpectedCeremonyDocSha) {
+    throw 'Component trust recovery toolkit/policy bytes do not match provenance.'
+}
+
+$Policy = Get-Content -LiteralPath $PolicyPath -Raw | ConvertFrom-Json
+if ($Policy.'$schema' -ne 'prototype-ordax.runtime-component-trust-policy/1' -or
+    $Policy.status -ne 'operator-ceremony-pending' -or
+    $Policy.key_id -ne $KeyId -or
+    $Policy.public_anchor.pinned -ne $false -or
+    $Policy.separation.whole_os_release_key_reuse_allowed -ne $false -or
+    $Policy.current_gates.component_publish_allowed -ne $false -or
+    $Policy.current_gates.production_component_slot_activation_allowed -ne $false) {
+    throw 'Component trust recovery policy is not the expected fail-closed pre-promotion policy.'
 }
 
 $ReviewDirectory = [IO.Path]::GetFullPath($ReviewDirectory)
