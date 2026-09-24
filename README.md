@@ -175,7 +175,7 @@ PUBLIC_PHYSICAL_USB_WRITE=NO
 PHYSICAL_WRITE_AUTHORIZED=NO
 ```
 
-O backend Win32 de escrita RAW e o fluxo `physical-test` ja existem para prova controlada, inclusive readback/verificacao e preparacao do espaco. Isso **nao** equivale a disponibilizar `apply` no Creator publico: o binario publico continua sem o backend destrutivo e a promocao fisica permanece bloqueada ate trust, bindings e autorizacao canonica estarem fechados.
+O backend Win32 de escrita RAW e o writer Portable interno ja existem para prova controlada, com revalidacao do alvo, UAC e readback por artefato. Isso **nao** equivale a disponibilizar `apply` no Creator publico: o trust público canônico já está pinado, mas a promoção física permanece bloqueada até o `canonical-v4-release-proof.json` real ser produzido/vinculado e uma nova autorização explícita ser emitida para o contexto atual de 17 artefatos / 39 operações.
 
 ## Desenvolvimento
 
