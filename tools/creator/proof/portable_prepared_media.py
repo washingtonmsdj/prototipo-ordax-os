@@ -327,7 +327,7 @@ def prove(plan_path: Path, source_values: list[str], output: Path, proof_path: P
         data_mounted = True
         copy_and_verify(plan, sources, {"ORDAX-ESP": esp_mount, "ORDAX-DATA": data_mount})
         os.sync()
-        checks["all_15_artifacts_materialized_from_core_targets"] = True
+        checks["all_17_artifacts_materialized_from_core_targets"] = True
 
         unmount(data_mount); data_mounted = False
         unmount(esp_mount); esp_mounted = False
