@@ -1,0 +1,31 @@
+{
+  "$schema": "prototype-ordax.model-router/1",
+  "status": "pre-mvp-foundation",
+  "owner": "system/services/intelligence",
+  "stable_port": "ordax.model-router/1",
+  "intelligence_port": "ordax.intelligence/1",
+  "local_backend_port": "ordax.local-ai/1",
+  "providers": {
+    "local": {
+      "enabled_in_mvp": true,
+      "network_required": false
+    },
+    "openai": {
+      "prepared": true,
+      "enabled_in_mvp": false
+    },
+    "xai": {
+      "prepared": true,
+      "enabled_in_mvp": false
+    }
+  },
+  "rules": {
+    "surface_imports_provider_sdk": false,
+    "memory_is_provider_owned": false,
+    "provider_credentials_in_prompt_or_memory_allowed": false,
+    "route_may_change_without_surface_rewrite": true,
+    "external_egress_requires_policy_and_user_visibility": true,
+    "professional_profile_may_set_preferences_but_not_bypass_authorization": true,
+    "local_ai_remains_available_when_cloud_provider_unavailable": true
+  }
+}
