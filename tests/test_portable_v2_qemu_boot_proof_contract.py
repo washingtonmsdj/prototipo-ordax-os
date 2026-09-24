@@ -145,6 +145,22 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
             ],
         )
 
+    def test_local_ai_build_isolated_before_broad_qemu_dependencies(self):
+        minimal = "Install bounded local AI build dependencies"
+        ai = "Build and verify exact local AI runtime"
+        broad = "Install remaining portable-v2 build and QEMU proof dependencies"
+        kernel = "Build exact kernel and kernel modules"
+        for marker in (minimal, ai, broad, kernel):
+            self.assertIn(marker, WORKFLOW)
+        self.assertLess(WORKFLOW.index(minimal), WORKFLOW.index(ai))
+        self.assertLess(WORKFLOW.index(ai), WORKFLOW.index(broad))
+        self.assertLess(WORKFLOW.index(broad), WORKFLOW.index(kernel))
+        before_ai = WORKFLOW[: WORKFLOW.index(ai)]
+        self.assertNotIn("libcap-dev", before_ai)
+        self.assertNotIn("libmount-dev", before_ai)
+        self.assertNotIn("libblkid-dev", before_ai)
+        self.assertNotIn("liblzma-dev", before_ai)
+
     def test_workflow_builds_signed_release_real_base_capsule_and_pinned_initramfs(self):
         for marker in (
             "bootstrap/kernel/build.py build",
