@@ -30,7 +30,8 @@ func portablePhysicalRequestFixture(t *testing.T) PortablePhysicalApplyRequest {
 		"systemd-boot","loader-config","loader-normal","loader-recovery",
 		"kernel","initramfs","bootstrap-capsule","release-trust",
 		"stable-base","persistent-state","system-image","surface-runtime-image",
-		"surface-runtime-ref","release-manifest","release-envelope",
+		"surface-runtime-ref","local-ai-runtime-image","local-ai-runtime-ref",
+		"release-manifest","release-envelope",
 	}
 	root := t.TempDir()
 	for i, id := range ids {
@@ -123,6 +124,24 @@ func TestPortablePhysicalApplyPolicyRejectsAuthorizationDrift(t *testing.T) {
 	request.DestructiveAuthorization = strings.Repeat("0", 64)
 	if err := ValidatePortablePhysicalApplyRequest(request); err == nil {
 		t.Fatal("wrong destructive authorization was accepted")
+	}
+}
+
+func TestPortablePhysicalApplyPolicyRejectsPlanDriftAfterAuthorization(t *testing.T) {
+	request := portablePhysicalRequestFixture(t)
+	originalAuthorization := request.DestructiveAuthorization
+
+	request.ApplicationPlan.SourceCommit = strings.Repeat("f", 40)
+	planSHA, err := creatorcore.PortableApplicationPlanSHA256(request.ApplicationPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if originalAuthorization == PortableDestructiveAuthorizationToken(request.Target, planSHA) {
+		t.Fatal("destructive authorization did not change after application-plan drift")
+	}
+	if err := ValidatePortablePhysicalApplyRequest(request); err == nil ||
+		!strings.Contains(err.Error(), "destructive authorization does not match current target and plan") {
+		t.Fatalf("application-plan drift was not rejected by destructive authorization: %v", err)
 	}
 }
 
