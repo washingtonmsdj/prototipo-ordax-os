@@ -23,3 +23,13 @@ Adapters implement environment-specific capabilities. Shared Surface/apps/servic
 Rules are machine-readable in `docs/contracts/module-boundaries.json`.
 Component update contracts follow the same boundary: `component-manifest.mjs` declares identity, version, failure domain and release mode; `component-state-store.mjs` owns persisted slot state; `component-manager.mjs` exposes the neutral runtime port. A semantic version does not by itself grant independent update authority — only `releaseMode: "component-slot"` does.
 
+## Pre-MVP ecosystem contracts
+
+The product foundation also defines narrow provider-neutral ports for the next account/ecosystem layer:
+
+- `entitlements.mjs` — server/local-default entitlement decisions; client-claimed paid state is never authoritative;
+- `spaces.mjs` — Spaces, membership and Profile Pack descriptors;
+- `memory.mjs` — scoped, provenance-bearing OrdaX Memory independent of model provider;
+- `model-router.mjs` — local/external inference route selection with explicit egress for cloud providers.
+
+These contracts prepare architecture only. They do not enable billing, public Store installation, cloud memory, external AI egress or mutating MCP tools by themselves.
