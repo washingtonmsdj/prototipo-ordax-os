@@ -10,8 +10,12 @@ on:
       - 'docs/contracts/portable-usb-v2.json'
       - 'docs/contracts/creator-portable-media-plan.json'
       - 'docs/contracts/physical-write-authorization.json'
+      - 'docs/evidence/canonical-v4-release-proof.json'
       - 'tools/creator/physical_promotion.py'
       - 'tools/creator/authorize_physical_write.py'
+      - 'tools/creator/bind_canonical_v4_release_proof.py'
+      - 'tests/test_physical_promotion_boundary.py'
+      - 'tests/test_canonical_v4_release_proof_binding.py'
       - 'tools/creator/core/**'
       - 'tools/creator/host/windows/**'
       - 'tools/creator/cmd/ordax-creator-physical-test/**'
@@ -26,8 +30,12 @@ on:
       - 'docs/contracts/portable-usb-v2.json'
       - 'docs/contracts/creator-portable-media-plan.json'
       - 'docs/contracts/physical-write-authorization.json'
+      - 'docs/evidence/canonical-v4-release-proof.json'
       - 'tools/creator/physical_promotion.py'
       - 'tools/creator/authorize_physical_write.py'
+      - 'tools/creator/bind_canonical_v4_release_proof.py'
+      - 'tests/test_physical_promotion_boundary.py'
+      - 'tests/test_canonical_v4_release_proof_binding.py'
       - 'tools/creator/core/**'
       - 'tools/creator/host/windows/**'
       - 'tools/creator/cmd/ordax-creator-physical-test/**'
@@ -52,6 +60,12 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+
+      - name: Regress non-destructive promotion boundaries
+        run: |
+          python -m unittest \
+            tests.test_physical_promotion_boundary \
+            tests.test_canonical_v4_release_proof_binding -v
 
       - name: Evaluate canonical physical promotion gates
         id: gate
@@ -155,25 +169,36 @@ jobs:
           minimal_sha="$(sha256sum docs/contracts/minimal-bootstrap.json | cut -d' ' -f1)"
           portable_sha="$(sha256sum docs/contracts/portable-usb-v2.json | cut -d' ' -f1)"
           creator_sha="$(sha256sum docs/contracts/creator-portable-media-plan.json | cut -d' ' -f1)"
+          proof_sha="$(sha256sum docs/evidence/canonical-v4-release-proof.json | cut -d' ' -f1)"
           auth_sha="$(sha256sum docs/contracts/physical-write-authorization.json | cut -d' ' -f1)"
 
           python - \
             docs/contracts/physical-write-authorization.json \
-            "$minimal_sha" "$trust_sha" "$portable_sha" "$creator_sha" <<'PY'
+            "$minimal_sha" "$trust_sha" "$portable_sha" "$creator_sha" "$proof_sha" <<'PY'
           import json, pathlib, sys
           auth = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
-          assert auth['$schema'] == 'prototype-ordax.physical-write-authorization/2'
+          assert auth['$schema'] == 'prototype-ordax.physical-write-authorization/3'
           expected = auth['bindings']
           actual = {
               'minimal_bootstrap_sha256': sys.argv[2],
               'release_trust_sha256': sys.argv[3],
               'portable_usb_contract_sha256': sys.argv[4],
               'creator_portable_media_contract_sha256': sys.argv[5],
+              'canonical_v4_release_proof_sha256': sys.argv[6],
           }
           if expected != actual:
               raise SystemExit(
                   f'authorization binding changed after preflight: expected={expected!r} actual={actual!r}'
               )
+          release_binding = auth.get('release_binding')
+          if not isinstance(release_binding, dict):
+              raise SystemExit('canonical v4 release binding is missing')
+          if release_binding.get('proof_path') != 'docs/evidence/canonical-v4-release-proof.json':
+              raise SystemExit('canonical v4 release proof path is invalid')
+          if release_binding.get('proof_schema') != 'prototype-ordax.portable-v4-canonical-release-proof/1':
+              raise SystemExit('canonical v4 release proof schema is invalid')
+          if not isinstance(release_binding.get('source_commit'), str) or len(release_binding['source_commit']) != 40:
+              raise SystemExit('canonical v4 release source commit is missing')
           sequence = auth.get('release_sequence')
           if isinstance(sequence, bool) or not isinstance(sequence, int) or sequence <= 0:
               raise SystemExit('physical release_sequence is missing or invalid')
@@ -188,6 +213,7 @@ jobs:
           cp docs/contracts/portable-usb-v2.json "$out/portable-usb-v2.json"
           cp docs/contracts/creator-portable-media-plan.json "$out/creator-portable-media-plan.json"
           cp docs/contracts/physical-write-authorization.json "$out/physical-write-authorization.json"
+          cp docs/evidence/canonical-v4-release-proof.json "$out/canonical-v4-release-proof.json"
 
           pushd tools/creator >/dev/null
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
@@ -203,7 +229,7 @@ jobs:
 
           python - \
             "$out/provenance.json" \
-            "$trust_sha" "$minimal_sha" "$portable_sha" "$creator_sha" "$auth_sha" <<'PY'
+            "$trust_sha" "$minimal_sha" "$portable_sha" "$creator_sha" "$proof_sha" "$auth_sha" <<'PY'
           import json, os, pathlib, sys
           auth = json.loads(
               pathlib.Path('docs/contracts/physical-write-authorization.json').read_text(encoding='utf-8')
@@ -220,7 +246,10 @@ jobs:
               'minimal_bootstrap_sha256': sys.argv[3],
               'portable_usb_contract_sha256': sys.argv[4],
               'creator_portable_media_contract_sha256': sys.argv[5],
-              'physical_write_authorization_sha256': sys.argv[6],
+              'canonical_v4_release_proof_sha256': sys.argv[6],
+              'canonical_v4_release_source_commit': auth['release_binding']['source_commit'],
+              'canonical_v4_release_envelope_url': auth['release_binding']['canonical_envelope_url'],
+              'physical_write_authorization_sha256': sys.argv[7],
               'portable_writer_linked': True,
               'portable_application_plan_schema': 'prototype-ordax.portable-application-plan/1',
               'portable_application_operation_count': 39,
@@ -249,6 +278,7 @@ jobs:
               portable-usb-v2.json \
               creator-portable-media-plan.json \
               physical-write-authorization.json \
+              canonical-v4-release-proof.json \
               provenance.json \
               > SHA256SUMS
           )
