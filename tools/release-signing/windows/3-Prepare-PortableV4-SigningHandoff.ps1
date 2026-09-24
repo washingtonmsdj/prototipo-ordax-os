@@ -77,6 +77,8 @@ $TrustPath = Get-RealFile $TrustPath 'canonical public trust'
 $SignScriptPath = Get-RealFile (Join-Path $Root '4-Sign-Initial-OrdaXRelease.ps1') 'canonical signing script'
 $VerifyScriptPath = Get-RealFile (Join-Path $Root '5-Verify-PortableV4-SignedHandoff.ps1') 'post-sign verification script'
 $VerifyLauncherPath = Get-RealFile (Join-Path $Root '5-Verify-PortableV4-SignedHandoff.cmd') 'post-sign verification launcher'
+$MaterializeScriptPath = Get-RealFile (Join-Path $Root '6-Materialize-Verify-PortableV4-Canonical.ps1') 'canonical materialization verification script'
+$MaterializeLauncherPath = Get-RealFile (Join-Path $Root '6-Materialize-Verify-PortableV4-Canonical.cmd') 'canonical materialization verification launcher'
 
 $SystemArtifactUrl = Get-HttpsUrl $SystemArtifactUrl 'SystemArtifactUrl'
 $SurfaceArtifactUrl = Get-HttpsUrl $SurfaceArtifactUrl 'SurfaceArtifactUrl'
@@ -93,6 +95,8 @@ $agentOut = Join-Path $OutputDirectory 'ordax-release-agent.exe'
 $signScriptOut = Join-Path $OutputDirectory '4-Sign-Initial-OrdaXRelease.ps1'
 $verifyScriptOut = Join-Path $OutputDirectory '5-Verify-PortableV4-SignedHandoff.ps1'
 $verifyLauncherOut = Join-Path $OutputDirectory '5-Verify-PortableV4-SignedHandoff.cmd'
+$materializeScriptOut = Join-Path $OutputDirectory '6-Materialize-Verify-PortableV4-Canonical.ps1'
+$materializeLauncherOut = Join-Path $OutputDirectory '6-Materialize-Verify-PortableV4-Canonical.cmd'
 $manifestOut = Join-Path $OutputDirectory 'release-manifest.json'
 
 $systemSha = Copy-VerifiedFile $SystemImagePath $systemOut
@@ -105,6 +109,8 @@ $null = Copy-VerifiedFile $ReleaseAgentPath $agentOut
 $null = Copy-VerifiedFile $SignScriptPath $signScriptOut
 $null = Copy-VerifiedFile $VerifyScriptPath $verifyScriptOut
 $null = Copy-VerifiedFile $VerifyLauncherPath $verifyLauncherOut
+$null = Copy-VerifiedFile $MaterializeScriptPath $materializeScriptOut
+$null = Copy-VerifiedFile $MaterializeLauncherPath $materializeLauncherOut
 
 $manifestArgs = @(
     '--manifest-schema', '4',
