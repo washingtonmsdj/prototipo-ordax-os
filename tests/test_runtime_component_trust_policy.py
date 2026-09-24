@@ -63,6 +63,13 @@ class RuntimeComponentTrustPolicyTests(unittest.TestCase):
         self.assertTrue(
             promotion["component_slot_activation_requires_separate_runtime_health_proof"]
         )
+        self.assertEqual(
+            promotion["public_promoter_source_path"],
+            "tools/runtime-component-channel/promote_public_trust.py",
+        )
+        self.assertTrue(promotion["public_handoff_zip_required"])
+        self.assertTrue(promotion["public_reverification_required"])
+        self.assertTrue(promotion["check_before_apply_required"])
 
         gates = CONTRACT["current_gates"]
         self.assertFalse(gates["canonical_component_trust_anchor_pinned"])

@@ -186,6 +186,47 @@ Publication still requires a reviewed signing workflow. Production activation
 still requires pending probation execution, runtime health, atomic promote and
 rollback proof. Physical USB authorization remains a completely separate gate.
 
+## Repository public promotion
+
+After step 3 has produced `OrdaX-Component-Public-Trust-Handoff.zip`, repository
+promotion is a separate public-only operation. The promoter never accepts a
+private key:
+
+```text
+tools/runtime-component-channel/promote_public_trust.py
+```
+
+First run read-only validation with the reviewed runtime-component verifier:
+
+```text
+python tools/runtime-component-channel/promote_public_trust.py check \
+  --promotion-zip OrdaX-Component-Public-Trust-Handoff.zip \
+  --verifier <path-to-ordax-runtime-component-channel>
+```
+
+The check must re-verify the recovered envelope, exact four-file ZIP set,
+ceremony hashes, source commit, key id and fail-closed repository contracts.
+
+Only after review may the same public handoff be applied:
+
+```text
+python tools/runtime-component-channel/promote_public_trust.py apply \
+  --promotion-zip OrdaX-Component-Public-Trust-Handoff.zip \
+  --verifier <path-to-ordax-runtime-component-channel>
+```
+
+Apply may pin only public trust/evidence and update the trust/package contracts.
+It must keep all of these false:
+
+```text
+COMPONENT_PUBLISH_ALLOWED=NO
+PRODUCTION_COMPONENT_SLOT_ACTIVATION_ALLOWED=NO
+PHYSICAL_WRITE_ALLOWED=NO
+```
+
+A pinned component anchor therefore enables signature verification against the
+canonical identity, not production update activation.
+
 ## Current state
 
 Today:
