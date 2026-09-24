@@ -92,6 +92,17 @@ if ([string]$signed.source_commit -cne $ExpectedCommit -or [string]$materialized
     throw 'Canonical v4 receipts do not bind the expected source commit.'
 }
 
+$canonicalEnvelopeUrl = [string]$materialized.canonical_envelope_url
+$canonicalEnvelopeUri = $null
+if (-not [Uri]::TryCreate($canonicalEnvelopeUrl, [UriKind]::Absolute, [ref]$canonicalEnvelopeUri) -or
+    $canonicalEnvelopeUri.Scheme -cne 'https' -or
+    [string]::IsNullOrWhiteSpace($canonicalEnvelopeUri.Host) -or
+    $canonicalEnvelopeUri.UserInfo -or
+    -not [string]::IsNullOrEmpty($canonicalEnvelopeUri.Query) -or
+    -not [string]::IsNullOrEmpty($canonicalEnvelopeUri.Fragment)) {
+    throw 'Canonical materialization receipt envelope URL is not a stable public HTTPS URL.'
+}
+
 $actualTrustSha = Get-Sha256Lower $Trust
 $signedTrustSha = Require-LowerSha256 ([string]$signed.canonical_trust_sha256) 'signed receipt canonical trust'
 $materialTrustSha = Require-LowerSha256 ([string]$materialized.canonical_trust_sha256) 'materialization receipt canonical trust'
@@ -160,6 +171,7 @@ if (-not [string]::IsNullOrWhiteSpace($receiptDirectory) -and -not (Test-Path -L
 $receipt = [ordered]@{
     schema = 'prototype-ordax.portable-v4-canonical-release-proof/1'
     source_commit = $ExpectedCommit
+    canonical_envelope_url = $canonicalEnvelopeUrl
     canonical_trust_sha256 = $actualTrustSha
     release_manifest_sha256 = $signedManifestSha
     release_envelope_sha256 = $signedEnvelopeSha
@@ -178,6 +190,7 @@ $receipt | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $ReceiptPath -Enco
 Write-Host ''
 Write-Host 'PORTABLE_V4_CANONICAL_RELEASE_PROOF=PASS'
 Write-Host "SOURCE_COMMIT=$ExpectedCommit"
+Write-Host "CANONICAL_ENVELOPE_URL=$canonicalEnvelopeUrl"
 Write-Host "CANONICAL_TRUST_SHA256=$actualTrustSha"
 Write-Host "RELEASE_MANIFEST_SHA256=$signedManifestSha"
 Write-Host "RELEASE_ENVELOPE_SHA256=$signedEnvelopeSha"
