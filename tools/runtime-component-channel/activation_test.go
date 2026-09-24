@@ -705,3 +705,91 @@ func TestFailedPendingRuntimeCannotBeRead(t *testing.T) {
 		t.Fatalf("failed pending runtime read error = %v", err)
 	}
 }
+
+
+func TestPendingHealthExactRevisionAndIdempotentRetry(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("c", 40))
+	armed, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := identityFromRelease(fixture.release)
+	expected := armed.Revision
+
+	recorded, err := recordPendingHealthAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		"healthy",
+		&expected,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recorded.Revision != expected+1 || recorded.PendingHealth != "healthy" {
+		t.Fatalf("recorded state = %+v, expected revision %d healthy", recorded, expected+1)
+	}
+
+	retry, err := recordPendingHealthAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		"healthy",
+		&expected,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retry.Revision != recorded.Revision || retry.PendingHealth != "healthy" {
+		t.Fatalf("idempotent retry changed state: %+v vs %+v", retry, recorded)
+	}
+}
+
+func TestPendingHealthRejectsStaleProbationRevision(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("d", 40))
+	armed, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := identityFromRelease(fixture.release)
+	expected := armed.Revision
+	if _, err := recordPendingHealthAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		"healthy",
+		&expected,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := recordPendingHealthAtRevision(
+		fixture.root,
+		"internet",
+		identity,
+		"failed",
+		&expected,
+	); err == nil || !strings.Contains(err.Error(), "revision no longer matches") {
+		t.Fatalf("stale probation revision error = %v", err)
+	}
+}
+
+
+func TestPendingHealthRejectsNonPositiveExpectedRevision(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("e", 40))
+	if _, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root); err != nil {
+		t.Fatal(err)
+	}
+	identity := identityFromRelease(fixture.release)
+	for _, expected := range []int64{0, -1} {
+		if _, err := recordPendingHealthAtRevision(
+			fixture.root,
+			"internet",
+			identity,
+			"healthy",
+			&expected,
+		); err == nil || !strings.Contains(err.Error(), "revision must be positive") {
+			t.Fatalf("expected revision %d error = %v", expected, err)
+		}
+	}
+}

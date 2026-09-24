@@ -509,12 +509,36 @@ func armPendingState(slot, trustPath, root string) (activationState, error) {
 }
 
 func recordPendingHealth(root, componentID string, identity slotIdentity, health string) (activationState, error) {
+	return recordPendingHealthAtRevision(root, componentID, identity, health, nil)
+}
+
+func recordPendingHealthAtRevision(
+	root, componentID string,
+	identity slotIdentity,
+	health string,
+	expectedRevision *int64,
+) (activationState, error) {
 	if health != "healthy" && health != "failed" {
 		return activationState{}, errors.New("runtime component pending health must be healthy or failed")
+	}
+	if expectedRevision != nil && *expectedRevision <= 0 {
+		return activationState{}, errors.New("runtime component probation revision must be positive")
 	}
 	return mutateActivationState(root, componentID, func(state activationState) (activationState, error) {
 		if state.Pending == nil || !sameSlotIdentity(state.Pending, &identity) {
 			return activationState{}, errors.New("runtime component health identity does not match pending slot")
+		}
+		if expectedRevision != nil {
+			switch {
+			case state.Revision == *expectedRevision:
+				// First application of this exact probation receipt.
+			case state.Revision > 0 && state.Revision-1 == *expectedRevision && state.PendingHealth == health:
+				// Safe idempotent retry: the only accepted change is the same
+				// health value for the same still-pending identity.
+				return state, nil
+			default:
+				return activationState{}, errors.New("runtime component health revision no longer matches pending probation receipt")
+			}
 		}
 		if state.PendingHealth == health {
 			return state, nil
@@ -658,26 +682,28 @@ func recordHealthCommand(args []string) error {
 	component := flags.String("component", "", "runtime component id")
 	version := flags.String("version", "", "pending semantic version")
 	sourceCommit := flags.String("source-commit", "", "pending source commit")
+	expectedRevision := flags.Int64("expected-revision", 0, "exact probation metadata revision")
 	health := flags.String("health", "", "healthy or failed")
 	root := flags.String("root", defaultSlotRoot, "runtime component slot root")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	if *component == "" || *version == "" || *sourceCommit == "" || *health == "" || flags.NArg() != 0 {
-		return errors.New("record-health requires --component, --version, --source-commit and --health")
+	if *component == "" || *version == "" || *sourceCommit == "" || *expectedRevision <= 0 || *health == "" || flags.NArg() != 0 {
+		return errors.New("record-health requires --component, --version, --source-commit, --expected-revision and --health")
 	}
-	state, err := recordPendingHealth(
+	state, err := recordPendingHealthAtRevision(
 		*root,
 		*component,
 		slotIdentity{Version: *version, SourceCommit: *sourceCommit},
 		*health,
+		expectedRevision,
 	)
 	if err != nil {
 		return err
 	}
 	fmt.Printf(
-		"RUNTIME_COMPONENT_PENDING_HEALTH_RECORDED=YES\nCOMPONENT_ID=%s\nREVISION=%d\nPENDING_HEALTH=%s\nRUNTIME_ACTIVATED=NO\n",
-		state.ComponentID, state.Revision, state.PendingHealth,
+		"RUNTIME_COMPONENT_PENDING_HEALTH_RECORDED=YES\nCOMPONENT_ID=%s\nREVISION=%d\nPENDING_VERSION=%s\nPENDING_SOURCE_COMMIT=%s\nPENDING_HEALTH=%s\nRUNTIME_ACTIVATED=NO\n",
+		state.ComponentID, state.Revision, state.Pending.Version, state.Pending.SourceCommit, state.PendingHealth,
 	)
 	return nil
 }
