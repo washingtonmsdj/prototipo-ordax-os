@@ -79,6 +79,8 @@ $VerifyScriptPath = Get-RealFile (Join-Path $Root '5-Verify-PortableV4-SignedHan
 $VerifyLauncherPath = Get-RealFile (Join-Path $Root '5-Verify-PortableV4-SignedHandoff.cmd') 'post-sign verification launcher'
 $MaterializeScriptPath = Get-RealFile (Join-Path $Root '6-Materialize-Verify-PortableV4-Canonical.ps1') 'canonical materialization verification script'
 $MaterializeLauncherPath = Get-RealFile (Join-Path $Root '6-Materialize-Verify-PortableV4-Canonical.cmd') 'canonical materialization verification launcher'
+$ProofScriptPath = Get-RealFile (Join-Path $Root '7-Verify-PortableV4-Canonical-Proof.ps1') 'canonical proof verification script'
+$ProofLauncherPath = Get-RealFile (Join-Path $Root '7-Verify-PortableV4-Canonical-Proof.cmd') 'canonical proof verification launcher'
 
 $SystemArtifactUrl = Get-HttpsUrl $SystemArtifactUrl 'SystemArtifactUrl'
 $SurfaceArtifactUrl = Get-HttpsUrl $SurfaceArtifactUrl 'SurfaceArtifactUrl'
@@ -97,6 +99,8 @@ $verifyScriptOut = Join-Path $OutputDirectory '5-Verify-PortableV4-SignedHandoff
 $verifyLauncherOut = Join-Path $OutputDirectory '5-Verify-PortableV4-SignedHandoff.cmd'
 $materializeScriptOut = Join-Path $OutputDirectory '6-Materialize-Verify-PortableV4-Canonical.ps1'
 $materializeLauncherOut = Join-Path $OutputDirectory '6-Materialize-Verify-PortableV4-Canonical.cmd'
+$proofScriptOut = Join-Path $OutputDirectory '7-Verify-PortableV4-Canonical-Proof.ps1'
+$proofLauncherOut = Join-Path $OutputDirectory '7-Verify-PortableV4-Canonical-Proof.cmd'
 $manifestOut = Join-Path $OutputDirectory 'release-manifest.json'
 
 $systemSha = Copy-VerifiedFile $SystemImagePath $systemOut
@@ -111,6 +115,8 @@ $null = Copy-VerifiedFile $VerifyScriptPath $verifyScriptOut
 $null = Copy-VerifiedFile $VerifyLauncherPath $verifyLauncherOut
 $null = Copy-VerifiedFile $MaterializeScriptPath $materializeScriptOut
 $null = Copy-VerifiedFile $MaterializeLauncherPath $materializeLauncherOut
+$null = Copy-VerifiedFile $ProofScriptPath $proofScriptOut
+$null = Copy-VerifiedFile $ProofLauncherPath $proofLauncherOut
 
 $manifestArgs = @(
     '--manifest-schema', '4',
