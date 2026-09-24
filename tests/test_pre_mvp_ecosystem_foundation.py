@@ -19,6 +19,7 @@ DEVELOPER_PACK = ROOT / "system" / "profile-packs" / "developer" / "manifest.jso
 MIGRATION_1 = ROOT / "infra" / "supabase" / "product" / "migrations" / "0001_product_foundation.sql"
 MIGRATION_3 = ROOT / "infra" / "supabase" / "product" / "migrations" / "0003_spaces_single_profile_pack_owner.sql"
 MIGRATION_4 = ROOT / "infra" / "supabase" / "product" / "migrations" / "0004_server_authoritative_mutations.sql"
+MIGRATION_5 = ROOT / "infra" / "supabase" / "product" / "migrations" / "0005_private_indexes_and_active_pack_catalog.sql"
 SURFACE_WORKFLOW = ROOT / ".github" / "workflows" / "surface-web-candidate.yml"
 
 
@@ -169,6 +170,17 @@ class PreMvpEcosystemFoundationTests(unittest.TestCase):
             sql,
         )
 
+
+    def test_draft_packs_and_raw_embeddings_are_not_client_visible(self):
+        sql = MIGRATION_5.read_text(encoding="utf-8").lower()
+        self.assertIn(
+            "using (state = 'active')",
+            sql,
+        )
+        self.assertIn(
+            "revoke select on table public.ordax_memory_embeddings from authenticated",
+            sql,
+        )
 
     def test_ecosystem_javascript_contracts_are_wired_into_surface_ci(self):
         workflow = SURFACE_WORKFLOW.read_text(encoding="utf-8")
