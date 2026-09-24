@@ -107,6 +107,8 @@ var portableMediaTargets = map[string]portableMediaTarget{
 	"system-image": {"ORDAX-DATA", func(commit, _ string) string { return "/.ordax/releases/" + commit + "/system.erofs" }},
 	"surface-runtime-image": {"ORDAX-DATA", func(_, digest string) string { return "/.ordax/runtimes/sha256/" + digest + "/native-surface-runtime.erofs" }},
 	"surface-runtime-ref": {"ORDAX-DATA", func(commit, _ string) string { return "/.ordax/releases/" + commit + "/surface-runtime.sha256" }},
+	"local-ai-runtime-image": {"ORDAX-DATA", func(_, digest string) string { return "/.ordax/ai-runtimes/sha256/" + digest + "/local-ai-runtime.erofs" }},
+	"local-ai-runtime-ref": {"ORDAX-DATA", func(commit, _ string) string { return "/.ordax/releases/" + commit + "/local-ai-runtime.sha256" }},
 	"release-manifest": {"ORDAX-DATA", func(commit, _ string) string { return "/.ordax/releases/" + commit + "/release-manifest.json" }},
 	"release-envelope": {"ORDAX-DATA", func(commit, _ string) string { return "/.ordax/releases/" + commit + "/release-envelope.json" }},
 }
