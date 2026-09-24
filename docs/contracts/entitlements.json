@@ -1,0 +1,47 @@
+{
+  "$schema": "prototype-ordax.entitlements/1",
+  "status": "pre-mvp-foundation",
+  "owner": "system/services/entitlements",
+  "stable_port": "ordax.entitlements/1",
+  "principles": {
+    "identity_is_never_plan_gated": true,
+    "offline_local_os_usage_is_never_plan_gated": true,
+    "client_claimed_paid_state_is_authoritative": false,
+    "server_authoritative_for_remote_value": true,
+    "downgrade_may_silently_delete_user_data": false,
+    "professional_profile_names_are_not_paywalled_by_category": true
+  },
+  "subject_types": ["account", "space"],
+  "value_types": ["boolean", "integer", "string", "quota"],
+  "prepared_keys": [
+    "spaces.active.max",
+    "spaces.shared.create",
+    "spaces.members.max",
+    "memory.cloud.enabled",
+    "memory.cloud.bytes",
+    "memory.history.days",
+    "ai.external.enabled",
+    "ai.external.compute",
+    "connectors.max",
+    "automations.max",
+    "sync.bytes",
+    "backup.bytes",
+    "support.level"
+  ],
+  "commercial_policy": {
+    "billing_implemented": false,
+    "prices_defined": false,
+    "paid_tier_names_frozen": false,
+    "mvp_provisional_private_space_limit": 2,
+    "profile_pack_templates_available_independent_of_plan": true,
+    "future_paid_value": [
+      "additional-space-capacity",
+      "shared-spaces-and-collaboration",
+      "cloud-memory-and-history",
+      "sync-and-backup-capacity",
+      "external-model-compute",
+      "connectors-and-automations",
+      "enhanced-support"
+    ]
+  }
+}
