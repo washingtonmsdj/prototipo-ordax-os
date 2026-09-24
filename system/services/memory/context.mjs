@@ -4,13 +4,13 @@ import {
   validateMemoryItem,
 } from "../../contracts/memory.mjs";
 import {
+  MAX_MEMORY_CONTEXT_AUTHORIZATIONS,
   MAX_MEMORY_CONTEXT_ITEMS,
   validateMemoryContextAuthorization,
 } from "../../contracts/memory-context.mjs";
 
 const MAX_CONTEXT_TEXT_CHARS = 8192;
 const MAX_CONTEXT_PROVENANCE_CHARS = 512;
-const MAX_CONTEXT_AUTHORIZATIONS = 4;
 
 function excerpt(value, max) {
   if (value.length <= max) return value;
@@ -95,7 +95,7 @@ export function retrieveAuthorizedMemoryContextSet(memoryPort, authorizationValu
   if (
     !Array.isArray(authorizationValues)
     || authorizationValues.length === 0
-    || authorizationValues.length > MAX_CONTEXT_AUTHORIZATIONS
+    || authorizationValues.length > MAX_MEMORY_CONTEXT_AUTHORIZATIONS
   ) {
     throw new TypeError("Memory context authorization set is outside its allowed bounds");
   }
