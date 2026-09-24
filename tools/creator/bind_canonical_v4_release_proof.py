@@ -41,6 +41,15 @@ class BindingError(RuntimeError):
     pass
 
 
+def _no_duplicates(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise BindingError(f"duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
 def _regular_bytes(path: Path, label: str) -> bytes:
     try:
         metadata = path.lstat()
@@ -56,7 +65,7 @@ def _regular_bytes(path: Path, label: str) -> bytes:
 
 def _json_object(payload: bytes, label: str) -> dict:
     try:
-        value = json.loads(payload.decode("utf-8"))
+        value = json.loads(payload.decode("utf-8"), object_pairs_hook=_no_duplicates)
     except (UnicodeError, json.JSONDecodeError) as exc:
         raise BindingError(f"{label} is not valid UTF-8 JSON") from exc
     if not isinstance(value, dict):
@@ -180,6 +189,11 @@ def bind(repo_root: Path, proof_path: Path) -> dict:
     bindings = auth.get("bindings")
     if not isinstance(bindings, dict) or "canonical_v4_release_proof_sha256" not in bindings:
         raise BindingError("physical authorization proof binding is missing")
+    trust_sha = hashlib.sha256(
+        _regular_bytes(root / TRUST_PATH, "canonical release trust")
+    ).hexdigest()
+    if bindings.get("release_trust_sha256") != trust_sha:
+        raise BindingError("physical authorization contract does not bind the pinned public trust")
     release_binding = auth.get("release_binding")
     if not isinstance(release_binding, dict):
         raise BindingError("physical authorization release binding is missing")
@@ -210,7 +224,8 @@ def bind(repo_root: Path, proof_path: Path) -> dict:
     return {
         "$schema": RESULT_SCHEMA,
         "status": "canonical-v4-release-proof-bound",
-        "ready_for_owner_authorization_preflight": True,
+        "proof_bound": True,
+        "next_step": "python tools/creator/authorize_physical_write.py check",
         "proof_path": DESTINATION_PATH.as_posix(),
         "proof_sha256": proof_sha,
         "source_commit": proof["source_commit"],
