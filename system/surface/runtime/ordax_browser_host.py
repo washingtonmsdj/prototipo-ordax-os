@@ -15,6 +15,7 @@ import math
 import os
 import re
 import socket
+import secrets
 import sys
 from dataclasses import dataclass
 from urllib.parse import urlsplit
@@ -26,6 +27,10 @@ gi.require_version("WebKit2", "4.1")
 from gi.repository import Gtk, WebKit2  # type: ignore  # noqa: E402
 
 from browser_session_store import load_browser_session, save_browser_session
+from native_component_probation import (
+    ComponentProbationReceiptError,
+    record_system_component_probation,
+)
 
 BRIDGE_NAME = "ordaxBrowser"
 TAB_ID_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
@@ -126,9 +131,19 @@ class BrowserTab:
 
 
 class OrdaXBrowserHost:
-    def __init__(self, start_uri: str, profile_root: str) -> None:
+    def __init__(
+        self,
+        start_uri: str,
+        profile_root: str,
+        component_channel_bin: str,
+        component_slot_root: str,
+    ) -> None:
         self.start_uri = start_uri
         self.profile_root = os.path.abspath(profile_root)
+        self.component_channel_bin = component_channel_bin
+        self.component_slot_root = component_slot_root
+        self.component_probation_started = False
+        self.component_probation_nonce: str | None = None
         self.session_path = os.path.join(self.profile_root, "session.json")
         self.tabs: dict[str, BrowserTab] = {}
         self.active_tab_id: str | None = None
@@ -158,6 +173,7 @@ class OrdaXBrowserHost:
         self.surface_view = WebKit2.WebView.new_with_user_content_manager(self.manager)
         self.surface_view.set_hexpand(True)
         self.surface_view.set_vexpand(True)
+        self.surface_view.connect("load-changed", self.on_surface_load_changed)
         self.surface_view.load_uri(self.start_uri)
 
         self.overlay = Gtk.Overlay()
@@ -174,6 +190,94 @@ class OrdaXBrowserHost:
         self.window.fullscreen()
         self.window.show_all()
         self.restore_session()
+
+
+    def on_surface_load_changed(self, _view: object, load_event: object) -> None:
+        if load_event != WebKit2.LoadEvent.FINISHED or self.component_probation_started:
+            return
+        self.component_probation_started = True
+        self.component_probation_nonce = secrets.token_urlsafe(32)
+        nonce = json.dumps(self.component_probation_nonce)
+        script = f"""
+(async () => {{
+  const nonce = {nonce};
+  let result;
+  try {{
+    const module = await import('/composition/native/component-probation.mjs');
+    result = await module.runNativePendingComponentProbation({{
+      componentId: 'internet',
+    }});
+  }} catch (error) {{
+    result = {{
+      schema: 'ordax.component-probation-result/1',
+      componentId: 'internet',
+      version: null,
+      sourceCommit: null,
+      revision: null,
+      health: 'failed',
+      probeMode: 'import-contract',
+      error: error instanceof Error ? error.message : 'System component probation failed',
+    }};
+  }}
+  window.webkit.messageHandlers.ordaxBrowser.postMessage(JSON.stringify({{
+    type: 'component.probation.result',
+    nonce,
+    result,
+  }}));
+}})();
+"""
+        try:
+            self.surface_view.run_javascript(script, None, None, None)
+        except Exception as exc:  # pragma: no cover - native runtime diagnostic
+            self.component_probation_nonce = None
+            print(
+                f"ordax-browser-host: failed to start component probation: {exc}",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    def handle_component_probation_result(self, payload: dict) -> None:
+        expected_nonce = self.component_probation_nonce
+        if expected_nonce is None:
+            raise ValueError("component probation receipt arrived without active nonce")
+
+        try:
+            outcome = record_system_component_probation(
+                payload=payload,
+                expected_nonce=expected_nonce,
+                helper_path=self.component_channel_bin,
+                slot_root=self.component_slot_root,
+            )
+        except ComponentProbationReceiptError as exc:
+            raise ValueError(str(exc)) from exc
+
+        # Consume the nonce only after the receipt proves it belongs to the
+        # probation attempt initiated by this host.
+        self.component_probation_nonce = None
+
+        if not outcome.actionable:
+            print(
+                "ordax-browser-host: component probation produced no actionable pending receipt",
+                file=sys.stderr,
+                flush=True,
+            )
+            return
+        if outcome.recorded is None:
+            print(
+                f"ordax-browser-host: pending component health rejected safely: {outcome.reason}",
+                file=sys.stderr,
+                flush=True,
+            )
+            return
+
+        print(
+            "ordax-browser-host: pending component health recorded "
+            f"(component={outcome.recorded.component_id}, "
+            f"revision={outcome.recorded.revision}, "
+            f"health={outcome.recorded.health})",
+            file=sys.stderr,
+            flush=True,
+        )
 
     def emit_host_event(self, payload: dict) -> None:
         encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
@@ -249,6 +353,8 @@ class OrdaXBrowserHost:
                 self.history_action(payload.get("tabId"), "reload")
             elif command == "viewport.set":
                 self.set_viewport(payload.get("viewport"))
+            elif command == "component.probation.result":
+                self.handle_component_probation_result(payload)
         except (TypeError, ValueError) as exc:
             print(f"ordax-browser-host: rejected {command!r}: {exc}", file=sys.stderr, flush=True)
 
@@ -540,6 +646,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="OrdaX native Surface/browser host")
     parser.add_argument("--start-uri", required=True)
     parser.add_argument("--profile-root", default="/var/lib/ordax-user/browser")
+    parser.add_argument(
+        "--component-channel-bin",
+        default="/srv/ordax-system/bin/ordax-runtime-component-channel",
+    )
+    parser.add_argument("--component-slot-root", default="/var/lib/ordax/components")
     return parser.parse_args()
 
 
@@ -549,7 +660,12 @@ def main() -> int:
         print("ordax-browser-host: Surface start URI must stay on loopback", file=sys.stderr)
         return 2
     try:
-        OrdaXBrowserHost(args.start_uri, args.profile_root)
+        OrdaXBrowserHost(
+            args.start_uri,
+            args.profile_root,
+            args.component_channel_bin,
+            args.component_slot_root,
+        )
     except Exception as exc:
         print(f"ordax-browser-host: startup failed: {exc}", file=sys.stderr, flush=True)
         return 1

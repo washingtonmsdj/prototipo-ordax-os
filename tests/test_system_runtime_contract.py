@@ -12,9 +12,12 @@ SURFACE_RUNTIME = ROOT / "system" / "surface" / "bin" / "ordax-surface"
 NATIVE_HOST_SERVER = ROOT / "system" / "surface" / "runtime" / "native_host_server.py"
 NATIVE_BROWSER_HOST = ROOT / "system" / "surface" / "runtime" / "ordax_browser_host.py"
 NATIVE_COMPONENT_SLOTS = ROOT / "system" / "surface" / "runtime" / "native_component_slots.py"
+NATIVE_COMPONENT_PROBATION = ROOT / "system" / "surface" / "runtime" / "native_component_probation.py"
+COMPONENT_PROBATION_ORCHESTRATOR = ROOT / "system" / "services" / "components" / "probation-orchestrator.mjs"
 RESCUE_AGENT = ROOT / "system" / "rescue" / "agent.sh"
 BASE_TELEMETRY_AGENT = ROOT / "system" / "services" / "telemetry" / "base-agent.sh"
 NATIVE_COMPOSITION = ROOT / "system" / "composition" / "native"
+NATIVE_COMPONENT_PROBATION_COMPOSITION = NATIVE_COMPOSITION / "component-probation.mjs"
 
 
 class SystemRuntimeContractTests(unittest.TestCase):
@@ -27,10 +30,16 @@ class SystemRuntimeContractTests(unittest.TestCase):
         self.assertTrue(NATIVE_HOST_SERVER.is_file(), NATIVE_HOST_SERVER)
         self.assertTrue(NATIVE_BROWSER_HOST.is_file(), NATIVE_BROWSER_HOST)
         self.assertTrue(NATIVE_COMPONENT_SLOTS.is_file(), NATIVE_COMPONENT_SLOTS)
+        self.assertTrue(NATIVE_COMPONENT_PROBATION.is_file(), NATIVE_COMPONENT_PROBATION)
+        self.assertTrue(COMPONENT_PROBATION_ORCHESTRATOR.is_file(), COMPONENT_PROBATION_ORCHESTRATOR)
         self.assertTrue(RESCUE_AGENT.is_file(), RESCUE_AGENT)
         self.assertTrue(BASE_TELEMETRY_AGENT.is_file(), BASE_TELEMETRY_AGENT)
         self.assertTrue((NATIVE_COMPOSITION / "index.html").is_file())
         self.assertTrue((NATIVE_COMPOSITION / "main.mjs").is_file())
+        self.assertTrue(
+            NATIVE_COMPONENT_PROBATION_COMPOSITION.is_file(),
+            NATIVE_COMPONENT_PROBATION_COMPOSITION,
+        )
 
     def test_shell_syntax_is_valid(self):
         for path in (SYSTEM_ENTRYPOINT, SYSTEM_SUPERVISOR, SURFACE_ENTRYPOINT, SURFACE_RUNTIME, RESCUE_AGENT, BASE_TELEMETRY_AGENT):
@@ -42,7 +51,12 @@ class SystemRuntimeContractTests(unittest.TestCase):
         self.assertIn("could not provision standard user directories", text)
 
     def test_native_host_server_python_syntax_is_valid(self):
-        for path in (NATIVE_HOST_SERVER, NATIVE_BROWSER_HOST, NATIVE_COMPONENT_SLOTS):
+        for path in (
+            NATIVE_HOST_SERVER,
+            NATIVE_BROWSER_HOST,
+            NATIVE_COMPONENT_SLOTS,
+            NATIVE_COMPONENT_PROBATION,
+        ):
             subprocess.run(
                 ["python3", "-m", "py_compile", str(path)],
                 check=True,
@@ -271,6 +285,49 @@ class SystemRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("reject-pending", adapter)
         self.assertNotIn("rollback-state", adapter)
         self.assertNotIn("rollback-state", adapter)
+
+    def test_component_probation_health_bridge_is_internal_nonce_bound_and_non_promoting(self):
+        launcher = SURFACE_RUNTIME.read_text(encoding="utf-8")
+        browser_host = NATIVE_BROWSER_HOST.read_text(encoding="utf-8")
+        authority = NATIVE_COMPONENT_PROBATION.read_text(encoding="utf-8")
+        orchestrator = COMPONENT_PROBATION_ORCHESTRATOR.read_text(encoding="utf-8")
+        composition = NATIVE_COMPONENT_PROBATION_COMPOSITION.read_text(encoding="utf-8")
+
+        self.assertIn("component_probation_nonce", browser_host)
+        self.assertIn("secrets.token_urlsafe(32)", browser_host)
+        self.assertIn("component.probation.result", browser_host)
+        self.assertIn("record_system_component_probation", browser_host)
+        self.assertLess(
+            browser_host.index("outcome = record_system_component_probation("),
+            browser_host.index("self.component_probation_nonce = None", browser_host.index("def handle_component_probation_result")),
+        )
+        self.assertIn("runNativePendingComponentProbation", browser_host)
+        self.assertIn("component-probation.mjs", browser_host)
+        self.assertNotIn("adapters/native", browser_host)
+        self.assertNotIn("services/components/probation-orchestrator", browser_host)
+        self.assertIn("--component-channel-bin /srv/ordax-system/bin/ordax-runtime-component-channel", launcher)
+        self.assertIn("--component-slot-root /var/lib/ordax/components", launcher)
+
+        self.assertIn("secrets.compare_digest", authority)
+        self.assertIn("record_component_pending_health", authority)
+        self.assertIn('PROBE_MODE = "import-contract"', authority)
+        self.assertNotIn("promote-state", authority)
+        self.assertNotIn("reject-pending", authority)
+        self.assertNotIn("rollback-state", authority)
+
+        self.assertIn('internet: "import-contract"', orchestrator)
+        self.assertIn("runPendingComponentProbation", orchestrator)
+        self.assertNotIn("adapters/native", orchestrator)
+        self.assertNotIn("record-health", orchestrator)
+        self.assertNotIn("promote", orchestrator)
+        self.assertIn("createNativeComponentSlotSource", composition)
+        self.assertIn("runSystemPendingComponentProbation", composition)
+        self.assertIn("../../adapters/native/component-slot-source.mjs", composition)
+        self.assertIn("../../services/components/probation-orchestrator.mjs", composition)
+
+        server = NATIVE_HOST_SERVER.read_text(encoding="utf-8")
+        self.assertNotIn("component.probation.result", server)
+        self.assertNotIn("record_system_component_probation", server)
 
     def test_native_restart_has_sync_and_kernel_fallback_without_weakening_shutdown(self):
         text = SURFACE_RUNTIME.read_text(encoding="utf-8")
