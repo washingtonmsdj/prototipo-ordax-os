@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "bootstrap/surface-runtime/source.json"
 DISCOVERY = ROOT / "bootstrap/surface-runtime/discover_lock.py"
 BUILDER = ROOT / "bootstrap/surface-runtime/build.py"
+WORKFLOW = ROOT / ".github" / "workflows" / "surface-runtime-lock-discovery.yml"
 SURFACE = ROOT / "system/surface/bin/ordax-surface"
 
 
@@ -45,6 +46,9 @@ class SurfaceRuntimeSourceContractTests(unittest.TestCase):
         text = DISCOVERY.read_text(encoding="utf-8")
         self.assertIn('"status": "verified-pinned-lock" if isinstance(expected_lock, dict) else "discovered-not-promotable"', text)
         self.assertIn("resolved package lock differs from committed candidate lock", text)
+        self.assertIn('"drift-detected-not-promotable"', text)
+        self.assertIn('result["drift"] = drift', text)
+        self.assertIn("full drift report was written before failing closed", text)
         self.assertIn('"physical_artifact_created": False', text)
         self.assertIn('"physical_write_authorized": False', text)
         self.assertIn('"portable_v3_boot_handoff_candidate_connected": True', text)
@@ -52,6 +56,11 @@ class SurfaceRuntimeSourceContractTests(unittest.TestCase):
         self.assertNotIn("/dev/sd", text)
         self.assertNotIn("/dev/nvme", text)
 
+
+    def test_workflow_uploads_drift_report_even_when_revalidation_fails(self):
+        text = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("- name: Upload proof metadata only\n        if: always()", text)
+        self.assertIn("surface-runtime-lock.json", text)
 
     def test_builder_is_fail_closed_until_reviewed_lock_is_committed(self):
         text = BUILDER.read_text(encoding="utf-8")
