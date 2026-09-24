@@ -67,6 +67,7 @@ def expected_apps():
     result = bundled_apps()
     result["internet"] = app_owned_manifest("internet")
     result["notes"] = app_owned_manifest("notes")
+    result["projects"] = app_owned_manifest("projects")
     return result
 
 
@@ -86,7 +87,7 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
     def test_first_party_app_snapshot_matches_real_manifests(self):
         state = assignment_map(CURRENT_STATE.read_text(encoding="utf-8"))
         apps = expected_apps()
-        self.assertEqual(set(apps), {"files", "settings", "account", "system", "internet", "notes"})
+        self.assertEqual(set(apps), {"files", "settings", "account", "system", "internet", "notes", "projects"})
 
         for app_id, app in apps.items():
             prefix = f"APP_{app_id.upper()}"

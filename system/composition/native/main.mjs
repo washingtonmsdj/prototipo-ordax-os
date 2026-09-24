@@ -10,6 +10,7 @@ import { createNativeDiagnosticJournalStore } from "../../adapters/native/diagno
 import { createNativeFileSpace } from "../../adapters/native/file-space.mjs";
 import { createNativeRecentFilesStore } from "../../adapters/native/recent-files.mjs";
 import { createNativeProjectStore } from "../../adapters/native/projects.mjs";
+import { createNativeProjectCloudLinkStore } from "../../adapters/native/project-cloud-links.mjs";
 import { createNativeProjectWebReferenceStore } from "../../adapters/native/project-web-references.mjs";
 import { createNativeNetworkManagement } from "../../adapters/native/network-management.mjs";
 import { createNativeKeyboardLayout } from "../../adapters/native/keyboard-layout.mjs";
@@ -38,6 +39,7 @@ import { createComponentManager } from "../../services/components/manager.mjs";
 import { loadOptionalComponentRuntime } from "../../services/components/runtime-loader.mjs";
 import { createRecentFilesRuntime } from "../../services/files/recent-files.mjs";
 import { createProjectCatalogRuntime } from "../../services/files/projects.mjs";
+import { createProjectCloudLinksRuntime } from "../../services/projects/cloud-links.mjs";
 import { createProjectWebReferenceRuntime } from "../../services/projects/web-references.mjs";
 import { createProjectContinuityFileSpace } from "../../services/files/project-continuity-file-space.mjs";
 import { createNotificationsRuntime } from "../../services/notifications/runtime.mjs";
@@ -223,6 +225,10 @@ async function start() {
   });
   const projects = fileSpace === null ? null : createProjectCatalogRuntime({
     store: createNativeProjectStore(window),
+  });
+  const projectCloudLinks = projects === null ? null : createProjectCloudLinksRuntime({
+    projects,
+    store: createNativeProjectCloudLinkStore(window),
   });
   const projectReferences = projects === null ? null : createProjectWebReferenceRuntime({
     store: createNativeProjectWebReferenceStore(window),
@@ -431,6 +437,22 @@ async function start() {
 
   bootScreen.setStage(surface.localization.translate("surface.boot.loadingApps"));
 
+  const projectsComponent = await loadOptionalComponentRuntime({
+    componentId: "projects",
+    importer: () => import("../../apps/projects/runtime.mjs"),
+    componentManager,
+    context: {
+      root,
+      surfaceLifecycle: surface,
+      projects,
+      projectCloudLinks,
+      appActivation,
+    },
+    onError(error) {
+      reportClientDiagnostic("projects-runtime", error);
+    },
+  });
+
   const notesComponent = await loadOptionalComponentRuntime({
     componentId: "notes",
     importer: () => import("../../apps/notes/runtime.mjs"),
@@ -513,9 +535,11 @@ async function start() {
       batteryTrayControls?.destroy();
       batteryQuickPanel?.destroy();
       fileSpaceControls.destroy();
+      projectsComponent?.destroy();
       notesComponent?.destroy();
       internetComponent?.destroy();
       projectReferences?.destroy();
+      projectCloudLinks?.destroy();
       accountOverviewControls.destroy();
       preferenceSync.destroy();
       browserSession.dispose();

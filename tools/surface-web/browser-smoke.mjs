@@ -25,6 +25,7 @@ const CSS_FILES = [
 const COMPONENT_ASSET_FILES = Object.freeze({
   'system/apps/internet/internet.css': 'text/css',
   'system/apps/notes/notes.css': 'text/css',
+  'system/apps/projects/projects.css': 'text/css',
 });
 
 function parseArgs(argv) {
@@ -610,6 +611,19 @@ function buildCompositionProofExpression(moduleSources, styles, assetUrls) {
     result.internetComponentStyleMounted = Boolean(
       firstInternetStyle?.href?.startsWith('data:text/css;base64,'),
     );
+    const firstProjectsStyle = document.querySelector(
+      'link[data-ordax-component-style="projects"]',
+    );
+    result.projectsComponentStyleMounted = Boolean(
+      firstProjectsStyle?.href?.startsWith('data:text/css;base64,'),
+    );
+
+    await launch('projects');
+    const projectsWindow = root.querySelector('[data-window-id="projects"]');
+    const projectsSlot = projectsWindow?.querySelector('[data-app-extension="projects-workspace"]');
+    const projectsView = projectsSlot?.querySelector('[data-ordax-projects-view]');
+    result.projectsOwnerMounted = projectsSlot?.dataset.ordaxProjectsMounted === 'true';
+    result.projectsWebUnavailableHonest = projectsView?.dataset.projectsAvailable === 'false';
 
     await launch('settings');
     let settingsWindow = root.querySelector('[data-window-id="settings"]');
@@ -1087,6 +1101,7 @@ function buildCompositionProofExpression(moduleSources, styles, assetUrls) {
       'darkActionPresent', 'darkThemeApplied', 'darkThemePersisted', 'accessibilityNavigationPresent',
       'accessibilityTargetApplied', 'extraLargeActionPresent', 'textScaleApplied', 'textScalePersisted',
       'workspaceTargetPersisted', 'internetComponentStyleMounted',
+      'projectsComponentStyleMounted', 'projectsOwnerMounted', 'projectsWebUnavailableHonest',
       'notesEmptyEditorState', 'notesHeadingEnterHandled',
       'notesBackspaceExitsBlock', 'notesBulletEnterContinuesList', 'notesShiftEnterKeepsBlock',
       'notesOwnerMounted', 'notesNewProjectActionPresent', 'notesProjectCreated',

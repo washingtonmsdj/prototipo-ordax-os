@@ -4,6 +4,7 @@ import test from "node:test";
 import { defineFirstPartyApp } from "../system/apps/app-contract.mjs";
 import { internetApp } from "../system/apps/internet/app.mjs";
 import { notesApp } from "../system/apps/notes/app.mjs";
+import { projectsApp } from "../system/apps/projects/app.mjs";
 import { validateFileListing } from "../system/contracts/file-space.mjs";
 
 function baseSpec(panel) {
@@ -125,6 +126,16 @@ test("app owner exposes validated component identity", () => {
   assert.equal(app.component.releaseMode, "bundled");
   assert.equal(Object.isFrozen(app.component), true);
 });
+test("Projects stays a first-party app with independent development delivery", () => {
+  assert.equal(projectsApp.id, "projects");
+  assert.deepEqual(projectsApp.requiredCapabilities, []);
+  assert.deepEqual(projectsApp.optionalCapabilities, []);
+  assert.equal(projectsApp.panels[0].extensionId, "projects-workspace");
+  assert.equal(projectsApp.component.owner, "system/apps/projects");
+  assert.equal(projectsApp.component.releaseMode, "git-app");
+  assert.equal(projectsApp.component.restartScope, "component");
+});
+
 test("Notes stays a first-party app and advertises native file-space as optional", () => {
   assert.equal(notesApp.id, "notes");
   assert.deepEqual(notesApp.requiredCapabilities, []);

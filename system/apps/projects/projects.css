@@ -1,0 +1,133 @@
+.ordax-projects-view {
+  display: grid;
+  gap: 1.25rem;
+  min-height: 100%;
+  padding: 1.25rem;
+}
+
+.ordax-projects-header {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 52rem;
+}
+
+.ordax-projects-kicker,
+.ordax-projects-intro,
+.ordax-project-card-meta,
+.ordax-project-card-path,
+.ordax-projects-cloud-summary,
+.ordax-projects-empty-copy {
+  margin: 0;
+}
+
+.ordax-projects-kicker {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.ordax-projects-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2.35rem);
+}
+
+.ordax-projects-intro {
+  max-width: 44rem;
+  opacity: 0.72;
+}
+
+.ordax-projects-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ordax-projects-summary-item,
+.ordax-project-badge {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
+  opacity: 0.72;
+}
+
+.ordax-projects-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.ordax-projects-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.8rem;
+}
+
+.ordax-project-card {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 1rem;
+}
+
+.ordax-project-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ordax-project-card-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.ordax-project-card-title,
+.ordax-project-card-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ordax-project-card-path {
+  white-space: nowrap;
+  font-size: 0.78rem;
+  opacity: 0.62;
+}
+
+.ordax-project-badge {
+  flex: 0 0 auto;
+}
+
+.ordax-project-card-meta {
+  font-size: 0.82rem;
+  opacity: 0.68;
+}
+
+.ordax-project-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ordax-project-action {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ordax-project-action:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.ordax-projects-empty-title {
+  margin: 0;
+}

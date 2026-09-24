@@ -110,6 +110,7 @@ test("canonical component catalog has one unique owner identity per app and serv
     "ordax-intelligence",
     "clock-service",
     "files",
+    "projects",
     "notes",
     "internet",
     "settings",
@@ -118,6 +119,11 @@ test("canonical component catalog has one unique owner identity per app and serv
   ]) {
     assert.ok(ids.includes(required), required);
   }
+  const projects = components.find((component) => component.id === "projects");
+  assert.equal(projects.version, "0.1.0");
+  assert.equal(projects.releaseMode, "git-app");
+  assert.equal(projects.restartScope, "component");
+  assert.equal(projects.owner, "system/apps/projects");
   const internet = components.find((component) => component.id === "internet");
   assert.equal(internet.version, "0.3.0");
   assert.equal(internet.releaseMode, "git-app");

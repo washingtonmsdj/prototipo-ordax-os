@@ -139,6 +139,26 @@ test("English catalog contains primary Files, Settings and System entries", asyn
   assert.match(localSessionCatalog, /"localSession\.lock\.message\.rateLimited": "Too many attempts\./);
 });
 
+test("Projects primary journey uses shared localization in PT-BR and English", async () => {
+  const controls = await readFile(
+    new URL("../system/apps/projects/ui/workspace-controls.mjs", import.meta.url),
+    "utf8",
+  );
+  const catalog = await readFile(
+    new URL("../system/services/i18n/catalog/projects.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(controls, /const localization = lifecycle\.localization/);
+  assert.match(controls, /t\("projects\.action\.openFiles"\)/);
+  assert.match(controls, /ordaxProjectsLocale/);
+  assert.match(catalog, /"projects\.title": "Projetos"/);
+  assert.match(catalog, /"projects\.title": "Projects"/);
+  assert.match(catalog, /"projects\.status\.localOnly": "Somente local"/);
+  assert.match(catalog, /"projects\.status\.localOnly": "Local only"/);
+  assert.doesNotMatch(controls, /timeZone:\s*"America\/Bahia"/);
+});
+
 test("Notes and Internet primary journeys use the shared localization owner", async () => {
   const notes = await readFile(
     new URL("../system/apps/notes/ui/workspace-controls.mjs", import.meta.url),

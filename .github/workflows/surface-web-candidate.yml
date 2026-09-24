@@ -86,6 +86,8 @@ on:
       - 'tests/test_recent_files.mjs'
       - 'tests/test_recent_files_ui_contract.py'
       - 'tests/test_projects.mjs'
+      - 'tests/test_projects_app.mjs'
+      - 'tests/test_projects_app_contract.py'
       - 'tests/test_project_web_references.mjs'
       - 'tests/test_browser_favorites.mjs'
       - 'tests/test_internet_favorites_contract.py'
@@ -227,6 +229,8 @@ on:
       - 'tests/test_recent_files.mjs'
       - 'tests/test_recent_files_ui_contract.py'
       - 'tests/test_projects.mjs'
+      - 'tests/test_projects_app.mjs'
+      - 'tests/test_projects_app_contract.py'
       - 'tests/test_project_web_references.mjs'
       - 'tests/test_browser_favorites.mjs'
       - 'tests/test_internet_favorites_contract.py'
@@ -340,6 +344,7 @@ jobs:
           node --test tests/test_surface_workspace.mjs
           node --test tests/test_recent_files.mjs
           node --test tests/test_projects.mjs
+          node --test tests/test_projects_app.mjs
           node --test tests/test_project_web_references.mjs
           node --test tests/test_browser_favorites.mjs
           node --test tests/test_browser_history.mjs
@@ -391,6 +396,7 @@ jobs:
           python -m unittest tests.test_surface_web_builder -v
           python -m unittest tests.test_recent_files_ui_contract -v
           python -m unittest tests.test_project_files_ui_contract -v
+          python -m unittest tests.test_projects_app_contract -v
           python -m unittest tests.test_home_continuation_contract -v
           python -m unittest tests.test_notification_center_ui_contract -v
           python -m unittest tests.test_files_to_notes_import_contract -v
