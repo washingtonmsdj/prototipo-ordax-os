@@ -70,20 +70,25 @@ python tools/local-ai-benchmark/benchmark.py \
 The benchmark accepts only literal IPv4 loopback HTTP with an explicit port. It
 first discovers exactly one active model through `/v1/models`, fails closed on
 an unexpected model identity, performs one unreported warmup, and then records
-bounded deterministic `/completion` samples.
+bounded deterministic samples through `/v1/chat/completions` — the same
+OpenAI-compatible inference path consumed by `ordax.local-ai/1`. Every request
+binds the discovered canonical model ID explicitly.
 
 The JSON result records:
 
 - engine/model identity;
+- the measured API path;
 - measured run count and token budget;
 - per-run wall latency;
-- predicted token count;
+- `usage.completion_tokens` from the chat-completions response;
 - wall-clock tokens/second;
 - llama.cpp-reported predicted tokens/second when supplied by the backend;
 - medians across measured samples.
 
 The warmup is excluded from the reported summary so model-load/cache effects are
-not confused with steady-state generation throughput.
+not confused with steady-state generation throughput. A malformed chat response,
+missing/invalid `usage.completion_tokens`, ambiguous model discovery or model-ID
+mismatch invalidates the benchmark instead of producing a partial measurement.
 
 This benchmark is intentionally **not** a performance release gate. CI tests the
 benchmark's policy, parsing and bounds with a local fake server; CI runner speed
@@ -123,8 +128,8 @@ For a real notebook/hardware target:
 
 1. capture `local-ai-baseline.json` from the untouched currently signed/pinned
    runtime;
-2. keep engine commit, model SHA, quantization, prompt, token budget and benchmark
-   run count fixed while testing one engine/launcher change at a time;
+2. keep engine commit, model SHA, quantization, prompt, token budget, API path and
+   benchmark run count fixed while testing one engine/launcher change at a time;
 3. capture a new baseline for each candidate on the same target when practical;
 4. compare medians rather than a single run;
 5. reject a candidate that changes model/engine identity unexpectedly, breaks
