@@ -769,5 +769,13 @@ PRODUCTION_COMPONENT_SLOT_ACTIVATION_ALLOWED=NO
 Only a reviewed public anchor may later enter
 `system/trust/runtime-components-ed25519.json`. The matching private key remains
 external to Git/device and must pass independent derivation plus encrypted-recovery
-signing proof before public pinning. Pinning will still not authorize activation:
-pending probation, runtime health, promotion and rollback remain separate gates.
+signing proof before public pinning.
+
+The Native Surface now has a fail-closed, read-only component-slot broker backed
+by the signed `ordax-runtime-component-channel` helper. It is available only for
+Stable/MVP USB when both the helper and a real component trust file exist, and it
+revalidates component bytes through the verifier rather than trusting writable
+slot paths directly. Because the canonical component trust file is not pinned,
+that broker remains unavailable in the current product. This is **not** production
+slot activation: pending probation, runtime health, promotion and rollback remain
+separate gates.
