@@ -121,6 +121,32 @@ if ($InitialResult.'$schema' -ne 'prototype-ordax.runtime-component-trust-ceremo
     throw 'Initial component trust ceremony result is invalid or belongs to another source identity.'
 }
 
+$CurrentTrustHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $TrustPath).Hash.ToLowerInvariant()
+$CurrentProofReleaseHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $ProofReleasePath).Hash.ToLowerInvariant()
+$CurrentInitialEnvelopeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $InitialEnvelopePath).Hash.ToLowerInvariant()
+if ([string]$InitialResult.public_trust_sha256 -ne $CurrentTrustHash -or
+    [string]$InitialResult.proof_release_sha256 -ne $CurrentProofReleaseHash -or
+    [string]$InitialResult.proof_envelope_sha256 -ne $CurrentInitialEnvelopeHash) {
+    throw 'Initial component trust ceremony files changed after the initialization proof.'
+}
+
+$ProofRelease = Get-Content -LiteralPath $ProofReleasePath -Raw | ConvertFrom-Json
+if ($ProofRelease.'$schema' -ne 'prototype-ordax.runtime-component-release/1' -or
+    $ProofRelease.source_repository -ne 'washingtonmsdj/prototipo-ordax-os' -or
+    [string]$ProofRelease.source_commit -ne $SourceCommit -or
+    $ProofRelease.created_from_ci_recipe -ne 'runtime-component/package/1' -or
+    $ProofRelease.component.id -ne 'internet' -or
+    $ProofRelease.component.release_mode -ne 'component-slot' -or
+    $ProofRelease.activation.direct_activation_allowed -ne $false -or
+    $ProofRelease.activation.pending_health_required -ne $true) {
+    throw 'Component trust proof release no longer matches toolkit source identity and fail-closed policy.'
+}
+
+& $Signer verify-envelope --envelope $InitialEnvelopePath --trust $TrustPath
+if ($LASTEXITCODE -ne 0) {
+    throw 'Initial component trust envelope no longer verifies before recovery.'
+}
+
 Write-Host 'Deriving component trust from recovered private key...'
 & $Signer derive-trust --private-key $RecoveredPrivateKeyPath --out $RecoveredDerivedPath --key-id $KeyId
 if ($LASTEXITCODE -ne 0) { throw 'Recovered component trust derivation failed.' }
@@ -216,6 +242,31 @@ Compress-Archive -LiteralPath @(
 
 Assert-RegularFile $HandoffZipPath 'component public trust handoff zip'
 $HandoffHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $HandoffZipPath).Hash.ToLowerInvariant()
+
+$VerifyDirectory = Join-Path $ReviewDirectory ('.handoff-verify-' + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $VerifyDirectory | Out-Null
+try {
+    Expand-Archive -LiteralPath $HandoffZipPath -DestinationPath $VerifyDirectory
+    $ExpandedNames = @(Get-ChildItem -LiteralPath $VerifyDirectory -Force | ForEach-Object { $_.Name } | Sort-Object)
+    if ($ExpandedNames.Count -ne $ExpectedNames.Count) {
+        throw 'Public component trust handoff ZIP contains unexpected entries.'
+    }
+    for ($i = 0; $i -lt $ExpectedNames.Count; $i++) {
+        if ($ExpandedNames[$i] -ne $ExpectedNames[$i]) {
+            throw 'Public component trust handoff ZIP entry set is invalid.'
+        }
+        $source = Join-Path $PromotionDirectory $ExpectedNames[$i]
+        $expanded = Join-Path $VerifyDirectory $ExpectedNames[$i]
+        Assert-RegularFile $expanded 'expanded component trust handoff file'
+        if ((Get-FileHash -Algorithm SHA256 -LiteralPath $source).Hash.ToLowerInvariant() -ne
+            (Get-FileHash -Algorithm SHA256 -LiteralPath $expanded).Hash.ToLowerInvariant()) {
+            throw "Public component trust handoff ZIP changed bytes for $($ExpectedNames[$i])."
+        }
+    }
+}
+finally {
+    Remove-Item -LiteralPath $VerifyDirectory -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 Write-Host ''
 Write-Host 'COMPONENT_TRUST_RECOVERY=PASS'
