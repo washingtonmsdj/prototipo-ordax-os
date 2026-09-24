@@ -3,7 +3,9 @@
 
 This is an engineering benchmark, not a release gate. It only accepts an IPv4
 loopback llama.cpp endpoint, performs one warmup followed by bounded deterministic
-samples, and emits machine-readable measurements for later tuning comparisons.
+samples through the same OpenAI-compatible chat-completions path used by
+ordax.local-ai/1, and emits machine-readable measurements for later tuning
+comparisons.
 """
 
 from __future__ import annotations
@@ -131,27 +133,40 @@ def discover_model(base_url: str, timeout: float) -> str:
     return model_id.strip()
 
 
-def run_sample(base_url: str, *, timeout: float, n_predict: int, prompt: str):
+def run_sample(base_url: str, *, model_id: str, timeout: float, n_predict: int, prompt: str):
     started = time.perf_counter()
     payload = request_json(
         base_url,
-        "/completion",
+        "/v1/chat/completions",
         timeout=timeout,
         max_bytes=MAX_COMPLETION_BYTES,
         payload={
-            "prompt": prompt,
-            "n_predict": n_predict,
+            "model": model_id,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": n_predict,
             "temperature": 0.0,
             "stream": False,
         },
     )
     elapsed_seconds = time.perf_counter() - started
-    content = payload.get("content")
-    tokens = payload.get("tokens_predicted")
+
+    choices = payload.get("choices")
+    if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+        raise BenchmarkError("benchmark chat completion returned invalid choices")
+    message = choices[0].get("message")
+    if not isinstance(message, dict):
+        raise BenchmarkError("benchmark chat completion returned invalid message")
+    content = message.get("content")
     if not isinstance(content, str) or not content.strip():
-        raise BenchmarkError("benchmark completion returned empty content")
-    if not isinstance(tokens, int) or tokens <= 0 or tokens > n_predict:
-        raise BenchmarkError("benchmark completion returned invalid token count")
+        raise BenchmarkError("benchmark chat completion returned empty content")
+
+    usage = payload.get("usage")
+    if not isinstance(usage, dict):
+        raise BenchmarkError("benchmark chat completion returned invalid usage")
+    tokens = usage.get("completion_tokens")
+    if not isinstance(tokens, int) or not 0 < tokens <= n_predict:
+        raise BenchmarkError("benchmark chat completion returned invalid token count")
+
     wall_tokens_per_second = tokens / elapsed_seconds if elapsed_seconds > 0 else 0.0
     timings = payload.get("timings")
     server_tokens_per_second = None
@@ -197,9 +212,21 @@ def benchmark(
 
     # Warmup is deliberately excluded from reported samples so model-load/cache
     # effects do not masquerade as steady-state inference throughput.
-    run_sample(base_url, timeout=timeout, n_predict=n_predict, prompt=prompt)
+    run_sample(
+        base_url,
+        model_id=model_id,
+        timeout=timeout,
+        n_predict=n_predict,
+        prompt=prompt,
+    )
     samples = [
-        run_sample(base_url, timeout=timeout, n_predict=n_predict, prompt=prompt)
+        run_sample(
+            base_url,
+            model_id=model_id,
+            timeout=timeout,
+            n_predict=n_predict,
+            prompt=prompt,
+        )
         for _ in range(runs)
     ]
 
@@ -213,6 +240,7 @@ def benchmark(
         "engineId": "llama.cpp",
         "modelId": model_id,
         "endpoint": base_url,
+        "api_path": "/v1/chat/completions",
         "warmup_runs": 1,
         "measured_runs": runs,
         "n_predict": n_predict,
