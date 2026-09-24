@@ -146,8 +146,12 @@ pré-USB exige, no mínimo:
 - diagnóstico/recovery de produto e inventário mínimo de hardware/suporte;
 - release-manifest/4 real com `local-ai-runtime.erofs` assinada/materializável.
 
-Store, Mobile completo, Native em disco, sync cloud, federação, perfis profissionais e
-tools/agentes mutáveis de IA permanecem pós-MVP salvo decisão arquitetural posterior.
+Store pública, Mobile completo, Native em disco, sync cloud, federação, cobrança e
+tools/agentes mutáveis de IA permanecem pós-MVP. **A fundação arquitetural** de Store/distribuição,
+Spaces/Profile Packs profissionais, entitlements, memória provider-neutral, model router e ponte
+MCP externa entra no pré-MVP para evitar migrações destrutivas depois que contas/dados reais existirem.
+Essa fundação de source não habilita essas capacidades comercialmente e não cria um novo gate físico
+para a primeira prova Stable USB.
 
 ```text
 PRE_USB_NOVA_ORDAX_AUDIT=PASS_SOURCE
@@ -315,9 +319,40 @@ No MVP:
 
 A arquitetura continua preparada para dispositivos, sincronização, backup, continuidade PC/Web/Mobile, armazenamento, assinatura/entitlements e serviços premium.
 
+Antes do MVP público, a fundação passa a distinguir:
+
+- **perfil da conta**: identidade pessoal do usuário, nunca um produto premium;
+- **Space**: contexto pessoal/de trabalho/profissional que contém projetos, memória e futuras memberships;
+- **Profile Pack**: composição versionada aplicada a um Space, por exemplo Developer, Creator, Business ou Legal/Advocacia;
+- **entitlement**: decisão server-authoritative para capacidade/serviço premium, nunca uma alegação do cliente.
+
+A experiência gratuita fica **arquiteturalmente preparada** para até 2 Spaces privados ativos como
+default provisório. Isso não é preço, tier comercial definitivo nem promessa de quota pública.
+Categorias de Profile Pack não são bloqueadas só pelo nome: a monetização futura deve recair sobre
+valor mensurável como Spaces adicionais/compartilhados, membros, memória cloud/histórico, sync/backup,
+compute externo, conectores, automações e suporte.
+
 A direção futura de monetização é vender **valor do ecossistema** — sincronização, backup, continuidade, armazenamento, colaboração, compute e serviços — e não transformar quantidade de dispositivos isoladamente no produto vendido.
 
-Nenhuma política de preço, nome de plano, quota comercial ou limite de dispositivos está definida.
+Nenhuma política de preço, nome de plano comercial definitivo ou limite comercial de dispositivos está definida.
+
+## 10.1 Fundação de ecossistema pré-MVP
+
+A especificação canônica dessa fundação está em `PLANO-04-FUNDACAO-ECOSSISTEMA-PRE-MVP.md` e nos
+contratos `ordax.entitlements/1`, `ordax.spaces/1`, `ordax.profile-packs/1`,
+`ordax.memory/1` e `ordax.model-router/1`.
+
+Memória persistente pertence ao OrdaX e pode alimentar, mediante autorização, o backend local ou
+provedores externos futuros. GPT, Grok, llama.cpp ou outro modelo não são donos da memória do usuário.
+
+O Product MCP futuro autentica o usuário na conta OrdaX e resolve Space/projeto/capability antes de
+expor ferramentas. Conexão GitHub é uma autorização separada, preferencialmente por GitHub App e
+repositórios selecionados; tokens GitHub não são entregues ao modelo externo.
+
+Profile Packs profissionais podem definir fontes de conhecimento, políticas de atualização,
+templates e composição de apps, mas não podem conceder privilégios, ignorar assinatura de pacotes ou
+transformar resposta de modelo em fonte autoritativa. O pack `legal-br` inicial permanece **draft**
+até existir pipeline de fontes oficiais/versionadas e validação de domínio.
 
 ## 11. Conta OrdaX
 
