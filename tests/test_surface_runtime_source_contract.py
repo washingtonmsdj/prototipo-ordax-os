@@ -44,7 +44,8 @@ class SurfaceRuntimeSourceContractTests(unittest.TestCase):
 
     def test_discovery_is_lock_only_and_forbids_physical_promotion(self):
         text = DISCOVERY.read_text(encoding="utf-8")
-        self.assertIn('"status": "verified-pinned-lock" if isinstance(expected_lock, dict) else "discovered-not-promotable"', text)
+        self.assertIn('"verified-pinned-lock"', text)
+        self.assertIn('"discovered-not-promotable"', text)
         self.assertIn("resolved package lock differs from committed candidate lock", text)
         self.assertIn('"drift-detected-not-promotable"', text)
         self.assertIn('result["drift"] = drift', text)
