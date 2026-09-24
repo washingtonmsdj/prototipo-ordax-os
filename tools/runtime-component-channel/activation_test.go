@@ -32,7 +32,7 @@ func writeComponentSlotCandidate(
 ) (string, string, releaseDescriptor) {
 	t.Helper()
 
-	runtimePath := "system/components/internet/runtime.mjs"
+	runtimePath := "system/apps/internet/runtime.mjs"
 	runtimeBytes := []byte("export const componentRuntime = { schema: \"ordax.component-runtime/1\" };\n")
 	runtimeDigest := sha256.Sum256(runtimeBytes)
 
