@@ -1,6 +1,6 @@
 {
-  "$schema": "prototype-ordax.physical-write-authorization/2",
-  "status": "blocked-explicit-physical-authorization-pending",
+  "$schema": "prototype-ordax.physical-write-authorization/3",
+  "status": "blocked-canonical-v4-release-proof-pending",
   "physical_write_allowed": false,
   "explicit_owner_authorization": false,
   "scope": "first-real-stable-mvp-usb-proof",
@@ -11,7 +11,8 @@
     "minimal_bootstrap_sha256": "6229a9b101ecdba389b184bbf1481462805422dc2030f18475f76b42244fceef",
     "release_trust_sha256": "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
     "portable_usb_contract_sha256": "d5f28c165b07c4d1201ac79f542a494f87ad520b31c98baa836313162f47c4c0",
-    "creator_portable_media_contract_sha256": "f771e519221a59ab065f9f8cf8c02972e0a311755de22b9accae96c5581fc10c"
+    "creator_portable_media_contract_sha256": "f771e519221a59ab065f9f8cf8c02972e0a311755de22b9accae96c5581fc10c",
+    "canonical_v4_release_proof_sha256": null
   },
   "requirements": {
     "canonical_public_trust_pinned": true,
@@ -29,7 +30,8 @@
     "live_usb_reenumeration_required": true,
     "end_user_destructive_confirmation_required": true,
     "windows_uac_required": true,
-    "post_write_readback_required": true
+    "post_write_readback_required": true,
+    "canonical_v4_release_proof_bound": true
   },
   "consumer_policy": {
     "user_selects_image_file": false,
@@ -37,5 +39,13 @@
     "user_manages_trust_backup": false,
     "development_channel_may_satisfy_this_authorization": false,
     "legacy_ordax_ext4_layout_may_satisfy_this_authorization": false
+  },
+  "release_binding": {
+    "proof_path": "docs/evidence/canonical-v4-release-proof.json",
+    "proof_schema": "prototype-ordax.portable-v4-canonical-release-proof/1",
+    "source_commit": null,
+    "canonical_envelope_url": null,
+    "release_manifest_sha256": null,
+    "release_envelope_sha256": null
   }
 }
