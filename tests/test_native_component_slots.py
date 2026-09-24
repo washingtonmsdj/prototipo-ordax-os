@@ -156,6 +156,10 @@ class NativeComponentSlotTests(unittest.TestCase):
         argv = run.call_args.args[0]
         self.assertEqual(argv[0], "/signed/bin/ordax-runtime-component-channel")
         self.assertEqual(argv[1], "read-runtime-file")
+        self.assertIn("--version", argv)
+        self.assertIn("0.4.0", argv)
+        self.assertIn("--source-commit", argv)
+        self.assertIn("7777777777777777777777777777777777777777", argv)
         self.assertIn("system/apps/internet/runtime.mjs", argv)
         self.assertEqual(run.call_args.kwargs["stdin"], subprocess.DEVNULL)
         self.assertEqual(run.call_args.kwargs["stdout"], subprocess.PIPE)
