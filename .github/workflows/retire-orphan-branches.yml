@@ -129,7 +129,8 @@ jobs:
               expected = item["expected"]
               tag = item["archive_tag"]
               full_tag_ref = f"refs/tags/{tag}"
-              encoded_tag = urllib.parse.quote(full_tag_ref, safe="")
+              tag_api_ref = f"tags/{tag}"
+              encoded_tag = urllib.parse.quote(tag_api_ref, safe="")
               encoded_branch_ref = urllib.parse.quote(f"heads/{branch}", safe="")
 
               existing = subprocess.run(

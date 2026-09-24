@@ -43,6 +43,10 @@ class OrphanBranchRetirementWorkflowTests(unittest.TestCase):
             self.workflow,
         )
 
+    def test_archive_tag_read_uses_git_ref_path_without_refs_prefix(self):
+        self.assertIn('tag_api_ref = f"tags/{tag}"', self.workflow)
+        self.assertIn('full_tag_ref = f"refs/tags/{tag}"', self.workflow)
+
     def test_archive_tag_is_verified_before_branch_delete(self):
         verify_index = self.workflow.index("archive tag verification failed")
         delete_index = self.workflow.index('"--method", "DELETE"')
