@@ -10,6 +10,7 @@ import subprocess
 from dataclasses import dataclass
 
 DEFAULT_SLOT_ROOT = "/var/lib/ordax/components"
+COMPONENT_MODULE_PREFIX = "/__ordax/native/component-module/"
 MAX_RUNTIME_FILE_BYTES = 2 * 1024 * 1024
 MAX_RESOLVE_OUTPUT_BYTES = 16 * 1024
 DEFAULT_TIMEOUT_SECONDS = 3.0
@@ -36,6 +37,15 @@ class ComponentSlotRequestError(ComponentSlotError):
 
 class ComponentSlotVerificationError(ComponentSlotError):
     pass
+
+
+@dataclass(frozen=True)
+class ComponentModuleRequest:
+    component_id: str
+    state: str
+    version: str
+    source_commit: str
+    requested_path: str
 
 
 @dataclass(frozen=True)
@@ -96,6 +106,37 @@ def _validate_request(component_id: str, state: str, requested_path: str | None 
     parts = requested_path.split("/")
     if any(part in {"", ".", ".."} for part in parts):
         raise ComponentSlotRequestError("invalid runtime component path")
+
+
+def parse_component_module_path(path: str) -> ComponentModuleRequest:
+    if (
+        not isinstance(path, str)
+        or not path.startswith(COMPONENT_MODULE_PREFIX)
+        or "\x00" in path
+        or "\\" in path
+        or "%" in path
+        or "?" in path
+        or "#" in path
+    ):
+        raise ComponentSlotRequestError("invalid runtime component module path")
+
+    suffix = path[len(COMPONENT_MODULE_PREFIX):]
+    parts = suffix.split("/", 4)
+    if len(parts) != 5:
+        raise ComponentSlotRequestError("invalid runtime component module path")
+
+    component_id, state, version, source_commit, requested_path = parts
+    _validate_request(component_id, state, requested_path)
+    if not _SEMVER_RE.fullmatch(version) or not _SHA40_RE.fullmatch(source_commit):
+        raise ComponentSlotRequestError("invalid runtime component slot identity")
+
+    return ComponentModuleRequest(
+        component_id=component_id,
+        state=state,
+        version=version,
+        source_commit=source_commit,
+        requested_path=requested_path,
+    )
 
 
 def _run_helper(
