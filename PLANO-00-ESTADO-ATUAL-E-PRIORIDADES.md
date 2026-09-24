@@ -123,7 +123,7 @@ Os planos longos registram capacidades herdadas como referência de produto, mas
 | C13 Store | **FUNDAÇÃO PRÉ-MVP; produto Store pós-MVP** | Store futura usa o mesmo manifesto/updater/permissions; UI pública, publicação de terceiros e billing continuam posteriores. |
 | C14 Perfis profissionais | **FUNDAÇÃO PRÉ-MVP via Spaces/Profile Packs** | Conta pessoal é separada. Packs Developer e Legal-BR existem como drafts; ativação comercial/knowledge pipeline completo continua posterior. |
 | C15 Objetos/proveniência de produto | **PÓS-MVP** | Fora do lançamento básico. |
-| C16 IA nativa | **ENTRA como capability do sistema + fundação de memória/router** | Intelligence + backend local fazem parte do Stable/MVP v4. `ordax.memory/1` e `ordax.model-router/1` preservam memória OrdaX/provider-neutral; cloud e tools mutáveis ainda não estão ativos. |
+| C16 IA nativa | **ENTRA como capability do sistema** | Intelligence + backend local fazem parte do Stable/MVP v4. A fundação `ordax.memory/1` + `ordax.model-router/1` preserva memória OrdaX/provider-neutral e rotas futuras; cloud e tools mutáveis ainda não estão ativos. |
 | C17 Conectores/automações | **BOUNDARY PRÉ-MVP; runtime pós-MVP** | Product MCP/OAuth e separação GitHub App/Space/project ficam definidos agora. Conectores ativos, automações e mutações continuam posteriores. |
 | C18 Diagnóstico/exportação | **ENTRA no recorte local útil** | Revisão/exportação sanitizada já existe; evoluir somente lacunas concretas de fonte/retenção/prova. |
 | C19 Controle remoto | **PÓS-MVP** | Rescue/observação existentes não viram controle remoto genérico. |
