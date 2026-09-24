@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { IDENTITY_SESSION_SCHEMA } from "../system/contracts/identity-session.mjs";
-import { validateMemoryOwner } from "../system/contracts/memory.mjs";
+import {
+  validateMemoryOwner,
+  validateMemorySearchRequest,
+} from "../system/contracts/memory.mjs";
 import {
   DEVICE_MEMORY_OWNER,
   memoryOwnersForIdentityPort,
@@ -37,6 +40,41 @@ test("legacy owner inference never turns an empty account id into device ownersh
     () => validateMemoryOwner({ ownerId: "" }),
     /must not be empty/,
   );
+});
+
+test("memory search query is text-only and never coerces arbitrary values", () => {
+  const empty = validateMemorySearchRequest({
+    ownerId: "account-1",
+    scopes: ["account"],
+    query: null,
+  });
+  assert.equal(empty.query, "");
+
+  assert.throws(
+    () => validateMemorySearchRequest({
+      ownerId: "account-1",
+      scopes: ["account"],
+      query: 42,
+    }),
+    /must be text/,
+  );
+
+  let coerced = false;
+  const dangerous = {
+    toString() {
+      coerced = true;
+      return "must-not-run";
+    },
+  };
+  assert.throws(
+    () => validateMemorySearchRequest({
+      ownerId: "account-1",
+      scopes: ["account"],
+      query: dangerous,
+    }),
+    /must be text/,
+  );
+  assert.equal(coerced, false);
 });
 
 test("signed-out and unavailable identity keep only device-owned memory", () => {
