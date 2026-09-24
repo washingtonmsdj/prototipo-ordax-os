@@ -20,6 +20,7 @@ spec.loader.exec_module(promotion)
 
 AUTHORIZATION_TOOL_PATH = ROOT / "tools" / "creator" / "authorize_physical_write.py"
 PHYSICAL_PROMOTION_WORKFLOW = ROOT / ".github" / "workflows" / "physical-write-promotion.yml"
+PHYSICAL_TEST_SOURCE = ROOT / "tools" / "creator" / "cmd" / "ordax-creator-physical-test" / "main_windows.go"
 authorization_spec = importlib.util.spec_from_file_location(
     "ordax_owner_authorization_test", AUTHORIZATION_TOOL_PATH
 )
@@ -261,6 +262,28 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         )
         self.assertNotIn(
             "if: ${{ needs.preflight.outputs.ready == 'true' }}",
+            workflow,
+        )
+
+    def test_portable_writer_uses_canonical_release_commit_and_exact_17_sources(self):
+        source = PHYSICAL_TEST_SOURCE.read_text(encoding="utf-8")
+        workflow = PHYSICAL_PROMOTION_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn('buildReleaseSourceCommit', source)
+        self.assertIn('json:"release_source_commit"', source)
+        self.assertEqual(
+            source.count("plan.SourceCommit != b.ReleaseSourceCommit"),
+            2,
+        )
+        self.assertNotIn("plan.SourceCommit != b.SourceCommit", source)
+        self.assertIn("exactly 17 canonical artifact sources", source)
+        self.assertIn("repeat exactly 17 times", source)
+        self.assertIn("exactly 17 --source values", source)
+        self.assertNotIn("exactly 15 canonical artifact sources", source)
+        self.assertNotIn("repeat exactly 15 times", source)
+        self.assertIn("release_source_commit=", workflow)
+        self.assertIn("-X main.buildReleaseSourceCommit=$release_source_commit", workflow)
+        self.assertIn(
+            "'canonical_v4_release_source_commit': auth['release_binding']['source_commit']",
             workflow,
         )
 
