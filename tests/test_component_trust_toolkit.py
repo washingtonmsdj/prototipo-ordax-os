@@ -98,6 +98,12 @@ class ComponentTrustToolkitTests(unittest.TestCase):
         self.assertIn("PUBLIC_HANDOFF_SECRET_MATERIAL=NO", FINALIZER)
         self.assertIn("READY_TO_PIN_PUBLIC_ANCHOR=YES", FINALIZER)
         self.assertIn("OrdaX-Component-Public-Trust-Handoff.zip", FINALIZER)
+        self.assertIn("proof_release_sha256", FINALIZER)
+        self.assertIn("proof_envelope_sha256", FINALIZER)
+        self.assertIn("Initial component trust ceremony files changed", FINALIZER)
+        self.assertIn("Initial component trust envelope no longer verifies", FINALIZER)
+        self.assertIn("Expand-Archive", FINALIZER)
+        self.assertIn("handoff ZIP changed bytes", FINALIZER)
 
     def test_windows_ci_parses_both_scripts(self):
         self.assertIn("runs-on: windows-latest", WORKFLOW)
