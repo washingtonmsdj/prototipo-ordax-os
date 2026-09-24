@@ -7,7 +7,7 @@
   "geometry_owner": "tools/creator/core/storage_profiles.go#PlanPortableTargetStorage",
   "binding_schema": "prototype-ordax.portable-media-bindings/1",
   "plan_schema": "prototype-ordax.portable-media-plan/1",
-  "artifact_count": 15,
+  "artifact_count": 17,
   "partitions": [
     "ORDAX-ESP",
     "ORDAX-DATA"
@@ -42,9 +42,9 @@
       "write-exact-two-partition-gpt",
       "format-ORDAX-ESP-fat32",
       "format-ORDAX-DATA-exfat",
-      "materialize-15-exact-artifacts",
+      "materialize-17-exact-artifacts",
       "flush-and-sync",
-      "readback-sha256-and-size-for-15-artifacts",
+      "readback-sha256-and-size-for-17-artifacts",
       "verify-gpt-filesystems-labels-and-capacity"
     ]
   },
@@ -55,7 +55,7 @@
     "image_target": "/.ordax/runtimes/sha256/<runtime-sha256>/native-surface-runtime.erofs",
     "reference_target": "/.ordax/releases/<source_commit>/surface-runtime.sha256",
     "content_addressed": true,
-    "release_manifest_schema": "prototype-ordax.release-manifest/3",
+    "release_manifest_schema": "prototype-ordax.release-manifest/4",
     "physical_write_authorized": false
   },
   "physical_writer_v2": {
@@ -65,8 +65,8 @@
     "internal_command": "ordax-creator-physical-test apply-portable",
     "preparation_command": "ordax-creator-physical-test prepare-portable",
     "consumes_application_plan_schema": "prototype-ordax.portable-application-plan/1",
-    "exact_operation_count": 35,
-    "exact_artifact_count": 15,
+    "exact_operation_count": 39,
+    "exact_artifact_count": 17,
     "readback_sha256_and_size_per_artifact": true,
     "whole_disk_raw_image_required": false,
     "live_usb_revalidation": true,
@@ -76,5 +76,15 @@
     "physical_write_authorized": false,
     "public_mvp_default_enabled": false,
     "safety_workflow": ".github/workflows/physical-usb-test-toolkit.yml"
+  },
+  "local_ai_runtime_preseed": {
+    "implemented": true,
+    "image_artifact_id": "local-ai-runtime-image",
+    "reference_artifact_id": "local-ai-runtime-ref",
+    "image_target": "/.ordax/ai-runtimes/sha256/<runtime-sha256>/local-ai-runtime.erofs",
+    "reference_target": "/.ordax/releases/<source_commit>/local-ai-runtime.sha256",
+    "content_addressed": true,
+    "release_manifest_schema": "prototype-ordax.release-manifest/4",
+    "physical_write_authorized": false
   }
 }
