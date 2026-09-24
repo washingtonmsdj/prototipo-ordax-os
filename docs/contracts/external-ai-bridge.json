@@ -37,7 +37,9 @@
     "oauth_2_1_required_for_remote_mcp_clients": true,
     "pkce_required_for_public_clients": true,
     "external_ai_account_is_not_ordax_identity": true,
-    "development_owner_mcp_credentials_reusable_for_end_users": false
+    "development_owner_mcp_credentials_reusable_for_end_users": false,
+    "user_authenticates_to_ordax": true,
+    "oauth_2_1_required_for_remote_clients": true
   },
   "authorization": {
     "account_scope": true,
@@ -55,7 +57,10 @@
     "github_connection_is_separate_from_ordax_login": true,
     "preferred_ordax_github_integration": "github-app",
     "repository_allowlist_required_for_ordax_integration": true,
-    "github_token_exposed_to_external_ai_by_ordax": false
+    "github_token_exposed_to_external_ai_by_ordax": false,
+    "preferred_github_integration": "github-app",
+    "repository_allowlist_required": true,
+    "github_token_exposed_to_external_ai": false
   },
   "device_runtime": {
     "product_name": "OrdaX Device Agent",
@@ -85,5 +90,6 @@
     "cross-space-memory",
     "unscoped-github-account",
     "implicit-admin"
-  ]
+  ],
+  "transport": "mcp"
 }
