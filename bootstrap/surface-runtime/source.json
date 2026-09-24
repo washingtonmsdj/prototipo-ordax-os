@@ -129,7 +129,7 @@
     "libelogind": "252.24-r1",
     "libepoxy": "1.5.10-r1",
     "libevdev": "1.13.3-r0",
-    "libexpat": "2.8.4-r0",
+    "libexpat": "2.8.5-r0",
     "libffi": "3.4.8-r0",
     "libflac": "1.4.3-r1",
     "libfontenc": "1.1.8-r0",
@@ -312,7 +312,7 @@
     "prove-or-explicitly-defer-secure-boot-boundary-before-public-promotion"
   ],
   "apk_package_lock_count": 253,
-  "apk_package_lock_status": "pinned-from-ci-discovery-148c0fc9a3d40c8629186c6da4c16dcfecd1bc1e",
+  "apk_package_lock_status": "reviewed-refresh-from-ci-drift-report-35987297472",
   "discovery_evidence": {
     "workflow_run_id": 35533896100,
     "source_commit": "148c0fc9a3d40c8629186c6da4c16dcfecd1bc1e",
@@ -320,7 +320,8 @@
     "artifact_archive_sha256": "b5d16bf5e981b83d44ac477457d78973fc68fd2318dbf0cb5ce2964de85a08f9",
     "resolved_package_count": 253,
     "physical_artifact_created": false,
-    "physical_write_authorized": false
+    "physical_write_authorized": false,
+    "scope": "historical-pre-2026-09-24-lock-refresh"
   },
   "closed_gates": [
     "full-transitive-apk-lock-pinned",
@@ -343,7 +344,8 @@
     "repeat_digest_passed": true,
     "runtime_image_retained": false,
     "physical_artifact_authorized": false,
-    "boot_handoff_connected_at_proof_time": false
+    "boot_handoff_connected_at_proof_time": false,
+    "scope": "historical-pre-2026-09-24-lock-refresh"
   },
   "runtime_generated_state": {
     "machine_identity_baked_into_image": false,
@@ -360,5 +362,27 @@
     "qemu_current_head_proof_passed": false,
     "physical_usb_boot_proven": false,
     "secure_boot_proven": false
+  },
+  "lock_refresh": {
+    "status": "reviewed-candidate-lock-refresh",
+    "detected_by_qemu_run_id": 35984825646,
+    "discovery_run_id": 35987297472,
+    "discovery_source_commit": "5d6dcc30a7ec1cd5b32dc4c22313d1c44384d3a5",
+    "discovery_artifact_id": 10801779514,
+    "discovery_artifact_sha256": "5f0f6b22debc1967e89ffe682903f7f65b784c584d3ad7deb41a0b47049f05c0",
+    "previous_package_count": 253,
+    "resolved_package_count": 253,
+    "missing": [],
+    "extra": [],
+    "changed": [
+      {
+        "name": "libexpat",
+        "from": "2.8.4-r0",
+        "to": "2.8.5-r0"
+      }
+    ],
+    "physical_artifact_created": false,
+    "physical_write_authorized": false,
+    "reproducibility_reproof_required": true
   }
 }
