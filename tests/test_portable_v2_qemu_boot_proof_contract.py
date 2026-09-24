@@ -114,10 +114,11 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
         marker = "ORDAX_PORTABLE_ACTIVATION_STATE_DURABLE=YES"
         self.assertIn(marker, text)
         self.assertIn("ACTIVATION_DURABLE in text", text)
-        success_block = text.split("if (", 1)[1]
+        boot = text.split("def boot_qemu_expected", 1)[1].split("def boot_qemu(", 1)[0]
+        success = boot.split("if (\n                SUCCESS in text", 1)[1]
         self.assertLess(
-            success_block.index("ACTIVATION_DURABLE in text"),
-            success_block.index("process.terminate()"),
+            success.index("ACTIVATION_DURABLE in text"),
+            success.index("process.terminate()"),
         )
 
         runner = CONTRACT["current_runner_invariants"]
