@@ -48,6 +48,31 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         write_json(trust_path, trust)
         trust_sha = sha256(trust_path)
 
+        proof = {
+            "schema": "prototype-ordax.portable-v4-canonical-release-proof/1",
+            "source_commit": "a" * 40,
+            "canonical_envelope_url": "https://releases.ordax.example/stable-v4/release-envelope.json",
+            "canonical_trust_sha256": trust_sha,
+            "release_manifest_sha256": "1" * 64,
+            "release_envelope_sha256": "2" * 64,
+            "artifacts": {
+                "system.erofs": {"sha256": "3" * 64, "size": 4096},
+                "native-surface-runtime.erofs": {"sha256": "4" * 64, "size": 8192},
+                "local-ai-runtime.erofs": {"sha256": "5" * 64, "size": 16384},
+            },
+            "signed_handoff_receipt_sha256": "6" * 64,
+            "canonical_materialization_receipt_sha256": "7" * 64,
+            "signed_handoff_verified": True,
+            "canonical_materialization_verified": True,
+            "release_activated": False,
+            "physical_target_selected": False,
+            "physical_write_authorized": False,
+            "physical_write_performed": False,
+        }
+        proof_path = root / "docs/evidence/canonical-v4-release-proof.json"
+        write_json(proof_path, proof)
+        proof_sha = sha256(proof_path)
+
         minimal = {
             "$schema": "prototype-ordax.minimal-bootstrap/4",
             "status": "canonical-bytes-resolved",
@@ -198,7 +223,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         authorization_context_sha, _ = promotion.authorization_context_sha256(root)
 
         auth = {
-            "$schema": "prototype-ordax.physical-write-authorization/2",
+            "$schema": "prototype-ordax.physical-write-authorization/3",
             "status": "authorized",
             "physical_write_allowed": True,
             "explicit_owner_authorization": True,
@@ -215,6 +240,15 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
                 "release_trust_sha256": trust_sha,
                 "portable_usb_contract_sha256": sha256(portable_path),
                 "creator_portable_media_contract_sha256": sha256(creator_path),
+                "canonical_v4_release_proof_sha256": proof_sha,
+            },
+            "release_binding": {
+                "proof_path": "docs/evidence/canonical-v4-release-proof.json",
+                "proof_schema": "prototype-ordax.portable-v4-canonical-release-proof/1",
+                "source_commit": proof["source_commit"],
+                "canonical_envelope_url": proof["canonical_envelope_url"],
+                "release_manifest_sha256": proof["release_manifest_sha256"],
+                "release_envelope_sha256": proof["release_envelope_sha256"],
             },
         }
         write_json(root / "docs/contracts/physical-write-authorization.json", auth)
@@ -230,7 +264,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             workflow,
         )
 
-    def test_repository_v4_media_scope_requires_fresh_owner_authorization(self):
+    def test_repository_v4_media_scope_requires_canonical_release_proof_before_owner_authorization(self):
         auth = json.loads(
             (ROOT / "docs/contracts/physical-write-authorization.json").read_text(
                 encoding="utf-8"
@@ -238,7 +272,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         )
         self.assertEqual(
             auth["status"],
-            "blocked-explicit-physical-authorization-pending",
+            "blocked-canonical-v4-release-proof-pending",
         )
         self.assertFalse(auth["physical_write_allowed"])
         self.assertFalse(auth["explicit_owner_authorization"])
@@ -254,16 +288,26 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         )
         status = promotion.evaluate(ROOT)
         self.assertFalse(status["ready"])
-        self.assertTrue(
-            status["pre_authorization_ready"],
+        self.assertFalse(status["pre_authorization_ready"])
+        self.assertFalse(status["canonical_v4_release_proof_valid"])
+        self.assertFalse(status["canonical_v4_release_binding_resolved"])
+        self.assertFalse(status["physical_authorization_bindings_resolved"])
+        self.assertIn(
+            "canonical-v4-release-proof-missing-or-invalid",
             status["pre_authorization_blockers"],
         )
-        self.assertTrue(status["physical_authorization_bindings_resolved"])
+        self.assertIn(
+            "canonical-v4-release-binding-unresolved",
+            status["pre_authorization_blockers"],
+        )
         self.assertEqual(
             status["authorization_blockers"],
-            ["explicit-physical-write-authorization-missing"],
+            [
+                "explicit-physical-write-authorization-missing",
+                "physical-authorization-bindings-unresolved",
+            ],
         )
-        self.assertTrue(status["owner_authorization_required"])
+        self.assertFalse(status["owner_authorization_required"])
         self.assertFalse(status["authorized_candidate_materialization_allowed"])
         for forbidden in ("physical_path", "device_path", "disk_number", "volume_id"):
             self.assertNotIn(forbidden, auth)
@@ -384,6 +428,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
                 "release_trust_sha256": None,
                 "portable_usb_contract_sha256": None,
                 "creator_portable_media_contract_sha256": None,
+                "canonical_v4_release_proof_sha256": None,
             }
             write_json(auth_path, auth)
             (root / "bootstrap/trust/release-ed25519.json").unlink()
@@ -404,6 +449,23 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
                 ]
             )
 
+    def test_missing_canonical_v4_release_proof_blocks_pre_authorization(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            (root / "docs/evidence/canonical-v4-release-proof.json").unlink()
+
+            status = promotion.evaluate(root)
+
+            self.assertFalse(status["ready"])
+            self.assertFalse(status["pre_authorization_ready"])
+            self.assertFalse(status["canonical_v4_release_proof_valid"])
+            self.assertIn(
+                "canonical-v4-release-proof-missing-or-invalid",
+                status["pre_authorization_blockers"],
+            )
+            self.assertFalse(status["authorized_candidate_materialization_allowed"])
+
     def test_ready_promotion_uses_only_portable_layout_authority(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -416,6 +478,13 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
             self.assertFalse(status["owner_authorization_required"])
             self.assertTrue(status["authorized_candidate_materialization_allowed"])
             self.assertTrue(status["physical_authorization_bindings_resolved"])
+            self.assertTrue(status["canonical_v4_release_proof_valid"])
+            self.assertTrue(status["canonical_v4_release_binding_resolved"])
+            self.assertEqual(status["canonical_v4_release_source_commit"], "a" * 40)
+            self.assertEqual(
+                status["canonical_v4_release_envelope_url"],
+                "https://releases.ordax.example/stable-v4/release-envelope.json",
+            )
             self.assertTrue(status["authorization_context_matches_current_source"])
             self.assertRegex(
                 status["computed_authorization_context_sha256"],
@@ -435,6 +504,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
                     "release_trust_sha256",
                     "portable_usb_contract_sha256",
                     "creator_portable_media_contract_sha256",
+                    "canonical_v4_release_proof_sha256",
                 },
             )
 
