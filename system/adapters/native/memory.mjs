@@ -8,6 +8,7 @@ import {
 
 export const MEMORY_ENDPOINT = "/__ordax/native/intelligence-memory";
 export const MAX_NATIVE_MEMORY_ENVELOPE_BYTES = 6 * MAX_MEMORY_SNAPSHOT_BYTES + 1024;
+const DEFAULT_NATIVE_MEMORY_REQUEST_TIMEOUT_MS = 3000;
 
 const encoder = new TextEncoder();
 
@@ -27,6 +28,13 @@ function parseDevicePayload(payload) {
   return validated;
 }
 
+function requestTimeoutMs(value) {
+  if (!Number.isSafeInteger(value) || value < 100 || value > 300000) {
+    throw new TypeError("Native memory request timeout must be between 100 and 300000 milliseconds");
+  }
+  return value;
+}
+
 function declaredContentLength(response) {
   const raw = response?.headers?.get?.("content-length");
   if (typeof raw !== "string" || !/^\d+$/.test(raw.trim())) return null;
@@ -39,6 +47,20 @@ function parseJsonText(text) {
     return JSON.parse(text);
   } catch {
     throw new Error("Native Intelligence memory response is not valid JSON");
+  }
+}
+
+function cancelResponseBody(response) {
+  const body = response?.body;
+  if (!body || typeof body.cancel !== "function") return;
+  try {
+    const cancellation = body.cancel();
+    if (cancellation && typeof cancellation.catch === "function") {
+      void cancellation.catch(() => {});
+    }
+  } catch {
+    // Status-only callers do not need the response body. Cancellation failure
+    // must not replace the actual persistence decision.
   }
 }
 
@@ -92,6 +114,26 @@ async function readBoundedEnvelope(response) {
   throw new Error("Native Intelligence memory response body is unreadable");
 }
 
+async function fetchWithTimeout(fetchImpl, url, options, milliseconds, label, consume = null) {
+  const controller = new AbortController();
+  let timer = null;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`${label} timed out after ${milliseconds}ms`));
+    }, milliseconds);
+  });
+  const operation = (async () => {
+    const response = await fetchImpl(url, { ...options, signal: controller.signal });
+    return consume === null ? response : await consume(response);
+  })();
+  try {
+    return await Promise.race([operation, timeout]);
+  } finally {
+    if (timer !== null) clearTimeout(timer);
+  }
+}
+
 function validateEnvelope(value) {
   if (
     !value
@@ -108,23 +150,45 @@ function validateEnvelope(value) {
   return value;
 }
 
-export async function createNativeMemoryStore(windowRef = globalThis.window) {
+export async function createNativeMemoryStore(
+  windowRef = globalThis.window,
+  { requestTimeoutMs: requestedTimeoutMs = DEFAULT_NATIVE_MEMORY_REQUEST_TIMEOUT_MS } = {},
+) {
   if (!windowRef || typeof windowRef.fetch !== "function") {
     throw new TypeError("Native memory store requires window.fetch");
   }
+  const fetchImpl = windowRef.fetch.bind(windowRef);
+  const requestTimeout = requestTimeoutMs(requestedTimeoutMs);
 
   let memory = null;
-  const response = await windowRef.fetch(MEMORY_ENDPOINT, {
-    method: "GET",
-    cache: "no-store",
-    credentials: "same-origin",
-  });
-  if (!response.ok) {
-    throw new Error(`Native Intelligence memory persistence unavailable: ${response.status}`);
+  const initialRequest = await fetchWithTimeout(
+    fetchImpl,
+    MEMORY_ENDPOINT,
+    {
+      method: "GET",
+      cache: "no-store",
+      credentials: "same-origin",
+    },
+    requestTimeout,
+    "Native Intelligence memory load",
+    async (response) => {
+      if (!response.ok) {
+        cancelResponseBody(response);
+        return Object.freeze({ response, envelope: null });
+      }
+      return Object.freeze({
+        response,
+        envelope: validateEnvelope(await readBoundedEnvelope(response)),
+      });
+    },
+  );
+  if (!initialRequest.response.ok) {
+    throw new Error(
+      `Native Intelligence memory persistence unavailable: ${initialRequest.response.status}`,
+    );
   }
-  const initial = validateEnvelope(await readBoundedEnvelope(response));
-  if (initial.payload !== null) {
-    memory = parseDevicePayload(initial.payload);
+  if (initialRequest.envelope.payload !== null) {
+    memory = parseDevicePayload(initialRequest.envelope.payload);
   }
 
   let desiredRevision = 0;
@@ -137,13 +201,23 @@ export async function createNativeMemoryStore(windowRef = globalThis.window) {
     if (encoder.encode(body).byteLength > MAX_NATIVE_MEMORY_ENVELOPE_BYTES) {
       throw new Error("Native Intelligence memory request exceeds its byte limit");
     }
-    const next = await windowRef.fetch(MEMORY_ENDPOINT, {
-      method: "POST",
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
+    const next = await fetchWithTimeout(
+      fetchImpl,
+      MEMORY_ENDPOINT,
+      {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body,
+      },
+      requestTimeout,
+      "Native Intelligence memory persistence",
+      async (response) => {
+        cancelResponseBody(response);
+        return response;
+      },
+    );
     if (!next.ok) {
       throw new Error(`Native Intelligence memory persistence failed: ${next.status}`);
     }
