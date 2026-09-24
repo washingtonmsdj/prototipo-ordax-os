@@ -327,6 +327,12 @@ class InitramfsSourceContractTests(unittest.TestCase):
         self.assertIn('"activation-transaction.json"', PORTABLE_STATE_HELPER)
         self.assertIn('"rejected"', PORTABLE_STATE_HELPER)
         self.assertIn('select-boot "$STATE_MOUNT" "$PORTABLE_ROOT"', PORTABLE_INIT)
+        self.assertIn('sync || rescue "cannot durably flush portable activation state"', PORTABLE_INIT)
+        self.assertIn('ORDAX_PORTABLE_ACTIVATION_STATE_DURABLE=YES', PORTABLE_INIT)
+        self.assertLess(
+            PORTABLE_INIT.index('sync || rescue "cannot durably flush portable activation state"'),
+            PORTABLE_INIT.index('ORDAX_PORTABLE_ACTIVATION_STATE_DURABLE=YES'),
+        )
         self.assertIn('rollback \\', PORTABLE_INIT)
         self.assertIn('cp /sbin/ordax-portable-state "$RUNTIME_STATE_HELPER"', PORTABLE_INIT)
         self.assertIn('chmod 0555 "$RUNTIME_STATE_HELPER"', PORTABLE_INIT)
@@ -447,6 +453,12 @@ class InitramfsSourceContractTests(unittest.TestCase):
         )
         self.assertTrue(pid1["candidate_failure_rolls_back_before_handoff"])
         self.assertTrue(pid1["activation_helper_retained_after_switch_root"])
+        self.assertTrue(pid1["activation_state_outer_sync_required"])
+        self.assertEqual(
+            pid1["activation_state_durable_marker"],
+            "ORDAX_PORTABLE_ACTIVATION_STATE_DURABLE=YES",
+        )
+        self.assertTrue(pid1["activation_state_durable_marker_after_sync"])
         self.assertTrue(pid1["selected_release_exact_signature_verification"])
         self.assertTrue(pid1["release_manifest_v4_supported"])
         self.assertTrue(pid1["local_ai_runtime_verified_handoff"])
