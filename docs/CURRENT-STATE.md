@@ -133,7 +133,13 @@ context instead of widening it. Source/CI work may continue, but destructive aut
 cannot even reach owner-consent preflight until the operator-controlled canonical v4
 signing/materialization sequence has produced `canonical-v4-release-proof.json` and that
 public receipt has been validated and bound to the authorization contract. Only then may
-fresh owner consent be evaluated for the exact 17-artifact v4 release.
+fresh owner consent be evaluated for the exact 17-artifact v4 release. The physical Creator
+now keeps writer/tooling provenance separate from release identity: the writer embeds its own
+Git SHA as provenance plus the canonical v4 release source commit from
+`physical-write-authorization.json -> release_binding.source_commit`. Target-specific
+Portable media/application plans must use that canonical release commit, and
+`prepare-portable`/`apply-portable` fail closed unless it matches; the v4 writer accepts
+exactly 17 canonical artifact sources, never the previous 15-source shape.
 
 ```text
 PRE_USB_NOVA_ORDAX_AUDIT=PASS
@@ -150,6 +156,9 @@ RECOVERY_STATUS_PHYSICAL_PROOF=PENDING_PHYSICAL
 SUPPORTED_HARDWARE_MATRIX=PASS_SOURCE
 CANONICAL_STABLE_TARGET_HARDWARE_PROOF=PENDING_PHYSICAL
 CANONICAL_V4_OPERATOR_PREFLIGHT=PASS_SOURCE_READ_ONLY
+CREATOR_PORTABLE_WRITER_RELEASE_SOURCE_BINDING=PASS_SOURCE
+CREATOR_PORTABLE_WRITER_ARTIFACT_SOURCE_COUNT=17
+CREATOR_WRITER_SOURCE_PROVENANCE_SEPARATE=YES
 CANONICAL_V4_RELEASE_PROOF=PENDING_OPERATOR_EXECUTION
 CANONICAL_V4_RELEASE_PROOF_BINDING=PENDING
 PHYSICAL_OWNER_AUTHORIZATION_REACHABLE=NO_CANONICAL_V4_RELEASE_PROOF_PENDING
