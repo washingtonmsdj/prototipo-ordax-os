@@ -12,6 +12,15 @@ function modelResponse(id) {
   };
 }
 
+function modelListResponse(ids) {
+  return {
+    ok: true,
+    async json() {
+      return { data: ids.map((id) => ({ id })) };
+    },
+  };
+}
+
 test("dynamically discovered Local AI model refreshes on each explicit probe", async () => {
   let discoveryCalls = 0;
   const requests = [];
@@ -41,6 +50,30 @@ test("dynamically discovered Local AI model refreshes on each explicit probe", a
     "/v1/models",
     "/health",
   ]);
+});
+
+test("dynamic model discovery fails closed when backend exposes multiple models", async () => {
+  let healthCalls = 0;
+  const runtime = createLocalAiRuntime({
+    modelId: null,
+    fetchImpl: async (url) => {
+      if (url.endsWith("/v1/models")) {
+        return modelListResponse(["model-a", "model-b"]);
+      }
+      if (url.endsWith("/health")) {
+        healthCalls += 1;
+        return { ok: true };
+      }
+      throw new Error("unexpected request");
+    },
+  });
+
+  await runtime.probe();
+  assert.equal(runtime.getSnapshot().state, "unavailable");
+  assert.equal(runtime.getSnapshot().engineId, null);
+  assert.equal(runtime.getSnapshot().modelId, null);
+  assert.equal(healthCalls, 0);
+  await assert.rejects(() => runtime.generate({ prompt: "must not pick first model" }), /not ready/);
 });
 
 test("failed generation rediscovery adopts a new dynamic model without retrying the failed prompt", async () => {
