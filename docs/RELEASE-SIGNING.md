@@ -46,15 +46,27 @@ public-only signing directory:
 ```
 
 The preparer copies only public material, verifies SHA-256 after every copy, builds the
-exact release-manifest/4, carries the canonical public trust and signer, and emits a
-public handoff receipt. It does not accept a private-key parameter, publish a release,
-activate a release or authorize physical media. The canonical private key is introduced
-only when the operator later runs `4-Sign-Initial-OrdaXRelease.ps1` from that reviewed
-handoff directory.
+exact release-manifest/4, carries the canonical public trust, signer, release agent and
+the verify/materialize steps 5/6, and emits a public handoff receipt. It does not accept
+a private-key parameter, publish a release, activate a release or authorize physical
+media. The canonical private key is introduced only when the operator later runs
+`4-Sign-Initial-OrdaXRelease.ps1` from that reviewed handoff directory.
 
 After signing, the same handoff directory also carries the official Windows release-acquisition agent and `5-Verify-PortableV4-SignedHandoff.ps1`. That step calls `ordax-release-agent verify-envelope` against the canonical public trust, proves that the envelope payload is byte-identical to `release-manifest.json`, and re-hashes/re-sizes `system.erofs`, `native-surface-runtime.erofs` and `local-ai-runtime.erofs` against the signed manifest.
 
-This post-sign check is deliberately **verify-only**: it does not publish the release, contact an artifact channel, call `materialize-portable-v4`, activate a release, select a USB target or authorize/write physical media. Canonical Portable materialization remains a later release-agent step against the reviewed HTTPS artifact channel.
+This post-sign check is deliberately **verify-only**: it does not publish the release, contact an artifact channel, call `materialize-portable-v4`, activate a release, select a USB target or authorize/write physical media.
+
+After the signed envelope and its exact three artifacts have been deliberately published on the reviewed canonical HTTPS channel, step 6 owns the non-activating materialization proof:
+
+```powershell
+.\6-Materialize-Verify-PortableV4-Canonical.ps1 \
+  -EnvelopeUrl https://<reviewed-channel>/release-envelope.json \
+  -ExpectedCommit <40-hex-source-commit>
+```
+
+The step requires a stable public HTTPS envelope URL with no query/fragment, a fresh empty local materialization root, the canonical public trust and the official release agent copied by step 3. It calls `materialize-portable-v4`, immediately calls `verify-portable-v4-exact`, validates the release directory plus the content-addressed Surface and Local AI stores, and writes `canonical-materialization-verification.json`.
+
+The materialization proof remains **non-activating and non-physical**. It fails if the fresh proof root contains `current`, `known-good`, `candidate` or an activation transaction, and it has no USB-target parameter. The proof therefore closes only the canonical signed/materializable-release boundary; physical-media authority and target confirmation stay separate.
 
 ## Private-key boundary
 
@@ -120,7 +132,7 @@ For v4, it additionally requires the exact `local-ai-runtime.erofs` artifact wit
 
 The signature is standard Ed25519 over the **exact manifest file bytes**. Whitespace is preserved in the signed payload. The output envelope remains `prototype-ordax.release-envelope/1`; envelope and manifest versions evolve independently.
 
-Signer support does not authorize publication, activation or physical-media writes. The repository already proves v4 signing/materialization with an ephemeral CI-only key. The remaining Stable/MVP gate is an operator-controlled signing/materialization run using the canonical private key outside Git, followed by disposable v4 boot proof before any physical USB write.
+Signer support does not authorize publication, activation or physical-media writes. The repository already proves v4 signing/materialization with an ephemeral CI-only key, and the disposable QEMU/UEFI v4 boot path is source/CI-proven. The remaining Stable/MVP release gate is execution of the operator-controlled canonical sequence outside Git: prepare the exact handoff, sign with the canonical private key, verify the signed handoff, review/publish the exact HTTPS artifacts, and run the step-6 canonical materialization verification. None of those steps by itself authorizes a physical USB write.
 
 ## Signing backends and custody evolution
 
