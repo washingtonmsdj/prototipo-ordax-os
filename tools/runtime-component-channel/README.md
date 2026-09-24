@@ -54,4 +54,8 @@ ordax-runtime-component-channel stage \
   --root /var/lib/ordax/components
 ```
 
-The canonical component trust anchor is intentionally unresolved in this prototype cut. Do not reuse or silently alias the whole-OS release key as component trust.
+The canonical component trust anchor is still unresolved until the explicit operator ceremony in `docs/COMPONENT-TRUST-CEREMONY.md` completes. The machine-readable policy is `docs/contracts/runtime-component-trust-policy.json`.
+
+The fixed first key id is `ordax-runtime-components-v1`. Only the reviewed public anchor may eventually be pinned at `system/trust/runtime-components-ed25519.json`; the matching private key stays outside Git and outside the device.
+
+Do not reuse or silently alias the whole-OS release key as component trust. Public-anchor pinning alone does not authorize publication or production activation.
