@@ -137,6 +137,26 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         ):
             self.assertNotIn(stale, document)
 
+    def test_current_stable_docs_make_v4_canonical_and_v3_compatibility(self):
+        current = CURRENT_STATE.read_text(encoding="utf-8")
+        bootstrap = MINIMAL_USB_BOOTSTRAP.read_text(encoding="utf-8")
+
+        self.assertIn(
+            "current Stable/MVP candidate uses signed `release-manifest/4`",
+            current,
+        )
+        self.assertIn("release-manifest/3` remains a verified compatibility baseline", current)
+        self.assertIn("PORTABLE_RELEASE_MANIFEST_V4_SIGN_VERIFY=PASS_CI_CURRENT_MVP", current)
+        self.assertIn("PORTABLE_RELEASE_OFFLINE_EXACT_VERIFY=PASS_CI_V2_V3_V4", current)
+        self.assertNotIn(
+            "current Stable/MVP candidate uses signed `release-manifest/3`",
+            current,
+        )
+
+        self.assertIn("current Stable/MVP release shape is release-manifest v4", bootstrap)
+        self.assertIn("v4 disposable boot plus fallback are now PASS_CI", bootstrap)
+        self.assertNotIn("A signed/materialized v4 disposable boot proof is still pending.", bootstrap)
+
     def test_version_identity_is_not_confused_with_independent_delivery(self):
         contract = json.loads(UPDATE_CONTRACT.read_text(encoding="utf-8"))
         component = contract["component_version"]
