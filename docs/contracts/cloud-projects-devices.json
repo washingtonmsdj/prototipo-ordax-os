@@ -19,7 +19,13 @@
     "github_is_optional": true,
     "local_path_stored_in_cloud": false,
     "local_device_binding_uses_opaque_ref": true,
-    "provider_tokens_stored_in_public_product_tables": false
+    "provider_tokens_stored_in_public_product_tables": false,
+    "local_cloud_link_port": "ordax.project-cloud-links/1",
+    "local_cloud_link_optional": true,
+    "local_project_identity_survives_unlinked": true,
+    "unlink_deletes_local_project": false,
+    "unlink_deletes_cloud_project": false,
+    "link_does_not_sync_files": true
   },
   "devices": {
     "product_registry_is_separate_from_engineering_control_plane": true,
