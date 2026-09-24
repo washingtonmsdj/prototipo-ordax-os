@@ -154,6 +154,7 @@ if (-not [string]::IsNullOrWhiteSpace($receiptDirectory) -and -not (Test-Path -L
 $receipt = [ordered]@{
     schema = 'prototype-ordax.portable-v4-canonical-materialization-verification/1'
     source_commit = $ExpectedCommit
+    canonical_envelope_url = $EnvelopeUrl
     canonical_trust_sha256 = Get-Sha256Lower $Trust
     release_manifest_sha256 = Get-Sha256Lower $Manifest
     release_envelope_sha256 = Get-Sha256Lower $Envelope

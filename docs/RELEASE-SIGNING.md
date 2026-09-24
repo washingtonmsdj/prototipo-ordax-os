@@ -68,6 +68,26 @@ The step requires a stable public HTTPS envelope URL with no query/fragment, a f
 
 The materialization proof remains **non-activating and non-physical**. It fails if the fresh proof root contains `current`, `known-good`, `candidate` or an activation transaction, and it has no USB-target parameter. The proof therefore closes only the canonical signed/materializable-release boundary; physical-media authority and target confirmation stay separate.
 
+After steps 5 and 6 both succeed, step 7 binds their receipts into one final non-physical proof:
+
+```powershell
+.\7-Verify-PortableV4-Canonical-Proof.ps1 \
+  -ExpectedCommit <40-hex-source-commit>
+```
+
+Step 7 requires the canonical public trust plus `signed-handoff-verification.json` and
+`canonical-materialization-verification.json`. It fails closed if the receipts disagree on
+source commit, canonical trust SHA-256, release-manifest SHA-256, release-envelope SHA-256
+or any of the three artifact SHA-256 values. It also requires the post-sign verifier and
+materializer receipts to prove that no release activation or physical-media action occurred.
+The output is `canonical-v4-release-proof.json` with schema
+`prototype-ordax.portable-v4-canonical-release-proof/1`.
+
+This aggregate receipt does not re-sign, republish or activate anything. It is the machine-checkable
+handoff that says the operator-controlled canonical signing proof and canonical materialization
+proof refer to exactly the same Stable v4 release. Fresh v4 physical-media authorization remains a
+separate later gate.
+
 ## Private-key boundary
 
 The private key:
