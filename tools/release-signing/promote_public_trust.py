@@ -31,7 +31,7 @@ EVIDENCE_SCHEMA = "prototype-ordax.release-trust-ceremony-evidence/1"
 ENVELOPE_SCHEMA = "prototype-ordax.release-envelope/1"
 POLICY_SCHEMA = "prototype-ordax.release-trust-policy/1"
 MINIMAL_SCHEMA = "prototype-ordax.minimal-bootstrap/4"
-AUTH_SCHEMA = "prototype-ordax.physical-write-authorization/2"
+AUTH_SCHEMA = "prototype-ordax.physical-write-authorization/3"
 PORTABLE_USB_SCHEMA = "prototype-ordax.portable-usb-v2/1"
 CREATOR_PORTABLE_SCHEMA = "prototype-ordax.creator-portable-media-plan/1"
 RESULT_SCHEMA = "prototype-ordax.release-trust-public-promotion/2"
@@ -789,7 +789,7 @@ def prepare_repository_promotion(
     promoted_authorization = copy.deepcopy(authorization)
     promoted_authorization[
         "status"
-    ] = "blocked-explicit-physical-authorization-pending"
+    ] = "blocked-canonical-v4-release-proof-pending"
     promoted_authorization["physical_write_allowed"] = False
     bindings = promoted_authorization.get("bindings")
     if not isinstance(bindings, dict):
@@ -802,6 +802,20 @@ def prepare_repository_promotion(
     bindings["release_trust_sha256"] = trust_sha
     bindings["portable_usb_contract_sha256"] = portable_sha
     bindings["creator_portable_media_contract_sha256"] = creator_portable_sha
+    bindings["canonical_v4_release_proof_sha256"] = None
+    release_binding = promoted_authorization.get("release_binding")
+    if not isinstance(release_binding, dict):
+        raise PromotionError("physical authorization release binding is invalid")
+    release_binding.update(
+        {
+            "proof_path": "docs/evidence/canonical-v4-release-proof.json",
+            "proof_schema": "prototype-ordax.portable-v4-canonical-release-proof/1",
+            "source_commit": None,
+            "canonical_envelope_url": None,
+            "release_manifest_sha256": None,
+            "release_envelope_sha256": None,
+        }
+    )
     auth_bytes = json_bytes(promoted_authorization)
 
     return {
@@ -963,7 +977,7 @@ def validate_promoted_repository(
         )
     if (
         authorization.get("status")
-        != "blocked-explicit-physical-authorization-pending"
+        != "blocked-canonical-v4-release-proof-pending"
     ):
         raise PromotionError(
             "physical write authorization status is unexpected "
@@ -978,9 +992,22 @@ def validate_promoted_repository(
         "release_trust_sha256": trust_sha,
         "portable_usb_contract_sha256": portable_sha,
         "creator_portable_media_contract_sha256": creator_portable_sha,
+        "canonical_v4_release_proof_sha256": None,
     }:
         raise PromotionError(
             "physical write authorization public bindings are invalid"
+        )
+    release_binding = authorization.get("release_binding")
+    if release_binding != {
+        "proof_path": "docs/evidence/canonical-v4-release-proof.json",
+        "proof_schema": "prototype-ordax.portable-v4-canonical-release-proof/1",
+        "source_commit": None,
+        "canonical_envelope_url": None,
+        "release_manifest_sha256": None,
+        "release_envelope_sha256": None,
+    }:
+        raise PromotionError(
+            "physical write authorization release binding is invalid after trust promotion"
         )
 
     return {
