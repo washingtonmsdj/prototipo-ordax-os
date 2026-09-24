@@ -127,6 +127,24 @@ func TestPortablePhysicalApplyPolicyRejectsAuthorizationDrift(t *testing.T) {
 	}
 }
 
+func TestPortablePhysicalApplyPolicyRejectsPlanDriftAfterAuthorization(t *testing.T) {
+	request := portablePhysicalRequestFixture(t)
+	originalAuthorization := request.DestructiveAuthorization
+
+	request.ApplicationPlan.SourceCommit = strings.Repeat("f", 40)
+	planSHA, err := creatorcore.PortableApplicationPlanSHA256(request.ApplicationPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if originalAuthorization == PortableDestructiveAuthorizationToken(request.Target, planSHA) {
+		t.Fatal("destructive authorization did not change after application-plan drift")
+	}
+	if err := ValidatePortablePhysicalApplyRequest(request); err == nil ||
+		!strings.Contains(err.Error(), "destructive authorization does not match current target and plan") {
+		t.Fatalf("application-plan drift was not rejected by destructive authorization: %v", err)
+	}
+}
+
 func TestPortablePhysicalApplyPolicyRejectsTargetAndSourceDrift(t *testing.T) {
 	request := portablePhysicalRequestFixture(t)
 	request.Target.PhysicalDiskBytes += 512
