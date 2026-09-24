@@ -424,12 +424,52 @@ func TestReleaseDescriptorRejectsDirectActivation(t *testing.T) {
 
 func TestCrossAppOwnerPackageIsRejected(t *testing.T) {
 	dir := t.TempDir()
-	packagePath, manifestHash, packageHash, packageSize := writePackage(
+	runtimePath := "system/apps/internet/runtime.mjs"
+	runtimeBytes := []byte("export const componentRuntime = { schema: \"ordax.component-runtime/1\" };\n")
+	_, manifest := packageManifestFor(t, runtimePath, runtimeBytes, testSourceCommit)
+
+	foreignPath := "system/apps/notes/runtime.mjs"
+	foreignBytes := []byte("export const foreign = true;\n")
+	foreignDigest := sha256.Sum256(foreignBytes)
+	manifest.Files = append(manifest.Files, packageFile{
+		Path:   foreignPath,
+		SHA256: hex.EncodeToString(foreignDigest[:]),
+		Size:   int64(len(foreignBytes)),
+	})
+	manifestBytes, err := marshalJSON(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	packagePath := filepath.Join(dir, "internet.zip")
+	file, err := os.OpenFile(packagePath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := zip.NewWriter(file)
+	writeZipEntry(t, writer, packageManifestName, manifestBytes)
+	writeZipEntry(t, writer, runtimePath, runtimeBytes)
+	writeZipEntry(t, writer, foreignPath, foreignBytes)
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	manifestDigest := sha256.Sum256(manifestBytes)
+	packageHash, packageSize, err := sha256File(packagePath, maxPackageBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	releasePath, _ := writeRelease(
 		t,
 		dir,
-		"system/apps/notes/runtime.mjs",
+		packagePath,
+		hex.EncodeToString(manifestDigest[:]),
+		packageHash,
+		packageSize,
 	)
-	releasePath, _ := writeRelease(t, dir, packagePath, manifestHash, packageHash, packageSize)
 	privatePath := filepath.Join(dir, "private-cross-app.pem")
 	trustPath := filepath.Join(dir, "trust-cross-app.json")
 	if _, err := generateKey(privatePath, trustPath, "runtime-components-cross-app-test-1"); err != nil {
@@ -445,7 +485,7 @@ func TestCrossAppOwnerPackageIsRejected(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
-	_, _, _, err := stageComponent(
+	_, _, _, err = stageComponent(
 		envelopePath,
 		trustPath,
 		packagePath,
