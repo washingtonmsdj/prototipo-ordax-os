@@ -7,7 +7,7 @@ import (
 )
 
 func portableBindingsFixture() PortableMediaBindings {
-	ids := []string{"systemd-boot","loader-config","loader-normal","loader-recovery","kernel","initramfs","bootstrap-capsule","release-trust","stable-base","persistent-state","system-image","surface-runtime-image","surface-runtime-ref","release-manifest","release-envelope"}
+	ids := []string{"systemd-boot","loader-config","loader-normal","loader-recovery","kernel","initramfs","bootstrap-capsule","release-trust","stable-base","persistent-state","system-image","surface-runtime-image","surface-runtime-ref","local-ai-runtime-image","local-ai-runtime-ref","release-manifest","release-envelope"}
 	value := PortableMediaBindings{Schema: PortableMediaBindingsSchema, Artifacts: make([]PortableMediaArtifactBinding, 0, len(ids))}
 	for index, id := range ids {
 		value.Artifacts = append(value.Artifacts, PortableMediaArtifactBinding{ID: id, SHA256: strings.Repeat(string("abcdef0123456789"[index%16]), 64), SizeBytes: uint64(index + 1)})
@@ -21,7 +21,7 @@ func TestPlanPortableMediaOwnsExactFinalDestinations(t *testing.T) {
 	if err != nil { t.Fatal(err) }
 	if plan.Schema != PortableMediaPlanSchema || plan.Profile != "portable-usb" { t.Fatalf("unexpected plan identity: %#v", plan) }
 	if plan.PhysicalWriteAuthorized { t.Fatal("portable media plan must not authorize physical write") }
-	if len(plan.Artifacts) != 15 { t.Fatalf("artifact count=%d want=15", len(plan.Artifacts)) }
+	if len(plan.Artifacts) != 17 { t.Fatalf("artifact count=%d want=17", len(plan.Artifacts)) }
 	got := map[string]PortableMediaArtifactPlan{}
 	for _, artifact := range plan.Artifacts { got[artifact.ID] = artifact }
 	expected := map[string][2]string{
@@ -38,6 +38,8 @@ func TestPlanPortableMediaOwnsExactFinalDestinations(t *testing.T) {
 		"system-image": {"ORDAX-DATA","/.ordax/releases/"+commit+"/system.erofs"},
 		"surface-runtime-image": {"ORDAX-DATA","/.ordax/runtimes/sha256/"+got["surface-runtime-image"].SHA256+"/native-surface-runtime.erofs"},
 		"surface-runtime-ref": {"ORDAX-DATA","/.ordax/releases/"+commit+"/surface-runtime.sha256"},
+		"local-ai-runtime-image": {"ORDAX-DATA","/.ordax/ai-runtimes/sha256/"+got["local-ai-runtime-image"].SHA256+"/local-ai-runtime.erofs"},
+		"local-ai-runtime-ref": {"ORDAX-DATA","/.ordax/releases/"+commit+"/local-ai-runtime.sha256"},
 		"release-manifest": {"ORDAX-DATA","/.ordax/releases/"+commit+"/release-manifest.json"},
 		"release-envelope": {"ORDAX-DATA","/.ordax/releases/"+commit+"/release-envelope.json"},
 	}
@@ -66,7 +68,7 @@ func TestParsePortableMediaBindingsIsStrict(t *testing.T) {
 	if err != nil { t.Fatal(err) }
 	parsed, err := ParsePortableMediaBindings(payload)
 	if err != nil { t.Fatal(err) }
-	if len(parsed.Artifacts) != 15 { t.Fatalf("artifact count=%d", len(parsed.Artifacts)) }
+	if len(parsed.Artifacts) != 17 { t.Fatalf("artifact count=%d", len(parsed.Artifacts)) }
 	payload = append(payload, []byte("\n{}")...)
 	if _, err := ParsePortableMediaBindings(payload); err == nil { t.Fatal("trailing JSON accepted") }
 }
@@ -96,7 +98,7 @@ func TestPlanPortableApplicationIsDeterministicHostNeutralAndUnauthorized(t *tes
 		first.Partitions[1].Name != "ORDAX-DATA" {
 		t.Fatalf("portable application partition plan is wrong: %#v", first.Partitions)
 	}
-	if len(first.Operations) != 3+15+1+15+1 {
+	if len(first.Operations) != 3+17+1+17+1 {
 		t.Fatalf("operation count=%d", len(first.Operations))
 	}
 	if first.Operations[0].Kind != "partition-table-gpt-two-partition" ||
