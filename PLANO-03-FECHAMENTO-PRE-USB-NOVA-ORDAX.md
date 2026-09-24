@@ -234,14 +234,14 @@ Ficam fora do primeiro USB **por decisão**, não por esquecimento:
 - OrdaX Desktop como produto instalado (o Creator desktop é outra responsabilidade);
 - sync cloud e continuidade entre dispositivos;
 - backup cloud;
-- Store;
+- Store **pública/instalação de terceiros**;
 - package manager geral para terceiros;
 - SDK público completo;
-- perfis profissionais;
+- ativação comercial e UI de perfis profissionais;
 - Object System universal/grafo de objetos;
 - ferramentas mutáveis de IA;
 - Agent Manager;
-- memória persistente de IA;
+- sync/cloud de memória e histórico remoto;
 - automações gerais;
 - multi-agent coordination;
 - Federation / Research Lab / Mission Control;
@@ -267,12 +267,12 @@ nem criar owners duplicados no MVP.
 | C09 | Sync/continuidade cloud | **Core offline existe; identity/transport remoto não.** | C |
 | C10 | Mobile Companion | **Futuro.** | C |
 | C11 | Desktop instalado e Creator | Creator é trilha MVP; Desktop como produto é futuro. | Creator=A/B; Desktop=C |
-| C12 | Apps instaláveis/SDK | **Não é requisito do primeiro USB.** | C |
-| C13 | Store | **Não implementado e não requerido.** | C |
-| C14 | Perfis profissionais | **Visão futura.** | C |
+| C12 | Apps instaláveis/SDK | **FUNDAÇÃO PRÉ-MVP.** Contrato de distribuição/manifesto assinado existe; instalação externa e SDK público continuam fora do primeiro USB. | **PASS_SOURCE foundation; C para instalação/SDK** |
+| C13 | Store | **FUNDAÇÃO PRÉ-MVP.** Store futura compartilha manifesto, assinatura, permissions e updater; UI pública/publicação/billing permanecem posteriores. | **PASS_SOURCE foundation; C para Store pública** |
+| C14 | Perfis profissionais | **FUNDAÇÃO PRÉ-MVP via Spaces/Profile Packs.** Conta pessoal é separada; Developer e Legal-BR existem apenas como packs draft. | **PASS_SOURCE foundation; C para ativação comercial/domain runtime** |
 | C15 | Objetos com provenance | **Não existe Object System universal.** Usar metadata/provenance pequenos onde necessários, inclusive IA. | C; provenance mínimo=A |
-| C16 | IA nativa/contexto/tools | **IA consultiva fechada em source.** Native compõe `local-ai -> intelligence`; Notas e Sistema possuem consumidores first-party bounded/read-only com provenance. Handoff Stable v4 do backend está `PASS_SOURCE`; materialização assinada e prova física continuam gate de release. Tools mutáveis permanecem deferidas. | **PASS_SOURCE para consumidores; A/P2 para lifecycle v4; C para tools/agents** |
-| C17 | Conhecimento/integrações/automações | **Deferido.** | C |
+| C16 | IA nativa/contexto/tools | **IA consultiva fechada em source + fundação de memória/router.** Native compõe `local-ai -> intelligence`; `ordax.memory/1` mantém memória provider-neutral e `ordax.model-router/1` prepara rotas externas sem egress implícito. Handoff Stable v4 do backend está `PASS_SOURCE`; cloud memory/tools mutáveis continuam deferidos. | **PASS_SOURCE consumidores/foundation; A/P2 para lifecycle v4; C para cloud/tools/agents** |
+| C17 | Conhecimento/integrações/automações | **BOUNDARY PRÉ-MVP.** Product MCP/OAuth, Space/project scope e GitHub App ficam especificados; conectores ativos, automações e mutações continuam deferidos. | **PASS_SOURCE boundary; C para runtime público** |
 | C18 | Diagnóstico/receipts/captura | **Fechado em source para o MVP.** Controller diagnóstico sanitizado é composto no Native; Sistema prepara/copia/exporta revisão explícita e apresenta recovery Portable v2 read-only sem autoridade de rollback/reboot. | **PASS_SOURCE; prova física=B** |
 | C19 | Controle remoto/Companion | Não é requisito do bootstrap/MVP. | C |
 | C20 | Update transacional/rollback | **Muito avançado em CI/source.** Falta Stable físico/cold-health. | **B** |
@@ -333,6 +333,31 @@ mutáveis continuam pós-MVP.
 
 Cada serviço estrutural deve ser capaz de expor pelo menos estado/health útil.
 Falha da IA, conta ou rede não pode derrubar a Surface ou bloquear arquivos locais.
+
+
+### 4.6 Fundação de ecossistema sem ampliar o primeiro USB
+
+O pré-MVP agora também preserva as fronteiras que seriam caras de migrar depois de contas/dados reais:
+
+```text
+Account
+ -> Spaces
+    -> Profile Packs
+    -> projects
+    -> memory
+    -> memberships
+
+ordax.intelligence/1
+ -> ordax.memory/1
+ -> ordax.model-router/1
+    -> local
+    -> external adapters (future)
+```
+
+Isso é **fundação de source/backend**, não escopo funcional do primeiro USB. Billing, cloud memory,
+Store pública, GitHub App público, Product MCP implantado e Profile Packs profissionais ativados
+continuam fora do gate físico. O Control Plane de desenvolvimento não empresta credenciais ou
+autoridade administrativa a usuários finais.
 
 ---
 
@@ -401,11 +426,14 @@ A análise da Nova OrdaX **não** muda as decisões já tomadas:
 - conta online continua opcional;
 - cloud/sync não bloqueiam o USB MVP;
 - Native em disco continua pós-MVP;
-- Store não bloqueia;
+- Store **pública** não bloqueia; sua fundação de manifesto/distribuição já pode existir;
 - Mobile não bloqueia;
+- Spaces/Profile Packs podem existir como fundação; ativação comercial/profissional não bloqueia;
+- memória provider-neutral pode existir como contrato/schema; cloud memory não bloqueia;
+- Product MCP pode existir como boundary; conectores/automação/mutações não bloqueiam;
 - agentes/tools mutáveis não bloqueiam;
 - federação não bloqueia;
-- Remote Core/Control Plane não entram por antecipação.
+- Remote Core/Control Plane de produto não entram por antecipação.
 
 Essa separação é importante: a auditoria serve para encontrar **fundamentos esquecidos**,
 não para transformar toda a visão futura em escopo de lançamento.
