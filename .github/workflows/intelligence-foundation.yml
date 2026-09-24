@@ -24,6 +24,7 @@ on:
       - 'system/surface/runtime/native_host_server.py'
       - 'system/composition/native/main.mjs'
       - 'tools/local-ai-benchmark/**'
+      - 'tools/local-ai-hardware-probe/**'
       - 'tests/test_native_memory_integration.py'
       - 'tests/test_ecosystem_contracts.mjs'
       - 'tests/test_intelligence_runtime.mjs'
@@ -34,6 +35,7 @@ on:
       - 'tests/test_local_ai_response_lifecycle.mjs'
       - 'tests/test_local_ai_model_rediscovery.mjs'
       - 'tests/test_local_ai_benchmark.py'
+      - 'tests/test_local_ai_hardware_probe.py'
       - 'tests/test_memory_runtime.mjs'
       - 'tests/test_memory_context.mjs'
       - 'tests/test_memory_review.mjs'
@@ -68,6 +70,7 @@ on:
       - 'system/surface/runtime/native_host_server.py'
       - 'system/composition/native/main.mjs'
       - 'tools/local-ai-benchmark/**'
+      - 'tools/local-ai-hardware-probe/**'
       - 'tests/test_native_memory_integration.py'
       - 'tests/test_ecosystem_contracts.mjs'
       - 'tests/test_intelligence_runtime.mjs'
@@ -78,6 +81,7 @@ on:
       - 'tests/test_local_ai_response_lifecycle.mjs'
       - 'tests/test_local_ai_model_rediscovery.mjs'
       - 'tests/test_local_ai_benchmark.py'
+      - 'tests/test_local_ai_hardware_probe.py'
       - 'tests/test_memory_runtime.mjs'
       - 'tests/test_memory_context.mjs'
       - 'tests/test_memory_review.mjs'
@@ -129,6 +133,7 @@ jobs:
           python -m py_compile system/surface/runtime/native_memory_endpoint.py
           python -m py_compile system/surface/runtime/native_host_server.py
           python -m py_compile tools/local-ai-benchmark/benchmark.py
+          python -m py_compile tools/local-ai-hardware-probe/probe.py
           node --check system/composition/native/main.mjs
           python -m json.tool docs/contracts/local-ai.json >/dev/null
           python -m json.tool docs/contracts/memory.json >/dev/null
@@ -155,6 +160,7 @@ jobs:
           node --test tests/test_memory_store_adapters.mjs
           node --test tests/test_memory_native_adapter_bounds.mjs
           python -m unittest tests.test_local_ai_benchmark -v
+          python -m unittest tests.test_local_ai_hardware_probe -v
           python -m unittest tests.test_memory_native_state -v
           python -m unittest tests.test_memory_native_endpoint -v
           python -m unittest tests.test_native_memory_integration -v
