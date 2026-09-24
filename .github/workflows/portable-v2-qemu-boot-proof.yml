@@ -100,28 +100,50 @@ jobs:
           check-latest: false
           cache: false
 
-      - name: Install portable-v2 build and QEMU proof dependencies
+      - name: Install bounded local AI build dependencies
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            gcc-13 g++ make bc perl bison flex openssl libssl-dev libelf-dev \
-            dwarves kmod xz-utils pkg-config musl-tools binutils bzip2 cmake git curl \
-            e2fsprogs util-linux proot erofs-utils gdisk dosfstools \
-            exfatprogs exfat-fuse qemu-system-x86 ovmf \
-            meson ninja-build gperf libcap-dev libmount-dev libblkid-dev \
-            liblz4-dev libzstd-dev liblzma-dev libpcre2-dev
-          command -v qemu-system-x86_64
-          command -v mkfs.exfat
-          command -v mount.exfat-fuse
-          test -e /usr/share/OVMF/OVMF_CODE.fd || test -e /usr/share/OVMF/OVMF_CODE_4M.fd
-          python -m pip install --disable-pip-version-check --no-cache-dir jinja2 pyelftools
+            binutils cmake curl erofs-utils g++ git iproute2 libc6-dev ninja-build openssl util-linux
 
       - name: Validate portable-v2 QEMU contract
         run: |
           set -euo pipefail
           python -m unittest tests.test_portable_v2_qemu_boot_proof_contract -v
           python -m unittest tests.test_portable_v4_ai_handoff_contract -v
+
+      - name: Build and verify exact local AI runtime
+        env:
+          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/portable-v2-qemu"
+          mkdir -p "$work/metadata"
+          python bootstrap/local-ai-runtime/build.py build \
+            --cache-dir "$work/local-ai-runtime-cache" \
+            --out-dir "$work/local-ai-runtime" \
+            > "$work/metadata/local-ai-runtime-build.json"
+          python bootstrap/local-ai-runtime/build.py verify \
+            --out-dir "$work/local-ai-runtime" \
+            > "$work/metadata/local-ai-runtime-verify.json"
+          test -s "$work/local-ai-runtime/local-ai-runtime.erofs"
+
+      - name: Install remaining portable-v2 build and QEMU proof dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y --no-install-recommends \
+            gcc-13 make bc perl bison flex libssl-dev libelf-dev \
+            dwarves kmod xz-utils pkg-config musl-tools bzip2 \
+            e2fsprogs proot gdisk dosfstools \
+            exfatprogs exfat-fuse qemu-system-x86 ovmf \
+            meson gperf libcap-dev libmount-dev libblkid-dev \
+            liblz4-dev libzstd-dev liblzma-dev libpcre2-dev
+          command -v qemu-system-x86_64
+          command -v mkfs.exfat
+          command -v mount.exfat-fuse
+          test -e /usr/share/OVMF/OVMF_CODE.fd || test -e /usr/share/OVMF/OVMF_CODE_4M.fd
+          python -m pip install --disable-pip-version-check --no-cache-dir jinja2 pyelftools
 
       - name: Build exact kernel and kernel modules
         env:
@@ -171,21 +193,6 @@ jobs:
             --out-dir "$work/surface-runtime" \
             > "$work/metadata/surface-runtime-verify.json"
           test -s "$work/surface-runtime/native-surface-runtime.erofs"
-
-      - name: Build and verify exact local AI runtime
-        env:
-          ORDAX_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          work="$RUNNER_TEMP/portable-v2-qemu"
-          python bootstrap/local-ai-runtime/build.py build \
-            --cache-dir "$work/local-ai-runtime-cache" \
-            --out-dir "$work/local-ai-runtime" \
-            > "$work/metadata/local-ai-runtime-build.json"
-          python bootstrap/local-ai-runtime/build.py verify \
-            --out-dir "$work/local-ai-runtime" \
-            > "$work/metadata/local-ai-runtime-verify.json"
-          test -s "$work/local-ai-runtime/local-ai-runtime.erofs"
 
       - name: Build exact release agent and bootstrap capsule
         run: |
