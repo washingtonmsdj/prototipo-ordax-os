@@ -32,7 +32,7 @@ func writeComponentSlotCandidate(
 ) (string, string, releaseDescriptor) {
 	t.Helper()
 
-	runtimePath := "system/components/internet/runtime.mjs"
+	runtimePath := "system/apps/internet/runtime.mjs"
 	runtimeBytes := []byte("export const componentRuntime = { schema: \"ordax.component-runtime/1\" };\n")
 	runtimeDigest := sha256.Sum256(runtimeBytes)
 
@@ -406,7 +406,7 @@ func TestResolveCurrentReverifiesSlotAndDetectsTampering(t *testing.T) {
 		t.Fatalf("current slot did not resolve: bundled=%t slot=%q state=%+v", bundled, slot, state)
 	}
 
-	runtimePath := filepath.Join(slot, "system", "components", "internet", "runtime.mjs")
+	runtimePath := filepath.Join(slot, "system", "apps", "internet", "runtime.mjs")
 	if runtime.GOOS != "windows" {
 		if err := os.Chmod(runtimePath, 0o644); err != nil {
 			t.Fatal(err)
