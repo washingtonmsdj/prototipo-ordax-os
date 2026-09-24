@@ -65,5 +65,14 @@
   "pending_probation_loader_requires_unknown_pending_health": true,
   "pending_health_record_requires_exact_revision": true,
   "pending_health_record_idempotent_same_receipt": true,
-  "pending_health_record_rejects_stale_receipt": true
+  "pending_health_record_rejects_stale_receipt": true,
+  "promotion_requires_exact_revision": true,
+  "promotion_requires_exact_pending_identity": true,
+  "promotion_idempotent_same_decision": true,
+  "rejection_requires_exact_revision": true,
+  "rejection_requires_exact_pending_identity": true,
+  "rejection_idempotent_same_decision": true,
+  "rollback_requires_exact_revision": true,
+  "rollback_requires_exact_current_identity": true,
+  "rollback_idempotent_same_decision": true
 }

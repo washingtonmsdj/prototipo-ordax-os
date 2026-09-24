@@ -552,19 +552,50 @@ func recordPendingHealthAtRevision(
 	})
 }
 
-func promotePendingState(root, componentID, trustPath string) (activationState, error) {
+func validateActionRevision(expectedRevision int64) error {
+	if expectedRevision <= 0 {
+		return errors.New("runtime component action expected revision must be positive")
+	}
+	return nil
+}
+
+func promotePendingStateAtRevision(
+	root,
+	componentID string,
+	identity slotIdentity,
+	expectedRevision int64,
+	trustPath string,
+) (activationState, error) {
+	if err := validateSlotIdentity(&identity); err != nil {
+		return activationState{}, err
+	}
+	if err := validateActionRevision(expectedRevision); err != nil {
+		return activationState{}, err
+	}
 	trustBytes, err := readRegular(trustPath, maxTrustBytes, false)
 	if err != nil {
 		return activationState{}, err
 	}
 	return mutateActivationState(root, componentID, func(state activationState) (activationState, error) {
-		if state.Pending == nil || state.PendingHealth != "healthy" {
+		if state.Revision == expectedRevision+1 &&
+			state.Pending == nil &&
+			sameSlotIdentity(state.Current, &identity) {
+			// Safe idempotent retry of the exact promotion receipt.
+			return state, nil
+		}
+		if state.Revision != expectedRevision {
+			return activationState{}, errors.New("runtime component promotion revision is stale")
+		}
+		if state.Pending == nil || !sameSlotIdentity(state.Pending, &identity) {
+			return activationState{}, errors.New("runtime component promotion identity does not match pending slot")
+		}
+		if state.PendingHealth != "healthy" {
 			return activationState{}, errors.New("runtime component pending slot must be healthy before promotion")
 		}
-		if _, _, err := verifyIdentitySlot(root, componentID, *state.Pending, trustBytes); err != nil {
+		if _, _, err := verifyIdentitySlot(root, componentID, identity, trustBytes); err != nil {
 			return activationState{}, err
 		}
-		promoted := *state.Pending
+		promoted := identity
 		state.Previous = state.Current
 		state.Current = &promoted
 		state.Pending = nil
@@ -575,18 +606,32 @@ func promotePendingState(root, componentID, trustPath string) (activationState, 
 	})
 }
 
-func rejectPendingState(root, componentID string, identity slotIdentity) (activationState, error) {
+func rejectPendingStateAtRevision(
+	root,
+	componentID string,
+	identity slotIdentity,
+	expectedRevision int64,
+) (activationState, error) {
+	if err := validateSlotIdentity(&identity); err != nil {
+		return activationState{}, err
+	}
+	if err := validateActionRevision(expectedRevision); err != nil {
+		return activationState{}, err
+	}
 	return mutateActivationState(root, componentID, func(state activationState) (activationState, error) {
-		if state.Pending == nil {
-			if sameSlotIdentity(state.Rejected, &identity) {
-				return state, nil
-			}
-			return activationState{}, errors.New("runtime component has no matching pending slot to reject")
+		if state.Revision == expectedRevision+1 &&
+			state.Pending == nil &&
+			sameSlotIdentity(state.Rejected, &identity) {
+			// Safe idempotent retry of the exact rejection receipt.
+			return state, nil
 		}
-		if !sameSlotIdentity(state.Pending, &identity) {
+		if state.Revision != expectedRevision {
+			return activationState{}, errors.New("runtime component rejection revision is stale")
+		}
+		if state.Pending == nil || !sameSlotIdentity(state.Pending, &identity) {
 			return activationState{}, errors.New("runtime component reject identity does not match pending slot")
 		}
-		rejected := *state.Pending
+		rejected := identity
 		state.Rejected = &rejected
 		state.Pending = nil
 		state.PendingHealth = "unknown"
@@ -595,24 +640,45 @@ func rejectPendingState(root, componentID string, identity slotIdentity) (activa
 	})
 }
 
-func rollbackCurrentState(root, componentID, trustPath string) (activationState, error) {
+func rollbackCurrentStateAtRevision(
+	root,
+	componentID string,
+	identity slotIdentity,
+	expectedRevision int64,
+	trustPath string,
+) (activationState, error) {
+	if err := validateSlotIdentity(&identity); err != nil {
+		return activationState{}, err
+	}
+	if err := validateActionRevision(expectedRevision); err != nil {
+		return activationState{}, err
+	}
 	trustBytes, err := readRegular(trustPath, maxTrustBytes, false)
 	if err != nil {
 		return activationState{}, err
 	}
 	return mutateActivationState(root, componentID, func(state activationState) (activationState, error) {
+		if state.Revision == expectedRevision+1 &&
+			state.Pending == nil &&
+			sameSlotIdentity(state.Rejected, &identity) {
+			// Safe idempotent retry of the exact rollback receipt.
+			return state, nil
+		}
+		if state.Revision != expectedRevision {
+			return activationState{}, errors.New("runtime component rollback revision is stale")
+		}
 		if state.Pending != nil {
 			return activationState{}, errors.New("runtime component pending slot must be rejected before rollback")
 		}
-		if state.Current == nil {
-			return activationState{}, errors.New("runtime component is already using bundled fallback")
+		if state.Current == nil || !sameSlotIdentity(state.Current, &identity) {
+			return activationState{}, errors.New("runtime component rollback identity does not match current slot")
 		}
 		if state.Previous != nil {
 			if _, _, err := verifyIdentitySlot(root, componentID, *state.Previous, trustBytes); err != nil {
 				return activationState{}, err
 			}
 		}
-		rejected := *state.Current
+		rejected := identity
 		if state.Previous == nil {
 			state.Current = nil
 		} else {
@@ -711,15 +777,24 @@ func recordHealthCommand(args []string) error {
 func promoteStateCommand(args []string) error {
 	flags := flag.NewFlagSet("promote-state", flag.ContinueOnError)
 	component := flags.String("component", "", "runtime component id")
+	version := flags.String("version", "", "pending semantic version")
+	sourceCommit := flags.String("source-commit", "", "pending source commit")
+	expectedRevision := flags.Int64("expected-revision", 0, "exact policy decision revision")
 	trust := flags.String("trust", "", "runtime component public trust")
 	root := flags.String("root", defaultSlotRoot, "runtime component slot root")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	if *component == "" || *trust == "" || flags.NArg() != 0 {
-		return errors.New("promote-state requires --component and --trust")
+	if *component == "" || *version == "" || *sourceCommit == "" || *expectedRevision <= 0 || *trust == "" || flags.NArg() != 0 {
+		return errors.New("promote-state requires --component, --version, --source-commit, --expected-revision and --trust")
 	}
-	state, err := promotePendingState(*root, *component, *trust)
+	state, err := promotePendingStateAtRevision(
+		*root,
+		*component,
+		slotIdentity{Version: *version, SourceCommit: *sourceCommit},
+		*expectedRevision,
+		*trust,
+	)
 	if err != nil {
 		return err
 	}
@@ -735,17 +810,19 @@ func rejectPendingCommand(args []string) error {
 	component := flags.String("component", "", "runtime component id")
 	version := flags.String("version", "", "pending semantic version")
 	sourceCommit := flags.String("source-commit", "", "pending source commit")
+	expectedRevision := flags.Int64("expected-revision", 0, "exact policy decision revision")
 	root := flags.String("root", defaultSlotRoot, "runtime component slot root")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	if *component == "" || *version == "" || *sourceCommit == "" || flags.NArg() != 0 {
-		return errors.New("reject-pending requires --component, --version and --source-commit")
+	if *component == "" || *version == "" || *sourceCommit == "" || *expectedRevision <= 0 || flags.NArg() != 0 {
+		return errors.New("reject-pending requires --component, --version, --source-commit and --expected-revision")
 	}
-	state, err := rejectPendingState(
+	state, err := rejectPendingStateAtRevision(
 		*root,
 		*component,
 		slotIdentity{Version: *version, SourceCommit: *sourceCommit},
+		*expectedRevision,
 	)
 	if err != nil {
 		return err
@@ -760,29 +837,38 @@ func rejectPendingCommand(args []string) error {
 func rollbackStateCommand(args []string) error {
 	flags := flag.NewFlagSet("rollback-state", flag.ContinueOnError)
 	component := flags.String("component", "", "runtime component id")
+	version := flags.String("version", "", "current semantic version")
+	sourceCommit := flags.String("source-commit", "", "current source commit")
+	expectedRevision := flags.Int64("expected-revision", 0, "exact rollback decision revision")
 	trust := flags.String("trust", "", "runtime component public trust")
 	root := flags.String("root", defaultSlotRoot, "runtime component slot root")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	if *component == "" || *trust == "" || flags.NArg() != 0 {
-		return errors.New("rollback-state requires --component and --trust")
+	if *component == "" || *version == "" || *sourceCommit == "" || *expectedRevision <= 0 || *trust == "" || flags.NArg() != 0 {
+		return errors.New("rollback-state requires --component, --version, --source-commit, --expected-revision and --trust")
 	}
-	state, err := rollbackCurrentState(*root, *component, *trust)
+	state, err := rollbackCurrentStateAtRevision(
+		*root,
+		*component,
+		slotIdentity{Version: *version, SourceCommit: *sourceCommit},
+		*expectedRevision,
+		*trust,
+	)
 	if err != nil {
 		return err
 	}
 	target := "bundled"
-	version := ""
-	commit := ""
+	versionOut := ""
+	commitOut := ""
 	if state.Current != nil {
 		target = "slot"
-		version = state.Current.Version
-		commit = state.Current.SourceCommit
+		versionOut = state.Current.Version
+		commitOut = state.Current.SourceCommit
 	}
 	fmt.Printf(
 		"RUNTIME_COMPONENT_STATE_ROLLED_BACK=YES\nCOMPONENT_ID=%s\nREVISION=%d\nTARGET=%s\nCURRENT_VERSION=%s\nCURRENT_SOURCE_COMMIT=%s\nRUNTIME_ACTIVATED=NO\n",
-		state.ComponentID, state.Revision, target, version, commit,
+		state.ComponentID, state.Revision, target, versionOut, commitOut,
 	)
 	return nil
 }

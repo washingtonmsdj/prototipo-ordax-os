@@ -90,6 +90,15 @@ class RuntimeComponentPackageTests(unittest.TestCase):
         self.assertFalse(policy["pending_probation_loader_mutates_component_state"])
         self.assertTrue(policy["pending_probation_loader_requires_unknown_pending_health"])
         self.assertFalse(policy["runtime_health_bridge_available"])
+        self.assertTrue(policy["promotion_requires_exact_revision"])
+        self.assertTrue(policy["promotion_requires_exact_pending_identity"])
+        self.assertTrue(policy["promotion_idempotent_same_decision"])
+        self.assertTrue(policy["rejection_requires_exact_revision"])
+        self.assertTrue(policy["rejection_requires_exact_pending_identity"])
+        self.assertTrue(policy["rejection_idempotent_same_decision"])
+        self.assertTrue(policy["rollback_requires_exact_revision"])
+        self.assertTrue(policy["rollback_requires_exact_current_identity"])
+        self.assertTrue(policy["rollback_idempotent_same_decision"])
 
     def test_internet_metadata_comes_from_canonical_component_manifest(self):
         builder = load_builder()
