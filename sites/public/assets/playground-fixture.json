@@ -24,6 +24,7 @@
     ],
     "rail_apps": [
       "files",
+      "projects",
       "notes",
       "internet",
       "settings",
@@ -34,6 +35,10 @@
       {
         "id": "files",
         "label": "Arquivos"
+      },
+      {
+        "id": "projects",
+        "label": "Projetos"
       },
       {
         "id": "notes",
@@ -64,6 +69,13 @@
       "description": "Organize documentos, imagens, downloads e conteúdo persistente do usuário.",
       "monogram": "AR",
       "display_title": "Arquivos"
+    },
+    {
+      "id": "projects",
+      "title": "Seu trabalho",
+      "description": "Organize projetos locais, conexões e continuidade entre dispositivos.",
+      "monogram": "PR",
+      "display_title": "Projetos"
     },
     {
       "id": "notes",

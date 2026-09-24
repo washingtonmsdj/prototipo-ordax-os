@@ -114,6 +114,21 @@ const systemOverviewControls = mountSystemOverviewControls(
 
 componentManager.setCurrentHealth("surface-shell", "healthy");
 bootScreen.setStage(surface.localization.translate("surface.boot.loadingApps"));
+const projectsComponent = await loadOptionalComponentRuntime({
+  componentId: "projects",
+  importer: () => import("../../apps/projects/runtime.mjs"),
+  componentManager,
+  context: {
+    root,
+    surfaceLifecycle: surface,
+    projects: null,
+    projectCloudLinks: null,
+    appActivation,
+  },
+  onError(error) {
+    console.warn("OrdaX Projects runtime unavailable", error);
+  },
+});
 const notesComponent = await loadOptionalComponentRuntime({
   componentId: "notes",
   importer: () => import("../../apps/notes/runtime.mjs"),
@@ -151,6 +166,7 @@ window.addEventListener(
     systemOverviewControls.destroy();
     internetComponent?.destroy();
     notesComponent?.destroy();
+    projectsComponent?.destroy();
     networkQuickPanel?.destroy();
     quickPanelControls?.destroy();
     notificationCenter.destroy();

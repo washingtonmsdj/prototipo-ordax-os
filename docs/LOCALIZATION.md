@@ -44,7 +44,7 @@ fallback panel metadata have explicit English catalog entries.
 `en-US` is now a complete Surface locale for the public MVP. Files covers
 navigation, search, locale-aware sorting, listing, selection, deep create/copy/move/
 rename/project/import/export flows, Recents, recoverable Trash, preview and Files → Notes
-presentation through the same owner. Settings, System, Account, Notes and Internet cover
+presentation through the same owner. Projects, Settings, System, Account, Notes and Internet cover
 their primary and deep first-party journeys in English. The Native local-session lock,
 Home continuation/pending cards, power controls, global update accelerator, desktop clock,
 boot screen, network/battery trays and quick panels, and Notification Center also consume
@@ -68,6 +68,7 @@ SETTINGS_NOTIFICATIONS_EN_US=PASS_SOURCE
 SETTINGS_SECURITY_EN_US=PASS_SOURCE
 LOCAL_SESSION_LOCK_EN_US=PASS_SOURCE
 ACCOUNT_EN_US=PASS_SOURCE
+PROJECTS_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 NOTES_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 INTERNET_PRIMARY_JOURNEY_EN_US=PASS_SOURCE
 NETWORK_TRAY_QUICK_PANEL_EN_US=PASS_SOURCE
