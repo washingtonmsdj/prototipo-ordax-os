@@ -100,7 +100,7 @@ Executar o runbook source-controlled no notebook em uma única sessão técnica:
 
 Depois dos P0, priorizar somente lacunas suportadas por necessidade concreta: comandos manuais do atualizador quando houver autoridade real; inventário/armazenamento além das métricas atuais quando houver contrato; recuperação local por perfil; lixeira/associações de arquivo; e melhorias de acessibilidade/continuidade ainda comprovadamente ausentes.
 
-Identidade/cloud, colaboração, planos, app store e expansões semelhantes não devem deslocar os gates de sistema do MVP.
+A fundação de identidade/entitlements, Spaces/Profile Packs, memória provider-neutral, distribuição de apps e Product MCP pode avançar em source sem deslocar os gates físicos do MVP. Cloud sync, colaboração real, billing, Store pública e ferramentas mutáveis continuam sem precedência sobre release/USB/rollback.
 
 ### Recorte do legado `novo-ordax-os` para o MVP USB-only
 
@@ -115,16 +115,16 @@ Os planos longos registram capacidades herdadas como referência de produto, mas
 | C05 Checkpoints de sessão | **PÓS-MVP** | Não bloquear o lançamento por restauração completa de rota/documento/posição/rascunho. |
 | C06 Home contextual | **NÃO BLOQUEIA** | Melhorias de “continuar trabalho” são P1/P2; não criar outro shell. |
 | C07 Hardware/compatibilidade | **ENTRA no recorte de suporte** | MVP precisa hardware suportado documentado e diagnóstico suficiente; inventário sofisticado de periféricos é posterior. |
-| C08 Conta de produto | **CONDICIONAL ao portal público** | Login/cadastro só pode ser ativado com identidade/sessão reais. Dispositivos vinculados, planos e continuidade não bloqueiam o USB. |
+| C08 Conta de produto | **FUNDAÇÃO PRÉ-MVP; ativação pública condicional** | Supabase dedicado `ordax-control-plane` está selecionado e o schema de produto foi aplicado; gateway público continua fail-closed até hardening/legal/deploy. Conta continua opcional e não bloqueia boot. |
 | C09 Sync cloud | **PÓS-MVP** | Core local pode permanecer; não implementar transporte cloud para fechar o lançamento. |
 | C10 Mobile | **PÓS-MVP** | Em breve; depende de conta/sync reais. |
 | C11 Desktop instalado / Creator | **Creator ENTRA; Desktop instalado NÃO** | Creator USB é P0. Instalação permanente/desktop Native continua pós-MVP. |
-| C12 Apps instaláveis/SDK | **PÓS-MVP** | Apps first-party atuais bastam para o MVP; package manager geral não é gate. |
-| C13 Store | **PÓS-MVP** | Não deslocar P0/P1. |
-| C14 Perfis profissionais | **PÓS-MVP** | Fora do lançamento básico. |
+| C12 Apps instaláveis/SDK | **FUNDAÇÃO PRÉ-MVP; instalação externa pós-MVP** | Contrato de manifesto/distribuição assinada entra agora para não refazer supply chain depois. Instalar apps terceiros/SDK público continua fora do primeiro USB. |
+| C13 Store | **FUNDAÇÃO PRÉ-MVP; produto Store pós-MVP** | Store futura usa o mesmo manifesto/updater/permissions; UI pública, publicação de terceiros e billing continuam posteriores. |
+| C14 Perfis profissionais | **FUNDAÇÃO PRÉ-MVP via Spaces/Profile Packs** | Conta pessoal é separada. Packs Developer e Legal-BR existem como drafts; ativação comercial/knowledge pipeline completo continua posterior. |
 | C15 Objetos/proveniência de produto | **PÓS-MVP** | Fora do lançamento básico. |
-| C16 IA nativa | **ENTRA como capability do sistema** | Ordax Intelligence + backend local fazem parte do Stable/MVP v4. A IA continua degradável e não bloqueia boot/Surface; tools/agentes mutáveis permanecem pós-MVP. |
-| C17 Conectores/automações | **PÓS-MVP** | Fora do lançamento básico. |
+| C16 IA nativa | **ENTRA como capability do sistema** | Intelligence + backend local fazem parte do Stable/MVP v4. A fundação `ordax.memory/1` + `ordax.model-router/1` preserva memória OrdaX/provider-neutral e rotas futuras; cloud e tools mutáveis ainda não estão ativos. |
+| C17 Conectores/automações | **BOUNDARY PRÉ-MVP; runtime pós-MVP** | Product MCP/OAuth e separação GitHub App/Space/project ficam definidos agora. Conectores ativos, automações e mutações continuam posteriores. |
 | C18 Diagnóstico/exportação | **ENTRA no recorte local útil** | Revisão/exportação sanitizada já existe; evoluir somente lacunas concretas de fonte/retenção/prova. |
 | C19 Controle remoto | **PÓS-MVP** | Rescue/observação existentes não viram controle remoto genérico. |
 | C20 Update/health/rollback | **ENTRA e é gate do MVP** | Canal oficial sem Git e transação Portable one-shot estão integrados à main; baseline current-slot e fallback one-shot/rejected já passaram em CI descartável. Falta provar commit por cold-health e depois known-good/rollback no USB Stable/MVP físico. |
@@ -135,7 +135,7 @@ Os planos longos registram capacidades herdadas como referência de produto, mas
 | C26 Onboarding/notificações/acessibilidade | **ENTRA no básico de produto** | OOBE persistente, rota sem conta e localização pública pt-BR/en-US estão PASS_SOURCE; notificações/acessibilidade seguem somente onde há contratos reais. Falta prova física Stable/MVP. |
 | C27 Backup/histórico pessoal | **PÓS-MVP** | Não confundir backup de dados com rollback/known-good do sistema, que é P0. |
 
-Portanto, do legado, os itens que ainda merecem atenção **antes do MVP** são principalmente as provas físicas de C02/C03/C07/C16/C20/C21/C26 no Stable/MVP e qualquer gap C18 realmente reproduzido. C01/C04 já possuem implementação suficiente para não serem reconstruídos. C08 só sobe de prioridade quando identidade real for habilitada no portal. O restante não deve atrasar o primeiro Stable/MVP USB.
+Portanto, o fechamento do **primeiro USB físico** continua dominado pelas provas de C02/C03/C07/C16/C20/C21/C26 e por qualquer gap C18 realmente reproduzido. Em paralelo, C08/C12/C13/C14/C16/C17 recebem somente as fundações de domínio definidas no `PLANO-04`; elas evitam dívida arquitetural, mas não transformam Store, billing, sync cloud ou MCP mutável em gates da mídia física.
 
 ## 3. Regra para trabalho paralelo
 

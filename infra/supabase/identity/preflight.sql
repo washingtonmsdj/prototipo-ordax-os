@@ -19,7 +19,7 @@ select
   table_name
 from information_schema.tables
 where table_schema = 'public'
-  and table_name in ('profiles', 'ordax_profiles')
+  and table_name in ('profiles', 'ordax_profiles', 'ordax_accounts')
 order by table_name;
 
 select
@@ -30,5 +30,5 @@ select
   cmd
 from pg_policies
 where schemaname = 'public'
-  and tablename in ('profiles', 'ordax_profiles')
+  and tablename in ('profiles', 'ordax_profiles', 'ordax_accounts')
 order by tablename, policyname;

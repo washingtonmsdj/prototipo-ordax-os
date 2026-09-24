@@ -162,6 +162,8 @@ def discover(out: Path, cache: Path) -> dict:
             raise DiscoveryError(f"requested packages missing from resolved lock: {missing}")
 
         expected_lock = contract.get("apk_package_lock")
+        drift = None
+        normalized_expected = None
         if isinstance(expected_lock, dict):
             normalized_expected = dict(sorted((str(k), str(v)) for k, v in expected_lock.items()))
             if lock != normalized_expected:
@@ -172,14 +174,30 @@ def discover(out: Path, cache: Path) -> dict:
                     for name in set(normalized_expected) & set(lock)
                     if normalized_expected[name] != lock[name]
                 )
-                raise DiscoveryError(
-                    "resolved package lock differs from committed candidate lock: "
-                    f"missing={missing[:8]} extra={extra[:8]} changed={changed[:8]}"
-                )
+                drift = {
+                    "expected_package_count": len(normalized_expected),
+                    "resolved_package_count": len(lock),
+                    "missing": missing,
+                    "extra": extra,
+                    "changed": [
+                        {
+                            "name": name,
+                            "expected": normalized_expected[name],
+                            "resolved": lock[name],
+                        }
+                        for name in changed
+                    ],
+                }
 
         result = {
             "$schema": "prototype-ordax.surface-runtime-apk-lock-discovery/1",
-            "status": "verified-pinned-lock" if isinstance(expected_lock, dict) else "discovered-not-promotable",
+            "status": (
+                "drift-detected-not-promotable"
+                if drift is not None
+                else "verified-pinned-lock"
+                if isinstance(expected_lock, dict)
+                else "discovered-not-promotable"
+            ),
             "alpine_version": contract["alpine"]["version"],
             "alpine_archive_sha256": actual_sha,
             "requested_packages": requested,
@@ -191,8 +209,21 @@ def discover(out: Path, cache: Path) -> dict:
             "portable_v3_boot_handoff_candidate_connected": True,
             "physical_boot_connected": False,
         }
+        if drift is not None:
+            result["drift"] = drift
+
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+        if drift is not None:
+            changed_names = [entry["name"] for entry in drift["changed"]]
+            raise DiscoveryError(
+                "resolved package lock differs from committed candidate lock; "
+                "full drift report was written before failing closed: "
+                f"missing={drift['missing'][:8]} extra={drift['extra'][:8]} "
+                f"changed={changed_names[:8]}"
+            )
+
         return result
     finally:
         shutil.rmtree(work, ignore_errors=True)

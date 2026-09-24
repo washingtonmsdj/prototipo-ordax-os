@@ -23,6 +23,10 @@ on:
       - 'system/contracts/workspace-metadata-source.mjs'
       - 'system/contracts/identity-session.mjs'
       - 'system/contracts/identity-actions.mjs'
+      - 'system/contracts/entitlements.mjs'
+      - 'system/contracts/spaces.mjs'
+      - 'system/contracts/memory.mjs'
+      - 'system/contracts/model-router.mjs'
       - 'system/contracts/power-actions.mjs'
       - 'system/contracts/power-status.mjs'
       - 'system/contracts/update-status.mjs'
@@ -128,6 +132,7 @@ on:
       - 'tests/test_update_*.mjs'
       - 'tests/test_update_service_ci_ownership.py'
       - 'tests/test_account_runtime.mjs'
+      - 'tests/test_ecosystem_contracts.mjs'
       - 'tests/test_network_status.mjs'
       - 'tests/test_network_management.mjs'
       - 'tests/test_network_management_runtime.mjs'
@@ -160,6 +165,10 @@ on:
       - 'system/contracts/workspace-metadata-source.mjs'
       - 'system/contracts/identity-session.mjs'
       - 'system/contracts/identity-actions.mjs'
+      - 'system/contracts/entitlements.mjs'
+      - 'system/contracts/spaces.mjs'
+      - 'system/contracts/memory.mjs'
+      - 'system/contracts/model-router.mjs'
       - 'system/contracts/power-actions.mjs'
       - 'system/contracts/power-status.mjs'
       - 'system/contracts/update-status.mjs'
@@ -263,6 +272,7 @@ on:
       - 'tests/test_update_*.mjs'
       - 'tests/test_update_service_ci_ownership.py'
       - 'tests/test_account_runtime.mjs'
+      - 'tests/test_ecosystem_contracts.mjs'
       - 'tests/test_network_status.mjs'
       - 'tests/test_network_management.mjs'
       - 'tests/test_network_management_runtime.mjs'
@@ -355,6 +365,7 @@ jobs:
           node --test tests/test_power_status.mjs
           node --test tests/test_update_*.mjs
           node --test tests/test_account_runtime.mjs
+          node --test tests/test_ecosystem_contracts.mjs
           node --test tests/test_network_status.mjs
           node --test tests/test_network_management.mjs
           node --test tests/test_network_management_runtime.mjs

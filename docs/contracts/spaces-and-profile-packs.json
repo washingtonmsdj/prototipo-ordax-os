@@ -1,0 +1,43 @@
+{
+  "$schema": "prototype-ordax.spaces-and-profile-packs/1",
+  "status": "pre-mvp-foundation",
+  "space_port": "ordax.spaces/1",
+  "profile_pack_port": "ordax.profile-packs/1",
+  "ownership": {
+    "account_profile_is_not_a_professional_profile": true,
+    "spaces_are_account_owned_or_membership_scoped": true,
+    "space_membership_does_not_share_account_private_memory": true
+  },
+  "space_kinds": ["personal", "work", "professional"],
+  "member_roles": ["owner", "admin", "member", "viewer"],
+  "profile_pack": {
+    "definition": "versioned composition of apps, templates, knowledge-source policy, intelligence instructions and optional capabilities",
+    "forks_the_os": false,
+    "may_auto_grant_privilege": false,
+    "may_install_unverified_code": false,
+    "knowledge_sources_require_provenance": true,
+    "knowledge_sources_require_freshness_policy": true,
+    "jurisdiction_or_domain_must_be_explicit_when_material": true,
+    "updates_are_versioned": true,
+    "rollback_supported": true
+  },
+  "examples": [
+    "developer",
+    "creator",
+    "business",
+    "education",
+    "legal"
+  ],
+  "legal_profile_rules": {
+    "authoritative_source_classes_required": [
+      "official-legislation",
+      "official-regulator",
+      "official-court-or-tribunal",
+      "user-authorized-firm-material"
+    ],
+    "source_date_and_jurisdiction_required": true,
+    "stale_knowledge_must_be_identified": true,
+    "model_output_is_not_source_of_law": true,
+    "professional_judgment_not_replaced": true
+  }
+}

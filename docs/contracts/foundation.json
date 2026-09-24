@@ -201,8 +201,16 @@
       "cross-device-continuity",
       "collaboration",
       "premium-compute",
-      "recovery-support"
-    ]
+      "recovery-support",
+      "additional-space-capacity",
+      "shared-spaces",
+      "cloud-memory",
+      "external-ai-compute",
+      "connectors",
+      "automations"
+    ],
+    "provisional_private_space_limit": 2,
+    "profile_pack_categories_are_plan_locked": false
   },
   "surface": {
     "single_source_tree_required": true,
@@ -260,5 +268,23 @@
     "remote_control_service_required": false,
     "emulator_mandatory": false,
     "real_hardware_validation_required_before_final_promotion": true
+  },
+  "ecosystem_foundation": {
+    "status": "pre-mvp-source-foundation",
+    "contracts": {
+      "entitlements": "docs/contracts/entitlements.json",
+      "spaces_and_profile_packs": "docs/contracts/spaces-and-profile-packs.json",
+      "memory": "docs/contracts/memory.json",
+      "model_router": "docs/contracts/model-router.json",
+      "app_distribution": "docs/contracts/app-distribution.json",
+      "external_ai_bridge": "docs/contracts/external-ai-bridge.json"
+    },
+    "account_profile_is_professional_profile": false,
+    "memory_owned_by_ordax": true,
+    "inference_provider_owns_memory": false,
+    "product_mcp_reuses_development_owner_credentials": false,
+    "github_project_access_prefers_github_app": true,
+    "billing_enabled": false,
+    "public_store_enabled": false
   }
 }

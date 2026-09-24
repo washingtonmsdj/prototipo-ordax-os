@@ -71,7 +71,7 @@ The future identity service may use an external infrastructure provider behind a
 
 The machine-readable entry boundary is `docs/contracts/public-identity.json`. It requires one account model across product modes, forbids browser/service secrets and keeps login/cadastro unavailable until a real same-origin identity route is configured.
 
-The server-side responsibility is prepared under `services/public-identity/`. A Supabase adapter may be used behind that gateway, but only on a dedicated or isolated target that passes `infra/supabase/identity/preflight.sql`. The previously considered shared project already owns unrelated Auth/profile behavior, so it was left unchanged.
+The server-side responsibility is prepared under `services/public-identity/`. The dedicated Supabase project `ordax-control-plane` is now the selected pre-MVP backend target and the canonical product-domain schema under `infra/supabase/product/` has been applied there. This prepares account/Spaces/entitlements/Profile Packs/Memory without enabling the public gateway. Login and registration remain fail-closed until same-origin deployment, Auth hardening and legal-readiness gates are complete. The previously considered shared project remains rejected because it already owns unrelated Auth/profile behavior.
 
 ## Download boundary
 
@@ -155,7 +155,7 @@ It must not copy the Surface desktop markup or make the marketing site look like
 
 Public copy should explain user-facing product behavior: Creator, **USB execution**, apps, official updates, rollback/recovery and account availability. The MVP must not advertise internal-disk installation as available. Native installation may be described only as a future/post-MVP direction. Web, Mobile, synchronization, backup and cross-device continuity may appear only as **Em breve** while unavailable. Do not use the landing page to explain Owner/Development Git operations.
 
-No public page may invent prices, billing, commercial tier names or device-count limits before those policies exist.
+No public page may invent prices, billing, commercial tier names or device-count limits before those policies exist. The provisional two-private-Space architecture default is an internal capacity foundation, not a public commercial offer and must not be advertised as a finalized free-plan quota.
 
 ## Build
 

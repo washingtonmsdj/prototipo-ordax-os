@@ -54,6 +54,30 @@ content-addressed stored AI runtime. This still does not claim a promoted Stable
 artifact: canonical-key Stable v4 signing/materialization plus disposable v4 boot and
 physical proof remain release gates.
 
+## Memory and model routing
+
+The pre-MVP foundation now separates persistent product memory from inference providers:
+
+```text
+ordax.intelligence/1
+  +-- ordax.memory/1
+  +-- ordax.model-router/1
+        +-- ordax.local-ai/1
+        +-- OpenAI adapter (future)
+        +-- xAI adapter (future)
+        +-- future providers
+```
+
+Memory belongs to OrdaX. llama.cpp, GPT, Grok or another model may receive authorized context, but none of them becomes the owner of persistent memory.
+
+Memory scopes are device, account, Space, project and session. Persistent items carry provenance and sensitivity. The user-facing memory owner must support review, edit and delete. Secret material is not memory.
+
+Semantic embeddings are derived indexes: replacing an embedding model does not change the identity of the underlying memory item.
+
+External routes require an explicit egress decision. Local AI remains the offline baseline when an external provider is unavailable or not authorized.
+
+Professional Profile Packs may influence retrieval sources and preferred model purpose, but they cannot bypass Space membership, memory authorization or tool permissions.
+
 ## Authority boundary
 
 The MVP Intelligence runtime is consultative:
@@ -66,9 +90,7 @@ The MVP Intelligence runtime is consultative:
 - no silent cloud fallback;
 - no privilege gained from prompt text.
 
-Context supplied to Intelligence is bounded and carries provenance. Tool
-execution, agents, persistent memory and broader capability bridges require
-their own explicit contracts and permissions before activation.
+Context supplied to Intelligence is bounded and carries provenance. Tool execution, agents and broader capability bridges still require their own explicit contracts and permissions before activation. Persistent memory now has the source-level `ordax.memory/1` contract, but runtime persistence/retrieval remains a separate implementation step and does not grant tool authority.
 
 ## Nova OrdaX reference
 
