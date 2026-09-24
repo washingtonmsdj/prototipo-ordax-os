@@ -1,0 +1,172 @@
+name: Retire orphan branches
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/evidence/branch-retirement-20260924.json'
+      - '.github/workflows/retire-orphan-branches.yml'
+      - 'tests/test_orphan_branch_retirement_workflow.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: retire-orphan-branches-20260924
+  cancel-in-progress: false
+
+jobs:
+  retire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout retirement contract
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Archive exact orphan heads before deleting branches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          CONTRACT: docs/evidence/branch-retirement-20260924.json
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+
+          gh api --paginate --slurp "repos/$REPOSITORY/pulls?state=open&per_page=100" > "$temp_dir/open.json"
+
+          REPOSITORY="$REPOSITORY" CONTRACT="$CONTRACT" TEMP_DIR="$temp_dir" python <<'PY'
+          import json
+          import os
+          import subprocess
+          import urllib.parse
+          from pathlib import Path
+
+          repo = os.environ["REPOSITORY"]
+          contract_path = Path(os.environ["CONTRACT"])
+          temp_dir = Path(os.environ["TEMP_DIR"])
+          contract = json.loads(contract_path.read_text(encoding="utf-8"))
+          open_pages = json.loads((temp_dir / "open.json").read_text(encoding="utf-8"))
+          open_prs = [item for page in open_pages for item in page]
+
+          open_heads = {
+              pr["head"]["ref"]
+              for pr in open_prs
+              if pr.get("head", {}).get("repo")
+              and pr["head"]["repo"].get("full_name") == repo
+          }
+
+          preserve = {"main", "ordax-rescue"} | open_heads
+          plan = []
+          errors = []
+
+          for item in contract["branches"]:
+              branch = item["branch"]
+              expected = item["expected_head_sha"]
+              archive_tag = item["archive_tag"]
+
+              if branch in preserve:
+                  errors.append(f"{branch}: branch is protected or now used by an open PR")
+                  continue
+
+              encoded_branch = urllib.parse.quote(branch, safe="")
+              branch_result = subprocess.run(
+                  ["gh", "api", f"repos/{repo}/branches/{encoded_branch}", "--jq", ".commit.sha"],
+                  capture_output=True,
+                  text=True,
+              )
+              if branch_result.returncode != 0:
+                  print(f"Already absent, preserving archive plan only: {branch}")
+                  continue
+
+              current = branch_result.stdout.strip()
+              if current != expected:
+                  errors.append(
+                      f"{branch}: current SHA {current} does not match expected {expected}"
+                  )
+                  continue
+
+              plan.append(
+                  {
+                      "branch": branch,
+                      "expected": expected,
+                      "archive_tag": archive_tag,
+                  }
+              )
+
+          if errors:
+              print("RETIREMENT_PRECHECK=FAIL")
+              for error in errors:
+                  print(f"  - {error}")
+              raise SystemExit(1)
+
+          (temp_dir / "plan.json").write_text(
+              json.dumps(plan, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(f"RETIREMENT_PRECHECK=PASS count={len(plan)}")
+          PY
+
+          python <<'PY'
+          import json
+          import os
+          import subprocess
+          import urllib.parse
+          from pathlib import Path
+
+          repo = os.environ["REPOSITORY"]
+          temp_dir = Path(os.environ["TEMP_DIR"])
+          plan = json.loads((temp_dir / "plan.json").read_text(encoding="utf-8"))
+
+          for item in plan:
+              branch = item["branch"]
+              expected = item["expected"]
+              tag = item["archive_tag"]
+              full_tag_ref = f"refs/tags/{tag}"
+              encoded_tag = urllib.parse.quote(full_tag_ref, safe="")
+              encoded_branch_ref = urllib.parse.quote(f"heads/{branch}", safe="")
+
+              existing = subprocess.run(
+                  ["gh", "api", f"repos/{repo}/git/ref/{encoded_tag}", "--jq", ".object.sha"],
+                  capture_output=True,
+                  text=True,
+              )
+              if existing.returncode == 0:
+                  actual_tag_sha = existing.stdout.strip()
+                  if actual_tag_sha != expected:
+                      raise SystemExit(
+                          f"archive tag {tag} points to {actual_tag_sha}, expected {expected}"
+                      )
+              else:
+                  subprocess.run(
+                      [
+                          "gh", "api", "--method", "POST", f"repos/{repo}/git/refs",
+                          "-f", f"ref={full_tag_ref}",
+                          "-f", f"sha={expected}",
+                      ],
+                      check=True,
+                  )
+
+              verified = subprocess.check_output(
+                  ["gh", "api", f"repos/{repo}/git/ref/{encoded_tag}", "--jq", ".object.sha"],
+                  text=True,
+              ).strip()
+              if verified != expected:
+                  raise SystemExit(
+                      f"archive tag verification failed for {tag}: {verified} != {expected}"
+                  )
+
+              subprocess.run(
+                  ["gh", "api", "--method", "DELETE", f"repos/{repo}/git/refs/{encoded_branch_ref}"],
+                  check=True,
+              )
+              print(f"ARCHIVED_AND_DELETED branch={branch} tag={tag} sha={expected}")
+
+          print(f"ORPHAN_BRANCH_RETIREMENT=PASS count={len(plan)}")
+          PY

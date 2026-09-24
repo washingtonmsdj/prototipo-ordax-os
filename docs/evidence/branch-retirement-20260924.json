@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "generated_on": "2026-09-24",
+  "purpose": "Retire historical branches that have no pull request while preserving their exact commits as archive tags.",
+  "safety": {
+    "preserve_branches": [
+      "main",
+      "ordax-rescue"
+    ],
+    "open_pull_request_heads_must_be_preserved": true,
+    "current_branch_sha_must_equal_expected_head_sha": true,
+    "archive_tag_must_point_to_expected_head_sha_before_branch_delete": true
+  },
+  "audit": {
+    "closed_pull_requests_scanned": 527,
+    "orphan_branch_count": 23
+  },
+  "branches": [
+    {
+      "branch": "ci/narrow-release-signing-media-triggers-20260921",
+      "expected_head_sha": "c916265f3aa2ed2a8345be8840e3b8f412c21746",
+      "created_at": "2026-09-21T10:33:40Z",
+      "head_message": "docs(plan): reconcile legacy capabilities with USB-only MVP and simplify branching",
+      "archive_tag": "archive/branches/20260924/ci/narrow-release-signing-media-triggers-20260921"
+    },
+    {
+      "branch": "feat/ai-native-pillar-i18n-20260922",
+      "expected_head_sha": "d50ba7e828961fd1f167a2077014279d08b4be65",
+      "created_at": "2026-09-22T12:07:36Z",
+      "head_message": "docs(ai-native): reconcile canonical state with platform AI foundation",
+      "archive_tag": "archive/branches/20260924/feat/ai-native-pillar-i18n-20260922"
+    },
+    {
+      "branch": "feat/en-us-notes-complete-20260922",
+      "expected_head_sha": "af4e3d6eeebf5c1f8dca2ec6b866a19f528a1b4d",
+      "created_at": "2026-09-23T00:30:45Z",
+      "head_message": "feat(i18n): localize Notes capacity and file picker",
+      "archive_tag": "archive/branches/20260924/feat/en-us-notes-complete-20260922"
+    },
+    {
+      "branch": "feat/files-git-app",
+      "expected_head_sha": "51aa36adcf8c067279e4a2cf10fa2a7e6057545e",
+      "created_at": "2026-09-19T15:04:15Z",
+      "head_message": "Remove obsolete Files Surface source system/surface/ui/files.css",
+      "archive_tag": "archive/branches/20260924/feat/files-git-app"
+    },
+    {
+      "branch": "feat/files-git-app-current",
+      "expected_head_sha": "4b890328f518daac1853e1975c724d4095530f4c",
+      "created_at": "2026-09-19T16:56:41Z",
+      "head_message": "Point test_file_notes_action.mjs at app-owned Files sources",
+      "archive_tag": "archive/branches/20260924/feat/files-git-app-current"
+    },
+    {
+      "branch": "feat/mvp-ai-assistant-i18n-20260922",
+      "expected_head_sha": "26b49f6a9aa732bfa56758d6a42cb5e4f5f1e910",
+      "created_at": "2026-09-22T12:29:34Z",
+      "head_message": "ci(ai): validate Intelligence and local inference",
+      "archive_tag": "archive/branches/20260924/feat/mvp-ai-assistant-i18n-20260922"
+    },
+    {
+      "branch": "feat/native-component-slots",
+      "expected_head_sha": "71d4ef78917938b6dd41a624becab4d443ee7eb7",
+      "created_at": "2026-09-19T13:28:10Z",
+      "head_message": "Test tokenized Native component slot HTTP boundary",
+      "archive_tag": "archive/branches/20260924/feat/native-component-slots"
+    },
+    {
+      "branch": "feat/notes-localization-en-20260922",
+      "expected_head_sha": "9e27b8889dc9f9f04f38fab56e5f5dc9e59b2422",
+      "created_at": "2026-09-23T00:54:19Z",
+      "head_message": "test(i18n): cover injected Notes file-picker error",
+      "archive_tag": "archive/branches/20260924/feat/notes-localization-en-20260922"
+    },
+    {
+      "branch": "feat/portable-v4-local-ai-runtime-20260922",
+      "expected_head_sha": "c8da768d090fc3de043a14487ad69eb2c0a5fe2b",
+      "created_at": "2026-09-22T13:20:00Z",
+      "head_message": "feat(acquisition): add content-addressed local AI runtime store",
+      "archive_tag": "archive/branches/20260924/feat/portable-v4-local-ai-runtime-20260922"
+    },
+    {
+      "branch": "feat/pre-usb-canonical-v4-public-proof",
+      "expected_head_sha": "603844c22dcfd5c5fe8cb05f99271dcbcf31d012",
+      "created_at": "2026-09-23T22:02:58Z",
+      "head_message": "test(release): enforce canonical v4 public-proof boundary",
+      "archive_tag": "archive/branches/20260924/feat/pre-usb-canonical-v4-public-proof"
+    },
+    {
+      "branch": "feat/pre-usb-internet-deep-i18n-current",
+      "expected_head_sha": "aeb0f43b8741d86d57dae44d6726fabe39ee8796",
+      "created_at": "2026-09-23T17:52:52Z",
+      "head_message": "sync(internet-i18n): add deep Internet localization regression",
+      "archive_tag": "archive/branches/20260924/feat/pre-usb-internet-deep-i18n-current"
+    },
+    {
+      "branch": "feat/pre-usb-internet-deep-i18n-main",
+      "expected_head_sha": "ab31d1f939b907b38f64eb3bc5d4ba8506fa87e6",
+      "created_at": "2026-09-23T17:23:29Z",
+      "head_message": "sync(i18n): carry tests/test_internet_deep_localization.py",
+      "archive_tag": "archive/branches/20260924/feat/pre-usb-internet-deep-i18n-main"
+    },
+    {
+      "branch": "feat/pre-usb-notes-deep-i18n-main",
+      "expected_head_sha": "1d9c7470ac7319ab9f9f79809114ee38b82a2d21",
+      "created_at": "2026-09-23T17:22:55Z",
+      "head_message": "sync(i18n): carry tests/test_surface_app_localization.mjs",
+      "archive_tag": "archive/branches/20260924/feat/pre-usb-notes-deep-i18n-main"
+    },
+    {
+      "branch": "feat/pre-usb-surface-residual-i18n-cd79",
+      "expected_head_sha": "43477564804354bc3902a4323de0d439c8c90586",
+      "created_at": "2026-09-23T19:54:31Z",
+      "head_message": "feat(i18n): add localized power action copy",
+      "archive_tag": "archive/branches/20260924/feat/pre-usb-surface-residual-i18n-cd79"
+    },
+    {
+      "branch": "feat/pre-usb-system-memory-i18n",
+      "expected_head_sha": "09b8ebd5120e81e34026c49a74735ddafcb6b7b9",
+      "created_at": "2026-09-23T12:52:13Z",
+      "head_message": "feat(i18n): localize System memory resource block",
+      "archive_tag": "archive/branches/20260924/feat/pre-usb-system-memory-i18n"
+    },
+    {
+      "branch": "feat/preseed-native-surface-runtime",
+      "expected_head_sha": "3a1fcc4a3c8ce9a1e47bdf42f4c3a4fca43770f1",
+      "created_at": "2026-09-19T11:58:06Z",
+      "head_message": "Clean failed runtime preseed transactions",
+      "archive_tag": "archive/branches/20260924/feat/preseed-native-surface-runtime"
+    },
+    {
+      "branch": "feat/signed-runtime-component-materialization",
+      "expected_head_sha": "2848a6adf23f0f8ea57a363b9ef7ec906a12b647",
+      "created_at": "2026-09-19T12:50:46Z",
+      "head_message": "Test runtime component signing with shared release trust",
+      "archive_tag": "archive/branches/20260924/feat/signed-runtime-component-materialization"
+    },
+    {
+      "branch": "feat/signing-v4-canonical-proof-receipt-latest",
+      "expected_head_sha": "2669b8ae978765badc3a58499a47452aca145f6b",
+      "created_at": "2026-09-24T01:40:25Z",
+      "head_message": "sync(signing): carry canonical v4 proof tooling onto latest main",
+      "archive_tag": "archive/branches/20260924/feat/signing-v4-canonical-proof-receipt-latest"
+    },
+    {
+      "branch": "feat/surface-en-controls-2-20260922",
+      "expected_head_sha": "35c6878e8afabaacdfb656e3ee8966ef6d95d62c",
+      "created_at": "2026-09-22T21:31:30Z",
+      "head_message": "refactor(i18n): make timestamp fallback language-neutral",
+      "archive_tag": "archive/branches/20260924/feat/surface-en-controls-2-20260922"
+    },
+    {
+      "branch": "feat/web-diagnostic-journal-store",
+      "expected_head_sha": "a1778f4fab039309b5ca5a71b5b4103bd3b94c4a",
+      "created_at": "2026-09-18T21:55:56Z",
+      "head_message": "Document Web diagnostic journal storage",
+      "archive_tag": "archive/branches/20260924/feat/web-diagnostic-journal-store"
+    },
+    {
+      "branch": "feature/time-sync-status",
+      "expected_head_sha": "8423e95ab446cc9c7bb846a76e155d68e8d0619a",
+      "created_at": "2026-09-18T14:04:47Z",
+      "head_message": "Test Native automatic time sync liveness boundary",
+      "archive_tag": "archive/branches/20260924/feature/time-sync-status"
+    },
+    {
+      "branch": "fix/system-update-copy-after-navigation",
+      "expected_head_sha": "63868363dbeee7dbc229fecb0f39bb4d55a1f396",
+      "created_at": "2026-09-18T18:37:43Z",
+      "head_message": "Regress pending base-update semantics",
+      "archive_tag": "archive/branches/20260924/fix/system-update-copy-after-navigation"
+    },
+    {
+      "branch": "refactor/internet-owned-ui",
+      "expected_head_sha": "e90c98bc283234b449d1d4b10e744df0474b014e",
+      "created_at": "2026-09-19T12:29:31Z",
+      "head_message": "Update test_component_runtime.mjs for component-owned Internet UI",
+      "archive_tag": "archive/branches/20260924/refactor/internet-owned-ui"
+    }
+  ]
+}
