@@ -1,6 +1,6 @@
 # OrdaX Public Identity Gateway
 
-Status: GATEWAY CORE IMPLEMENTED / PROVIDER NOT CONFIGURED
+Status: GATEWAY CORE IMPLEMENTED / DEDICATED SUPABASE TARGET PREPARED / PUBLIC PROVIDER NOT ENABLED
 
 This directory defines the backend responsibility that will sit behind the public site's login and registration entry points.
 
@@ -64,15 +64,22 @@ The provider may not redefine:
 
 ## Current provider decision
 
-The previously suggested shared Supabase project was inspected read-only and is not a clean target for OrdaX identity: it already owns `auth.users` signup behavior and an unrelated `public.profiles` lifecycle.
+The dedicated Supabase project `ordax-control-plane` is now the selected pre-MVP provider target. The product-domain foundation from `infra/supabase/product/migrations/0001_product_foundation.sql` has been applied there and owns the single `ordax_accounts` bootstrap.
 
-No database, auth or Edge Function mutation was made there.
+The previously suggested shared `Ordax-2026-1` project remains rejected for OrdaX identity because it already has another product's `public.profiles` lifecycle and an unrelated signup trigger.
 
-For Supabase, OrdaX identity therefore requires either a dedicated project or a development branch/project that passes the preflight in `infra/supabase/identity/preflight.sql`. Creating a paid branch/project remains a separate explicit action.
+The provider-specific email/password HTTP adapter remains implemented in `supabase_password.py`. It uses only a Supabase publishable key and the public Auth API; passwords are transient request inputs and are never written by the adapter.
 
-The provider-specific email/password HTTP adapter is implemented in `supabase_password.py`. It uses only a Supabase `sb_publishable_` key and the public Auth API for signup, password sign-in, refresh, current-user lookup and sign-out. It does not own cookies or public routes and is not instantiated by the gateway while the canonical provider remains unconfigured. Passwords are transient request inputs and are never written by the adapter.
+**Target prepared does not mean public identity enabled.** The gateway still fails closed until all of the following are true:
 
-Activation remains deliberately separate from implementation: a clean Supabase target must pass the read-only preflight, `0001_ordax_profiles.sql` must be applied there, the same-origin deployment/session owner must be connected, and the public legal-readiness gate must be complete before credential collection is exposed.
+- a same-origin production deployment owns the session cookie;
+- the Supabase runtime configuration is supplied outside source;
+- Auth redirect/email settings are reviewed;
+- leaked-password protection and the chosen password/passkey policy are hardened;
+- public privacy/terms readiness is complete;
+- login/register routes pass end-to-end tests.
+
+The product domain remains provider-neutral, so the Supabase project can later be migrated without changing Surface account semantics.
 
 ## Non-goals of this foundation
 
