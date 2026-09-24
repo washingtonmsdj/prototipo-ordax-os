@@ -58,8 +58,11 @@ jobs:
           check-latest: false
           cache: false
 
-      - name: Validate v4 boot handoff contract
-        run: python -m unittest tests.test_portable_v4_ai_handoff_contract -v
+      - name: Validate v4 boot handoff and Native release assembly contracts
+        run: |
+          python -m unittest tests.test_portable_v4_ai_handoff_contract -v
+          python -m unittest tests.test_native_release_assembly_contract -v
+          python -m unittest tests.test_build_autonomy_contract -v
 
       - name: Build release pipeline tools
         run: |
