@@ -168,6 +168,8 @@ The final Portable physical flow is implemented behind the isolated tagged/publi
 ```text
 canonical public trust
  -> exact Portable policy bindings
+ -> canonical v4 signed/materialized aggregate proof
+ -> bind exact public proof SHA/source/HTTPS release identity
  -> fresh Stable/MVP owner authorization contract
  -> signed physical channel
  -> select and revalidate exact USB target
@@ -181,7 +183,18 @@ canonical public trust
  -> success / fail-closed result
 ```
 
-The v4 physical plan adds `local-ai-runtime-image` and `local-ai-runtime-ref` to the previous 15-artifact shape; the previous authorization context is intentionally not reusable. There is no target-sized whole-disk RAW image in this final path. Canonical publisher trust is now pinned; the next destructive boundary is still separate and requires the repository owner to deliberately record a **new Stable/MVP-specific authorization** only after the remaining canonical media proof is green. The old first-USB development consent is not reusable.
+The v4 physical plan adds `local-ai-runtime-image` and `local-ai-runtime-ref` to the previous 15-artifact shape; the previous authorization context is intentionally not reusable. There is no target-sized whole-disk RAW image in this final path. Canonical publisher trust is now pinned, but owner consent is deliberately **not reachable** until the operator-controlled canonical v4 signing/materialization flow has produced its aggregate public receipt.
+
+Bind that receipt non-destructively first:
+
+```text
+python tools/creator/bind_canonical_v4_release_proof.py <canonical-v4-release-proof.json>
+```
+
+This validates the pinned trust, exact source/release identities and safe physical flags, stores only
+the public receipt under `docs/evidence/`, and advances the contract only to owner-consent pending.
+It never selects/touches media, invokes the writer or authorizes a write. The old first-USB
+development consent is not reusable.
 
 Read-only authorization preflight:
 
