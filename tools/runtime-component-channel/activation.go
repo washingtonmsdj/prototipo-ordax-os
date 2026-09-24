@@ -88,6 +88,13 @@ func validateActivationState(value activationState, componentID string) error {
 	if value.Pending != nil && (sameSlotIdentity(value.Pending, value.Current) || sameSlotIdentity(value.Pending, value.Previous)) {
 		return errors.New("runtime component pending slot duplicates current or previous")
 	}
+	if value.Rejected != nil && (
+		sameSlotIdentity(value.Rejected, value.Current) ||
+		sameSlotIdentity(value.Rejected, value.Previous) ||
+		sameSlotIdentity(value.Rejected, value.Pending)
+	) {
+		return errors.New("runtime component rejected slot must remain distinct from active state")
+	}
 	return nil
 }
 
@@ -355,6 +362,9 @@ func armPendingState(slot, trustPath, root string) (activationState, error) {
 		if sameSlotIdentity(state.Current, &identity) {
 			return activationState{}, errors.New("runtime component candidate already matches current slot")
 		}
+		if sameSlotIdentity(state.Rejected, &identity) {
+			return activationState{}, errors.New("runtime component candidate was previously rejected; a new signed identity is required")
+		}
 		if state.Pending != nil {
 			if sameSlotIdentity(state.Pending, &identity) {
 				return state, nil
@@ -364,9 +374,6 @@ func armPendingState(slot, trustPath, root string) (activationState, error) {
 		candidate := identity
 		state.Pending = &candidate
 		state.PendingHealth = "unknown"
-		if sameSlotIdentity(state.Rejected, &candidate) {
-			state.Rejected = nil
-		}
 		state.Revision++
 		return state, nil
 	})
@@ -382,6 +389,9 @@ func recordPendingHealth(root, componentID string, identity slotIdentity, health
 		}
 		if state.PendingHealth == health {
 			return state, nil
+		}
+		if state.PendingHealth == "failed" && health == "healthy" {
+			return activationState{}, errors.New("runtime component failed candidate must be rejected before a new health attempt")
 		}
 		state.PendingHealth = health
 		state.Revision++
