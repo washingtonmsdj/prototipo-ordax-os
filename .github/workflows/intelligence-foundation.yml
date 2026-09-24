@@ -1,0 +1,154 @@
+name: Intelligence Foundation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/INTELLIGENCE.md'
+      - 'docs/contracts/local-ai.json'
+      - 'docs/contracts/memory.json'
+      - 'docs/contracts/model-router.json'
+      - 'system/contracts/intelligence.mjs'
+      - 'system/contracts/local-ai.mjs'
+      - 'system/contracts/memory.mjs'
+      - 'system/contracts/memory-store.mjs'
+      - 'system/contracts/memory-context.mjs'
+      - 'system/contracts/model-router.mjs'
+      - 'system/services/intelligence/**'
+      - 'system/services/local-ai/**'
+      - 'system/services/memory/**'
+      - 'system/adapters/web/memory.mjs'
+      - 'system/adapters/native/memory.mjs'
+      - 'system/surface/runtime/native_memory_state.py'
+      - 'system/surface/runtime/native_memory_endpoint.py'
+      - 'system/surface/runtime/native_host_server.py'
+      - 'system/composition/native/main.mjs'
+      - 'tests/test_native_memory_integration.py'
+      - 'tests/test_ecosystem_contracts.mjs'
+      - 'tests/test_intelligence_runtime.mjs'
+      - 'tests/test_model_router_runtime.mjs'
+      - 'tests/test_local_ai_runtime.mjs'
+      - 'tests/test_local_ai_endpoint_policy.mjs'
+      - 'tests/test_local_ai_probe_races.mjs'
+      - 'tests/test_local_ai_response_lifecycle.mjs'
+      - 'tests/test_local_ai_model_rediscovery.mjs'
+      - 'tests/test_memory_runtime.mjs'
+      - 'tests/test_memory_context.mjs'
+      - 'tests/test_memory_review.mjs'
+      - 'tests/test_memory_owners.mjs'
+      - 'tests/test_memory_review_session.mjs'
+      - 'tests/test_memory_review_view_model.mjs'
+      - 'tests/test_memory_session_store_policy.mjs'
+      - 'tests/test_memory_store_adapters.mjs'
+      - 'tests/test_memory_native_adapter_bounds.mjs'
+      - 'tests/test_memory_native_state.py'
+      - 'tests/test_memory_native_endpoint.py'
+      - '.github/workflows/intelligence-foundation.yml'
+  pull_request:
+    paths:
+      - 'docs/INTELLIGENCE.md'
+      - 'docs/contracts/local-ai.json'
+      - 'docs/contracts/memory.json'
+      - 'docs/contracts/model-router.json'
+      - 'system/contracts/intelligence.mjs'
+      - 'system/contracts/local-ai.mjs'
+      - 'system/contracts/memory.mjs'
+      - 'system/contracts/memory-store.mjs'
+      - 'system/contracts/memory-context.mjs'
+      - 'system/contracts/model-router.mjs'
+      - 'system/services/intelligence/**'
+      - 'system/services/local-ai/**'
+      - 'system/services/memory/**'
+      - 'system/adapters/web/memory.mjs'
+      - 'system/adapters/native/memory.mjs'
+      - 'system/surface/runtime/native_memory_state.py'
+      - 'system/surface/runtime/native_memory_endpoint.py'
+      - 'system/surface/runtime/native_host_server.py'
+      - 'system/composition/native/main.mjs'
+      - 'tests/test_native_memory_integration.py'
+      - 'tests/test_ecosystem_contracts.mjs'
+      - 'tests/test_intelligence_runtime.mjs'
+      - 'tests/test_model_router_runtime.mjs'
+      - 'tests/test_local_ai_runtime.mjs'
+      - 'tests/test_local_ai_endpoint_policy.mjs'
+      - 'tests/test_local_ai_probe_races.mjs'
+      - 'tests/test_local_ai_response_lifecycle.mjs'
+      - 'tests/test_local_ai_model_rediscovery.mjs'
+      - 'tests/test_memory_runtime.mjs'
+      - 'tests/test_memory_context.mjs'
+      - 'tests/test_memory_review.mjs'
+      - 'tests/test_memory_owners.mjs'
+      - 'tests/test_memory_review_session.mjs'
+      - 'tests/test_memory_review_view_model.mjs'
+      - 'tests/test_memory_session_store_policy.mjs'
+      - 'tests/test_memory_store_adapters.mjs'
+      - 'tests/test_memory_native_adapter_bounds.mjs'
+      - 'tests/test_memory_native_state.py'
+      - 'tests/test_memory_native_endpoint.py'
+      - '.github/workflows/intelligence-foundation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  intelligence-foundation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          check-latest: false
+
+      - name: Validate Intelligence source syntax
+        run: |
+          set -euo pipefail
+          node --check system/contracts/intelligence.mjs
+          node --check system/contracts/local-ai.mjs
+          node --check system/contracts/memory.mjs
+          node --check system/contracts/memory-store.mjs
+          node --check system/contracts/memory-context.mjs
+          node --check system/contracts/model-router.mjs
+          find system/services/intelligence system/services/local-ai system/services/memory -type f -name '*.mjs' -print0 \
+            | sort -z \
+            | xargs -0 -n1 node --check
+          node --check system/adapters/web/memory.mjs
+          node --check system/adapters/native/memory.mjs
+          python -m py_compile system/surface/runtime/native_memory_state.py
+          python -m py_compile system/surface/runtime/native_memory_endpoint.py
+          python -m py_compile system/surface/runtime/native_host_server.py
+          node --check system/composition/native/main.mjs
+          python -m json.tool docs/contracts/local-ai.json >/dev/null
+          python -m json.tool docs/contracts/memory.json >/dev/null
+          python -m json.tool docs/contracts/model-router.json >/dev/null
+
+      - name: Run Intelligence and Local AI contract tests
+        run: |
+          set -euo pipefail
+          node --test tests/test_ecosystem_contracts.mjs
+          node --test tests/test_intelligence_runtime.mjs
+          node --test tests/test_model_router_runtime.mjs
+          node --test tests/test_local_ai_runtime.mjs
+          node --test tests/test_local_ai_endpoint_policy.mjs
+          node --test tests/test_local_ai_probe_races.mjs
+          node --test tests/test_local_ai_response_lifecycle.mjs
+          node --test tests/test_local_ai_model_rediscovery.mjs
+          node --test tests/test_memory_runtime.mjs
+          node --test tests/test_memory_context.mjs
+          node --test tests/test_memory_review.mjs
+          node --test tests/test_memory_owners.mjs
+          node --test tests/test_memory_review_session.mjs
+          node --test tests/test_memory_review_view_model.mjs
+          node --test tests/test_memory_session_store_policy.mjs
+          node --test tests/test_memory_store_adapters.mjs
+          node --test tests/test_memory_native_adapter_bounds.mjs
+          python -m unittest tests.test_memory_native_state -v
+          python -m unittest tests.test_memory_native_endpoint -v
+          python -m unittest tests.test_native_memory_integration -v

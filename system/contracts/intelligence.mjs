@@ -1,5 +1,6 @@
 export const INTELLIGENCE_PORT_SCHEMA = "ordax.intelligence/1";
 export const INTELLIGENCE_RESPONSE_SCHEMA = "ordax.intelligence-response/1";
+export const INTELLIGENCE_MAX_PROMPT_CHARS = 32000;
 
 const STATES = new Set(["degraded", "ready", "busy", "error"]);
 const INTENTS = new Set(["ask", "explain", "summarize", "diagnose"]);
@@ -92,7 +93,7 @@ export function validateIntelligenceRequest(value) {
   }
   return Object.freeze({
     intent,
-    prompt: boundedText(value.prompt, "Intelligence prompt", 32768),
+    prompt: boundedText(value.prompt, "Intelligence prompt", INTELLIGENCE_MAX_PROMPT_CHARS),
     context: validateContext(value.context),
     maxTokens:
       Number.isSafeInteger(value.maxTokens)

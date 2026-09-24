@@ -8,7 +8,8 @@
   "providers": {
     "local": {
       "enabled_in_mvp": true,
-      "network_required": false
+      "network_required": false,
+      "route_identity": ["engineId", "modelId"]
     },
     "openai": {
       "prepared": true,
@@ -24,6 +25,8 @@
     "memory_is_provider_owned": false,
     "provider_credentials_in_prompt_or_memory_allowed": false,
     "route_may_change_without_surface_rewrite": true,
+    "local_response_must_match_routed_engine_and_model": true,
+    "silent_engine_or_model_drift_during_generation_allowed": false,
     "external_egress_requires_policy_and_user_visibility": true,
     "professional_profile_may_set_preferences_but_not_bypass_authorization": true,
     "local_ai_remains_available_when_cloud_provider_unavailable": true

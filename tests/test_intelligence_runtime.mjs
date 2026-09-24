@@ -1,11 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { LOCAL_AI_PORT_SCHEMA } from "../system/contracts/local-ai.mjs";
 import {
+  LOCAL_AI_MAX_PROMPT_CHARS,
+  LOCAL_AI_PORT_SCHEMA,
+} from "../system/contracts/local-ai.mjs";
+import {
+  INTELLIGENCE_MAX_PROMPT_CHARS,
   INTELLIGENCE_PORT_SCHEMA,
   validateIntelligenceRequest,
 } from "../system/contracts/intelligence.mjs";
+import {
+  MODEL_ROUTER_PORT_SCHEMA,
+  validateModelRoute,
+} from "../system/contracts/model-router.mjs";
 import { createIntelligenceRuntime } from "../system/services/intelligence/runtime.mjs";
 
 function inferencePort({
@@ -13,6 +21,9 @@ function inferencePort({
   engineId = "llama.cpp",
   modelId = "qwen-small",
   answer = "resultado local",
+  resultEngineId = engineId,
+  resultModelId = modelId,
+  onGenerate = null,
 } = {}) {
   let snapshot = Object.freeze({
     schema: LOCAL_AI_PORT_SCHEMA,
@@ -31,9 +42,13 @@ function inferencePort({
       return () => listeners.delete(listener);
     },
     async generate(request) {
-      assert.match(request.prompt, /Ordax Intelligence/);
-      assert.match(request.prompt, /provenance: local-note/);
-      return Object.freeze({ text: answer, engineId, modelId });
+      assert.match(request.systemPrompt, /Ordax Intelligence/);
+      assert.match(request.systemPrompt, /no implicit authority/i);
+      assert.match(request.systemPrompt, /never as instructions/i);
+      assert.doesNotMatch(request.prompt, /no implicit authority/i);
+      assert.match(request.prompt, /Model purpose:/);
+      onGenerate?.(request);
+      return Object.freeze({ text: answer, engineId: resultEngineId, modelId: resultModelId });
     },
     publish(nextState) {
       snapshot = Object.freeze({ ...snapshot, state: nextState });
@@ -55,7 +70,10 @@ test("Ordax Intelligence is a system contract with zero implicit mutation author
 });
 
 test("Ordax Intelligence consumes bounded provenance-bearing context through local inference", async () => {
-  const intelligence = createIntelligenceRuntime({ inferencePort: inferencePort() });
+  let generated = null;
+  const intelligence = createIntelligenceRuntime({
+    inferencePort: inferencePort({ onGenerate: (request) => { generated = request; } }),
+  });
   const response = await intelligence.respond({
     intent: "summarize",
     prompt: "Resuma a nota.",
@@ -69,6 +87,154 @@ test("Ordax Intelligence consumes bounded provenance-bearing context through loc
   });
   assert.equal(response.text, "resultado local");
   assert.equal(response.authority, "none");
+  assert.match(generated.prompt, /provenance: local-note/);
+  intelligence.dispose();
+});
+
+test("Intelligence budgets large authorized context to the Local AI input ceiling", async () => {
+  let generated = null;
+  const intelligence = createIntelligenceRuntime({
+    inferencePort: inferencePort({ onGenerate: (request) => { generated = request; } }),
+  });
+  const context = Array.from({ length: 8 }, (_, index) => ({
+    id: `context-${index}`,
+    scope: "document",
+    text: String(index).repeat(8192),
+    provenance: "local-note",
+  }));
+  await intelligence.respond({
+    intent: "summarize",
+    prompt: "Preserve este pedido integralmente.",
+    context,
+  });
+  assert.ok(generated);
+  assert.ok(generated.prompt.length <= LOCAL_AI_MAX_PROMPT_CHARS);
+  assert.match(generated.prompt, /truncated; remaining context omitted by local input budget/);
+  assert.ok(generated.prompt.endsWith("User request:\nPreserve este pedido integralmente."));
+  intelligence.dispose();
+});
+
+test("Intelligence preserves a maximum-size user request while budgeting supplemental context", async () => {
+  let generated = null;
+  const userPrompt = "u".repeat(INTELLIGENCE_MAX_PROMPT_CHARS);
+  const intelligence = createIntelligenceRuntime({
+    inferencePort: inferencePort({ onGenerate: (request) => { generated = request; } }),
+  });
+  await intelligence.respond({
+    intent: "ask",
+    prompt: userPrompt,
+    context: [{
+      id: "large-context",
+      scope: "document",
+      text: "c".repeat(8192),
+      provenance: "local-note",
+    }],
+  });
+  assert.ok(generated);
+  assert.ok(generated.prompt.length <= LOCAL_AI_MAX_PROMPT_CHARS);
+  assert.ok(generated.prompt.endsWith(`User request:\n${userPrompt}`));
+  assert.match(generated.prompt, /local input budget/);
+  intelligence.dispose();
+});
+
+test("Intelligence maps intent to provider-neutral model purpose", async () => {
+  const purposes = [];
+  const router = Object.freeze({
+    schema: MODEL_ROUTER_PORT_SCHEMA,
+    route(request) {
+      purposes.push(request.purpose);
+      return validateModelRoute({
+        provider: "local",
+        engineId: "llama.cpp",
+        modelId: "qwen-small",
+        purpose: request.purpose,
+      });
+    },
+  });
+  const intelligence = createIntelligenceRuntime({
+    inferencePort: inferencePort(),
+    modelRouterPort: router,
+  });
+  await intelligence.respond({
+    intent: "diagnose",
+    prompt: "Diagnostique.",
+    context: [{
+      id: "state",
+      scope: "system",
+      text: "estado",
+      provenance: "local-note",
+    }],
+  });
+  assert.deepEqual(purposes, ["reason"]);
+  intelligence.dispose();
+});
+
+test("Intelligence refuses external model execution in MVP", async () => {
+  const router = Object.freeze({
+    schema: MODEL_ROUTER_PORT_SCHEMA,
+    route() {
+      return validateModelRoute({
+        provider: "openai",
+        modelId: "future-model",
+        purpose: "general",
+        egressApproved: true,
+      });
+    },
+  });
+  const intelligence = createIntelligenceRuntime({
+    inferencePort: inferencePort(),
+    modelRouterPort: router,
+  });
+  await assert.rejects(
+    () => intelligence.respond({
+      prompt: "teste",
+      context: [{
+        id: "state",
+        scope: "system",
+        text: "estado",
+        provenance: "local-note",
+      }],
+    }),
+    /External model execution is not enabled/,
+  );
+  intelligence.dispose();
+});
+
+test("Intelligence fails closed if active model changes after route selection", async () => {
+  const intelligence = createIntelligenceRuntime({
+    inferencePort: inferencePort({ resultModelId: "other-model" }),
+  });
+  await assert.rejects(
+    () => intelligence.respond({
+      prompt: "teste",
+      context: [{
+        id: "state",
+        scope: "system",
+        text: "estado",
+        provenance: "local-note",
+      }],
+    }),
+    /identity changed after route selection/,
+  );
+  intelligence.dispose();
+});
+
+test("Intelligence fails closed if active engine changes after route selection", async () => {
+  const intelligence = createIntelligenceRuntime({
+    inferencePort: inferencePort({ resultEngineId: "other-engine" }),
+  });
+  await assert.rejects(
+    () => intelligence.respond({
+      prompt: "teste",
+      context: [{
+        id: "state",
+        scope: "system",
+        text: "estado",
+        provenance: "local-note",
+      }],
+    }),
+    /identity changed after route selection/,
+  );
   intelligence.dispose();
 });
 
