@@ -60,6 +60,8 @@ jobs:
           cp tools/runtime-component-channel/windows/3-Verify-OrdaXComponentTrustRecovery.cmd "$out/"
           cp tools/runtime-component-channel/windows/Initialize-OrdaXComponentTrust.ps1 "$out/"
           cp tools/runtime-component-channel/windows/Complete-OrdaXComponentTrust.ps1 "$out/"
+          cp docs/COMPONENT-TRUST-CEREMONY.md "$out/"
+          cp docs/contracts/runtime-component-trust-policy.json "$out/component-trust-policy.json"
 
       - name: Emit hashes and provenance
         run: |
@@ -74,6 +76,8 @@ jobs:
               3-Verify-OrdaXComponentTrustRecovery.cmd \
               Initialize-OrdaXComponentTrust.ps1 \
               Complete-OrdaXComponentTrust.ps1 \
+              COMPONENT-TRUST-CEREMONY.md \
+              component-trust-policy.json \
               > SHA256SUMS
           )
           python3 - <<'PY'
@@ -85,6 +89,8 @@ jobs:
 
           contract_path = pathlib.Path('docs/contracts/runtime-component-package.json')
           contract = json.loads(contract_path.read_text(encoding='utf-8'))
+          trust_policy_path = pathlib.Path('docs/contracts/runtime-component-trust-policy.json')
+          trust_policy = json.loads(trust_policy_path.read_text(encoding='utf-8'))
 
           prerequisites = {
               'signed_slot_staging_available': (
@@ -116,6 +122,15 @@ jobs:
                   and contract.get('publish_allowed') is False
                   and contract.get('canonical_component_trust_anchor_pinned') is False
               ),
+              'trust_policy_pending_and_separate': (
+                  trust_policy.get('$schema') == 'prototype-ordax.runtime-component-trust-policy/1'
+                  and trust_policy.get('status') == 'operator-ceremony-pending'
+                  and trust_policy.get('key_id') == 'ordax-runtime-components-v1'
+                  and trust_policy.get('public_anchor', {}).get('pinned') is False
+                  and trust_policy.get('separation', {}).get('whole_os_release_key_reuse_allowed') is False
+                  and trust_policy.get('current_gates', {}).get('component_publish_allowed') is False
+                  and trust_policy.get('current_gates', {}).get('production_component_slot_activation_allowed') is False
+              ),
           }
 
           canonical_main_push = (
@@ -141,6 +156,8 @@ jobs:
               'canonical_public_trust_included': False,
               'key_generation_requires_local_user_action': True,
               'whole_os_release_key_reuse_allowed': False,
+              'policy_sha256': digest('component-trust-policy.json'),
+              'ceremony_doc_sha256': digest('COMPONENT-TRUST-CEREMONY.md'),
               'components': {
                   'component_signer': {
                       'name': 'ordax-runtime-component-channel.exe',
@@ -186,6 +203,7 @@ jobs:
               'native_read_broker_available',
               'trust_domains_separate',
               'production_activation_still_blocked',
+              'trust_policy_pending_and_separate',
           }
           assert all(isinstance(value, bool) for value in prerequisites.values())
           canonical_main_push = (
