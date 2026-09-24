@@ -13,6 +13,7 @@ DEFAULT_SLOT_ROOT = "/var/lib/ordax/components"
 COMPONENT_MODULE_PREFIX = "/__ordax/native/component-module/"
 MAX_RUNTIME_FILE_BYTES = 2 * 1024 * 1024
 MAX_RESOLVE_OUTPUT_BYTES = 16 * 1024
+MAX_HEALTH_OUTPUT_BYTES = 16 * 1024
 DEFAULT_TIMEOUT_SECONDS = 3.0
 
 _COMPONENT_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
@@ -59,6 +60,15 @@ class ComponentSlotResolution:
     entrypoint: str | None
     slot: str | None
     pending_health: str | None = None
+
+
+@dataclass(frozen=True)
+class ComponentHealthRecord:
+    component_id: str
+    revision: int
+    version: str
+    source_commit: str
+    health: str
 
 
 def _safe_regular_file(path: str, *, executable: bool = False) -> bool:
@@ -346,4 +356,116 @@ def read_component_runtime_file(
         ],
         max_stdout_bytes=MAX_RUNTIME_FILE_BYTES,
         timeout_seconds=timeout_seconds,
+    )
+
+
+def _parse_health_record_output(
+    payload: bytes,
+    *,
+    component_id: str,
+    version: str,
+    source_commit: str,
+    expected_revision: int,
+    health: str,
+) -> ComponentHealthRecord:
+    if len(payload) > MAX_HEALTH_OUTPUT_BYTES:
+        raise ComponentSlotVerificationError("runtime component health output exceeded limit")
+    try:
+        text = payload.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ComponentSlotVerificationError("runtime component health output is not UTF-8") from exc
+
+    values: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        if not raw_line or "=" not in raw_line:
+            raise ComponentSlotVerificationError("runtime component health output is malformed")
+        key, value = raw_line.split("=", 1)
+        if not key or key in values:
+            raise ComponentSlotVerificationError("runtime component health output contains duplicate fields")
+        values[key] = value
+
+    required = {
+        "RUNTIME_COMPONENT_PENDING_HEALTH_RECORDED",
+        "COMPONENT_ID",
+        "REVISION",
+        "PENDING_VERSION",
+        "PENDING_SOURCE_COMMIT",
+        "PENDING_HEALTH",
+        "RUNTIME_ACTIVATED",
+    }
+    if set(values) != required:
+        raise ComponentSlotVerificationError("runtime component health output contains unexpected fields")
+    if values["RUNTIME_COMPONENT_PENDING_HEALTH_RECORDED"] != "YES":
+        raise ComponentSlotVerificationError("runtime component health marker is missing")
+    if values["RUNTIME_ACTIVATED"] != "NO":
+        raise ComponentSlotVerificationError("runtime component health recorder exceeded authority")
+    if values["COMPONENT_ID"] != component_id:
+        raise ComponentSlotVerificationError("runtime component health component mismatch")
+    if values["PENDING_VERSION"] != version or values["PENDING_SOURCE_COMMIT"] != source_commit:
+        raise ComponentSlotVerificationError("runtime component health identity mismatch")
+    if values["PENDING_HEALTH"] != health:
+        raise ComponentSlotVerificationError("runtime component health result mismatch")
+    try:
+        revision = int(values["REVISION"])
+    except ValueError as exc:
+        raise ComponentSlotVerificationError("runtime component health revision is invalid") from exc
+    if revision != expected_revision + 1:
+        raise ComponentSlotVerificationError("runtime component health revision did not advance exactly once")
+
+    return ComponentHealthRecord(
+        component_id=component_id,
+        revision=revision,
+        version=version,
+        source_commit=source_commit,
+        health=health,
+    )
+
+
+def record_component_pending_health(
+    *,
+    helper_path: str,
+    component_id: str,
+    version: str,
+    source_commit: str,
+    expected_revision: int,
+    health: str,
+    slot_root: str = DEFAULT_SLOT_ROOT,
+    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+) -> ComponentHealthRecord:
+    if component_id not in SUPPORTED_COMPONENTS or not _COMPONENT_RE.fullmatch(component_id):
+        raise ComponentSlotRequestError("unsupported runtime component")
+    if not _SEMVER_RE.fullmatch(version) or not _SHA40_RE.fullmatch(source_commit):
+        raise ComponentSlotRequestError("invalid runtime component health identity")
+    if not isinstance(expected_revision, int) or isinstance(expected_revision, bool) or expected_revision <= 0:
+        raise ComponentSlotRequestError("invalid runtime component probation revision")
+    if health not in {"healthy", "failed"}:
+        raise ComponentSlotRequestError("invalid runtime component health result")
+
+    output = _run_helper(
+        helper_path,
+        [
+            "record-health",
+            "--component",
+            component_id,
+            "--version",
+            version,
+            "--source-commit",
+            source_commit,
+            "--expected-revision",
+            str(expected_revision),
+            "--health",
+            health,
+            "--root",
+            slot_root,
+        ],
+        max_stdout_bytes=MAX_HEALTH_OUTPUT_BYTES,
+        timeout_seconds=timeout_seconds,
+    )
+    return _parse_health_record_output(
+        output,
+        component_id=component_id,
+        version=version,
+        source_commit=source_commit,
+        expected_revision=expected_revision,
+        health=health,
     )

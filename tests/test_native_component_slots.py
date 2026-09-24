@@ -277,5 +277,87 @@ class NativeComponentSlotTests(unittest.TestCase):
                 )
 
 
+    def test_pending_health_recorder_uses_exact_revision_and_fixed_argv(self):
+        commit = "a" * 40
+        output = (
+            "RUNTIME_COMPONENT_PENDING_HEALTH_RECORDED=YES\n"
+            "COMPONENT_ID=internet\n"
+            "REVISION=8\n"
+            "PENDING_VERSION=0.4.0\n"
+            f"PENDING_SOURCE_COMMIT={commit}\n"
+            "PENDING_HEALTH=healthy\n"
+            "RUNTIME_ACTIVATED=NO\n"
+        ).encode("utf-8")
+        completed = subprocess.CompletedProcess([], 0, stdout=output, stderr=b"")
+        with mock.patch.object(slots.subprocess, "run", return_value=completed) as run:
+            record = slots.record_component_pending_health(
+                helper_path="/signed/bin/ordax-runtime-component-channel",
+                component_id="internet",
+                version="0.4.0",
+                source_commit=commit,
+                expected_revision=7,
+                health="healthy",
+            )
+        self.assertEqual(record.component_id, "internet")
+        self.assertEqual(record.revision, 8)
+        self.assertEqual(record.version, "0.4.0")
+        self.assertEqual(record.source_commit, commit)
+        self.assertEqual(record.health, "healthy")
+        argv = run.call_args.args[0]
+        self.assertEqual(argv[1], "record-health")
+        self.assertIn("--expected-revision", argv)
+        self.assertIn("7", argv)
+        self.assertIn("--health", argv)
+        self.assertIn("healthy", argv)
+        self.assertNotIn("promote-state", argv)
+        self.assertNotIn("reject-pending", argv)
+        self.assertNotIn("rollback-state", argv)
+
+    def test_pending_health_recorder_rejects_invalid_input_before_helper(self):
+        with mock.patch.object(slots.subprocess, "run") as run:
+            with self.assertRaises(slots.ComponentSlotRequestError):
+                slots.record_component_pending_health(
+                    helper_path="/signed/bin/helper",
+                    component_id="internet",
+                    version="0.4.0",
+                    source_commit="a" * 40,
+                    expected_revision=0,
+                    health="healthy",
+                )
+            with self.assertRaises(slots.ComponentSlotRequestError):
+                slots.record_component_pending_health(
+                    helper_path="/signed/bin/helper",
+                    component_id="internet",
+                    version="0.4.0",
+                    source_commit="a" * 40,
+                    expected_revision=7,
+                    health="maybe",
+                )
+        run.assert_not_called()
+
+    def test_pending_health_recorder_rejects_mismatched_helper_receipt(self):
+        commit = "a" * 40
+        bad = (
+            "RUNTIME_COMPONENT_PENDING_HEALTH_RECORDED=YES\n"
+            "COMPONENT_ID=internet\n"
+            "REVISION=9\n"
+            "PENDING_VERSION=0.4.0\n"
+            f"PENDING_SOURCE_COMMIT={commit}\n"
+            "PENDING_HEALTH=healthy\n"
+            "RUNTIME_ACTIVATED=NO\n"
+        ).encode("utf-8")
+        completed = subprocess.CompletedProcess([], 0, stdout=bad, stderr=b"")
+        with mock.patch.object(slots.subprocess, "run", return_value=completed):
+            with self.assertRaises(slots.ComponentSlotVerificationError):
+                slots.record_component_pending_health(
+                    helper_path="/signed/bin/helper",
+                    component_id="internet",
+                    version="0.4.0",
+                    source_commit=commit,
+                    expected_revision=7,
+                    health="healthy",
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
