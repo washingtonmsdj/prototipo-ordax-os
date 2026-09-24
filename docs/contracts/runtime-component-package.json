@@ -29,7 +29,7 @@
   "rollback_slot_activation_available": false,
   "publish_allowed": false,
   "internet_release_mode": "git-app",
-  "next_gate": "Pin canonical runtime-component public trust, then wire pending probation loading and real runtime health to promote/reject; production component-slot activation remains blocked until that proof passes",
+  "next_gate": "Pin canonical runtime-component public trust, then load the exact identity-bound pending runtime in probation and report real runtime health before promote/reject",
   "activation_state_machine_available": true,
   "activation_state_atomic_current_previous_pending_rejected": true,
   "activation_state_revalidates_signed_slots": true,
@@ -49,5 +49,8 @@
   "native_loopback_broker_supported_components": [
     "internet"
   ],
-  "failed_pending_runtime_read_allowed": false
+  "failed_pending_runtime_read_allowed": false,
+  "runtime_file_read_requires_exact_version_and_source_commit": true,
+  "runtime_file_read_rejects_state_identity_change": true,
+  "native_loopback_virtual_namespace_identity_bound": true
 }
