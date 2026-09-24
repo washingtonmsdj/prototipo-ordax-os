@@ -153,8 +153,14 @@ export function validateMemorySearchRequest(value) {
   if (owner.ownerKind === "device" && uniqueScopes.includes("account")) {
     throw new TypeError("Device-owned memory search cannot request account scope");
   }
-  const query = value.query == null ? "" : String(value.query).trim();
-  if (query.length > 1024 || query.includes("\0")) {
+  let query = "";
+  if (value.query != null) {
+    if (typeof value.query !== "string" || value.query.includes("\0")) {
+      throw new TypeError("Memory search query must be text");
+    }
+    query = value.query.trim();
+  }
+  if (query.length > 1024) {
     throw new TypeError("Memory search query is outside its allowed bounds");
   }
   const spaceId = optionalText(value.spaceId, "Memory search space id", 160);
