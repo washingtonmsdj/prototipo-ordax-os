@@ -9,7 +9,10 @@ import {
   LOCAL_AI_MAX_PROMPT_CHARS,
   assertLocalAiPort,
 } from "../../contracts/local-ai.mjs";
-import { assertModelRouterPort } from "../../contracts/model-router.mjs";
+import {
+  assertModelRouterPort,
+  validateModelRoute,
+} from "../../contracts/model-router.mjs";
 import { createModelRouterRuntime } from "./model-router.mjs";
 
 const PURPOSE_BY_INTENT = Object.freeze({
@@ -154,11 +157,11 @@ export function createIntelligenceRuntime({ inferencePort, modelRouterPort = nul
       if (snapshot.state !== "ready") {
         throw new Error("Ordax Intelligence local inference is not ready");
       }
-      const route = router.route({
+      const route = validateModelRoute(router.route({
         provider: "local",
         purpose: PURPOSE_BY_INTENT[request.intent] ?? "general",
         egressApproved: false,
-      });
+      }));
       if (route.provider !== "local") {
         throw new Error("External model execution is not enabled in the Stable/MVP runtime");
       }
