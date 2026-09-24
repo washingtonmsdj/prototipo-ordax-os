@@ -20,6 +20,7 @@
     "do-not-promote-candidate",
     "boot-again-on-the-same-disposable-disk",
     "select-previous-current-release",
+    "sync-inner-state-and-outer-data-filesystem-before-proof-handoff",
     "persist-candidate-as-rejected",
     "remove-candidate-advisory-file",
     "remove-activation-transaction"
@@ -41,7 +42,10 @@
     "physical_usb_boot_proven": false,
     "secure_boot_proven": false,
     "qemu_disk_cache_mode": "directsync",
-    "final_state_inspection": "read-only-copy-fail-closed"
+    "final_state_inspection": "read-only-copy-fail-closed",
+    "activation_state_outer_sync_required": true,
+    "activation_state_durable_serial_marker": "ORDAX_PORTABLE_ACTIVATION_STATE_DURABLE=YES",
+    "qemu_termination_requires_durable_state_marker": true
   },
   "promotion_effect": {
     "baseline_current_boot_contract_unchanged": true,

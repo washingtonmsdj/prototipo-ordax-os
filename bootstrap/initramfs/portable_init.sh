@@ -217,6 +217,12 @@ select_verified_release() {
 select_verified_release ||
     rescue "no candidate/current/known-good release is safely selectable and exactly verified"
 
+# select-boot may durably arm the one-shot attempt or persist fallback cleanup
+# inside the ext4 state image, which itself is a file on ORDAX-DATA. Flush the
+# outer filesystem before advertising the selection as QEMU-proof durable.
+sync || rescue "cannot durably flush portable activation state"
+echo "ORDAX_PORTABLE_ACTIVATION_STATE_DURABLE=YES"
+
 if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ] || [ "$SELECTED_MANIFEST_SCHEMA" = "4" ]; then
     SURFACE_RUNTIME_IMAGE="$PORTABLE_ROOT/runtimes/sha256/$SELECTED_SURFACE_RUNTIME_SHA256/native-surface-runtime.erofs"
     mkdir -p \

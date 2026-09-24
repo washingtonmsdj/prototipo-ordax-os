@@ -109,6 +109,25 @@ class PortableV2QEMUBootProofTests(unittest.TestCase):
         self.assertIn('"physical_usb_boot_proven": False', text)
 
 
+    def test_runner_waits_for_durable_activation_state_before_terminating_guest(self):
+        text = SCRIPT.read_text(encoding="utf-8")
+        marker = "ORDAX_PORTABLE_ACTIVATION_STATE_DURABLE=YES"
+        self.assertIn(marker, text)
+        self.assertIn("ACTIVATION_DURABLE in text", text)
+        boot = text.split("def boot_qemu_expected", 1)[1].split("def boot_qemu(", 1)[0]
+        success = boot.split("if (\n                SUCCESS in text", 1)[1]
+        self.assertLess(
+            success.index("ACTIVATION_DURABLE in text"),
+            success.index("process.terminate()"),
+        )
+
+        runner = CONTRACT["current_runner_invariants"]
+        self.assertTrue(runner["activation_state_outer_sync_before_handoff"])
+        self.assertEqual(runner["activation_state_durable_serial_marker"], marker)
+        self.assertTrue(runner["qemu_termination_requires_durable_state_marker"])
+        self.assertTrue(runner["applies_to_future_proof_runs"])
+        self.assertFalse(runner["historical_last_proven_artifact_rewritten"])
+
     def test_initramfs_mount_understands_security_flags_before_vfat_handoff(self):
         build = INITRAMFS_BUILD.read_text(encoding="utf-8")
         source = json.loads(INITRAMFS_SOURCE.read_text(encoding="utf-8"))

@@ -27,6 +27,8 @@ class PortableV3OneShotQemuProofTests(unittest.TestCase):
         self.assertIn('"-net", "none"', text)
         self.assertIn("cache=directsync", text)
         self.assertIn('"qemu_durable_cache_mode"', text)
+        self.assertIn("ORDAX_PORTABLE_ACTIVATION_STATE_DURABLE=YES", text)
+        self.assertIn("ACTIVATION_DURABLE in text", text)
 
     def test_final_state_is_inspected_from_a_read_only_copy(self):
         text = QEMU.read_text(encoding="utf-8")
@@ -70,6 +72,16 @@ class PortableV3OneShotQemuProofTests(unittest.TestCase):
         self.assertEqual(spec["required_final_state"]["rejected"], "candidate")
         self.assertEqual(spec["required_final_state"]["candidate_file"], "absent")
         self.assertEqual(spec["required_final_state"]["activation_transaction"], "absent")
+        self.assertIn(
+            "sync-inner-state-and-outer-data-filesystem-before-proof-handoff",
+            spec["required_sequence"],
+        )
+        self.assertTrue(spec["safety"]["activation_state_outer_sync_required"])
+        self.assertEqual(
+            spec["safety"]["activation_state_durable_serial_marker"],
+            "ORDAX_PORTABLE_ACTIVATION_STATE_DURABLE=YES",
+        )
+        self.assertTrue(spec["safety"]["qemu_termination_requires_durable_state_marker"])
         self.assertTrue(spec["safety"]["qemu_network"] == "disabled")
         self.assertFalse(spec["safety"]["physical_target_device_touched"])
         self.assertFalse(spec["safety"]["physical_write_authorized"])
