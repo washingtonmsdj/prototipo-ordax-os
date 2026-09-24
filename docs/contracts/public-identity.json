@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-entry/1",
-  "status": "provider-unconfigured",
+  "status": "provider-target-prepared",
   "purpose": "public-site-account-entry-boundary",
   "routes": {
     "login_page": "/login/",
@@ -45,10 +45,15 @@
     "gateway_core_implemented": true
   },
   "supabase_candidate": {
-    "status": "not-configured",
+    "status": "dedicated-target-schema-prepared",
+    "project_name": "ordax-control-plane",
+    "project_ref": "eobcxuyvhkvdmkbaihwh",
     "preflight": "infra/supabase/identity/preflight.sql",
-    "migration_root": "infra/supabase/identity/migrations",
-    "existing_shared_project_mutation_allowed": false
+    "migration_root": "infra/supabase/product/migrations",
+    "product_schema_applied": true,
+    "public_auth_enabled": false,
+    "existing_shared_project_mutation_allowed": false,
+    "previous_shared_project_rejected": true
   },
   "legal_readiness": {
     "contract": "docs/contracts/public-legal-readiness.json",
