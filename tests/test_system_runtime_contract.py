@@ -11,6 +11,7 @@ SURFACE_ENTRYPOINT = ROOT / "system" / "surface" / "entrypoint"
 SURFACE_RUNTIME = ROOT / "system" / "surface" / "bin" / "ordax-surface"
 NATIVE_HOST_SERVER = ROOT / "system" / "surface" / "runtime" / "native_host_server.py"
 NATIVE_BROWSER_HOST = ROOT / "system" / "surface" / "runtime" / "ordax_browser_host.py"
+NATIVE_COMPONENT_SLOTS = ROOT / "system" / "surface" / "runtime" / "native_component_slots.py"
 RESCUE_AGENT = ROOT / "system" / "rescue" / "agent.sh"
 BASE_TELEMETRY_AGENT = ROOT / "system" / "services" / "telemetry" / "base-agent.sh"
 NATIVE_COMPOSITION = ROOT / "system" / "composition" / "native"
@@ -25,6 +26,7 @@ class SystemRuntimeContractTests(unittest.TestCase):
         self.assertTrue(SYSTEM_SUPERVISOR.is_file(), SYSTEM_SUPERVISOR)
         self.assertTrue(NATIVE_HOST_SERVER.is_file(), NATIVE_HOST_SERVER)
         self.assertTrue(NATIVE_BROWSER_HOST.is_file(), NATIVE_BROWSER_HOST)
+        self.assertTrue(NATIVE_COMPONENT_SLOTS.is_file(), NATIVE_COMPONENT_SLOTS)
         self.assertTrue(RESCUE_AGENT.is_file(), RESCUE_AGENT)
         self.assertTrue(BASE_TELEMETRY_AGENT.is_file(), BASE_TELEMETRY_AGENT)
         self.assertTrue((NATIVE_COMPOSITION / "index.html").is_file())
@@ -40,7 +42,7 @@ class SystemRuntimeContractTests(unittest.TestCase):
         self.assertIn("could not provision standard user directories", text)
 
     def test_native_host_server_python_syntax_is_valid(self):
-        for path in (NATIVE_HOST_SERVER, NATIVE_BROWSER_HOST):
+        for path in (NATIVE_HOST_SERVER, NATIVE_BROWSER_HOST, NATIVE_COMPONENT_SLOTS):
             subprocess.run(
                 ["python3", "-m", "py_compile", str(path)],
                 check=True,
@@ -241,6 +243,26 @@ class SystemRuntimeContractTests(unittest.TestCase):
         self.assertIn("self.client_address[0] != \"127.0.0.1\"", server)
         self.assertIn("hmac.compare_digest", server)
         self.assertIn("Deliberately no CORS headers", server)
+
+    def test_native_component_slot_reader_is_signed_helper_backed_and_fail_closed(self):
+        launcher = SURFACE_RUNTIME.read_text(encoding="utf-8")
+        server = NATIVE_HOST_SERVER.read_text(encoding="utf-8")
+        adapter = NATIVE_COMPONENT_SLOTS.read_text(encoding="utf-8")
+        self.assertIn('COMPONENT_RUNTIME_PATH = "/__ordax/native/component-runtime"', server)
+        self.assertIn("component_slot_read_available", server)
+        self.assertIn("resolve_component_slot", server)
+        self.assertIn("read_component_runtime_file", server)
+        self.assertIn("--component-channel-bin /srv/ordax-system/bin/ordax-runtime-component-channel", launcher)
+        self.assertIn("--component-trust /srv/ordax-system/trust/runtime-components-ed25519.json", launcher)
+        self.assertIn("--component-slot-root /var/lib/ordax/components", launcher)
+        self.assertIn('distribution_profile == "stable-mvp"', adapter)
+        self.assertIn('product_mode == "usb"', adapter)
+        self.assertIn("subprocess.run(", adapter)
+        self.assertIn("stdin=subprocess.DEVNULL", adapter)
+        self.assertNotIn("shell=True", adapter)
+        self.assertNotIn("promote-state", adapter)
+        self.assertNotIn("record-health", adapter)
+        self.assertNotIn("rollback-state", adapter)
 
     def test_native_restart_has_sync_and_kernel_fallback_without_weakening_shutdown(self):
         text = SURFACE_RUNTIME.read_text(encoding="utf-8")

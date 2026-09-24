@@ -748,3 +748,34 @@ The Foundation regression suite compares this snapshot against structured owners
 ## Handoff rule
 
 Any new AI/conversation must read `AGENTS.md`, this file and the canonical contracts before changing source. It must also reconcile current structured source with the snapshot before planning work from a historical statement. CI alone never proves physical boot, native graphics or destructive safety. For the tested owner/development USB notebook, physical native graphics/input/power/live-update claims are supported by `docs/evidence/physical-native-surface-2026-09-17.md`; those claims still do not promote CI trust, authorize physical mutation, prove canonical signed release acquisition or declare the product complete.
+
+
+## Runtime component trust identity
+
+The signed `component-slot` protocol intentionally uses a trust domain separate
+from whole-OS release signing. Source now defines the operator ceremony and
+fail-closed policy for the first component identity, but no canonical component
+key is pinned yet.
+
+```text
+COMPONENT_TRUST_DOMAIN=runtime-components
+COMPONENT_TRUST_KEY_ID=ordax-runtime-components-v1
+COMPONENT_TRUST_CEREMONY=PENDING_OPERATOR_EXECUTION
+CANONICAL_COMPONENT_TRUST_ANCHOR_PINNED=NO
+COMPONENT_PUBLISH_ALLOWED=NO
+PRODUCTION_COMPONENT_SLOT_ACTIVATION_ALLOWED=NO
+```
+
+Only a reviewed public anchor may later enter
+`system/trust/runtime-components-ed25519.json`. The matching private key remains
+external to Git/device and must pass independent derivation plus encrypted-recovery
+signing proof before public pinning.
+
+The Native Surface now has a fail-closed, read-only component-slot broker backed
+by the signed `ordax-runtime-component-channel` helper. It is available only for
+Stable/MVP USB when both the helper and a real component trust file exist, and it
+revalidates component bytes through the verifier rather than trusting writable
+slot paths directly. Because the canonical component trust file is not pinned,
+that broker remains unavailable in the current product. This is **not** production
+slot activation: pending probation, runtime health, promotion and rollback remain
+separate gates.

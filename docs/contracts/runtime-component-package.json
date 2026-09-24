@@ -29,7 +29,7 @@
   "rollback_slot_activation_available": false,
   "publish_allowed": false,
   "internet_release_mode": "git-app",
-  "next_gate": "Native loopback broker for verified pending/current bytes plus probation health bridge; canonical component trust and production activation remain blocked",
+  "next_gate": "Pin canonical runtime-component public trust, then wire pending probation loading and real runtime health to promote/reject; production component-slot activation remains blocked until that proof passes",
   "activation_state_machine_available": true,
   "activation_state_atomic_current_previous_pending_rejected": true,
   "activation_state_revalidates_signed_slots": true,
@@ -40,5 +40,14 @@
   "pending_slot_resolution_available": true,
   "current_slot_resolution_available": true,
   "verified_runtime_file_read_available": true,
-  "runtime_file_read_revalidates_slot_and_hash": true
+  "runtime_file_read_revalidates_slot_and_hash": true,
+  "native_loopback_verified_read_broker_implemented": true,
+  "native_loopback_broker_stable_usb_only": true,
+  "native_loopback_broker_requires_signed_system_helper": true,
+  "native_loopback_broker_requires_component_trust": true,
+  "native_loopback_broker_read_only": true,
+  "native_loopback_broker_supported_components": [
+    "internet"
+  ],
+  "failed_pending_runtime_read_allowed": false
 }
