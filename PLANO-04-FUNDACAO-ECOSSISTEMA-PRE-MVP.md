@@ -122,9 +122,26 @@ Profile Pack pode depender/recomendar apps, mas nunca contorna assinatura ou con
 
 Antes de abrir Store pública, provar um app externo pequeno e não privilegiado.
 
-## 5. GPT, Grok e outros clientes através de MCP
+## 5. GPT, Grok, GitHub e OrdaX Device Agent
 
-O desenho correto não é dar a cada modelo o token GitHub do usuário.
+Não existe um único caminho obrigatório para IA externa.
+
+Para projetos de código, a integração GitHub oferecida diretamente por GPT, Grok
+ou outra ferramenta continua sendo uma rota excelente e deve permanecer
+first-class:
+
+```text
+ChatGPT / Grok
+        |
+        +-- GitHub connector --> selected repository
+```
+
+Ela permite que o usuário aproveite uma assinatura de modelo que já possui sem
+tornar uma IDE paga adicional requisito do OrdaX. Esse acesso é independente da
+Conta OrdaX e não concede automaticamente Memory privada, arquivos locais ou
+controle do dispositivo.
+
+O segundo caminho adiciona capacidades que GitHub sozinho não possui:
 
 ```text
 ChatGPT / Grok / other MCP client
@@ -136,27 +153,53 @@ OrdaX Product MCP Gateway
         +-- account/session
         +-- entitlements
         +-- Space membership
-        +-- project capability grants
+        +-- project/device capability grants
         |
-        +-- local OrdaX project source
-        +-- GitHub App installation -> selected repositories
+        v
+OrdaX Action Gateway
+        |
+        v
+OrdaX Device Agent
+        |
+        +-- local project/files
+        +-- Git/GitHub when connected
+        +-- Blender adapter
+        +-- Unity adapter
+        +-- artifacts/evidence
+        +-- authorized private project context
 ```
 
-O usuário autentica **a conta OrdaX** no conector MCP. GitHub é uma conexão adicional da conta/Space.
+O runtime incubado historicamente em `washingtonmsdj/mcp-blender` evolui para
+**OrdaX Device Agent**. Blender e Unity passam a ser adapters/capabilities, e não
+a identidade do produto. A migração deve preservar os entrypoints antigos até
+bootstrap/update/recovery estarem comprovadamente migrados.
 
-Para GitHub, a direção é um GitHub App com permissões mínimas e repositórios selecionados. O token GitHub fica no backend/secret owner do OrdaX e nunca é entregue ao ChatGPT/Grok.
+O usuário autentica **a conta OrdaX** no Product MCP. GitHub é uma conexão
+adicional da Conta/Space quando o OrdaX precisa operar repositórios. Para essa
+integração própria, a direção é um GitHub App com permissões mínimas e
+repositórios selecionados. O token GitHub fica no backend/secret owner do OrdaX e
+nunca é entregue ao ChatGPT/Grok.
 
-As ferramentas MCP iniciais são somente leitura:
+O usuário pode usar **GitHub direto no GPT/Grok e OrdaX MCP ao mesmo tempo**. Não
+devemos forçar um caminho a substituir o outro.
 
+As ferramentas MCP iniciais de produto continuam somente leitura:
 - listar Spaces;
 - listar projetos;
 - ler contexto autorizado;
 - pesquisar memória autorizada;
-- listar artefatos.
+- listar artefatos;
+- consultar status/capabilities de dispositivo quando autorizado.
 
-Mutações futuras exigem capability explícita, aprovação, auditoria e escopo de projeto. Nada de shell genérico.
+Mutações futuras exigem capability explícita, aprovação, auditoria e escopo de
+projeto/dispositivo. Nada de shell genérico.
 
-O Control Plane de desenvolvimento existente não pode reutilizar suas credenciais administrativas para usuários finais. Podemos reaproveitar seus padrões de OAuth/capability/auditoria, mas criamos namespace e autoridade de produto próprios.
+O **OrdaX Web** não cria um segundo sistema de controle remoto. Ele será outro
+cliente do mesmo Action Gateway usado pelo Product MCP e pelo app Projetos.
+
+O Control Plane de desenvolvimento existente não pode reutilizar suas credenciais
+administrativas para usuários finais. Podemos reaproveitar padrões de
+OAuth/capability/auditoria, mas criamos namespace e autoridade de produto próprios.
 
 ## 6. Supabase dedicado
 
@@ -207,18 +250,22 @@ Mutações de recursos sujeitos a quota/entitlement são **server-authoritative*
 9. UI mínima de Spaces;
 10. memória local real com revisão/apagar;
 11. primeiro Profile Pack interno (Developer) ativado como prova;
-12. catálogo de packs consumível pela Surface;
-13. primeiro app externo assinado de teste.
+12. integrar o conceito OrdaX Device Agent ao app Projetos sem torná-lo boot-critical;
+13. preservar GitHub como conexão first-class e preparar vínculo Conta/Space -> repositórios selecionados;
+14. catálogo de packs consumível pela Surface;
+15. primeiro app externo assinado de teste.
 
 ### P2 — pós-MVP inicial
 
-14. GitHub App público do OrdaX;
-15. Product MCP Gateway para ChatGPT/Grok;
-16. sync/cloud memory;
-17. compartilhamento de Space;
-18. pack Legal/Advocacia com pipeline de fontes oficiais;
-19. Store pública;
-20. billing/plan bundles.
+16. GitHub App público do OrdaX;
+17. Action Gateway read-only para device/project capabilities;
+18. Product MCP Gateway para ChatGPT/Grok;
+19. OrdaX Web sobre o mesmo Action Gateway;
+20. sync/cloud memory;
+21. compartilhamento de Space;
+22. pack Legal/Advocacia com pipeline de fontes oficiais;
+23. Store pública;
+24. billing/plan bundles.
 
 ## 8. Regra de fechamento de escopo
 

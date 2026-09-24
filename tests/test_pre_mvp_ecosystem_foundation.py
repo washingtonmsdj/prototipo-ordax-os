@@ -122,6 +122,17 @@ class PreMvpEcosystemFoundationTests(unittest.TestCase):
         self.assertFalse(bridge["project_sources"]["github_token_exposed_to_external_ai"])
         self.assertIn("generic-shell", bridge["forbidden"])
         self.assertIn("unscoped-github-account", bridge["forbidden"])
+        direct = bridge["access_modes"]["direct_github_connector"]
+        self.assertTrue(direct["supported"])
+        self.assertFalse(direct["ordax_account_required"])
+        self.assertFalse(direct["ordax_memory_granted"])
+        self.assertFalse(direct["local_device_control_granted"])
+        self.assertTrue(bridge["access_modes"]["coexistence_supported"])
+        self.assertEqual(
+            bridge["device_runtime"]["product_name"],
+            "OrdaX Device Agent",
+        )
+        self.assertTrue(bridge["device_runtime"]["web_and_mcp_share_action_gateway"])
 
     def test_supabase_product_migration_has_rls_vector_and_no_provider_tokens(self):
         sql = MIGRATION_1.read_text(encoding="utf-8").lower()

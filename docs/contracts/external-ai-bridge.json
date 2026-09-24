@@ -1,19 +1,51 @@
 {
   "$schema": "prototype-ordax.external-ai-bridge/1",
   "status": "pre-mvp-foundation",
-  "purpose": "allow user-authorized AI clients to access OrdaX projects through scoped MCP tools",
-  "transport": "mcp",
+  "purpose": "allow user-authorized AI clients to work with OrdaX projects through direct GitHub access and/or scoped OrdaX MCP tools",
+  "access_modes": {
+    "direct_github_connector": {
+      "supported": true,
+      "ordax_account_required": false,
+      "ordax_memory_granted": false,
+      "local_device_control_granted": false,
+      "best_for": [
+        "versioned-code",
+        "repository-docs",
+        "branches",
+        "pull-requests",
+        "provider-native-github-workflows"
+      ]
+    },
+    "ordax_product_mcp": {
+      "supported": true,
+      "authentication": "ordax-oauth",
+      "action_gateway": "ordax",
+      "best_for": [
+        "local-projects",
+        "device-capabilities",
+        "private-project-context",
+        "artifacts",
+        "blender",
+        "unity",
+        "typed-local-actions"
+      ]
+    },
+    "coexistence_supported": true
+  },
   "authentication": {
-    "user_authenticates_to_ordax": true,
-    "oauth_2_1_required_for_remote_clients": true,
+    "user_authenticates_to_ordax_for_ordax_mcp": true,
+    "oauth_2_1_required_for_remote_mcp_clients": true,
     "pkce_required_for_public_clients": true,
     "external_ai_account_is_not_ordax_identity": true,
-    "development_owner_mcp_credentials_reusable_for_end_users": false
+    "development_owner_mcp_credentials_reusable_for_end_users": false,
+    "user_authenticates_to_ordax": true,
+    "oauth_2_1_required_for_remote_clients": true
   },
   "authorization": {
     "account_scope": true,
     "space_scope": true,
     "project_scope": true,
+    "device_scope_for_local_actions": true,
     "read_and_write_are_distinct": true,
     "write_requires_explicit_capability_and_approval": true,
     "token_is_bound_to_user_and_client": true,
@@ -23,28 +55,41 @@
     "local_ordax_project_supported": true,
     "github_supported": true,
     "github_connection_is_separate_from_ordax_login": true,
+    "preferred_ordax_github_integration": "github-app",
+    "repository_allowlist_required_for_ordax_integration": true,
+    "github_token_exposed_to_external_ai_by_ordax": false,
     "preferred_github_integration": "github-app",
     "repository_allowlist_required": true,
     "github_token_exposed_to_external_ai": false
+  },
+  "device_runtime": {
+    "product_name": "OrdaX Device Agent",
+    "historical_incubation_repository": "washingtonmsdj/mcp-blender",
+    "blender_and_unity_are_adapters": true,
+    "web_and_mcp_share_action_gateway": true
   },
   "initial_tool_classes": [
     "spaces.list",
     "projects.list",
     "project.read-context",
     "memory.search-authorized",
-    "artifacts.list"
+    "artifacts.list",
+    "device.capabilities"
   ],
   "future_mutating_tool_classes": [
     "project.write-file",
     "project.create-branch",
-    "project.propose-change"
+    "project.propose-change",
+    "device.execute-approved-action"
   ],
   "forbidden": [
     "generic-shell",
     "raw-disk",
     "release-signing-key",
     "cross-user-memory",
+    "cross-space-memory",
     "unscoped-github-account",
     "implicit-admin"
-  ]
+  ],
+  "transport": "mcp"
 }
