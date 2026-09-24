@@ -19,6 +19,7 @@ DEVELOPER_PACK = ROOT / "system" / "profile-packs" / "developer" / "manifest.jso
 MIGRATION_1 = ROOT / "infra" / "supabase" / "product" / "migrations" / "0001_product_foundation.sql"
 MIGRATION_3 = ROOT / "infra" / "supabase" / "product" / "migrations" / "0003_spaces_single_profile_pack_owner.sql"
 MIGRATION_4 = ROOT / "infra" / "supabase" / "product" / "migrations" / "0004_server_authoritative_mutations.sql"
+SURFACE_WORKFLOW = ROOT / ".github" / "workflows" / "surface-web-candidate.yml"
 
 
 class PreMvpEcosystemFoundationTests(unittest.TestCase):
@@ -166,6 +167,22 @@ class PreMvpEcosystemFoundationTests(unittest.TestCase):
         self.assertIn(
             "grant update (display_name) on table public.ordax_accounts to authenticated",
             sql,
+        )
+
+
+    def test_ecosystem_javascript_contracts_are_wired_into_surface_ci(self):
+        workflow = SURFACE_WORKFLOW.read_text(encoding="utf-8")
+        for path in (
+            "system/contracts/entitlements.mjs",
+            "system/contracts/spaces.mjs",
+            "system/contracts/memory.mjs",
+            "system/contracts/model-router.mjs",
+            "tests/test_ecosystem_contracts.mjs",
+        ):
+            self.assertGreaterEqual(workflow.count(path), 2, path)
+        self.assertIn(
+            "node --test tests/test_ecosystem_contracts.mjs",
+            workflow,
         )
 
 
