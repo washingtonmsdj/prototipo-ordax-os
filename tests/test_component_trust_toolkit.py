@@ -44,6 +44,10 @@ class ComponentTrustToolkitTests(unittest.TestCase):
         self.assertIn("'canonical_public_trust_included': False", WORKFLOW)
         self.assertIn("'key_generation_requires_local_user_action': True", WORKFLOW)
         self.assertIn("'whole_os_release_key_reuse_allowed': False", WORKFLOW)
+        self.assertIn("'policy_sha256': digest('component-trust-policy.json')", WORKFLOW)
+        self.assertIn("'ceremony_doc_sha256': digest('COMPONENT-TRUST-CEREMONY.md')", WORKFLOW)
+        self.assertIn("cp docs/COMPONENT-TRUST-CEREMONY.md", WORKFLOW)
+        self.assertIn("cp docs/contracts/runtime-component-trust-policy.json", WORKFLOW)
         self.assertIn("COMPONENT_TRUST_TOOLKIT_SECRET_MATERIAL=NONE", WORKFLOW)
         self.assertNotIn("generate-key --private-key", WORKFLOW)
         self.assertNotIn("runtime-component-private.pem", WORKFLOW)
@@ -74,6 +78,11 @@ class ComponentTrustToolkitTests(unittest.TestCase):
         self.assertIn("components.component_signer.sha256", INITIALIZER)
         self.assertIn("components.trust_initializer.sha256", INITIALIZER)
         self.assertIn("Get-FileHash -Algorithm SHA256", INITIALIZER)
+        self.assertIn("component-trust-policy.json", INITIALIZER)
+        self.assertIn("COMPONENT-TRUST-CEREMONY.md", INITIALIZER)
+        self.assertIn("policy/document bytes do not match toolkit provenance", INITIALIZER)
+        self.assertIn("operator-ceremony-pending", INITIALIZER)
+        self.assertIn("system/trust/runtime-components-ed25519.json", INITIALIZER)
         self.assertIn("^[0-9a-f]{40}$", INITIALIZER)
 
     def test_initializer_proves_independent_derivation_and_real_protocol_signature(self):
@@ -104,6 +113,10 @@ class ComponentTrustToolkitTests(unittest.TestCase):
         self.assertIn("Initial component trust envelope no longer verifies", FINALIZER)
         self.assertIn("Expand-Archive", FINALIZER)
         self.assertIn("handoff ZIP changed bytes", FINALIZER)
+        self.assertIn("component-trust-policy.json", FINALIZER)
+        self.assertIn("COMPONENT-TRUST-CEREMONY.md", FINALIZER)
+        self.assertIn("recovery toolkit/policy bytes do not match provenance", FINALIZER)
+        self.assertIn("operator-ceremony-pending", FINALIZER)
 
     def test_windows_ci_parses_both_scripts(self):
         self.assertIn("runs-on: windows-latest", WORKFLOW)
