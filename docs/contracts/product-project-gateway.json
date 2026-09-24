@@ -1,0 +1,44 @@
+{
+  "$schema": "prototype-ordax.product-project-gateway/1",
+  "status": "source-foundation-fail-closed",
+  "routes": {
+    "GET /product/status": "public-non-secret-status",
+    "POST /product/projects": "server-authoritative-project-create",
+    "POST /product/project-bindings": "server-authoritative-device-project-bind",
+    "POST /product/remote-grants": "server-authoritative-remote-capability-grant"
+  },
+  "session": {
+    "ordax_session_required_for_mutation": true,
+    "browser_bearer_token_owner": false,
+    "csrf_required_for_mutation": true,
+    "cross_site_mutation_rejected": true
+  },
+  "mutation": {
+    "json_only": true,
+    "bounded_body": true,
+    "idempotency_key_required": true,
+    "entitlement_receipt_required": true,
+    "approval_receipt_required": true,
+    "audit_receipt_required": true
+  },
+  "project_binding": {
+    "local_path_allowed": false,
+    "opaque_local_project_ref_required": true,
+    "provider_token_allowed": false
+  },
+  "forbidden_capabilities": [
+    "generic-shell",
+    "raw-disk",
+    "release-signing-key",
+    "implicit-admin",
+    "cross-user-memory",
+    "cross-space-memory",
+    "unscoped-github-account"
+  ],
+  "backend": {
+    "provider_neutral": true,
+    "supabase_service_role_in_client": false,
+    "default_authority": "disabled",
+    "public_activation": false
+  }
+}
