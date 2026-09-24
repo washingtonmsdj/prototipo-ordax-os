@@ -351,6 +351,19 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertIn("Versão própria de componente e atualização independente são eixos diferentes", agents)
         self.assertIn("Versão própria de um componente e capacidade de atualizá-lo independentemente são eixos diferentes", nomenclature)
 
+    def test_pre_usb_v4_gate_distinguishes_requirement_from_current_pending_state(self):
+        plan = (ROOT / "PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md").read_text(encoding="utf-8")
+        promotion = (ROOT / "docs/PROMOTION-GATES.md").read_text(encoding="utf-8")
+        current = (ROOT / "docs/CURRENT-STATE.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "SIGNED_RELEASE_V4_WITH_LOCAL_AI=REQUIRED_PASS_BEFORE_PHYSICAL_PREFLIGHT",
+            plan,
+        )
+        self.assertNotIn("SIGNED_RELEASE_V4_WITH_LOCAL_AI=PASS\n", plan)
+        self.assertIn("SIGNED_RELEASE_V4_WITH_LOCAL_AI=REQUIRED", promotion)
+        self.assertIn("CANONICAL_V4_RELEASE_PROOF=PENDING_OPERATOR_EXECUTION", current)
+        self.assertIn("FIRST_STABLE_MVP_USB_WRITE=HOLD_CANONICAL_V4_RELEASE_PROOF", current)
+
 
 if __name__ == "__main__":
     unittest.main()
