@@ -41,6 +41,10 @@ Authenticated clients do not receive direct Data API authority to create or muta
 
 `0004_server_authoritative_mutations.sql` revokes those client writes so future quotas, plan checks, approvals and audit receipts cannot be bypassed by calling Supabase directly. Product services/gateways own those mutations with server-side authority. The only direct authenticated account mutation retained is the user's own `display_name`.
 
+## Catalog and semantic-index visibility
+
+`0005_private_indexes_and_active_pack_catalog.sql` keeps Profile Pack drafts backend-only and exposes only `state=active` pack rows to authenticated clients. It also removes direct client SELECT access from `ordax_memory_embeddings`: semantic vectors are an internal derived search index, not user-facing Memory data.
+
 ## MCP boundary
 
 The existing Control Plane MCP/OAuth tables belong to the development/operator authority. Product MCP for end users must use a separate client/token authority even if it reuses the same implementation patterns.
