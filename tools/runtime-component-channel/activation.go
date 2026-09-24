@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -306,6 +308,110 @@ func verifyIdentitySlot(root, componentID string, identity slotIdentity, trustBy
 		return releaseDescriptor{}, "", errors.New("runtime component activation requires release_mode=component-slot")
 	}
 	return release, slot, nil
+}
+
+func verifiedRuntimeManifest(slot string, release releaseDescriptor, trustBytes []byte) (componentPackageManifest, error) {
+	verifiedRelease, err := verifySlotWithTrustBytes(slot, trustBytes)
+	if err != nil {
+		return componentPackageManifest{}, err
+	}
+	if verifiedRelease.Component.ID != release.Component.ID ||
+		verifiedRelease.Component.Version != release.Component.Version ||
+		verifiedRelease.SourceCommit != release.SourceCommit {
+		return componentPackageManifest{}, errors.New("runtime component verified slot release identity changed")
+	}
+	manifestPath := filepath.Join(slot, packageManifestName)
+	payload, err := readRegular(manifestPath, maxFileBytes, false)
+	if err != nil {
+		return componentPackageManifest{}, err
+	}
+	var manifest componentPackageManifest
+	if err := decodeStrict(payload, int(maxFileBytes), &manifest); err != nil {
+		return componentPackageManifest{}, fmt.Errorf("runtime component installed manifest: %w", err)
+	}
+	if err := validatePackageManifest(manifest, verifiedRelease); err != nil {
+		return componentPackageManifest{}, err
+	}
+	return manifest, nil
+}
+
+func resolveRuntimeSlot(root, componentID, trustPath, target string) (activationState, string, componentPackageManifest, bool, error) {
+	state, err := readActivationState(root, componentID)
+	if err != nil {
+		return activationState{}, "", componentPackageManifest{}, false, err
+	}
+
+	var identity *slotIdentity
+	switch target {
+	case "current":
+		identity = state.Current
+		if identity == nil {
+			return state, "", componentPackageManifest{}, true, nil
+		}
+	case "pending":
+		identity = state.Pending
+		if identity == nil {
+			return activationState{}, "", componentPackageManifest{}, false, errors.New("runtime component has no pending slot")
+		}
+	default:
+		return activationState{}, "", componentPackageManifest{}, false, errors.New("runtime component slot target must be current or pending")
+	}
+
+	trustBytes, err := readRegular(trustPath, maxTrustBytes, false)
+	if err != nil {
+		return activationState{}, "", componentPackageManifest{}, false, err
+	}
+	release, slot, err := verifyIdentitySlot(root, componentID, *identity, trustBytes)
+	if err != nil {
+		return activationState{}, "", componentPackageManifest{}, false, err
+	}
+	manifest, err := verifiedRuntimeManifest(slot, release, trustBytes)
+	if err != nil {
+		return activationState{}, "", componentPackageManifest{}, false, err
+	}
+	return state, slot, manifest, false, nil
+}
+
+func readVerifiedRuntimeFile(root, componentID, trustPath, target, requestedPath string) ([]byte, error) {
+	_, slot, manifest, bundled, err := resolveRuntimeSlot(root, componentID, trustPath, target)
+	if err != nil {
+		return nil, err
+	}
+	if bundled {
+		return nil, errors.New("runtime component current source is bundled")
+	}
+	requested, err := safePackagePath(requestedPath)
+	if err != nil {
+		return nil, err
+	}
+	if requested == packageManifestName || requested == slotEnvelopeName {
+		return nil, errors.New("runtime component metadata files are not runtime-readable")
+	}
+	var record *packageFile
+	for index := range manifest.Files {
+		if manifest.Files[index].Path == requested {
+			record = &manifest.Files[index]
+			break
+		}
+	}
+	if record == nil {
+		return nil, errors.New("runtime component requested file is not bound by package manifest")
+	}
+	filePath := filepath.Join(slot, filepath.FromSlash(requested))
+	relative, err := filepath.Rel(slot, filePath)
+	if err != nil || relative == ".." || filepath.IsAbs(relative) ||
+		len(relative) >= 3 && relative[:3] == ".."+string(os.PathSeparator) {
+		return nil, errors.New("runtime component requested file escaped verified slot")
+	}
+	payload, err := readRegular(filePath, maxFileBytes, false)
+	if err != nil {
+		return nil, err
+	}
+	digest := sha256.Sum256(payload)
+	if int64(len(payload)) != record.Size || hex.EncodeToString(digest[:]) != record.SHA256 {
+		return nil, errors.New("runtime component requested file changed after slot verification")
+	}
+	return payload, nil
 }
 
 func mutateActivationState(root, componentID string, mutate func(activationState) (activationState, error)) (activationState, error) {
@@ -641,7 +747,7 @@ func resolveCurrentCommand(args []string) error {
 	if *component == "" || *trust == "" || flags.NArg() != 0 {
 		return errors.New("resolve-current requires --component and --trust")
 	}
-	state, slot, bundled, err := resolveCurrentState(*root, *component, *trust)
+	state, slot, manifest, bundled, err := resolveRuntimeSlot(*root, *component, *trust, "current")
 	if err != nil {
 		return err
 	}
@@ -653,10 +759,53 @@ func resolveCurrentCommand(args []string) error {
 		return nil
 	}
 	fmt.Printf(
-		"RUNTIME_COMPONENT_CURRENT_RESOLVED=YES\nCOMPONENT_ID=%s\nREVISION=%d\nSOURCE=SLOT\nCURRENT_VERSION=%s\nCURRENT_SOURCE_COMMIT=%s\nSLOT=%s\nRUNTIME_SERVED_FROM_SLOT=NO\n",
-		state.ComponentID, state.Revision, state.Current.Version, state.Current.SourceCommit, slot,
+		"RUNTIME_COMPONENT_CURRENT_RESOLVED=YES\nCOMPONENT_ID=%s\nREVISION=%d\nSOURCE=SLOT\nCURRENT_VERSION=%s\nCURRENT_SOURCE_COMMIT=%s\nSLOT=%s\nENTRYPOINT=%s\nRUNTIME_SERVED_FROM_SLOT=NO\n",
+		state.ComponentID, state.Revision, state.Current.Version, state.Current.SourceCommit, slot, manifest.Entrypoint,
 	)
 	return nil
+}
+
+func resolvePendingCommand(args []string) error {
+	flags := flag.NewFlagSet("resolve-pending", flag.ContinueOnError)
+	component := flags.String("component", "", "runtime component id")
+	trust := flags.String("trust", "", "runtime component public trust")
+	root := flags.String("root", defaultSlotRoot, "runtime component slot root")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if *component == "" || *trust == "" || flags.NArg() != 0 {
+		return errors.New("resolve-pending requires --component and --trust")
+	}
+	state, slot, manifest, _, err := resolveRuntimeSlot(*root, *component, *trust, "pending")
+	if err != nil {
+		return err
+	}
+	fmt.Printf(
+		"RUNTIME_COMPONENT_PENDING_RESOLVED=YES\nCOMPONENT_ID=%s\nREVISION=%d\nSOURCE=SLOT\nPENDING_VERSION=%s\nPENDING_SOURCE_COMMIT=%s\nPENDING_HEALTH=%s\nSLOT=%s\nENTRYPOINT=%s\nRUNTIME_SERVED_FROM_SLOT=NO\n",
+		state.ComponentID, state.Revision, state.Pending.Version, state.Pending.SourceCommit, state.PendingHealth, slot, manifest.Entrypoint,
+	)
+	return nil
+}
+
+func readRuntimeFileCommand(args []string) error {
+	flags := flag.NewFlagSet("read-runtime-file", flag.ContinueOnError)
+	component := flags.String("component", "", "runtime component id")
+	trust := flags.String("trust", "", "runtime component public trust")
+	target := flags.String("state", "", "current or pending slot")
+	requestedPath := flags.String("path", "", "package-relative runtime file path")
+	root := flags.String("root", defaultSlotRoot, "runtime component slot root")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if *component == "" || *trust == "" || *target == "" || *requestedPath == "" || flags.NArg() != 0 {
+		return errors.New("read-runtime-file requires --component, --trust, --state and --path")
+	}
+	payload, err := readVerifiedRuntimeFile(*root, *component, *trust, *target, *requestedPath)
+	if err != nil {
+		return err
+	}
+	_, err = os.Stdout.Write(payload)
+	return err
 }
 
 func activationStatusCommand(args []string) error {

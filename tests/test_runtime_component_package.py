@@ -60,13 +60,17 @@ class RuntimeComponentPackageTests(unittest.TestCase):
         self.assertTrue(policy["activation_state_atomic_current_previous_pending_rejected"])
         self.assertTrue(policy["activation_state_revalidates_signed_slots"])
         self.assertTrue(policy["activation_state_requires_component_slot_release_mode"])
+        self.assertTrue(policy["pending_slot_resolution_available"])
+        self.assertTrue(policy["current_slot_resolution_available"])
+        self.assertTrue(policy["verified_runtime_file_read_available"])
+        self.assertTrue(policy["runtime_file_read_revalidates_slot_and_hash"])
         self.assertFalse(policy["native_slot_serving_available"])
         self.assertFalse(policy["slot_activation_available"])
         self.assertFalse(policy["pending_health_promotion_available"])
         self.assertFalse(policy["publish_allowed"])
         self.assertFalse(policy["rollback_slot_activation_available"])
         self.assertEqual(policy["internet_release_mode"], "git-app")
-        self.assertIn("Native current-slot serving/import", policy["next_gate"])
+        self.assertIn("probation health bridge", policy["next_gate"])
 
     def test_internet_metadata_comes_from_canonical_component_manifest(self):
         builder = load_builder()
