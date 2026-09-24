@@ -252,6 +252,7 @@ PY
               '$schema': 'prototype-ordax.physical-write-candidate/2',
               'status': 'authorized-candidate-not-published',
               'source_commit': os.environ['GITHUB_SHA'],
+              'writer_source_commit': os.environ['GITHUB_SHA'],
               'release_sequence': release_sequence,
               'consumer_key_setup_required': False,
               'development_channel': False,
