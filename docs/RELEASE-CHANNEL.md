@@ -217,15 +217,16 @@ PHYSICAL_ARTIFACT_AUTHORIZED=NO
 
 The Stable/MVP runtime reuses the shared `system/supervisor`, but it does not poll Git.
 
-The Stable profile has two explicit runtime layouts. The legacy-tree path keeps its existing exact activation transaction. The MVP Portable path uses release-manifest/3 and never creates the legacy `/ordax/current` symlink:
+The Stable profile has two explicit runtime layouts. The legacy-tree path keeps its existing exact activation transaction. The MVP Portable path is now **release-manifest/4** and never creates the legacy `/ordax/current` symlink:
 
 ```text
 official HTTPS channel
  -> ordax-release-agent inspect
- -> verify signed envelope + trust + exact source_commit
- -> ordax-release-agent materialize-portable-v3 --expected-commit
- -> ordax-release-agent verify-portable-v3-exact
- -> immutable .ordax/releases/<commit> + content-addressed runtime
+ -> verify signed envelope + trust + exact source_commit + manifest_schema
+ -> ordax-release-agent materialize-portable-v4 --expected-commit
+ -> ordax-release-agent verify-portable-v4-exact
+ -> immutable .ordax/releases/<commit>
+ -> content-addressed Surface runtime + Local AI runtime
  -> ordax-portable-state prepare
  -> reboot
  -> initramfs ordax-portable-state select-boot
@@ -234,4 +235,6 @@ official HTTPS channel
  -> commit current/known-good OR persist rejected + rollback
 ```
 
-`materialize-portable-v3` and `verify-portable-v3-exact` remain **non-activating primitives**. Activation authority is the ext4 Portable state transaction plus the shared supervisor health policy. No Git is required for activation or rollback. The source path is connected, but the current transaction must still pass its disposable update/rollback proof and later the physical Stable/MVP USB gate before being called product-proven.
+The supervisor selects the materializer/verifier from the **signed inspected manifest schema**. A pre-v4 current boot may still consume a valid v3 release during the compatibility window and may upgrade to v4. Once the running verified boot is v4, a remote v3 manifest is rejected as a schema downgrade; the channel must advance with v4. This preserves published v3 semantics without letting the public selector silently remove the Local AI artifact from a v4 installation.
+
+`materialize-portable-v3/v4` and their exact verifiers remain **non-activating primitives**. Activation authority is the ext4 Portable state transaction plus the shared supervisor health policy. No Git is required for activation or rollback. The v4 disposable QEMU/UEFI path is proven in CI; physical Stable/MVP cold-health and rollback evidence remain separate later gates.
