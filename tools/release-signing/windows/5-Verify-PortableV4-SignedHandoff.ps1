@@ -105,7 +105,7 @@ foreach ($artifact in $artifacts) {
     $item = Get-Item -LiteralPath $path -Force
     $signedSize = [Int64]$artifact.size
     if ($item.Length -ne $signedSize) {
-        throw "Signed artifact size mismatch for $name: expected=$signedSize actual=$($item.Length)"
+        throw "Signed artifact size mismatch for ${name}: expected=$signedSize actual=$($item.Length)"
     }
     $signedHash = ([string]$artifact.sha256).ToLowerInvariant()
     if ($signedHash -cnotmatch '^[0-9a-f]{64}$') {
