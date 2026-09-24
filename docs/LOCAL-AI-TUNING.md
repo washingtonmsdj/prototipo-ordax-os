@@ -13,16 +13,17 @@ The Stable/MVP local AI artifact is byte-pinned and uses the generic reproducibl
 not be changed opportunistically in the product runtime because changing the
 engine or launcher changes the signed v4 payload identity.
 
-Three engineering tools are available on the source tree and do **not** modify
+Four engineering tools are available on the source tree and do **not** modify
 the runtime artifact:
 
 ```text
 tools/local-ai-hardware-probe/probe.py
 tools/local-ai-benchmark/benchmark.py
 tools/local-ai-baseline/report.py
+tools/local-ai-baseline/compare.py
 ```
 
-All three are covered by the `Intelligence Foundation` source gate.
+All four are covered by the `Intelligence Foundation` source gate.
 
 ## 1. Hardware capability probe
 
@@ -33,31 +34,24 @@ python tools/local-ai-hardware-probe/probe.py
 ```
 
 The probe reads bounded `/proc/cpuinfo` and `/proc/meminfo` inputs without shelling
-out. It reports:
-
-- normalized architecture;
-- logical CPU count;
-- total and available memory when exposed by the kernel;
-- a bounded allow-list of CPU SIMD/features common to every parsed processor;
-- objective compatibility with the currently pinned `linux-x86_64` engine
-  artifact.
+out. It reports normalized architecture, logical CPU count, total/available memory,
+a bounded allow-list of common CPU features, and objective compatibility with the
+currently pinned `linux-x86_64` engine artifact.
 
 The probe deliberately does **not** invent RAM/CPU performance minimums and does
 not output tuning flags. Today the only start blocker it may derive is an
 architecture mismatch with the pinned engine artifact. Any future memory or
-feature threshold must be justified by measured product behavior and then added
-to an explicit contract.
+feature threshold must be justified by measured product behavior and added to an
+explicit contract.
 
-The MVP contract requires a hardware probe before backend start. The probe
-implementation is now source-complete, but wiring it into Stable Base startup is
-still a separate integration step. Until that wiring lands, do not claim the
-`hardware_probe_before_start` requirement as runtime-complete. When wired, probe
-failure or incompatibility must degrade Local AI and must not block Surface,
-recovery, files or update.
+The MVP contract requires a hardware probe before backend start. The probe is
+source-complete, but wiring it into Stable Base startup remains a separate boot
+integration step. Until that wiring lands, do not claim
+`hardware_probe_before_start` as runtime-complete.
 
 ## 2. Steady-state benchmark
 
-With the pinned Local AI backend already running on its loopback endpoint, run:
+With the pinned Local AI backend already running on loopback:
 
 ```bash
 python tools/local-ai-benchmark/benchmark.py \
@@ -68,36 +62,23 @@ python tools/local-ai-benchmark/benchmark.py \
 ```
 
 The benchmark accepts only literal IPv4 loopback HTTP with an explicit port. It
-first discovers exactly one active model through `/v1/models`, fails closed on
-an unexpected model identity, performs one unreported warmup, and then records
-bounded deterministic samples through `/v1/chat/completions` — the same
-OpenAI-compatible inference path consumed by `ordax.local-ai/1`. Every request
-binds the discovered canonical model ID explicitly.
+discovers exactly one active model through `/v1/models`, fails closed on model
+identity drift, performs one unreported warmup, and then measures bounded samples
+through `/v1/chat/completions` — the same OpenAI-compatible inference path used by
+`ordax.local-ai/1`. Each request binds the discovered canonical model ID.
 
-The JSON result records:
+The result records engine/model identity, API path, measured run count, token
+budget, per-run wall latency, `usage.completion_tokens`, wall-clock tokens/second,
+llama.cpp-reported predicted tokens/second when available, and medians.
 
-- engine/model identity;
-- the measured API path;
-- measured run count and token budget;
-- per-run wall latency;
-- `usage.completion_tokens` from the chat-completions response;
-- wall-clock tokens/second;
-- llama.cpp-reported predicted tokens/second when supplied by the backend;
-- medians across measured samples.
-
-The warmup is excluded from the reported summary so model-load/cache effects are
-not confused with steady-state generation throughput. A malformed chat response,
-missing/invalid `usage.completion_tokens`, ambiguous model discovery or model-ID
-mismatch invalidates the benchmark instead of producing a partial measurement.
-
-This benchmark is intentionally **not** a performance release gate. CI tests the
-benchmark's policy, parsing and bounds with a local fake server; CI runner speed
-must not become a product acceptance threshold.
+A malformed chat response, invalid token count, ambiguous model discovery or
+model-ID mismatch invalidates the benchmark instead of producing a partial result.
+CI validates behavior with a fake loopback server; CI speed is never a product
+performance threshold.
 
 ## 3. Composed target baseline
 
-For a real notebook or USB target, the preferred capture is a single baseline
-report that preserves the complete hardware-probe and benchmark payloads:
+For a real notebook or USB target:
 
 ```bash
 python tools/local-ai-baseline/report.py \
@@ -107,53 +88,70 @@ python tools/local-ai-baseline/report.py \
   --output local-ai-baseline.json
 ```
 
-The reporter does not duplicate the measurement logic. It loads the canonical
-hardware probe and benchmark, requires the hardware probe to be compatible with
-the pinned runtime before attempting inference, and emits both original schema
-payloads under `hardware` and `benchmark`.
+The reporter composes the canonical hardware probe and benchmark. It requires
+compatible hardware before inference and preserves both original schema payloads.
+It rejects a benchmark measured through any path other than
+`/v1/chat/completions`, so an older raw `/completion` measurement cannot be mixed
+with the product-path baseline.
 
-A baseline is invalid if either component fails. The reporter never converts an
-incompatible architecture or an unavailable/mismatched model into a partial
-performance result. Its comparison policy explicitly records that it is not a
-release gate, that runtime bytes were not modified, and that later tuning should
-change one variable at a time.
+The report contains capability classes and performance metrics but no hostname,
+account, prompt history, model responses, user files, tokens or remote telemetry
+identity.
 
-This report intentionally contains host capability classes (architecture, CPU
-count, bounded common SIMD flags and memory totals) but no hostname, account,
-prompt history, model responses, user files, tokens or remote telemetry identity.
+## 4. A/B baseline comparison
 
-## 4. Tuning workflow
+After measuring one controlled candidate on the same target:
+
+```bash
+python tools/local-ai-baseline/compare.py \
+  local-ai-baseline.json \
+  local-ai-candidate.json \
+  --output local-ai-comparison.json
+```
+
+The comparator fails closed unless both baselines use the same engine/model ID,
+product API path, run count, token budget and hardware fingerprint (runtime
+platform, architecture, logical CPU count, total memory and common CPU-feature
+set). Available memory is deliberately excluded from the fingerprint because it
+is transient runtime state.
+
+The output reports objective percentage deltas only:
+
+- `latency`: negative means lower latency;
+- `wall_tokens_per_second`: positive means higher wall throughput;
+- `server_tokens_per_second`: positive means higher server-reported throughput,
+  when both baselines expose it.
+
+The comparator does **not** select a winner, apply a performance threshold, mutate
+runtime bytes or promote a release. Product acceptance remains a separate human
+and release-policy decision based on measured evidence.
+
+## 5. Tuning workflow
 
 For a real notebook/hardware target:
 
-1. capture `local-ai-baseline.json` from the untouched currently signed/pinned
-   runtime;
-2. keep engine commit, model SHA, quantization, prompt, token budget, API path and
-   benchmark run count fixed while testing one engine/launcher change at a time;
-3. capture a new baseline for each candidate on the same target when practical;
-4. compare medians rather than a single run;
-5. reject a candidate that changes model/engine identity unexpectedly, breaks
-   loopback-only operation, increases failure rate, or violates the bounded
+1. capture the untouched signed/pinned baseline;
+2. keep model, prompt, token budget, API path and run count fixed;
+3. change one engine/launcher variable at a time;
+4. capture a candidate baseline on the same target;
+5. compare with `compare.py` and inspect objective deltas;
+6. reject candidates that break identity, loopback-only operation or bounded
    runtime contracts;
-6. only after a measured candidate is selected, update the engine/launcher in the
-   release lane and regenerate the exact engine/runtime hashes and signed v4
-   evidence.
+7. only after a measured candidate is deliberately selected, update the release
+   lane and regenerate exact runtime hashes and signed v4 evidence.
 
-Do not silently activate CPU-specific flags based only on feature presence. A CPU
-feature is an input to experimentation, not proof that a particular build or
+CPU feature presence is an input to experimentation, not proof that a build or
 threading policy is faster or sufficiently portable.
 
-## 5. What remains
+## 6. What remains
 
-The following work is intentionally still open:
-
-- wire the source-complete hardware probe into Stable Base **before** launching
-  the local backend, with fail-soft behavior;
-- collect a baseline on the actual target notebook/USB environment;
-- decide whether the portable generic engine already meets the UX target;
-- if not, evaluate measured alternatives without changing the stable
+- wire the source-complete hardware probe into Stable Base before backend start,
+  fail-soft;
+- collect the first baseline on the actual target notebook/USB environment;
+- determine whether the portable generic engine meets the UX target;
+- if not, evaluate controlled alternatives without changing the stable
   `ordax.local-ai/1` / `ordax.intelligence/1` APIs;
-- if a tuned engine/launcher is adopted, re-pin and re-prove the entire local AI
+- if a tuned engine/launcher is adopted, re-pin and re-prove the whole Local AI
   runtime through the canonical release lane.
 
 No cloud provider, tool execution, agent authority or prompt telemetry is enabled
