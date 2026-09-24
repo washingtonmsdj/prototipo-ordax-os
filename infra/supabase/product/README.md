@@ -48,3 +48,30 @@ Authenticated clients do not receive direct Data API authority to create or muta
 ## MCP boundary
 
 The existing Control Plane MCP/OAuth tables belong to the development/operator authority. Product MCP for end users must use a separate client/token authority even if it reuses the same implementation patterns.
+
+
+## Projects, devices and remote capabilities
+
+Migration `0006_projects_devices_remote_grants.sql` adds the first product-domain
+cloud identities for Projects and Devices without reusing the older engineering
+Control Plane authority.
+
+The product tables intentionally store metadata/authorization only:
+
+- `ordax_projects` — Space-scoped product project identity;
+- `ordax_product_devices` — end-user device identity, separate from engineering
+  `ordax_devices`;
+- `ordax_device_presence` — presence/version/capability digest, separate from
+  long-lived device identity;
+- `ordax_space_devices` — explicit Space/device sharing;
+- `ordax_device_project_bindings` — opaque local project references, never local
+  filesystem paths;
+- `ordax_remote_capability_grants` — server-authoritative Web/Mobile/Product MCP
+  grants scoped to Space + Project + Device + capability.
+
+`ordax_project_connections` gains a required `project_id`, making GitHub and
+other providers connections *of a Project* rather than substitutes for Project
+identity.
+
+Authenticated clients receive SELECT only. Mutations continue through OrdaX
+server-side product gateways so entitlement, approval and audit cannot be bypassed.
