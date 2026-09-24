@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"errors"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
