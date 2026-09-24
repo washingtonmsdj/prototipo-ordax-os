@@ -268,15 +268,16 @@ O owner/development Git-first tambem possui base com Git nativo, rede e firmware
 
 O Creator Windows ja mede a capacidade real do `PhysicalDrive`, inclui essa capacidade no token de confirmacao, verifica imagem RAW por tamanho/hash e possui uma autorizacao destrutiva calculada sobre alvo + imagem/plano. O backend nativo Win32 de escrita RAW ja existe e e testado internamente, mas sua autorizacao/publicacao permanece separada dos gates canonicos.
 
-A prova byte-completa com confianca efemera tambem passou para o bootstrap seed. A chave privada efemera e a imagem RAW foram destruidas antes do upload; somente metadados de prova foram preservados. Isso nao substitui confianca canonica e nao autoriza por si so promocao publica.
+A prova byte-completa com confianca efemera tambem passou para o bootstrap seed. A chave privada efemera e a imagem RAW foram destruidas antes do upload; somente metadados de prova foram preservados. O anchor Ed25519 canonico ja foi gerado, recuperado criptograficamente, promovido e pinado; o full-bootstrap canonical-trust proof tambem passou. Esses fatos nao autorizam por si so promocao fisica.
 
-Ainda permanecem abertos antes da promocao canonical:
+Ainda permanecem abertos antes do primeiro Stable/MVP fisico:
 
 ```text
-canonical Ed25519 release trust ceremony/public anchor
-byte-complete proof with canonical public trust
-real notebook boot/network/runtime/recovery evidence
-graphical shared Surface and remaining product-mode continuity
+canonical v4 signed/materialized release aggregate proof + binding
+fresh owner authorization for the current 17-artifact / 39-operation writer context
+real Stable/MVP USB boot/network/runtime/recovery/cold-health evidence
+graphical Surface smoke and known-good/rollback evidence on supported hardware
+Secure Boot evidence or an explicit MVP support policy that does not overclaim it
 ```
 
 A permissao de escrita fisica deve continuar obedecendo os contratos/gates atuais; nao inferir autorizacao apenas porque o Creator owner/development gera uma imagem ou executavel.
