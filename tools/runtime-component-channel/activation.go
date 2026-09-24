@@ -372,13 +372,31 @@ func resolveRuntimeSlot(root, componentID, trustPath, target string) (activation
 	return state, slot, manifest, false, nil
 }
 
-func readVerifiedRuntimeFile(root, componentID, trustPath, target, requestedPath string) ([]byte, error) {
+func readVerifiedRuntimeFileExact(
+	root, componentID, trustPath, target, requestedPath string,
+	expected *slotIdentity,
+) ([]byte, error) {
 	state, slot, manifest, bundled, err := resolveRuntimeSlot(root, componentID, trustPath, target)
 	if err != nil {
 		return nil, err
 	}
 	if bundled {
 		return nil, errors.New("runtime component current source is bundled")
+	}
+	var resolved *slotIdentity
+	switch target {
+	case "current":
+		resolved = state.Current
+	case "pending":
+		resolved = state.Pending
+	default:
+		return nil, errors.New("runtime component file state must be current or pending")
+	}
+	if resolved == nil {
+		return nil, errors.New("runtime component file identity is unavailable")
+	}
+	if expected != nil && !sameSlotIdentity(resolved, expected) {
+		return nil, errors.New("runtime component file identity no longer matches requested slot")
 	}
 	if target == "pending" && state.PendingHealth == "failed" {
 		return nil, errors.New("runtime component failed pending slot is not runtime-readable")
@@ -415,6 +433,10 @@ func readVerifiedRuntimeFile(root, componentID, trustPath, target, requestedPath
 		return nil, errors.New("runtime component requested file changed after slot verification")
 	}
 	return payload, nil
+}
+
+func readVerifiedRuntimeFile(root, componentID, trustPath, target, requestedPath string) ([]byte, error) {
+	return readVerifiedRuntimeFileExact(root, componentID, trustPath, target, requestedPath, nil)
 }
 
 func mutateActivationState(root, componentID string, mutate func(activationState) (activationState, error)) (activationState, error) {
@@ -795,15 +817,28 @@ func readRuntimeFileCommand(args []string) error {
 	component := flags.String("component", "", "runtime component id")
 	trust := flags.String("trust", "", "runtime component public trust")
 	target := flags.String("state", "", "current or pending slot")
+	version := flags.String("version", "", "exact runtime component semantic version")
+	sourceCommit := flags.String("source-commit", "", "exact runtime component source commit")
 	requestedPath := flags.String("path", "", "package-relative runtime file path")
 	root := flags.String("root", defaultSlotRoot, "runtime component slot root")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	if *component == "" || *trust == "" || *target == "" || *requestedPath == "" || flags.NArg() != 0 {
-		return errors.New("read-runtime-file requires --component, --trust, --state and --path")
+	if *component == "" || *trust == "" || *target == "" || *version == "" || *sourceCommit == "" || *requestedPath == "" || flags.NArg() != 0 {
+		return errors.New("read-runtime-file requires --component, --trust, --state, --version, --source-commit and --path")
 	}
-	payload, err := readVerifiedRuntimeFile(*root, *component, *trust, *target, *requestedPath)
+	expected := slotIdentity{Version: *version, SourceCommit: *sourceCommit}
+	if err := validateSlotIdentity(&expected); err != nil {
+		return err
+	}
+	payload, err := readVerifiedRuntimeFileExact(
+		*root,
+		*component,
+		*trust,
+		*target,
+		*requestedPath,
+		&expected,
+	)
 	if err != nil {
 		return err
 	}

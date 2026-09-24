@@ -139,6 +139,45 @@ class NativeComponentSlotTests(unittest.TestCase):
         self.assertEqual(resolution.entrypoint, "system/apps/internet/runtime.mjs")
         self.assertEqual(resolution.slot, slot_path)
 
+    def test_component_module_path_binds_exact_identity_and_package_path(self):
+        commit = "7" * 40
+        request = slots.parse_component_module_path(
+            "/__ordax/native/component-module/internet/pending/0.4.0/"
+            + commit
+            + "/system/apps/internet/runtime.mjs"
+        )
+        self.assertEqual(request.component_id, "internet")
+        self.assertEqual(request.state, "pending")
+        self.assertEqual(request.version, "0.4.0")
+        self.assertEqual(request.source_commit, commit)
+        self.assertEqual(
+            request.requested_path,
+            "system/apps/internet/runtime.mjs",
+        )
+
+    def test_component_module_path_rejects_encoded_or_traversal_forms(self):
+        commit = "7" * 40
+        bad = (
+            "/__ordax/native/component-module/internet/pending/0.4.0/"
+            + commit
+            + "/system/apps/internet/%2e%2e/runtime.mjs",
+            "/__ordax/native/component-module/internet/pending/0.4.0/"
+            + commit
+            + "/system/apps/../runtime.mjs",
+            "/__ordax/native/component-module/internet/pending/not-semver/"
+            + commit
+            + "/system/apps/internet/runtime.mjs",
+            "/__ordax/native/component-module/internet/pending/0.4.0/not-a-sha/"
+            "system/apps/internet/runtime.mjs",
+            "/__ordax/native/component-module/notes/pending/0.4.0/"
+            + commit
+            + "/system/apps/notes/runtime.mjs",
+        )
+        for path in bad:
+            with self.subTest(path=path):
+                with self.assertRaises(slots.ComponentSlotRequestError):
+                    slots.parse_component_module_path(path)
+
     def test_runtime_file_read_uses_fixed_argv_and_returns_only_verified_stdout(self):
         payload = b'export const componentRuntime = { schema: "ordax.component-runtime/1" };\n'
         completed = subprocess.CompletedProcess([], 0, stdout=payload, stderr=b"")
@@ -148,12 +187,18 @@ class NativeComponentSlotTests(unittest.TestCase):
                 trust_path="/signed/trust/runtime-components-ed25519.json",
                 component_id="internet",
                 state="pending",
+                version="0.4.0",
+                source_commit="7777777777777777777777777777777777777777",
                 requested_path="system/apps/internet/runtime.mjs",
             )
         self.assertEqual(result, payload)
         argv = run.call_args.args[0]
         self.assertEqual(argv[0], "/signed/bin/ordax-runtime-component-channel")
         self.assertEqual(argv[1], "read-runtime-file")
+        self.assertIn("--version", argv)
+        self.assertIn("0.4.0", argv)
+        self.assertIn("--source-commit", argv)
+        self.assertIn("7777777777777777777777777777777777777777", argv)
         self.assertIn("system/apps/internet/runtime.mjs", argv)
         self.assertEqual(run.call_args.kwargs["stdin"], subprocess.DEVNULL)
         self.assertEqual(run.call_args.kwargs["stdout"], subprocess.PIPE)
@@ -167,6 +212,8 @@ class NativeComponentSlotTests(unittest.TestCase):
                     trust_path="/signed/trust.json",
                     component_id="notes",
                     state="pending",
+                    version="0.4.0",
+                    source_commit="7777777777777777777777777777777777777777",
                     requested_path="system/apps/notes/runtime.mjs",
                 )
             with self.assertRaises(slots.ComponentSlotRequestError):
@@ -175,7 +222,33 @@ class NativeComponentSlotTests(unittest.TestCase):
                     trust_path="/signed/trust.json",
                     component_id="internet",
                     state="pending",
+                    version="0.4.0",
+                    source_commit="7777777777777777777777777777777777777777",
                     requested_path="../escape.mjs",
+                )
+        run.assert_not_called()
+
+    def test_runtime_file_read_rejects_invalid_slot_identity_before_verifier(self):
+        with mock.patch.object(slots.subprocess, "run") as run:
+            with self.assertRaises(slots.ComponentSlotRequestError):
+                slots.read_component_runtime_file(
+                    helper_path="/signed/bin/helper",
+                    trust_path="/signed/trust.json",
+                    component_id="internet",
+                    state="pending",
+                    version="not-semver",
+                    source_commit="7" * 40,
+                    requested_path="system/apps/internet/runtime.mjs",
+                )
+            with self.assertRaises(slots.ComponentSlotRequestError):
+                slots.read_component_runtime_file(
+                    helper_path="/signed/bin/helper",
+                    trust_path="/signed/trust.json",
+                    component_id="internet",
+                    state="pending",
+                    version="0.4.0",
+                    source_commit="bad-sha",
+                    requested_path="system/apps/internet/runtime.mjs",
                 )
         run.assert_not_called()
 

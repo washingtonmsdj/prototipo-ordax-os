@@ -29,10 +29,12 @@ if _RUNTIME_DIR not in sys.path:
 
 from native_request_boundary import expected_surface_authority, request_is_trusted
 from native_component_slots import (
+    COMPONENT_MODULE_PREFIX,
     ComponentSlotRequestError,
     ComponentSlotUnavailableError,
     ComponentSlotVerificationError,
     component_slot_reader_available,
+    parse_component_module_path,
     read_component_runtime_file,
     resolve_component_slot,
 )
@@ -3101,6 +3103,9 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if parsed_path in {SESSION_PATH, FILES_PATH, TRASH_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, RECOVERY_STATUS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, COMPONENT_RUNTIME_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
+        if parsed_path.startswith(COMPONENT_MODULE_PREFIX) and self.client_address[0] != "127.0.0.1":
+            self._empty(403)
+            return
         if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH, LOCAL_SESSION_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
@@ -3182,61 +3187,24 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                 return
             self._write_json(200, snapshot)
             return
-        if parsed_path == COMPONENT_RUNTIME_PATH:
+        if parsed_path.startswith(COMPONENT_MODULE_PREFIX):
             if not self.server.component_slot_read_available:
                 self._empty(404)
                 return
+            if urlsplit(self.path).query:
+                self._empty(400)
+                return
             try:
-                query = parse_qs(
-                    urlsplit(self.path).query,
-                    keep_blank_values=True,
-                    strict_parsing=True,
-                )
-            except ValueError:
-                self._empty(400)
-                return
-            if set(query) not in (
-                {"component", "state"},
-                {"component", "state", "path"},
-            ):
-                self._empty(400)
-                return
-            if any(len(values) != 1 for values in query.values()):
-                self._empty(400)
-                return
-            component_id = query["component"][0]
-            state = query["state"][0]
-            requested_path = query.get("path", [None])[0]
-            try:
+                request = parse_component_module_path(parsed_path)
                 with self.server.component_slot_lock:
-                    if requested_path is None:
-                        resolution = resolve_component_slot(
-                            helper_path=self.server.component_channel_bin,
-                            trust_path=self.server.component_trust_path,
-                            component_id=component_id,
-                            state=state,
-                            slot_root=self.server.component_slot_root,
-                        )
-                        self._write_json(
-                            200,
-                            {
-                                "componentId": resolution.component_id,
-                                "state": resolution.state,
-                                "source": resolution.source,
-                                "revision": resolution.revision,
-                                "version": resolution.version,
-                                "sourceCommit": resolution.source_commit,
-                                "entrypoint": resolution.entrypoint,
-                                "pendingHealth": resolution.pending_health,
-                            },
-                        )
-                        return
                     payload = read_component_runtime_file(
                         helper_path=self.server.component_channel_bin,
                         trust_path=self.server.component_trust_path,
-                        component_id=component_id,
-                        state=state,
-                        requested_path=requested_path,
+                        component_id=request.component_id,
+                        state=request.state,
+                        version=request.version,
+                        source_commit=request.source_commit,
+                        requested_path=request.requested_path,
                         slot_root=self.server.component_slot_root,
                     )
             except ComponentSlotRequestError:
@@ -3258,13 +3226,15 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                 )
                 self._empty(409)
                 return
+
             mime = "application/octet-stream"
-            if requested_path.endswith((".mjs", ".js")):
+            if request.requested_path.endswith((".mjs", ".js")):
                 mime = "text/javascript; charset=utf-8"
-            elif requested_path.endswith(".css"):
+            elif request.requested_path.endswith(".css"):
                 mime = "text/css; charset=utf-8"
-            elif requested_path.endswith(".json"):
+            elif request.requested_path.endswith(".json"):
                 mime = "application/json; charset=utf-8"
+
             self.send_response(200)
             self.send_header("Content-Type", mime)
             self.send_header("Content-Length", str(len(payload)))
@@ -3272,6 +3242,70 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
             self.wfile.write(payload)
+            return
+
+        if parsed_path == COMPONENT_RUNTIME_PATH:
+            if not self.server.component_slot_read_available:
+                self._empty(404)
+                return
+            try:
+                query = parse_qs(
+                    urlsplit(self.path).query,
+                    keep_blank_values=True,
+                    strict_parsing=True,
+                )
+            except ValueError:
+                self._empty(400)
+                return
+            if set(query) != {"component", "state"}:
+                self._empty(400)
+                return
+            if any(len(values) != 1 for values in query.values()):
+                self._empty(400)
+                return
+            component_id = query["component"][0]
+            state = query["state"][0]
+            try:
+                with self.server.component_slot_lock:
+                    resolution = resolve_component_slot(
+                        helper_path=self.server.component_channel_bin,
+                        trust_path=self.server.component_trust_path,
+                        component_id=component_id,
+                        state=state,
+                        slot_root=self.server.component_slot_root,
+                    )
+            except ComponentSlotRequestError:
+                self._empty(400)
+                return
+            except ComponentSlotUnavailableError as exc:
+                print(
+                    f"ordax-native-host: component slot reader unavailable: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._empty(503)
+                return
+            except ComponentSlotVerificationError as exc:
+                print(
+                    f"ordax-native-host: component slot verification failed safely: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._empty(409)
+                return
+            self._write_json(
+                200,
+                {
+                    "componentId": resolution.component_id,
+                    "state": resolution.state,
+                    "source": resolution.source,
+                    "revision": resolution.revision,
+                    "version": resolution.version,
+                    "sourceCommit": resolution.source_commit,
+                    "entrypoint": resolution.entrypoint,
+                    "pendingHealth": resolution.pending_health,
+                },
+            )
             return
 
         if parsed_path == UPDATE_HISTORY_PATH:
