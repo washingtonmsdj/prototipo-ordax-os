@@ -61,10 +61,11 @@
   },
   "next_boundary": {
     "canonical_https_publication_review_required": true,
-    "release_agent_materialize_portable_v4_required": false,
-    "release_agent_verify_portable_v4_exact_required": false,
+    "release_agent_materialize_portable_v4_required": true,
+    "release_agent_verify_portable_v4_exact_required": true,
     "physical_media_authority_separate": true,
-    "canonical_materialization_verification_step": "tools/release-signing/windows/6-Materialize-Verify-PortableV4-Canonical.ps1"
+    "canonical_materialization_verification_step": "tools/release-signing/windows/6-Materialize-Verify-PortableV4-Canonical.ps1",
+    "canonical_materialization_step_implemented": true
   },
   "canonical_materialization_receipt_schema": "prototype-ordax.portable-v4-canonical-materialization-verification/1",
   "canonical_materialization_boundary": {
