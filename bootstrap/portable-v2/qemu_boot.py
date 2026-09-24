@@ -32,6 +32,7 @@ DISK_BYTES = 3 * 1024 * 1024 * 1024
 ESP_BYTES = 512 * 1024 * 1024
 SUCCESS = "ORDAX_PORTABLE_V2_HANDOFF=VERIFIED"
 STABLE = "ORDAX_STABLE_INIT_HANDOFF=VERIFIED"
+ACTIVATION_DURABLE = "ORDAX_PORTABLE_ACTIVATION_STATE_DURABLE=YES"
 
 
 class ProofError(RuntimeError):
@@ -533,6 +534,7 @@ def boot_qemu_expected(
             if (
                 SUCCESS in text
                 and STABLE in text
+                and ACTIVATION_DURABLE in text
                 and source_marker in text
                 and stable_source_marker in text
                 and slot_marker in text
@@ -550,6 +552,7 @@ def boot_qemu_expected(
                 return text, {
                     "portable_pid1_handoff_marker": True,
                     "stable_init_handoff_marker": True,
+                    "activation_state_durable_marker": True,
                     "qemu_network_disabled": "-net" in command and "none" in command,
                     "qemu_durable_cache_mode": any(
                         "cache=directsync" in item for item in command
@@ -696,6 +699,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
         "final_two_partition_layout": False,
         "portable_pid1_handoff_marker": False,
         "stable_init_handoff_marker": False,
+        "activation_state_durable_marker": False,
         "qemu_network_disabled": False,
         "qemu_durable_cache_mode": False,
         "candidate_rdinit_used": False,
@@ -761,6 +765,10 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
                 "stable_init_handoff_marker": (
                     first_checks["stable_init_handoff_marker"]
                     and second_checks["stable_init_handoff_marker"]
+                ),
+                "activation_state_durable_marker": (
+                    first_checks["activation_state_durable_marker"]
+                    and second_checks["activation_state_durable_marker"]
                 ),
                 "qemu_network_disabled": (
                     first_checks["qemu_network_disabled"]
@@ -834,6 +842,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
             markers = [
                 SUCCESS,
                 STABLE,
+                ACTIVATION_DURABLE,
                 "ORDAX_PORTABLE_V2_SLOT=" + slot,
                 "ORDAX_PORTABLE_V2_SOURCE_SHA=" + release_info["commit"],
                 "ORDAX_STABLE_INIT_SOURCE_SHA=" + release_info["commit"],
