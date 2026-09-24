@@ -48,5 +48,6 @@
   "native_loopback_broker_read_only": true,
   "native_loopback_broker_supported_components": [
     "internet"
-  ]
+  ],
+  "failed_pending_runtime_read_allowed": false
 }
