@@ -115,8 +115,8 @@
     "profile": "stable-mvp",
     "runtime_layout": "portable-v2",
     "discovery_command": "ordax-release-agent inspect",
-    "materialization_command": "ordax-release-agent materialize-portable-v3",
-    "exact_verification_command": "ordax-release-agent verify-portable-v3-exact",
+    "materialization_command": "ordax-release-agent materialize-portable-v4",
+    "exact_verification_command": "ordax-release-agent verify-portable-v4-exact",
     "activation_state_helper": "ordax-portable-state",
     "activation_state_root": "/state/ordax/portable-release",
     "portable_root": "/ordax-data/.ordax",
@@ -128,6 +128,14 @@
     "same_failed_candidate_retried": false,
     "rollback_network_required": false,
     "rollback_git_required": false,
-    "physical_boot_proven": false
+    "physical_boot_proven": false,
+    "manifest_schema": "prototype-ordax.release-manifest/4",
+    "local_ai_runtime_required": true,
+    "inspect_manifest_schema_drives_materializer": true,
+    "pre_v4_current_may_accept_v3": true,
+    "pre_v4_current_may_upgrade_to_v4": true,
+    "v4_to_v3_downgrade_allowed": false,
+    "v3_compatibility_materialization_command": "ordax-release-agent materialize-portable-v3",
+    "v3_compatibility_exact_verification_command": "ordax-release-agent verify-portable-v3-exact"
   }
 }
