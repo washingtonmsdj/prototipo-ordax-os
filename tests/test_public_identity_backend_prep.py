@@ -8,21 +8,25 @@ IDENTITY_CONTRACT = ROOT / "docs" / "contracts" / "public-identity.json"
 SERVICE_README = ROOT / "services" / "public-identity" / "README.md"
 SUPABASE_ROOT = ROOT / "infra" / "supabase" / "identity"
 PREFLIGHT = SUPABASE_ROOT / "preflight.sql"
-MIGRATION = SUPABASE_ROOT / "migrations" / "0001_ordax_profiles.sql"
+PRODUCT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "0001_product_foundation.sql"
 
 
 class PublicIdentityBackendPrepTests(unittest.TestCase):
-    def test_identity_contract_keeps_provider_unconfigured(self):
+    def test_identity_contract_selects_dedicated_target_without_enabling_public_auth(self):
         contract = json.loads(IDENTITY_CONTRACT.read_text(encoding="utf-8"))
-        self.assertEqual(contract["status"], "provider-unconfigured")
+        self.assertEqual(contract["status"], "provider-target-prepared")
         self.assertFalse(contract["backend"]["provider_configured"])
         self.assertTrue(contract["backend"]["dedicated_or_isolated_target_required"])
         self.assertFalse(contract["backend"]["conflicting_auth_user_trigger_allowed"])
-        self.assertFalse(contract["supabase_candidate"]["existing_shared_project_mutation_allowed"])
+        candidate = contract["supabase_candidate"]
+        self.assertEqual(candidate["project_name"], "ordax-control-plane")
+        self.assertTrue(candidate["product_schema_applied"])
+        self.assertFalse(candidate["public_auth_enabled"])
+        self.assertFalse(candidate["existing_shared_project_mutation_allowed"])
 
-    def test_gateway_boundary_does_not_claim_live_provider(self):
+    def test_gateway_boundary_does_not_claim_live_public_provider(self):
         text = SERVICE_README.read_text(encoding="utf-8")
-        self.assertIn("PROVIDER NOT CONFIGURED", text)
+        self.assertIn("PUBLIC PROVIDER NOT ENABLED", text)
         self.assertIn("GET  /auth/login", text)
         self.assertIn("GET  /auth/register", text)
         self.assertIn("POST /auth/logout", text)
@@ -53,24 +57,24 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, f" {sql} ")
 
-    def test_profile_migration_is_minimal_owner_scoped_and_no_anon_access(self):
-        sql = MIGRATION.read_text(encoding="utf-8").lower()
-        self.assertIn("create table public.ordax_profiles", sql)
+    def test_product_account_migration_is_owner_scoped_and_no_anon_access(self):
+        sql = PRODUCT_MIGRATION.read_text(encoding="utf-8").lower()
+        self.assertIn("create table public.ordax_accounts", sql)
         self.assertIn("references auth.users(id) on delete cascade", sql)
         self.assertIn("enable row level security", sql)
         self.assertIn("to authenticated", sql)
         self.assertIn("(select auth.uid()) = user_id", sql)
-        self.assertIn("revoke all on table public.ordax_profiles from public, anon, authenticated", sql)
-        self.assertIn("grant select, update on table public.ordax_profiles to authenticated", sql)
+        self.assertIn("revoke all on table public.ordax_accounts from public, anon, authenticated", sql)
+        self.assertIn("grant select, update on table public.ordax_accounts to authenticated", sql)
         self.assertNotRegex(sql, re.compile(r"grant\s+.*\s+to\s+anon"))
 
-    def test_profile_bootstrap_function_is_private_and_search_path_locked(self):
-        sql = MIGRATION.read_text(encoding="utf-8").lower()
+    def test_account_bootstrap_function_is_private_and_search_path_locked(self):
+        sql = PRODUCT_MIGRATION.read_text(encoding="utf-8").lower()
         self.assertIn("create schema if not exists private", sql)
-        self.assertIn("private.handle_ordax_user_created()", sql)
+        self.assertIn("private.handle_ordax_account_created()", sql)
         self.assertIn("security definer", sql)
         self.assertIn("set search_path = ''", sql)
-        self.assertIn("on_auth_user_created_ordax", sql)
+        self.assertIn("on_auth_user_created_ordax_product", sql)
         self.assertIn("after insert on auth.users", sql)
 
 
