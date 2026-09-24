@@ -108,7 +108,7 @@ CANONICAL_SYSTEM_RUNTIME_COMPLETE=NO
 ```
 
 
-The canonical prototype trust ceremony and public handoff are complete. The eligible toolkit bound to `2172eb6a18430910afd036199ec492ad63dc185d` passed read-only preflight; canonical Ed25519 key material was generated locally, independent public derivation matched, the proof signature passed, recovery was verified from a distinct restored copy, and the recovered signing envelope passed public verification. The exact public anchor is now pinned in Git and the minimal-bootstrap trust binding is resolved. The owner has explicitly authorized the scope `first-real-stable-mvp-usb-proof` for release sequence 1 and the source-controlled authorization contract is `authorized`. This still does not select a USB or authorize erasing any particular device; live target revalidation, Windows UAC and target-specific destructive confirmation remain pending. The local PEM remains a controlled prototype signing backend rather than the intended long-term production custody model; independent off-device custody and managed non-exportable KMS/HSM remain broad-distribution hardening requirements, with signed trust rotation required before broad public distribution.
+The canonical prototype trust ceremony and public handoff are complete. The eligible toolkit bound to `2172eb6a18430910afd036199ec492ad63dc185d` passed read-only preflight; canonical Ed25519 key material was generated locally, independent public derivation matched, the proof signature passed, recovery was verified from a distinct restored copy, and the recovered signing envelope passed public verification. The exact public anchor is pinned in Git and the minimal-bootstrap trust binding remains resolved. An earlier owner authorization existed for the first Stable/MVP USB proof, release sequence 1, but it was bound to the previous 15-artifact physical-writer context. The Stable/MVP v4 payload now contains 17 exact artifacts, adding the content-addressed Local AI runtime plus its release reference, so that prior consent is deliberately invalidated and the source-controlled authorization contract is back at `blocked-explicit-physical-authorization-pending` with `physical_write_allowed=false`. No USB is selected or erasable; fresh owner consent, live target revalidation, Windows UAC and target-specific destructive confirmation remain separate later gates. The local PEM remains a controlled prototype signing backend rather than the intended long-term production custody model; independent off-device custody and managed non-exportable KMS/HSM remain broad-distribution hardening requirements, with signed trust rotation required before broad public distribution.
 
 The first formal human product version is **OrdaX Prototype v0.1.0**. Product version, Entrega, Git SHA and component/app versions are separate identities: v0.1.0 identifies the prototype product milestone, Entrega identifies the notebook-facing delivery sequence, the SHA remains the exact technical build identity, and each component may evolve its own SemVer. First-party apps on the `0.x` line are **Beta**; `1.0.0` remains reserved for the first stable release of each app. Internet is currently `0.3.0 Beta` and Notes is `0.4.0 Beta`, both using `git-app` in Owner/Development. Arquivos, Ajustes, Conta and Sistema are `0.1.0 Beta` and remain `bundled`. A component having its own version does not mean it already has a production-independent update channel: `git-app` is a development delivery mode, while production-independent activation remains gated behind the signed `component-slot` path with pending health, promotion and rollback. Product v1.0 remains reserved for the stable product rather than being inferred from prototype maturity, component versions or delivery count.
 
@@ -122,17 +122,18 @@ The legacy/product-vision audit has been revalidated before the first Stable/MVP
 physical USB. `PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md` is now the active
 pre-USB closure plan. Physical media work is intentionally held while the remaining
 class-A product gaps are closed. Ordax Intelligence consumers, Native local
-session/lock, and a safe Files removal path are now source-complete. The remaining
-pre-USB source gaps are now narrowed to coherent launch-language coverage and the
+session/lock, safe Files removal and PT-BR/en-US launch-language coverage are now
+source-complete. The remaining pre-USB class-A release gap is the canonical
 signed/materializable v4 release that carries the proven local-AI runtime.
 Diagnostics/recovery presentation and the conservative MVP hardware-support matrix
 are source-complete; their target-hardware/physical proofs remain later gates.
 
-This hold does not revoke or widen any existing destructive authorization. It simply
-adds a product/source prerequisite before target-specific physical execution.
+The v4 Creator payload change deliberately revokes the stale 15-artifact authorization
+context instead of widening it. Source/CI work may continue, but destructive authority
+must be granted again only after the 17-artifact v4 bindings are reviewed.
 
 ```text
-PRE_USB_NOVA_ORDAX_AUDIT=IN_PROGRESS
+PRE_USB_NOVA_ORDAX_AUDIT=PASS
 INTELLIGENCE_REAL_SYSTEM_CONSUMER=PASS_SOURCE
 INTELLIGENCE_STABLE_V4_BACKEND_LIFECYCLE=PASS_SOURCE_SIGNED_STABLE_PROOF_PENDING
 LOCAL_SESSION_LOCK_POLICY=PASS_SOURCE
@@ -146,7 +147,7 @@ RECOVERY_STATUS_PHYSICAL_PROOF=PENDING_PHYSICAL
 SUPPORTED_HARDWARE_MATRIX=PASS_SOURCE
 CANONICAL_STABLE_TARGET_HARDWARE_PROOF=PENDING_PHYSICAL
 FIRST_STABLE_MVP_USB_WRITE=HOLD_FUNCTIONAL_CLOSURE
-PHYSICAL_WRITE_AUTHORITY=UNCHANGED
+PHYSICAL_WRITE_AUTHORITY=FRESH_V4_OWNER_AUTHORIZATION_REQUIRED
 ```
 
 ### System diagnostics and recovery presentation
@@ -278,7 +279,7 @@ FILES_TRASH_PHYSICAL_PROOF=PENDING
 
 ### Ordax Intelligence and local inference
 
-Ordax Intelligence is now a first-class system service with stable contract `ordax.intelligence/1`; an Assistant UI is only a possible client. The Native composition now creates the provider-neutral `ordax.local-ai/1 -> ordax.intelligence/1` chain and exposes real consultative first-party consumers: Notes can request a bounded provenance-bearing summary without rewriting the note, and System can request an explanation using only local Surface capabilities/connectivity plus sanitized metrics. Neither consumer imports llama.cpp/Qwen directly, and both retain `authority=none` with tool execution disabled. The service therefore exists as a real system function in source rather than only a model/runtime test. The Stable v4 source handoff is now implemented: Portable v2 verifies `release-manifest/4`, resolves and mounts the content-addressed `local-ai-runtime.erofs` read-only, and Stable Base starts the loopback backend when the verified runtime is available. Intelligence/model failure remains non-boot-critical and degrades the capability instead of blocking boot, Surface, recovery, files or updates. Signed Stable v4 materialization plus disposable/physical proof remain release gates.
+Ordax Intelligence is now a first-class system service with stable contract `ordax.intelligence/1`; an Assistant UI is only a possible client. The Native composition now creates the provider-neutral `ordax.local-ai/1 -> ordax.intelligence/1` chain and exposes real consultative first-party consumers: Notes can request a bounded provenance-bearing summary without rewriting the note, and System can request an explanation using only local Surface capabilities/connectivity plus sanitized metrics. Neither consumer imports llama.cpp/Qwen directly, and both retain `authority=none` with tool execution disabled. The service therefore exists as a real system function in source rather than only a model/runtime test. The Stable v4 source handoff is now implemented: Portable v2 verifies `release-manifest/4`, resolves and mounts the content-addressed `local-ai-runtime.erofs` read-only, and Stable Base starts the loopback backend when the verified runtime is available. Intelligence/model failure remains non-boot-critical and degrades the capability instead of blocking boot, Surface, recovery, files or updates. Disposable QEMU/UEFI v4 boot and fallback are now PASS_CI; canonical Stable v4 signing/materialization and the later physical Stable/MVP proof remain separate release gates.
 
 The initial source lock pins Qwen3.5-0.8B-Q4_0 by exact GGUF SHA-256/size and llama.cpp by exact source commit plus the reproducibly observed `llama-server` ELF SHA-256/size. The real `local-ai-runtime.erofs` is now CI-proven: the current source lock produced byte-identical A/B builds in one job, the EROFS was mounted read-only, the exact model loaded, eight real completion tokens were generated on loopback-only HTTP, and the same runtime produced a real `OK` chat completion inside the pinned Alpine 3.22.5 userspace used by Stable Base. The current candidate engine SHA-256 is `4a974691b9905b88cb46d97c85c2b035b33592a16cd0239ae4c6687f68799afe` (17,039,584 bytes); the current EROFS candidate SHA-256 is `b244056dad3609357e8a70433f53f41becacd8f3bd93da3d8b23f9e99d86e11a` (568,061,952 bytes). `prototype-ordax.release-manifest/4` already binds this payload to the canonical source lock and content-addressed AI runtime store. The Local AI candidate workflow now also owns a non-promotional integration gate that signs a v4 envelope with an ephemeral CI-only key, serves the three artifacts over loopback HTTPS, materializes them through `materialize-portable-v4`, revalidates them offline, and byte-compares the content-addressed stored AI EROFS with the real built runtime. This proves the real-byte protocol/materialization path without activation or physical media. What remains pending is canonical Stable/MVP v4 signing/materialization with the controlled release key and the real physical Stable USB proof.
 
@@ -295,6 +296,7 @@ LOCAL_AI_RELEASE_MANIFEST_V4=PASS_SOURCE
 LOCAL_AI_CONTENT_ADDRESSED_ACQUISITION=PASS_SOURCE
 LOCAL_AI_REAL_RUNTIME_EROFS=PASS_CI_ALPINE
 LOCAL_AI_REAL_V4_MATERIALIZATION_CI_GATE=IMPLEMENTED_NON_PROMOTIONAL
+LOCAL_AI_V4_QEMU_UEFI_PROOF=PASS_CI
 LOCAL_AI_CANONICAL_SIGNED_STABLE_MATERIALIZATION=PENDING
 LOCAL_AI_PHYSICAL_STABLE_MVP_PROOF=PENDING
 ```
@@ -515,7 +517,7 @@ FULL_BOOTSTRAP_CANONICAL_TRUST_PROOF_ARTIFACT_SHA256=079aad05492867000989fa2c276
 
 The canonical release channel resolves `release-envelope.json`; the URL selects bytes and Ed25519 verification decides authenticity. The release acquisition code remains fail-closed with SHA-256 verification, exact source-commit binding, safe materialization, atomic activation and known-good preservation.
 
-### Canonical release trust — public anchor pinned, first Stable/MVP proof authorized
+### Canonical release trust — public anchor pinned, v4 physical consent pending refresh
 
 ```text
 RELEASE_TRUST_POLICY=RESOLVED
@@ -541,14 +543,14 @@ EXTERNAL_OFFLINE_BACKUP_REQUIRED_BEFORE_BROAD_DISTRIBUTION=YES
 PUBLIC_TRUST_PROMOTION=PASS_PUBLIC_HANDOFF_VALIDATED
 MINIMAL_BOOTSTRAP_ALL_ARTIFACTS_RESOLVED=YES
 PHYSICAL_AUTHORIZATION_ELIGIBLE=YES
-PHYSICAL_WRITE_ALLOWED=YES_FIRST_STABLE_MVP_USB_PROOF
+PHYSICAL_WRITE_ALLOWED=NO_FRESH_V4_OWNER_AUTHORIZATION_PENDING
 PHYSICAL_WRITE_SCOPE=first-real-stable-mvp-usb-proof
 PHYSICAL_WRITE_RELEASE_SEQUENCE=1
 PHYSICAL_TARGET_SELECTED=NO
 PHYSICAL_TARGET_DESTRUCTIVE_CONFIRMATION=PENDING
 ```
 
-The eligible Windows trust toolkit from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`) completed operator steps 1, 2 and 3 on 2026-09-21. The uploaded `OrdaX-Public-Trust-Handoff.zip` was then independently revalidated: archive shape, exact public hashes and the recovered Ed25519 signing proof all passed. The exact public anchor is now pinned at `bootstrap/trust/release-ed25519.json`, the minimal bootstrap trust group is resolved and the physical-authorization bindings are populated. The private key remains outside Git/USB/Actions artifacts and is not recorded here. A same-host encrypted backup copy was verified byte-for-byte; this is accepted for the first controlled prototype but is not called independent off-device custody, which remains required before broad public distribution. Public trust promotion itself did not authorize destructive media writes. On 2026-09-22 the owner separately provided the exact Stable/MVP authorization phrase for scope `first-real-stable-mvp-usb-proof`, release sequence 1. The source-controlled authorization is now recorded and bound to the proven source context. This does not select a disk, does not identify a physical target and does not replace the later live USB revalidation, Windows UAC or target-specific destructive confirmation.
+The eligible Windows trust toolkit from canonical `main` source `2172eb6a18430910afd036199ec492ad63dc185d` (workflow run `35617567458`) completed operator steps 1, 2 and 3 on 2026-09-21. The uploaded `OrdaX-Public-Trust-Handoff.zip` was then independently revalidated: archive shape, exact public hashes and the recovered Ed25519 signing proof all passed. The exact public anchor is now pinned at `bootstrap/trust/release-ed25519.json`, the minimal bootstrap trust group is resolved and the physical-authorization bindings are populated. The private key remains outside Git/USB/Actions artifacts and is not recorded here. A same-host encrypted backup copy was verified byte-for-byte; this is accepted for the first controlled prototype but is not called independent off-device custody, which remains required before broad public distribution. Public trust promotion itself did not authorize destructive media writes. On 2026-09-22 the owner provided the exact Stable/MVP authorization phrase for scope `first-real-stable-mvp-usb-proof`, release sequence 1, and that consent was correctly bound to the then-current writer context. The later v4 Creator migration expands the physical payload from 15 to 17 artifacts, so the old context is no longer accepted: the authorization contract has returned to explicit-consent pending with `physical_write_allowed=false`. This revocation does not change canonical trust and does not touch a disk; after all non-destructive v4 gates are green, a fresh owner authorization must bind the new writer context before live USB revalidation, Windows UAC or target-specific destructive confirmation can become reachable.
 
 ## Creator and physical-write boundary
 
@@ -567,18 +569,18 @@ CREATOR_WINDOWS_RAW_BACKEND_BUILD_TAG_ISOLATION=PASS
 CREATOR_WINDOWS_RAW_BACKEND_IN_PUBLIC_BUILD=NO
 CREATOR_NATIVE_BACKEND_PUBLICLY_REACHABLE=NO
 CREATOR_PORTABLE_PHYSICAL_WRITER_IMPLEMENTED=YES_TAGGED_INTERNAL
-CREATOR_PORTABLE_PHYSICAL_WRITER_OPERATION_COUNT=35
-CREATOR_PORTABLE_PHYSICAL_WRITER_ARTIFACT_READBACKS=15
+CREATOR_PORTABLE_PHYSICAL_WRITER_OPERATION_COUNT=39
+CREATOR_PORTABLE_PHYSICAL_WRITER_ARTIFACT_READBACKS=17
 CREATOR_PORTABLE_PHYSICAL_WRITER_WHOLE_DISK_RAW=NO
 CREATOR_PORTABLE_PHYSICAL_WRITER_UAC_REQUIRED=YES
 CREATOR_PORTABLE_PHYSICAL_WRITER_LIVE_USB_REVALIDATION=YES
 CREATOR_PUBLIC_PHYSICAL_APPLY_IMPLEMENTED=NO
-PHYSICAL_WRITE_AUTHORIZED=YES_FIRST_STABLE_MVP_USB_PROOF
+PHYSICAL_WRITE_AUTHORIZED=NO_FRESH_V4_OWNER_AUTHORIZATION_PENDING
 PHYSICAL_TARGET_SELECTED=NO
 PHYSICAL_TARGET_DESTRUCTIVE_CONFIRMATION=PENDING
 ```
 
-The Windows destructive backend remains compile-time isolated behind `ordax_raw_backend` and unreachable from the public Creator command. The final Portable writer is now implemented inside that tagged boundary: it executes the Core-owned 35-operation `ORDAX-ESP + ORDAX-DATA` plan directly on a revalidated USB, copies 15 exact artifacts, performs per-artifact sync/readback SHA-256+size verification, and does not require a target-sized whole-disk RAW image. **Implementation alone did not authorize use.** Canonical trust and physical-promotion bindings are resolved, and the owner has now explicitly authorized the exact first Stable/MVP USB proof scope. Public reachability remains closed, and choosing/revalidating a concrete USB plus Windows UAC and the target-specific destructive confirmation remain separate execution gates.
+The Windows destructive backend remains compile-time isolated behind `ordax_raw_backend` and unreachable from the public Creator command. The final Portable writer is now implemented inside that tagged boundary: it executes the Core-owned 39-operation `ORDAX-ESP + ORDAX-DATA` plan, with 17 exact artifacts including the Local AI runtime and its signed-release digest reference, and performs per-artifact sync/readback SHA-256+size verification without a target-sized whole-disk RAW image. **Implementation alone does not authorize use.** Canonical trust remains resolved, while the old 15-artifact authorization is intentionally stale and fresh explicit owner authorization is required for the v4 writer context. Public reachability remains closed, and choosing/revalidating a concrete USB plus Windows UAC and the target-specific destructive confirmation remain separate execution gates.
 
 The byte-complete media workflow remains proven with ephemeral CI trust and disposable media only. That proof establishes composition and growth behavior; it does not establish canonical public trust or authorize a product-media write. The notebook development-USB boot is a separate physical proof and must not be used to collapse those boundaries.
 
@@ -626,7 +628,7 @@ CANONICAL_NATIVE_DISK_INSTALL_PROVEN=NO_POST_MVP
 CREATOR_PUBLIC_PHYSICAL_APPLY_IMPLEMENTED=NO
 RELEASE_TRUST=PASS_CANONICAL_PUBLIC_ANCHOR_PINNED
 PHYSICAL_AUTHORIZATION_ELIGIBLE=YES
-PHYSICAL_WRITE_AUTHORIZED=YES_FIRST_STABLE_MVP_USB_PROOF
+PHYSICAL_WRITE_AUTHORIZED=NO_FRESH_V4_OWNER_AUTHORIZATION_PENDING
 PHYSICAL_TARGET_SELECTED=NO
 PHYSICAL_TARGET_DESTRUCTIVE_CONFIRMATION=PENDING
 MVP_SURFACE_SMOKE_HARNESS=PASS_SOURCE
@@ -656,7 +658,7 @@ BROADER_HARDWARE_COVERAGE=PENDING_FINAL
 ## Current priorities
 
 1. prioritize the Stable/MVP **USB system path**: preserve the green source/QEMU/UEFI path, complete canonical signed Stable v4 materialization with the proven local-AI runtime, then close the later real-hardware gates for first canonical USB boot, cold health, known-good promotion and rollback without coupling ordinary app changes to a full system reboot;
-2. keep the **local inference payload** pinned and reproducible: the exact llama.cpp/model artifacts and real-byte v4 materialization are already CI-proven; the remaining release gate is canonical Stable signing/materialization and its disposable v4 regression, without making AI boot-critical;
+2. keep the **local inference payload** pinned and reproducible: the exact llama.cpp/model artifacts, real-byte v4 materialization and disposable QEMU/UEFI v4 path are already CI-proven; the remaining non-physical release gate is canonical Stable signing/materialization, without making AI boot-critical;
 3. keep PT-BR/en-US launch coverage regression-closed and continue Spanish, German and French migration without exposing those hidden compatibility locales as complete before their Surface coverage reaches the same standard;
 4. keep the current first-party apps useful and coherent as Beta components, focusing app work on correctness, regression coverage and genuine MVP gaps; move an app toward production-independent packaging only when the signed `component-slot` path is actually ready to prove it;
 5. continue hardening staged/transactional Owner/Development Git-first activation while keeping it explicitly separate from the Stable/MVP public update channel;

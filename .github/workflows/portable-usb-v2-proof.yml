@@ -145,6 +145,7 @@ jobs:
               'kernel', 'initramfs', 'bootstrap-capsule', 'release-trust',
               'stable-base', 'persistent-state', 'system-image',
               'surface-runtime-image', 'surface-runtime-ref',
+              'local-ai-runtime-image', 'local-ai-runtime-ref',
               'release-manifest', 'release-envelope',
           ]
           artifacts = []
@@ -178,7 +179,7 @@ jobs:
           for id in \
             systemd-boot loader-config loader-normal loader-recovery \
             kernel initramfs bootstrap-capsule release-trust \
-            stable-base persistent-state system-image surface-runtime-image surface-runtime-ref release-manifest release-envelope
+            stable-base persistent-state system-image surface-runtime-image surface-runtime-ref local-ai-runtime-image local-ai-runtime-ref release-manifest release-envelope
           do
             args+=(--source "$id=$fixtures/$id")
           done
@@ -194,7 +195,7 @@ jobs:
           import json, pathlib, sys
           proof = json.loads(pathlib.Path(sys.argv[1]).read_text())
           assert proof['status'] == 'pass'
-          assert proof['artifact_count'] == 15
+          assert proof['artifact_count'] == 17
           assert proof['partitions'] == ['ORDAX-ESP', 'ORDAX-DATA']
           assert proof['physical_target_device_touched'] is False
           assert proof['physical_write_authorized'] is False
@@ -231,17 +232,22 @@ jobs:
           assert plan['physical_device_bound'] is False
           assert plan['physical_write_authorized'] is False
           assert plan['public_promotion_allowed'] is False
-          assert len(plan['operations']) == 35
+          assert len(plan['operations']) == 39
           materialize = [op for op in plan['operations'] if op['kind'] == 'materialize-artifact']
           readback = [op for op in plan['operations'] if op['kind'] == 'readback-sha256-size']
-          assert len(materialize) == 15
-          assert len(readback) == 15
+          assert len(materialize) == 17
+          assert len(readback) == 17
           by_id = {op['artifact_id']: op for op in materialize}
           assert by_id['surface-runtime-image']['partition'] == 'ORDAX-DATA'
           assert '/.ordax/runtimes/sha256/' in by_id['surface-runtime-image']['target_path']
           assert by_id['surface-runtime-image']['target_path'].endswith('/native-surface-runtime.erofs')
           assert by_id['surface-runtime-ref']['partition'] == 'ORDAX-DATA'
           assert by_id['surface-runtime-ref']['target_path'].endswith('/surface-runtime.sha256')
+          assert by_id['local-ai-runtime-image']['partition'] == 'ORDAX-DATA'
+          assert '/.ordax/ai-runtimes/sha256/' in by_id['local-ai-runtime-image']['target_path']
+          assert by_id['local-ai-runtime-image']['target_path'].endswith('/local-ai-runtime.erofs')
+          assert by_id['local-ai-runtime-ref']['partition'] == 'ORDAX-DATA'
+          assert by_id['local-ai-runtime-ref']['target_path'].endswith('/local-ai-runtime.sha256')
           assert all(
               op['readback_required']
               for op in plan['operations']

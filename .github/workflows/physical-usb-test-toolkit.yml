@@ -128,13 +128,13 @@ jobs:
           if ($runtime -match 'PreparePhysicalStorageImage') {
             throw 'Portable writer regressed to whole-disk RAW preparation'
           }
-          if ($core -notmatch 'requires 35 operations' -or
-              $core -notmatch 'exactly 15 artifact materializations and readbacks') {
-            throw 'Core Portable executor no longer fixes the canonical 35-operation policy'
+          if ($core -notmatch 'requires 39 operations' -or
+              $core -notmatch 'exactly 17 artifact materializations and readbacks') {
+            throw 'Core Portable executor no longer fixes the canonical 39-operation policy'
           }
           Write-Host 'PORTABLE_WRITER_WHOLE_DISK_RAW=NO'
-          Write-Host 'PORTABLE_WRITER_OPERATION_POLICY=35'
-          Write-Host 'PORTABLE_WRITER_ARTIFACT_READBACKS=15'
+          Write-Host 'PORTABLE_WRITER_OPERATION_POLICY=39'
+          Write-Host 'PORTABLE_WRITER_ARTIFACT_READBACKS=17'
 
       - name: Ensure no end-user toolkit is emitted
         shell: pwsh

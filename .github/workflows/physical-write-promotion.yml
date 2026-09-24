@@ -223,8 +223,8 @@ jobs:
               'physical_write_authorization_sha256': sys.argv[6],
               'portable_writer_linked': True,
               'portable_application_plan_schema': 'prototype-ordax.portable-application-plan/1',
-              'portable_application_operation_count': 35,
-              'portable_artifact_count': 15,
+              'portable_application_operation_count': 39,
+              'portable_artifact_count': 17,
               'per_artifact_readback_sha256_size': True,
               'whole_disk_raw_image_required': False,
               'target_specific_plan_required': True,
@@ -318,9 +318,9 @@ jobs:
               raise SystemExit('Portable writer provenance schema is invalid')
           if provenance.get('whole_disk_raw_image_required') is not False:
               raise SystemExit('Portable writer provenance regressed to whole-disk RAW')
-          if provenance.get('portable_application_operation_count') != 35:
+          if provenance.get('portable_application_operation_count') != 39:
               raise SystemExit('Portable writer provenance operation count is invalid')
-          if provenance.get('portable_artifact_count') != 15:
+          if provenance.get('portable_artifact_count') != 17:
               raise SystemExit('Portable writer provenance artifact count is invalid')
 
           with zipfile.ZipFile(

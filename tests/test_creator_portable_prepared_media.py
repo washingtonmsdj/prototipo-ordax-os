@@ -25,19 +25,27 @@ class CreatorPortablePreparedMediaTests(unittest.TestCase):
         self.assertTrue(contract["disposable_materializer_implemented"])
         self.assertFalse(contract["disposable_materializer_physical_device_allowed"])
         self.assertTrue(contract["disposable_materializer_readback_verification"])
-        self.assertEqual(contract["artifact_count"], 15)
+        self.assertEqual(contract["artifact_count"], 17)
         runtime = contract["surface_runtime_preseed"]
         self.assertTrue(runtime["implemented"])
         self.assertTrue(runtime["content_addressed"])
         self.assertFalse(runtime["physical_write_authorized"])
         self.assertIn("/.ordax/runtimes/sha256/", runtime["image_target"])
         self.assertTrue(runtime["reference_target"].endswith("/surface-runtime.sha256"))
+        self.assertEqual(runtime["release_manifest_schema"], "prototype-ordax.release-manifest/4")
+        ai_runtime = contract["local_ai_runtime_preseed"]
+        self.assertTrue(ai_runtime["implemented"])
+        self.assertTrue(ai_runtime["content_addressed"])
+        self.assertFalse(ai_runtime["physical_write_authorized"])
+        self.assertIn("/.ordax/ai-runtimes/sha256/", ai_runtime["image_target"])
+        self.assertTrue(ai_runtime["reference_target"].endswith("/local-ai-runtime.sha256"))
+        self.assertEqual(ai_runtime["release_manifest_schema"], "prototype-ordax.release-manifest/4")
         self.assertTrue(contract["physical_writer_v2_implemented"])
         writer = contract["physical_writer_v2"]
         self.assertTrue(writer["implemented"])
         self.assertEqual(writer["build_tag"], "ordax_raw_backend")
-        self.assertEqual(writer["exact_operation_count"], 35)
-        self.assertEqual(writer["exact_artifact_count"], 15)
+        self.assertEqual(writer["exact_operation_count"], 39)
+        self.assertEqual(writer["exact_artifact_count"], 17)
         self.assertTrue(writer["readback_sha256_and_size_per_artifact"])
         self.assertFalse(writer["whole_disk_raw_image_required"])
         self.assertFalse(writer["public_creator_reachable"])
@@ -83,15 +91,15 @@ class CreatorPortablePreparedMediaTests(unittest.TestCase):
                         "sha256": module.sha256_file(source),
                         "size_bytes": source.stat().st_size,
                     }
-                    for index in range(15)
+                    for index in range(17)
                 ],
             }
             parsed = module.load_plan(
                 self._write_json(root / "plan.json", plan)
             )
-            sources = [f"id-{index}={source}" for index in range(15)]
+            sources = [f"id-{index}={source}" for index in range(17)]
             result = module.parse_sources(sources, parsed)
-            self.assertEqual(len(result), 15)
+            self.assertEqual(len(result), 17)
 
             source.write_bytes(b"tampered")
             with self.assertRaisesRegex(module.ProofError, "size mismatch|digest mismatch"):
