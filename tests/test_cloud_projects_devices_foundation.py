@@ -13,6 +13,14 @@ MIGRATION = (
     / "migrations"
     / "0006_projects_devices_remote_grants.sql"
 )
+INDEX_MIGRATION = (
+    ROOT
+    / "infra"
+    / "supabase"
+    / "product"
+    / "migrations"
+    / "0007_projects_devices_fk_indexes.sql"
+)
 
 
 class CloudProjectsDevicesFoundationTests(unittest.TestCase):
@@ -77,6 +85,17 @@ class CloudProjectsDevicesFoundationTests(unittest.TestCase):
         sql = MIGRATION.read_text(encoding="utf-8")
         self.assertIn("local_project_ref !~ '[\\\\/]'", sql)
         self.assertIn("local_project_ref !~ '\\.\\.'", sql)
+
+    def test_product_foreign_keys_have_explicit_covering_indexes(self):
+        sql = INDEX_MIGRATION.read_text(encoding="utf-8").lower()
+        for index_name in (
+            "ordax_project_connections_project_space_idx",
+            "ordax_remote_grants_project_space_idx",
+            "ordax_remote_grants_device_idx",
+            "ordax_remote_grants_approved_by_idx",
+            "ordax_space_devices_granted_by_idx",
+        ):
+            self.assertIn(index_name, sql)
 
 
 if __name__ == "__main__":
