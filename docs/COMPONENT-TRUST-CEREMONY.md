@@ -51,6 +51,54 @@ must not silently grant authority in the other.
 CI may create disposable component keys only for protocol tests. A disposable
 CI key can never satisfy the canonical component-trust gate.
 
+## Windows operator toolkit
+
+After this toolkit source is merged, use only the artifact produced by an
+eligible **push of `main`**. Pull-request and manual-dispatch artifacts remain
+review/test artifacts and are not eligible to create the canonical identity.
+
+The toolkit contains the signer, provenance, this ceremony document, the exact
+policy JSON and three operator wrappers:
+
+```text
+1-Verify-OrdaXComponentTrustToolkit.cmd
+2-Initialize-OrdaXComponentTrust.cmd
+3-Verify-OrdaXComponentTrustRecovery.cmd <restored-private-key-path>
+```
+
+Step 1 is read-only and must report:
+
+```text
+COMPONENT_TRUST_TOOLKIT_PREFLIGHT=PASS
+CANONICAL_COMPONENT_TRUST_CEREMONY_ELIGIBLE=YES
+TOOLKIT_COMPONENT_HASHES_VERIFIED=YES
+PRIVATE_KEY_TOUCHED=NO
+FILESYSTEM_MUTATION=NO
+```
+
+Step 2 is the only wrapper that supplies the explicit `-GenerateKey` switch.
+It writes the private key and review material under the operator's local
+`%LOCALAPPDATA%\OrdaX\ComponentTrust\...` paths by default, outside the
+toolkit/repository. It performs independent public derivation and a
+protocol-shaped signing/verification proof, then stops with:
+
+```text
+OFFLINE_RECOVERY_VERIFIED=NO
+READY_TO_PIN_PUBLIC_ANCHOR=NO
+```
+
+After creating an encrypted backup and restoring one copy to a **different**
+temporary private path, step 3 derives the public key from the restored copy,
+re-verifies the initial proof bytes, creates a recovered signing proof and
+builds the public-only:
+
+```text
+OrdaX-Component-Public-Trust-Handoff.zip
+```
+
+Only then may it report `READY_TO_PIN_PUBLIC_ANCHOR=YES`. The toolkit does not
+pin the anchor automatically and does not enable publication or activation.
+
 ## Required ceremony
 
 The ceremony is an explicit operator action. Source support does not make a key
