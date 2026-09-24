@@ -115,6 +115,7 @@ jobs:
           $materialized = [ordered]@{
             schema = 'prototype-ordax.portable-v4-canonical-materialization-verification/1'
             source_commit = $commit
+            canonical_envelope_url = 'https://releases.example.invalid/release-envelope.json'
             canonical_trust_sha256 = $trustSha
             release_manifest_sha256 = $manifestSha
             release_envelope_sha256 = $envelopeSha
