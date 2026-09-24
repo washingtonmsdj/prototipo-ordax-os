@@ -385,8 +385,9 @@ O gate é de produto/source. Ele **não** substitui:
 
 8. Handoff v4 com AI real. — **PASS_SOURCE**; materialização/assinatura Stable real ainda pendente.
 9. Materialização v4 com bytes reais + assinatura efêmera + regressão QEMU/UEFI v4. — **PASS_CI_NON_PROMOTIONAL**; a assinatura/materialização canônica Stable continua pendente e CI não substitui a prova física.
-10. Creator físico alinhado ao payload Stable v4. — **PASS_SOURCE_CANDIDATE**: plano final passa de 15 para 17 artefatos e de 35 para 39 operações, incluindo `local-ai-runtime.erofs` content-addressed + `local-ai-runtime.sha256`; consentimento físico anterior fica inválido por contexto e exige nova autorização explícita depois dos gates não destrutivos.
-11. Somente então voltar ao primeiro USB Stable/MVP físico.
+10. Creator físico alinhado ao payload Stable v4. — **PASS_SOURCE_CANDIDATE**: plano final passa de 15 para 17 artefatos e de 35 para 39 operações, incluindo `local-ai-runtime.erofs` content-addressed + `local-ai-runtime.sha256`; consentimento físico anterior fica inválido por contexto.
+11. Gate proof-before-consent. — **PASS_SOURCE**: promoção física exige `canonical-v4-release-proof.json` real, validado contra trust/commit/manifest/envelope/3 artefatos e vinculado por SHA-256 antes de `pre_authorization_ready`; o receipt real ainda está **PENDING_OPERATOR_EXECUTION**.
+12. Somente depois do proof canônico vinculado, novo consentimento explícito e demais gates físicos, voltar ao primeiro USB Stable/MVP físico.
 
 ---
 
@@ -414,14 +415,14 @@ Voltar à missão física somente quando:
 
 1. todos os itens A estiverem PASS em source/CI ou tiverem uma decisão canônica explícita
    retirando-os do MVP;
-2. o manifest v4 real estiver assinado/materializável;
+2. o manifest v4 real estiver assinado/materializável e o aggregate receipt `canonical-v4-release-proof.json` estiver validado/vinculado;
 3. os testes descartáveis/UEFI relevantes estiverem verdes;
 4. documentação canônica e contratos estiverem coerentes;
-5. então aplicar novamente os gates físicos já existentes.
+5. somente então permitir o novo preflight de consentimento do dono e, depois dele, aplicar novamente os gates físicos já existentes.
 
 Até lá:
 
 ```text
-FIRST_STABLE_MVP_USB_WRITE=HOLD_FUNCTIONAL_CLOSURE
-PHYSICAL_WRITE_AUTHORITY=UNCHANGED
+FIRST_STABLE_MVP_USB_WRITE=HOLD_CANONICAL_V4_RELEASE_PROOF
+PHYSICAL_WRITE_AUTHORITY=CANONICAL_V4_RELEASE_PROOF_THEN_FRESH_OWNER_AUTHORIZATION_REQUIRED
 ```
