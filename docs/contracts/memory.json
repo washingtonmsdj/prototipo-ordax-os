@@ -1,0 +1,37 @@
+{
+  "$schema": "prototype-ordax.memory/1",
+  "status": "pre-mvp-foundation",
+  "owner": "system/services/memory",
+  "stable_port": "ordax.memory/1",
+  "provider_neutral": true,
+  "model_owns_memory": false,
+  "scopes": ["device", "account", "space", "project", "session"],
+  "kinds": ["preference", "fact", "instruction", "summary", "artifact-reference"],
+  "sensitivity": ["normal", "private", "restricted"],
+  "requirements": {
+    "local_first": true,
+    "works_without_account": true,
+    "cloud_sync_requires_account_and_entitlement": true,
+    "user_can_view": true,
+    "user_can_edit": true,
+    "user_can_delete": true,
+    "provenance_required": true,
+    "source_timestamp_required": true,
+    "cross_space_retrieval_without_membership_allowed": false,
+    "provider_specific_memory_silos_allowed": false,
+    "secret_material_as_memory_allowed": false,
+    "retrieval_must_respect_current_authorization": true
+  },
+  "retrieval": {
+    "structured_filters_before_semantic_ranking": true,
+    "semantic_index_is_derived_and_rebuildable": true,
+    "embedding_model_is_not_memory_identity": true,
+    "result_budget_is_bounded": true
+  },
+  "external_models": {
+    "local_ai": "may-receive-authorized-context",
+    "openai": "may-receive-authorized-context-after-egress-policy",
+    "xai": "may-receive-authorized-context-after-egress-policy",
+    "future_providers": "adapter-only"
+  }
+}
