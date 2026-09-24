@@ -775,7 +775,14 @@ The Native Surface now has a fail-closed, read-only component-slot broker backed
 by the signed `ordax-runtime-component-channel` helper. It is available only for
 Stable/MVP USB when both the helper and a real component trust file exist, and it
 revalidates component bytes through the verifier rather than trusting writable
-slot paths directly. Because the canonical component trust file is not pinned,
-that broker remains unavailable in the current product. This is **not** production
-slot activation: pending probation, runtime health, promotion and rollback remain
-separate gates.
+slot paths directly. Source also implements the next non-activation layers: a
+pending probation loader, an internal Native health recorder bound to the exact
+component identity and probation revision, a system-owned nonce-bound health
+bridge, and a fail-closed promotion policy that can only return hold/reject/promote
+decisions. The bridge does not expose generic HTTP mutation authority and neither
+the recorder nor the policy executes promotion, rejection or rollback. Because the
+canonical component trust file is not pinned, the broker remains unavailable in
+the current product and production component-slot activation is still blocked.
+The next authority boundary is a separate Native executor consuming exact
+revision+identity policy decisions only after canonical component trust and the
+promotion/rollback proof gates are satisfied.

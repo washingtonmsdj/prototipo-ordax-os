@@ -121,6 +121,7 @@ on:
       - 'tests/test_component_probation_loader.mjs'
       - 'tests/test_component_probation_orchestrator.mjs'
       - 'tests/test_native_component_probation_composition.mjs'
+      - 'tests/test_component_promotion_policy.mjs'
       - 'tests/test_native_component_probation.py'
       - 'tests/test_native_component_state.py'
       - 'tests/test_browser_session_integration_contract.py'
@@ -268,6 +269,7 @@ on:
       - 'tests/test_component_probation_loader.mjs'
       - 'tests/test_component_probation_orchestrator.mjs'
       - 'tests/test_native_component_probation_composition.mjs'
+      - 'tests/test_component_promotion_policy.mjs'
       - 'tests/test_native_component_probation.py'
       - 'tests/test_native_component_state.py'
       - 'tests/test_browser_session_integration_contract.py'
@@ -378,6 +380,7 @@ jobs:
           node --test tests/test_component_probation_loader.mjs
           node --test tests/test_component_probation_orchestrator.mjs
           node --test tests/test_native_component_probation_composition.mjs
+          node --test tests/test_component_promotion_policy.mjs
           node --test tests/test_identity_session.mjs
           node --test tests/test_identity_actions.mjs
           node --test tests/test_power_actions.mjs
