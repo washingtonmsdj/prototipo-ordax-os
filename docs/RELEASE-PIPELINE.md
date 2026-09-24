@@ -26,15 +26,18 @@ is not silently reinterpreted as v4.
 
 The shared product source remains `system/`. Native-only prebuilt executables that are required by the USB/Native capability boundary are injected into a temporary staged `system/` tree by `tools/native-release-assembly/build.py` before bundling.
 
-For the MVP installer this currently adds exactly one binary:
+The Native release assembly currently adds exactly two contracted binaries:
 
 ```text
 system/bin/ordax-native-install-targets
+system/bin/ordax-runtime-component-channel
 ```
 
-Its source remains under the shared Creator Core/Linux adapter. CI cross-compiles it as a static `linux/amd64` binary, records SHA-256/size/mode/source package/source commit in `system/.ordax/native-release-tools.json`, and then the ordinary deterministic bundler includes those bytes in `system.tar`.
+The first remains the read-only Native install target/plan helper. The second is the runtime-component signature verifier and activation-state owner used by the future `component-slot` path; it has no component publishing authority and receives no private signing key.
 
-There is no separate helper download channel and no compilation on the user's device. Because the helper is inside `system.tar`, it is covered by the same release manifest hash and Ed25519 envelope as the rest of the Native system release. Its current role is read-only discovery/target-plan binding; physical APPLY remains unauthorized.
+CI cross-compiles both as static `linux/amd64` binaries, records SHA-256/size/mode/source package/source commit in `system/.ordax/native-release-tools.json`, proves repeat-byte identity across two independent assemblies, and then the ordinary deterministic bundler includes those bytes in the same signed `system.tar`.
+
+There is no separate helper download channel and no compilation on the user's device. Because both helpers are inside `system.tar`, their executable bytes are covered by the same whole-system release manifest hash and Ed25519 envelope. Runtime-component package authenticity remains a separate component-trust domain; the whole-OS signature does not authorize a component package. Native physical APPLY and component publication remain unauthorized.
 
 ## CI integration proof
 
