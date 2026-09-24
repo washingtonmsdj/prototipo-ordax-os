@@ -85,3 +85,15 @@ Never return or place in Memory:
 - device private credentials.
 
 The MCP gateway receives a scoped OrdaX authorization decision, not raw upstream credentials.
+
+
+## Shared product mutation gateway
+
+The source foundation under `services/product-gateway/` now owns the fail-closed
+server-authoritative mutation boundary for Project creation, Device/Project binding
+and remote capability grants. Product MCP is a client of that authority; it does
+not receive direct Supabase mutation credentials and does not create a second
+authorization system.
+
+The gateway remains disabled until an OrdaX session resolver and reviewed
+server-side authority adapter are configured.
