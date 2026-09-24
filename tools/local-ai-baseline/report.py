@@ -19,6 +19,7 @@ BENCHMARK = ROOT / "tools/local-ai-benchmark/benchmark.py"
 SCHEMA = "prototype-ordax.local-ai-baseline/1"
 HARDWARE_SCHEMA = "prototype-ordax.local-ai-hardware-probe/1"
 BENCHMARK_SCHEMA = "prototype-ordax.local-ai-benchmark/1"
+PRODUCT_INFERENCE_API_PATH = "/v1/chat/completions"
 
 
 class BaselineError(RuntimeError):
@@ -57,6 +58,8 @@ def validate_benchmark_result(value):
     model_id = value.get("modelId")
     if not isinstance(model_id, str) or not model_id.strip() or len(model_id) > 160 or "\0" in model_id:
         raise BaselineError("benchmark returned an invalid model identity")
+    if value.get("api_path") != PRODUCT_INFERENCE_API_PATH:
+        raise BaselineError("benchmark did not measure the product inference API path")
     if value.get("release_gate") is not False or value.get("tuning_applied") is not False:
         raise BaselineError("benchmark result must remain non-promotional and untuned")
     summary = value.get("summary")
