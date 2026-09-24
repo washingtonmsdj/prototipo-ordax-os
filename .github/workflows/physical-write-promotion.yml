@@ -10,8 +10,12 @@ on:
       - 'docs/contracts/portable-usb-v2.json'
       - 'docs/contracts/creator-portable-media-plan.json'
       - 'docs/contracts/physical-write-authorization.json'
+      - 'docs/evidence/canonical-v4-release-proof.json'
       - 'tools/creator/physical_promotion.py'
       - 'tools/creator/authorize_physical_write.py'
+      - 'tools/creator/bind_canonical_v4_release_proof.py'
+      - 'tests/test_physical_promotion_boundary.py'
+      - 'tests/test_canonical_v4_release_proof_binding.py'
       - 'tools/creator/core/**'
       - 'tools/creator/host/windows/**'
       - 'tools/creator/cmd/ordax-creator-physical-test/**'
@@ -26,8 +30,12 @@ on:
       - 'docs/contracts/portable-usb-v2.json'
       - 'docs/contracts/creator-portable-media-plan.json'
       - 'docs/contracts/physical-write-authorization.json'
+      - 'docs/evidence/canonical-v4-release-proof.json'
       - 'tools/creator/physical_promotion.py'
       - 'tools/creator/authorize_physical_write.py'
+      - 'tools/creator/bind_canonical_v4_release_proof.py'
+      - 'tests/test_physical_promotion_boundary.py'
+      - 'tests/test_canonical_v4_release_proof_binding.py'
       - 'tools/creator/core/**'
       - 'tools/creator/host/windows/**'
       - 'tools/creator/cmd/ordax-creator-physical-test/**'
@@ -52,6 +60,12 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+
+      - name: Regress non-destructive promotion boundaries
+        run: |
+          python -m unittest \
+            tests.test_physical_promotion_boundary \
+            tests.test_canonical_v4_release_proof_binding -v
 
       - name: Evaluate canonical physical promotion gates
         id: gate
