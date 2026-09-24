@@ -374,6 +374,25 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertIn("Versão própria de componente e atualização independente são eixos diferentes", agents)
         self.assertIn("Versão própria de um componente e capacidade de atualizá-lo independentemente são eixos diferentes", nomenclature)
 
+    def test_root_mvp_docs_follow_current_v4_canonical_state(self):
+        state = assignment_map(CURRENT_STATE.read_text(encoding="utf-8"))
+        mvp = (ROOT / "MVP.md").read_text(encoding="utf-8")
+        agents = AGENTS.read_text(encoding="utf-8")
+        plan = (ROOT / "PLANO-00-ESTADO-ATUAL-E-PRIORIDADES.md").read_text(encoding="utf-8")
+
+        self.assertEqual(state["RELEASE_TRUST"], "PASS_CANONICAL_PUBLIC_ANCHOR_PINNED")
+        self.assertEqual(state["CANONICAL_V4_RELEASE_PROOF"], "PENDING_OPERATOR_EXECUTION")
+        self.assertIn("canonical release trust público: **PASS**", mvp)
+        self.assertIn("FIRST_STABLE_MVP_USB_WRITE=HOLD_CANONICAL_V4_RELEASE_PROOF", mvp)
+        self.assertIn("O MVP público oferece **pt-BR e en-US**", mvp)
+        self.assertNotIn("canonical release trust público: pendente", mvp)
+        self.assertNotIn("O primeiro uso Native oferece **pt-BR, en-US, es-ES, de-DE e fr-FR**", mvp)
+
+        self.assertIn("canonical v4 signed/materialized release aggregate proof + binding", agents)
+        self.assertNotIn("canonical Ed25519 release trust ceremony/public anchor", agents)
+        self.assertIn("| C16 IA nativa | **ENTRA como capability do sistema** |", plan)
+        self.assertIn("trust canônico resolvido; fechar proof canônico v4", plan)
+
     def test_pre_usb_v4_gate_distinguishes_requirement_from_current_pending_state(self):
         plan = (ROOT / "PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md").read_text(encoding="utf-8")
         promotion = (ROOT / "docs/PROMOTION-GATES.md").read_text(encoding="utf-8")
