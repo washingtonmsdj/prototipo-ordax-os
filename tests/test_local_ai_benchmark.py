@@ -4,6 +4,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import threading
 import unittest
+from unittest.mock import patch
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "tools" / "local-ai-benchmark" / "benchmark.py"
 SPEC = importlib.util.spec_from_file_location("ordax_local_ai_benchmark", MODULE_PATH)
@@ -136,7 +137,7 @@ class LocalAiBenchmarkTests(unittest.TestCase):
                 }
             return original_send(handler, value)
 
-        with unittest.mock.patch.object(FakeLlamaHandler, "_send_json", malformed_send):
+        with patch.object(FakeLlamaHandler, "_send_json", malformed_send):
             with ServerFixture() as fixture:
                 with self.assertRaisesRegex(BENCH.BenchmarkError, "invalid token count"):
                     BENCH.benchmark(
