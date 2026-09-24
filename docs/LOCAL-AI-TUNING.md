@@ -13,15 +13,16 @@ The Stable/MVP local AI artifact is byte-pinned and uses the generic reproducibl
 not be changed opportunistically in the product runtime because changing the
 engine or launcher changes the signed v4 payload identity.
 
-Two engineering tools are available on the source tree and do **not** modify the
-runtime artifact:
+Three engineering tools are available on the source tree and do **not** modify
+the runtime artifact:
 
 ```text
 tools/local-ai-hardware-probe/probe.py
 tools/local-ai-benchmark/benchmark.py
+tools/local-ai-baseline/report.py
 ```
 
-Both are covered by the `Intelligence Foundation` source gate.
+All three are covered by the `Intelligence Foundation` source gate.
 
 ## 1. Hardware capability probe
 
@@ -88,15 +89,43 @@ This benchmark is intentionally **not** a performance release gate. CI tests the
 benchmark's policy, parsing and bounds with a local fake server; CI runner speed
 must not become a product acceptance threshold.
 
-## 3. Tuning workflow
+## 3. Composed target baseline
+
+For a real notebook or USB target, the preferred capture is a single baseline
+report that preserves the complete hardware-probe and benchmark payloads:
+
+```bash
+python tools/local-ai-baseline/report.py \
+  --expected-model qwen3.5-0.8b-q4_0 \
+  --runs 5 \
+  --n-predict 32 \
+  --output local-ai-baseline.json
+```
+
+The reporter does not duplicate the measurement logic. It loads the canonical
+hardware probe and benchmark, requires the hardware probe to be compatible with
+the pinned runtime before attempting inference, and emits both original schema
+payloads under `hardware` and `benchmark`.
+
+A baseline is invalid if either component fails. The reporter never converts an
+incompatible architecture or an unavailable/mismatched model into a partial
+performance result. Its comparison policy explicitly records that it is not a
+release gate, that runtime bytes were not modified, and that later tuning should
+change one variable at a time.
+
+This report intentionally contains host capability classes (architecture, CPU
+count, bounded common SIMD flags and memory totals) but no hostname, account,
+prompt history, model responses, user files, tokens or remote telemetry identity.
+
+## 4. Tuning workflow
 
 For a real notebook/hardware target:
 
-1. capture the hardware-probe JSON;
-2. capture an untouched baseline benchmark from the currently signed/pinned
+1. capture `local-ai-baseline.json` from the untouched currently signed/pinned
    runtime;
-3. keep engine commit, model SHA, quantization, prompt, token budget and benchmark
+2. keep engine commit, model SHA, quantization, prompt, token budget and benchmark
    run count fixed while testing one engine/launcher change at a time;
+3. capture a new baseline for each candidate on the same target when practical;
 4. compare medians rather than a single run;
 5. reject a candidate that changes model/engine identity unexpectedly, breaks
    loopback-only operation, increases failure rate, or violates the bounded
@@ -109,7 +138,7 @@ Do not silently activate CPU-specific flags based only on feature presence. A CP
 feature is an input to experimentation, not proof that a particular build or
 threading policy is faster or sufficiently portable.
 
-## 4. What remains
+## 5. What remains
 
 The following work is intentionally still open:
 
