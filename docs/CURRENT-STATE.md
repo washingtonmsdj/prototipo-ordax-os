@@ -438,15 +438,17 @@ ORDAX-DATA  exFAT
   -> .ordax/state/persistent-state.img   # ext4-in-file
 ```
 
-Mutable activation authority (`current`, `known-good`, `candidate`, `rejected` and `activation-transaction.json`) lives inside the ext4 persistent-state image, never as a mutable exFAT symlink/pointer. Portable v2 remains a compatibility release shape; the current Stable/MVP candidate uses signed `release-manifest/3`, binding both `system.erofs` and the content-addressed Surface runtime. The Stable Base remains a separate immutable minimal OS EROFS. The fixed initramfs candidate owns exact release selection, capsule/Base verification, system/runtime EROFS mounts and the read-only-to-ephemeral OverlayFS handoff; signature authority remains in the bootstrap-owned release agent. The Portable activation primitive is now connected in source: a verified v3 release is materialized without activation, armed as a one-shot candidate in ext4, cold-booted once, committed only after Surface health, or rejected/rolled back offline to the previous `current`. The dedicated disposable QEMU proof now also proves the armed one-shot **failure path** on the merged source: the candidate boots exactly once, the next boot returns to the exact previous release, the failed candidate is persisted as `rejected`, and both `candidate` and `activation-transaction.json` are removed. This still does **not** prove cold-health commit, physical Stable/MVP USB boot, Secure Boot, physical known-good or physical rollback. The graphical cold-health path is intentionally not synthesized in CI: the actual product path requires Cage/Wayland/WebKit/seatd plus the native host and Surface heartbeat/health handshake with the exact release SHA, and no equivalent headless product mode is currently implemented.
+Mutable activation authority (`current`, `known-good`, `candidate`, `rejected` and `activation-transaction.json`) lives inside the ext4 persistent-state image, never as a mutable exFAT symlink/pointer. Portable v2 remains the storage/bootstrap compatibility shape; the current Stable/MVP candidate uses signed `release-manifest/4`, binding `system.erofs`, the content-addressed Surface runtime and the content-addressed Local AI runtime/source-lock identity. `release-manifest/3` remains a verified compatibility baseline for pre-v4 devices and for the already-proven v3 activation evidence; it is not the current MVP release shape. The Stable Base remains a separate immutable minimal OS EROFS. The fixed initramfs candidate owns exact release selection, capsule/Base verification, system/runtime EROFS mounts and the read-only-to-ephemeral OverlayFS handoff; signature authority remains in the bootstrap-owned release agent. The Stable supervisor is v4-aware: it inspects the signed manifest schema, selects exact v3 or v4 materialization/verification, blocks v3 downgrade after a v4 boot, and preserves the one-shot `candidate -> cold-health -> commit/rollback` lifecycle. The dedicated disposable QEMU/UEFI v4 proof now proves boot handoff with the Local AI runtime plus safe fallback, while the older v3 one-shot proof remains compatibility evidence for candidate rejection/rollback behavior. This still does **not** prove cold-health commit, physical Stable/MVP USB boot, Secure Boot, physical known-good or physical rollback. The graphical cold-health path is intentionally not synthesized in CI: the actual product path requires Cage/Wayland/WebKit/seatd plus the native host and Surface heartbeat/health handshake with the exact release SHA, and no equivalent headless product mode is currently implemented.
 
 ```text
 PORTABLE_USB_V2_STORAGE_PROOF=PASS_CI_DISPOSABLE
 PORTABLE_RELEASE_EROFS_REPRODUCIBLE=PASS_CI
 PORTABLE_RELEASE_MANIFEST_V2_SIGN_VERIFY=PASS_CI_COMPATIBILITY
-PORTABLE_RELEASE_MANIFEST_V3_SIGN_VERIFY=PASS_CI
-PORTABLE_RELEASE_V3_CONTENT_ADDRESSED_RUNTIME=PASS_CI
-PORTABLE_RELEASE_OFFLINE_EXACT_VERIFY=PASS_CI_V2_AND_V3
+PORTABLE_RELEASE_MANIFEST_V3_SIGN_VERIFY=PASS_CI_COMPATIBILITY
+PORTABLE_RELEASE_V3_CONTENT_ADDRESSED_RUNTIME=PASS_CI_COMPATIBILITY
+PORTABLE_RELEASE_MANIFEST_V4_SIGN_VERIFY=PASS_CI_CURRENT_MVP
+PORTABLE_RELEASE_V4_LOCAL_AI_CONTENT_ADDRESSED_RUNTIME=PASS_CI
+PORTABLE_RELEASE_OFFLINE_EXACT_VERIFY=PASS_CI_V2_V3_V4
 PORTABLE_MOUNT_HANDOFF_PROOF=PASS_CI_DISPOSABLE
 PORTABLE_BOOTSTRAP_CAPSULE_REPRODUCIBLE=PASS_CI
 PORTABLE_INITRAMFS_HELPERS=PASS_CI
