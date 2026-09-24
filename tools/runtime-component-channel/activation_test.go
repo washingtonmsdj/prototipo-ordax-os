@@ -515,3 +515,167 @@ func TestRejectedIdentityCannotBeRearmed(t *testing.T) {
 		t.Fatalf("rearm rejected candidate error = %v", err)
 	}
 }
+
+
+func TestPendingRuntimeResolutionAndVerifiedFileRead(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("7", 40))
+	if _, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root); err != nil {
+		t.Fatal(err)
+	}
+
+	state, slot, manifest, bundled, err := resolveRuntimeSlot(
+		fixture.root,
+		"internet",
+		fixture.trustPath,
+		"pending",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bundled {
+		t.Fatal("pending runtime unexpectedly resolved as bundled")
+	}
+	if slot != fixture.slot {
+		t.Fatalf("pending slot = %q, want %q", slot, fixture.slot)
+	}
+	if manifest.Entrypoint != "system/apps/internet/runtime.mjs" {
+		t.Fatalf("entrypoint = %q", manifest.Entrypoint)
+	}
+	if state.Pending == nil || state.Pending.Version != "0.4.0" {
+		t.Fatalf("pending state = %+v", state.Pending)
+	}
+
+	payload, err := readVerifiedRuntimeFile(
+		fixture.root,
+		"internet",
+		fixture.trustPath,
+		"pending",
+		manifest.Entrypoint,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := "export const componentRuntime = { schema: \"ordax.component-runtime/1\" };\n"
+	if string(payload) != expected {
+		t.Fatalf("runtime payload = %q", payload)
+	}
+}
+
+func TestVerifiedRuntimeReadRejectsMetadataAndUnboundPaths(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("8", 40))
+	if _, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, requested := range []string{
+		packageManifestName,
+		slotEnvelopeName,
+		"system/apps/internet/not-packaged.mjs",
+		"../escape.mjs",
+	} {
+		if _, err := readVerifiedRuntimeFile(
+			fixture.root,
+			"internet",
+			fixture.trustPath,
+			"pending",
+			requested,
+		); err == nil {
+			t.Fatalf("unsafe/unbound runtime path unexpectedly read: %s", requested)
+		}
+	}
+}
+
+func TestPromotedCurrentRuntimeRemainsVerifiedAtReadTime(t *testing.T) {
+	fixture := makeActivationFixture(t, "0.4.0", strings.Repeat("9", 40))
+	if _, err := armPendingState(fixture.slot, fixture.trustPath, fixture.root); err != nil {
+		t.Fatal(err)
+	}
+	identity := identityFromRelease(fixture.release)
+	if _, err := recordPendingHealth(
+		fixture.root,
+		"internet",
+		identity,
+		"healthy",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := promotePendingState(fixture.root, "internet", fixture.trustPath); err != nil {
+		t.Fatal(err)
+	}
+
+	state, slot, manifest, bundled, err := resolveRuntimeSlot(
+		fixture.root,
+		"internet",
+		fixture.trustPath,
+		"current",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bundled || state.Current == nil || slot != fixture.slot {
+		t.Fatalf("unexpected current runtime resolution: bundled=%t state=%+v slot=%q", bundled, state.Current, slot)
+	}
+	if _, err := readVerifiedRuntimeFile(
+		fixture.root,
+		"internet",
+		fixture.trustPath,
+		"current",
+		manifest.Entrypoint,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	runtimePath := filepath.Join(
+		fixture.slot,
+		"system",
+		"apps",
+		"internet",
+		"runtime.mjs",
+	)
+	if runtime.GOOS != "windows" {
+		if err := os.Chmod(runtimePath, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(runtimePath, []byte("tampered\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readVerifiedRuntimeFile(
+		fixture.root,
+		"internet",
+		fixture.trustPath,
+		"current",
+		manifest.Entrypoint,
+	); err == nil {
+		t.Fatal("tampered current runtime unexpectedly read")
+	}
+}
+
+func TestCurrentBundledFallbackIsNotExposedAsSlotBytes(t *testing.T) {
+	dir := t.TempDir()
+	root := filepath.Join(dir, "slots")
+	if _, err := ensureSecureDirectory(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	state, slot, _, bundled, err := resolveRuntimeSlot(
+		root,
+		"internet",
+		filepath.Join(dir, "missing-trust.json"),
+		"current",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bundled || slot != "" || state.Current != nil {
+		t.Fatalf("unexpected bundled resolution: bundled=%t slot=%q current=%+v", bundled, slot, state.Current)
+	}
+	if _, err := readVerifiedRuntimeFile(
+		root,
+		"internet",
+		filepath.Join(dir, "missing-trust.json"),
+		"current",
+		"system/apps/internet/runtime.mjs",
+	); err == nil || !strings.Contains(err.Error(), "bundled") {
+		t.Fatalf("bundled runtime read error = %v", err)
+	}
+}
