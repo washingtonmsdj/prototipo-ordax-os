@@ -35,6 +35,12 @@ External provider secrets require a dedicated server-side secret owner and are n
 
 The Legal-BR row is architecture metadata only. It does not claim current legal coverage.
 
+## Mutation authority
+
+Authenticated clients do not receive direct Data API authority to create or mutate Spaces, memberships, cloud Memory, project connections, Profile Pack assignments or entitlement grants.
+
+`0004_server_authoritative_mutations.sql` revokes those client writes so future quotas, plan checks, approvals and audit receipts cannot be bypassed by calling Supabase directly. Product services/gateways own those mutations with server-side authority. The only direct authenticated account mutation retained is the user's own `display_name`.
+
 ## MCP boundary
 
 The existing Control Plane MCP/OAuth tables belong to the development/operator authority. Product MCP for end users must use a separate client/token authority even if it reuses the same implementation patterns.
