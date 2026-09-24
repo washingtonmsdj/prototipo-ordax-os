@@ -88,11 +88,9 @@ func validateActivationState(value activationState, componentID string) error {
 	if value.Pending != nil && (sameSlotIdentity(value.Pending, value.Current) || sameSlotIdentity(value.Pending, value.Previous)) {
 		return errors.New("runtime component pending slot duplicates current or previous")
 	}
-	if value.Rejected != nil && (
-		sameSlotIdentity(value.Rejected, value.Current) ||
+	if value.Rejected != nil && (sameSlotIdentity(value.Rejected, value.Current) ||
 		sameSlotIdentity(value.Rejected, value.Previous) ||
-		sameSlotIdentity(value.Rejected, value.Pending)
-	) {
+		sameSlotIdentity(value.Rejected, value.Pending)) {
 		return errors.New("runtime component rejected slot must remain distinct from active state")
 	}
 	return nil
