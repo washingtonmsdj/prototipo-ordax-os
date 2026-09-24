@@ -15,7 +15,8 @@ if errorlevel 1 (
 )
 echo.
 echo ASSINATURA_INICIAL=CONCLUIDA
-echo O arquivo release-envelope.json pode ser publicado junto com system.tar.
+echo O release-envelope.json deve permanecer junto dos tres artefatos v4 exatos apos revisao.
+echo Proximo passo: execute 5-Verify-PortableV4-SignedHandoff.cmd antes de qualquer publicacao/materializacao.
 echo A chave privada NAO deve ser publicada.
 echo.
 pause
