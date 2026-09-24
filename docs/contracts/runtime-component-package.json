@@ -34,5 +34,7 @@
   "activation_state_atomic_current_previous_pending_rejected": true,
   "activation_state_revalidates_signed_slots": true,
   "activation_state_requires_component_slot_release_mode": true,
-  "native_slot_serving_available": false
+  "native_slot_serving_available": false,
+  "activation_state_rejected_identity_terminal": true,
+  "activation_state_failed_health_terminal_until_reject": true
 }
