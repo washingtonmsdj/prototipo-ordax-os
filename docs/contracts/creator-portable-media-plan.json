@@ -75,7 +75,10 @@
     "public_creator_reachable": false,
     "physical_write_authorized": false,
     "public_mvp_default_enabled": false,
-    "safety_workflow": ".github/workflows/physical-usb-test-toolkit.yml"
+    "safety_workflow": ".github/workflows/physical-usb-test-toolkit.yml",
+    "writer_source_commit_provenance_separate": true,
+    "canonical_release_source_commit_from_authorization_binding": true,
+    "portable_plan_source_commit_must_equal_canonical_release_source_commit": true
   },
   "local_ai_runtime_preseed": {
     "implemented": true,
