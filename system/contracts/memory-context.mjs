@@ -2,6 +2,7 @@ import { validateMemoryOwner } from "./memory.mjs";
 
 export const MEMORY_CONTEXT_AUTH_SCHEMA = "ordax.memory-context-auth/1";
 export const MAX_MEMORY_CONTEXT_ITEMS = 8;
+export const MAX_MEMORY_CONTEXT_AUTHORIZATIONS = 4;
 
 const SCOPES = new Set(["device", "account", "space", "project", "session"]);
 
