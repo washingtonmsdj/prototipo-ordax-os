@@ -228,8 +228,11 @@ jobs:
                   and portable_media.get('physical_writer_v2', {}).get('physical_write_authorized') is False
               ),
               'physical_authorization_still_fail_closed': (
-                  physical_auth.get('$schema') == 'prototype-ordax.physical-write-authorization/2'
-                  and physical_auth.get('status') == 'blocked-canonical-trust-pending'
+                  physical_auth.get('$schema') == 'prototype-ordax.physical-write-authorization/3'
+                  and physical_auth.get('status') in (
+                      'blocked-canonical-trust-pending',
+                      'blocked-canonical-v4-release-proof-pending',
+                  )
                   and physical_auth.get('physical_write_allowed') is False
                   and physical_auth.get('explicit_owner_authorization') is False
                   and physical_auth.get('authorization_context_sha256') in (None, '')
