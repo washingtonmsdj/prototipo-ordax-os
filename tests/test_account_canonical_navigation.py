@@ -82,8 +82,18 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
             "    appActivation,"
         )
         self.assertIn(expected, native)
-        expected_web = expected.replace("    ", "  ")
+        expected_web = (
+            "root,\n"
+            "  identitySession,\n"
+            "  identityActions,\n"
+            "  surface,\n"
+            "  accountSync,\n"
+            "  workspaceMetadata.source,\n"
+            "  appActivation,"
+        )
         self.assertIn(expected_web, web)
+        self.assertIn("let accountSync = preferenceSync;", web)
+        self.assertIn("createAccountSyncRuntime({", web)
         self.assertNotIn(
             "root,\n    host,\n    identitySession,",
             native,
