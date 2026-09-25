@@ -22,7 +22,7 @@
   },
   "current_observation": {
     "source": "supabase-security-advisor",
-    "observed_date": "2026-09-24",
+    "observed_date": "2026-09-25",
     "leaked_password_protection": "enabled-product-gateway",
     "public_login_enabled": false,
     "edge_gateway": "source-v10-edge-revision-13-pwned-passwords-gated-public-server-gated",
@@ -56,8 +56,8 @@
     "public_adapter_rate_limit_deployed": false,
     "public_adapter_real_ip_source": "trusted-loopback-tls-terminator-x-forwarded-for",
     "public_adapter_real_ip_source_verified_in_source": true,
-    "email_confirmation_policy_reviewed": false,
-    "redirect_allowlist_reviewed": false,
+    "email_confirmation_policy_reviewed": true,
+    "redirect_allowlist_reviewed": true,
     "same_origin_session_owner_deployed": false,
     "secure_http_only_cookie_policy_verified": true,
     "csrf_state_change_protection_verified": true,
@@ -76,7 +76,10 @@
     "product_leaked_password_screening_padding": true,
     "product_leaked_password_plaintext_sent": false,
     "product_leaked_password_full_hash_sent": false,
-    "product_leaked_password_screening_fail_closed": true
+    "product_leaked_password_screening_fail_closed": true,
+    "email_confirmation_provider_verified": false,
+    "redirect_allowlist_provider_verified": false,
+    "provider_policy_contract": "docs/contracts/public-auth-provider-policy.json"
   },
   "rules": {
     "public_login_must_fail_closed_until_all_required_gates_pass": true,
