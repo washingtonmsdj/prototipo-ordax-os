@@ -1,0 +1,20 @@
+{
+  "$schema": "prototype-ordax.public-auth-provider-policy/1",
+  "status": "reviewed-not-verified-in-provider",
+  "provider": "supabase",
+  "confirm_email_required": true,
+  "redirect_policy": {
+    "production_https_origin_required": true,
+    "same_origin_only": true,
+    "wildcards_allowed": false,
+    "required_paths": [
+      "/auth/recover/verify"
+    ],
+    "origin": "unresolved-until-public-deployment"
+  },
+  "provider_verification": {
+    "confirm_email": false,
+    "redirect_allowlist": false,
+    "production_origin": false
+  }
+}
