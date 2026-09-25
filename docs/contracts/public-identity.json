@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-entry/1",
-  "status": "provider-adapter-deployed-v7-public-server-gated-form-ready-same-origin-adapter-source-ready",
+  "status": "provider-adapter-source-v6-edge-revision-7-public-server-gated-form-ready",
   "purpose": "public-site-account-entry-boundary",
   "routes": {
     "login_page": "/login/",
@@ -62,7 +62,8 @@
     "public_site_account_enabled": false,
     "public_site_marker_header": "X-OrdaX-Public-Site",
     "native_direct_account_gateway_remains_available": true,
-    "edge_gateway_deployment_revision_observed": 7
+    "edge_gateway_deployment_revision_observed": 7,
+    "edge_deployment_revision_observed": 7
   },
   "supabase_candidate": {
     "status": "dedicated-target-schema-and-edge-gateway-deployed",
