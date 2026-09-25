@@ -132,6 +132,47 @@ class CanonicalV4ReleaseProofBindingTests(unittest.TestCase):
             self.assertFalse(result["writer_invoked"])
             self.assertFalse(result["candidate_materialized"])
 
+    def test_rebinding_same_proof_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            auth_path, proof_path = self.fixture(root)
+
+            binding.bind(root, proof_path)
+            first_auth = auth_path.read_bytes()
+            first_destination = (
+                root / "docs/evidence/canonical-v4-release-proof.json"
+            ).read_bytes()
+
+            result = binding.bind(root, proof_path)
+
+            self.assertEqual(auth_path.read_bytes(), first_auth)
+            self.assertEqual(
+                (root / "docs/evidence/canonical-v4-release-proof.json").read_bytes(),
+                first_destination,
+            )
+            self.assertEqual(result["proof_sha256"], hashlib.sha256(first_destination).hexdigest())
+
+    def test_rebinding_different_proof_requires_explicit_reset(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            auth_path, proof_path = self.fixture(root)
+
+            binding.bind(root, proof_path)
+            destination = root / "docs/evidence/canonical-v4-release-proof.json"
+            before_auth = auth_path.read_bytes()
+            before_destination = destination.read_bytes()
+
+            replacement = json.loads(proof_path.read_text(encoding="utf-8"))
+            replacement["source_commit"] = "c" * 40
+            replacement["release_manifest_sha256"] = "d" * 64
+            write_json(proof_path, replacement)
+
+            with self.assertRaisesRegex(binding.BindingError, "already bound to different bytes"):
+                binding.bind(root, proof_path)
+
+            self.assertEqual(auth_path.read_bytes(), before_auth)
+            self.assertEqual(destination.read_bytes(), before_destination)
+
     def test_unsafe_proof_is_rejected_without_mutating_authorization(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
