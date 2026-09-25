@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-entry/1",
-  "status": "provider-target-prepared",
+  "status": "provider-adapter-implemented-activation-gated",
   "purpose": "public-site-account-entry-boundary",
   "routes": {
     "login_page": "/login/",
@@ -44,7 +44,9 @@
     "gateway_entrypoint": "services/public-identity/gateway.py:application",
     "gateway_core_implemented": true,
     "auth_hardening_contract": "docs/contracts/public-auth-hardening.json",
-    "public_auth_enabled": false
+    "public_auth_enabled": false,
+    "password_auth_flow_implemented": true,
+    "session_refresh_implemented": true
   },
   "supabase_candidate": {
     "status": "dedicated-target-schema-prepared",
@@ -55,7 +57,8 @@
     "product_schema_applied": true,
     "public_auth_enabled": false,
     "existing_shared_project_mutation_allowed": false,
-    "previous_shared_project_rejected": true
+    "previous_shared_project_rejected": true,
+    "password_provider_adapter_implemented": true
   },
   "legal_readiness": {
     "contract": "docs/contracts/public-legal-readiness.json",
