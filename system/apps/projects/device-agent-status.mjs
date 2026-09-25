@@ -1,5 +1,5 @@
 import {
-  assertDeviceAgentPort,
+  assertDeviceAgentCapabilityReaderPort,
   validateDeviceAgentCapabilitiesSnapshot,
 } from "../../contracts/device-agent.mjs";
 
@@ -55,20 +55,20 @@ export function validateProjectsDeviceAgentStatus(value) {
   });
 }
 
-export async function probeProjectsDeviceAgent(deviceAgentValue, {
+export async function probeProjectsDeviceAgent(deviceAgentCapabilitiesValue, {
   timeoutMs: requestedTimeout = DEFAULT_TIMEOUT_MS,
 } = {}) {
-  if (deviceAgentValue == null) return null;
+  if (deviceAgentCapabilitiesValue == null) return null;
   const timeoutMs = timeoutValue(requestedTimeout);
 
   let timer = null;
   try {
-    const deviceAgent = assertDeviceAgentPort(deviceAgentValue);
+    const capabilityReader = assertDeviceAgentCapabilityReaderPort(deviceAgentCapabilitiesValue);
     const timeout = new Promise((_, reject) => {
       timer = setTimeout(() => reject(new Error("Device Agent capability probe timed out")), timeoutMs);
     });
     const raw = await Promise.race([
-      Promise.resolve(deviceAgent.capabilities({ client: "ordax-local" })),
+      Promise.resolve(capabilityReader.capabilities({ client: "ordax-local" })),
       timeout,
     ]);
     const snapshot = validateDeviceAgentCapabilitiesSnapshot(raw);
