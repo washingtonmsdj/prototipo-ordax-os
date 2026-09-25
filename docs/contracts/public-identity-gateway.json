@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-and-account-sync-gateway-v5-deployed-browser-form-and-api-dual-mode-activation-gated",
+  "status": "real-auth-and-account-sync-gateway-v6-deployed-registration-password-policy-activation-gated",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
@@ -9,7 +9,7 @@
     "provider_adapter": "supabase-password-and-sync-rest",
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
-    "deployed_edge_adapter_version": 5
+    "deployed_edge_adapter_version": 6
   },
   "routes": [
     {
@@ -93,7 +93,10 @@
     "cross_site_state_changes_allowed": false,
     "csrf_state_change_protection": true,
     "browser_form_redirects_implemented": true,
-    "json_api_mode_preserved": true
+    "json_api_mode_preserved": true,
+    "registration_password_minimum_chars": 12,
+    "registration_password_policy_enforced_at_edge": true,
+    "existing_login_passwords_retroactively_rejected": false
   },
   "deployment": {
     "same_origin_required_for_public_site": true,
