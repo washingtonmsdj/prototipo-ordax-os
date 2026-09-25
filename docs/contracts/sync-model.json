@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.sync-model/1",
-  "status": "account-sync-backend-v1-implemented-client-integration-pending",
+  "status": "account-sync-backend-and-web-source-integration-implemented-public-rollout-gated",
   "authority": {
     "domain_owner": "system/services/sync",
     "platform_integration_owner": "system/adapters",
@@ -120,7 +120,10 @@
     "mobile_continuity_available": false,
     "public_copy": "coming-soon-only",
     "backend_foundation_available": true,
-    "client_integration_available": false
+    "client_integration_available": true,
+    "web_source_integration": true,
+    "native_usb_source_integration": false,
+    "mobile_source_integration": false
   },
   "backend": {
     "status": "applied",
@@ -136,6 +139,18 @@
     "tombstones": true,
     "list_rpc": "ordax_list_sync_objects_v1",
     "public_tables_exposed": false,
-    "security_invoker_api": true
+    "security_invoker_api": true,
+    "current_read_mode": "safe-full-resync",
+    "incremental_cursor_implemented": false,
+    "web_gateway_routes": [
+      "/sync/objects",
+      "/sync/mutate"
+    ],
+    "web_transport_contract": "ordax.sync-transport/1",
+    "web_client_data_classes": [
+      "appearance",
+      "preferences",
+      "workspace-metadata"
+    ]
   }
 }
