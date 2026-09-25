@@ -16,9 +16,12 @@ on:
       - 'system/contracts/memory-store.mjs'
       - 'system/contracts/memory-context.mjs'
       - 'system/contracts/model-router.mjs'
+      - 'system/contracts/profile-pack.mjs'
+      - 'system/profile-packs/developer/manifest.json'
       - 'system/services/intelligence/**'
       - 'system/services/local-ai/**'
       - 'system/services/memory/**'
+      - 'system/services/profile-packs/**'
       - 'system/adapters/web/memory.mjs'
       - 'system/adapters/native/memory.mjs'
       - 'system/surface/runtime/native_memory_state.py'
@@ -53,6 +56,8 @@ on:
       - 'tests/test_memory_native_adapter_bounds.mjs'
       - 'tests/test_memory_native_state.py'
       - 'tests/test_memory_native_endpoint.py'
+      - 'tests/test_profile_pack_runtime.mjs'
+      - 'tests/test_profile_pack_runtime.py'
       - '.github/workflows/intelligence-foundation.yml'
   pull_request:
     paths:
@@ -68,9 +73,12 @@ on:
       - 'system/contracts/memory-store.mjs'
       - 'system/contracts/memory-context.mjs'
       - 'system/contracts/model-router.mjs'
+      - 'system/contracts/profile-pack.mjs'
+      - 'system/profile-packs/developer/manifest.json'
       - 'system/services/intelligence/**'
       - 'system/services/local-ai/**'
       - 'system/services/memory/**'
+      - 'system/services/profile-packs/**'
       - 'system/adapters/web/memory.mjs'
       - 'system/adapters/native/memory.mjs'
       - 'system/surface/runtime/native_memory_state.py'
@@ -105,6 +113,8 @@ on:
       - 'tests/test_memory_native_adapter_bounds.mjs'
       - 'tests/test_memory_native_state.py'
       - 'tests/test_memory_native_endpoint.py'
+      - 'tests/test_profile_pack_runtime.mjs'
+      - 'tests/test_profile_pack_runtime.py'
       - '.github/workflows/intelligence-foundation.yml'
   workflow_dispatch:
 
@@ -136,7 +146,8 @@ jobs:
           node --check system/contracts/memory-store.mjs
           node --check system/contracts/memory-context.mjs
           node --check system/contracts/model-router.mjs
-          find system/services/intelligence system/services/local-ai system/services/memory -type f -name '*.mjs' -print0 \
+          node --check system/contracts/profile-pack.mjs
+          find system/services/intelligence system/services/local-ai system/services/memory system/services/profile-packs -type f -name '*.mjs' -print0 \
             | sort -z \
             | xargs -0 -n1 node --check
           node --check system/adapters/web/memory.mjs
@@ -153,6 +164,7 @@ jobs:
           python -m json.tool docs/contracts/local-ai.json >/dev/null
           python -m json.tool docs/contracts/memory.json >/dev/null
           python -m json.tool docs/contracts/model-router.json >/dev/null
+          python -m json.tool system/profile-packs/developer/manifest.json >/dev/null
 
       - name: Run Intelligence and Local AI contract tests
         run: |
@@ -175,6 +187,7 @@ jobs:
           node --test tests/test_memory_session_store_policy.mjs
           node --test tests/test_memory_store_adapters.mjs
           node --test tests/test_memory_native_adapter_bounds.mjs
+          node --test tests/test_profile_pack_runtime.mjs
           python -m unittest tests.test_local_ai_baseline -v
           python -m unittest tests.test_local_ai_baseline_compare -v
           python -m unittest tests.test_local_ai_benchmark -v
@@ -182,3 +195,4 @@ jobs:
           python -m unittest tests.test_memory_native_state -v
           python -m unittest tests.test_memory_native_endpoint -v
           python -m unittest tests.test_native_memory_integration -v
+          python -m unittest tests.test_profile_pack_runtime -v
