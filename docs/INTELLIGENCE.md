@@ -15,6 +15,7 @@ window.
 Surface / applications
  -> shared OrdaX services and Workspace context
  -> Ordax Intelligence
+ -> model router
  -> AI Runtime / local inference backend
  -> llama.cpp + verified local model (initial implementation)
 ```
@@ -39,7 +40,6 @@ The initial source lock targets a small Qwen3.5 GGUF profile served by
 update may replace the model, quantization or inference engine without changing
 the stable Intelligence API.
 
-
 The release layer has a dedicated v4 source contract for this payload.
 `prototype-ordax.release-manifest/4` keeps the system image and Surface runtime
 semantics from v3, adds `local-ai-runtime.erofs`, and signs a binding to the
@@ -56,7 +56,7 @@ physical proof remain release gates.
 
 ## Memory and model routing
 
-The pre-MVP foundation now separates persistent product memory from inference providers:
+The pre-MVP foundation separates persistent product memory from inference providers:
 
 ```text
 ordax.intelligence/1
@@ -68,17 +68,102 @@ ordax.intelligence/1
         +-- future providers
 ```
 
+The source-level model router is active in the Intelligence runtime. MVP requests map the
+Intelligence intent to a provider-neutral purpose and resolve the active local model through
+`ordax.model-router/1`. A route is executable only while the local backend is actually `ready`;
+`busy`, `stopped`, `error` and `unavailable` fail closed. External providers remain fail-closed
+even when an egress approval is present because their runtime adapters are not enabled yet. A
+local route binds both `engineId` and `modelId`; the result must match both identities, so a silent
+engine or model change between routing and inference fails closed while normal engine/model
+migration between releases remains behind the same stable Intelligence boundary.
+
 Memory belongs to OrdaX. llama.cpp, GPT, Grok or another model may receive authorized context, but none of them becomes the owner of persistent memory.
 
-Memory scopes are device, account, Space, project and session. Persistent items carry provenance and sensitivity. The user-facing memory owner must support review, edit and delete. Secret material is not memory.
+Memory scopes are device, account, Space, project and session. Ownership is an explicit pair:
+`ownerKind=device` has no account `subjectId`, while `ownerKind=account` requires the authenticated
+account subject. This lets local-only/offline mode own device, Space, project and session memory
+without inventing a fake account identity. Device-owned memory cannot request the `account` scope
+and is never eligible for implicit cloud sync; account-scoped memory requires an account owner.
+Update, delete, review and retrieval compare both owner kind and owner id.
 
-Semantic embeddings are derived indexes: replacing an embedding model does not change the identity of the underlying memory item.
+Signing in adds an account owner; it does **not** replace the device owner or migrate device memory.
+The owner resolver always keeps the trusted device owner available and exposes the authenticated
+account owner only while the identity session is actually signed in. Signing out drops the account
+owner and review state falls back to device memory. Any future migration/copy between those owners
+must therefore be an explicit product operation, not a side effect of authentication.
+
+Persistent items carry provenance, source timestamp and sensitivity. The source-level memory
+runtime implements bounded `search`, `remember`, `forget` and `flush` over `ordax.memory/1`, with a
+bounded `ordax.memory-store/1` snapshot boundary. Search applies owner/Space/project filters before
+local lexical ranking, restricted items require explicit inclusion, item IDs cannot change owner,
+and device stores never persist session-scoped memory. Search is paginated through a bounded
+offset instead of raising the result cap, so user review can reach older items without creating an
+unbounded read.
+
+A dedicated memory-review runtime owns the user-review semantics above the stable port. It can
+list, edit and remove only inside one explicit owner/Space/project boundary. Editing may change
+content, provenance and sensitivity, but cannot silently change item identity, owner kind, owner
+id, kind, scope, Space or project. Review of more than one page walks the same bounded search API
+instead of gaining a privileged bypass. A review-session layer switches explicitly between the
+currently available device/account owners, and a Surface-ready view model adds bounded search,
+one-item pagination lookahead and generic `idle/pending/saved/error` persistence state. That is
+presentation plumbing only; a visual review surface is still not claimed as mounted in the MVP.
+
+Secret material is not memory. The contract rejects explicit secret items and known private-key
+or token-shaped material in both **content and provenance** before either can enter persistence or
+model context. Semantic embeddings remain derived indexes: replacing an embedding model does not
+change the identity of the underlying memory item. A local semantic index is still not claimed;
+current local retrieval is intentionally lexical until an approved embedding owner exists.
+
+The source also has explicit persistence and retrieval boundaries. Web uses a local browser
+memory store. If persistent browser storage is unavailable, its fallback is explicitly
+**session-only**: it may keep only `scope=session` items and rejects device/account/Space/project
+memory instead of pretending that an ephemeral in-memory value is durable. Native has a dedicated
+device-store adapter plus a bounded private state owner for
+`/var/lib/ordax/intelligence-memory.json`; that helper rejects session-scoped state, invalid owner
+metadata, malformed item fields, duplicate IDs, non-canonical timestamps, secret-shaped content or
+provenance, symlinks, non-private targets and oversized payloads. It writes through `0600`
+temporary files with file+directory `fsync` and atomic replacement. The JS snapshot contract and
+the Native owner share an exact **8 MiB** serialized ceiling, so the runtime cannot accept a
+durable snapshot that the host would later reject solely because of payload size.
+
+Store acceptance and durable completion are separate. A synchronous store rejection does not
+mutate the memory runtime state. Every store exposes `flush()`: Web/session stores confirm
+immediately after their synchronous save path, while the Native adapter waits for its queued POST
+and surfaces a host persistence failure instead of swallowing it. Native persistence tracks desired
+and durable revisions. If a queued POST fails, `flush()` retries the current desired snapshot once;
+a newer successful revision supersedes an older failure, so a redundant retry cannot report a
+false failure after the current state is already durable. This keeps `remember()` and `forget()`
+synchronous without pretending an asynchronous Native write is already durable.
+
+Authorized memory-to-Intelligence context is a separate boundary. `ordax.memory-context-auth/1`
+accepts only authorization produced by the composition layer, including the exact owner kind/id
+and allowed device/account/Space/project/session scopes. Retrieval re-checks owner kind/id, Space,
+project and restricted sensitivity even after the memory port returns results, caps the context to
+eight items and excerpts each item to the existing Intelligence context bounds. Canonical memory
+IDs are preserved without adding a prefix, so a valid 160-character memory ID cannot overflow the
+Intelligence context-ID bound.
+
+When both device and account context are desired, composition must supply a separate authorization
+for each owner. The multi-owner helper never infers the second grant from login state: it retrieves
+each authorized owner independently and round-robins the shared bounded context budget, preventing
+one owner from silently replacing or starving the other. A user prompt therefore cannot grant
+itself access to another owner, Space or project.
+
+Native persistence is now wired end-to-end at the platform boundary: the loopback-only Native host
+owns `GET/POST /__ordax/native/intelligence-memory`, delegates validation and private atomic state
+ownership to the dedicated memory endpoint/helper, and Native composition probes the device store
+fail-soft before creating `ordax.memory/1`. If persistence is unavailable or corrupt, the Surface
+and local inference still mount without memory. Memory is **not automatically injected** into
+ordinary Intelligence requests: composition must explicitly choose the trusted device owner or a
+real authenticated account owner and apply the current Space/project authorization before calling
+the memory-context boundary.
 
 External routes require an explicit egress decision. Local AI remains the offline baseline when an external provider is unavailable or not authorized.
 
 Professional Profile Packs may influence retrieval sources and preferred model purpose, but they cannot bypass Space membership, memory authorization or tool permissions.
 
-## Authority boundary
+## Authority and input boundary
 
 The MVP Intelligence runtime is consultative:
 
@@ -90,7 +175,37 @@ The MVP Intelligence runtime is consultative:
 - no silent cloud fallback;
 - no privilege gained from prompt text.
 
-Context supplied to Intelligence is bounded and carries provenance. Tool execution, agents and broader capability bridges still require their own explicit contracts and permissions before activation. Persistent memory now has the source-level `ordax.memory/1` contract, but runtime persistence/retrieval remains a separate implementation step and does not grant tool authority.
+The local backend receives these immutable Intelligence rules as an OpenAI-compatible `system`
+message, while the user request and authorized provenance-bearing context remain in the `user`
+message. This does not make prompt injection impossible, but it stops ordinary context text from
+sharing the same message role as the system authority policy. The Local AI client enforces the
+runtime endpoint literally before URL canonicalization: only lower-case `http://127.0.0.1` with an
+optional valid port is accepted. Hostname aliases, integer/octal/hex loopback forms, trailing-dot
+hosts, userinfo, external addresses and HTTPS endpoints are rejected for this local-only port.
+Configured `engineId`/`modelId` are validated before any network work, and discovered model identity
+uses the same bounded validator.
+
+The Local AI user-message ceiling is 32,768 characters. Intelligence reserves a small render margin
+by limiting the direct user request to 32,000 characters, then fits supplemental authorized context
+inside the remaining backend budget. The user request is preserved; context is clipped or omitted
+first and receives an explicit local-input-budget marker when that happens. A valid large context
+can therefore no longer accidentally overflow `ordax.local-ai/1` after Intelligence adds intent,
+purpose, provenance and framing metadata.
+
+Backend responses are bounded before JSON parsing in the production fetch path. Model discovery is
+limited to **256 KiB** and the OpenAI-compatible completion envelope to **1 MiB**; the accepted
+completion text is then limited again to **131,072 characters** and rejects NUL. Streaming body
+consumption remains inside the same probe/inference timeout, so a server that sends headers and
+then stalls the body cannot bypass the deadline. Oversized/malformed completion data is treated as
+an inference failure and receives the same bounded health revalidation as other backend failures.
+
+Backend request failure is not treated as permanent service death. After an inference failure the
+runtime performs a bounded `/health` revalidation: a healthy backend returns to `ready`, while a
+missing backend degrades to `stopped`. It does not silently retry the failed generation. `probe()`
+will not reset a currently `busy` inference, and `dispose()` aborts active fetches and refuses new
+probe/generate work so shutdown cannot leave hidden inference requests running.
+
+Context supplied to Intelligence is bounded and carries provenance. Tool execution, agents and broader capability bridges still require their own explicit contracts and permissions before activation. The memory runtime does not grant tool authority and does not bypass current authorization.
 
 ## Nova OrdaX reference
 
