@@ -73,6 +73,8 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertIn('path === "/auth/login" && req.method === "GET"', text)
         self.assertIn('path === "/auth/register" && req.method === "GET"', text)
         self.assertIn('redirectResponse("/conta/", cookies)', text)
+        self.assertIn("MIN_REGISTRATION_PASSWORD_CHARS = 12", text)
+        self.assertIn("registration-password-policy", text)
         self.assertIn('Accept', (ROOT / "system" / "surface" / "runtime" / "native_account_gateway.py").read_text(encoding="utf-8"))
         self.assertNotIn('service_role', text.lower())
         self.assertNotIn('SUPABASE_SERVICE_ROLE_KEY', text)
