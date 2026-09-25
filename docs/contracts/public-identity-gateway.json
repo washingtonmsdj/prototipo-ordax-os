@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-sync-export-gateway-source-v12-close-source-ready-deployed-source-v11-revision-14",
+  "status": "real-auth-sync-export-gateway-source-v12-deployed-revision-15-close-disabled",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
@@ -10,8 +10,8 @@
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
     "gateway_source_version": 12,
-    "edge_deployment_revision_observed": 14,
-    "deployed_gateway_source_version": 11,
+    "edge_deployment_revision_observed": 15,
+    "deployed_gateway_source_version": 12,
     "lifecycle_service_source": "infra/supabase/functions/ordax-account-lifecycle/index.ts",
     "lifecycle_service_deployed": true,
     "lifecycle_service_deployment_revision_observed": 1,
@@ -172,7 +172,7 @@
     "public_site_account_export_enabled": false,
     "account_close_source_implemented": true,
     "account_close_enabled": false,
-    "account_close_gateway_route_deployed": false,
+    "account_close_gateway_route_deployed": true,
     "account_close_requires_recent_reauthentication": true,
     "account_close_requires_explicit_confirmation": true,
     "account_close_service_role_in_public_gateway": false,
