@@ -24,11 +24,17 @@
     "observed_date": "2026-09-24",
     "leaked_password_protection": "disabled-warn",
     "public_login_enabled": false,
-    "edge_gateway": "deployed-v5-browser-form-api-dual-mode",
+    "edge_gateway": "deployed-v6-registration-password-policy",
     "csrf_state_change_protection": "pass-deployed",
     "secure_http_only_cookie_policy": "pass-source-and-edge",
     "same_origin_session_owner": "adapter-source-ready-not-deployed",
-    "gated_native_forms": "pass-source-disabled-by-runtime-config"
+    "gated_native_forms": "pass-source-disabled-by-runtime-config",
+    "password_policy": "pass-product-registration-min-12-provider-config-not-verified",
+    "password_policy_product_minimum_chars": 12,
+    "provider_password_policy_verified": false,
+    "auth_rate_limits": "reviewed-provider-defaults-present-real-client-ip-forwarding-not-verified",
+    "rate_limit_provider_defaults_reviewed": true,
+    "rate_limit_real_client_ip_forwarding_verified": false
   },
   "rules": {
     "public_login_must_fail_closed_until_all_required_gates_pass": true,
