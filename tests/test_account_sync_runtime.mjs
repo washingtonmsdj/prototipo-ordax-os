@@ -213,7 +213,7 @@ test("local portable preference changes made before first reconciliation win ove
           tombstone: false,
           payload: {
             "accessibility.contrast": "standard",
-            "accessibility.motion": "full",
+            "accessibility.motion": "standard",
             "accessibility.text-scale": "standard",
           },
         },
@@ -305,7 +305,7 @@ test("persisted checkpoint resumes with incremental changes instead of another f
             tombstone: false,
             payload: {
               "accessibility.contrast": "high",
-              "accessibility.motion": "full",
+              "accessibility.motion": "standard",
               "accessibility.text-scale": "standard",
             },
           },
@@ -432,7 +432,7 @@ test("portable preference conflict rebases once and treats idempotent acceptance
             tombstone: false,
             payload: {
               "accessibility.contrast": "standard",
-              "accessibility.motion": "full",
+              "accessibility.motion": "standard",
               "accessibility.text-scale": "standard",
             },
           },
@@ -551,7 +551,7 @@ test("repeated portable preference conflicts are bounded and leave rebased inten
             tombstone: false,
             payload: {
               "accessibility.contrast": "standard",
-              "accessibility.motion": "full",
+              "accessibility.motion": "standard",
               "accessibility.text-scale": "standard",
             },
           },
