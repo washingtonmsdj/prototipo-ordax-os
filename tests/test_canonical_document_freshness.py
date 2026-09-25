@@ -328,7 +328,7 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertEqual(promotion["MVP_SURFACE_SMOKE_PHYSICAL"], "PENDING")
         self.assertIn("tour-template", promotion_text)
         self.assertIn("`finalize`", promotion_text)
-        self.assertIn("all 11 required tour items are PASS", promotion_text)
+        self.assertIn("all 12 required tour items are PASS", promotion_text)
         self.assertIn("verified Stable/MVP runtime", promotion_text)
         self.assertIn("physical keyboard layout", promotion_text)
         self.assertIn("matches a fresh recomputation", promotion_text)
