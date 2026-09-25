@@ -17,15 +17,17 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         contract = json.loads(IDENTITY_CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "provider-adapter-source-v9-edge-revision-12-recovery-token-hash-gated-public-server-gated",
+            "provider-adapter-source-v10-edge-revision-13-pwned-passwords-gated-public-server-gated",
         )
         self.assertFalse(contract["backend"]["provider_configured"])
         self.assertTrue(contract["backend"]["password_auth_flow_implemented"])
+        self.assertTrue(contract["backend"]["compromised_password_screening_implemented"])
+        self.assertTrue(contract["backend"]["compromised_password_screening_fail_closed"])
         self.assertTrue(contract["backend"]["session_refresh_implemented"])
         self.assertTrue(contract["backend"]["dedicated_or_isolated_target_required"])
         self.assertFalse(contract["backend"]["conflicting_auth_user_trigger_allowed"])
-        self.assertEqual(contract["backend"]["gateway_source_version"], 9)
-        self.assertEqual(contract["backend"]["edge_deployment_revision_observed"], 12)
+        self.assertEqual(contract["backend"]["gateway_source_version"], 10)
+        self.assertEqual(contract["backend"]["edge_deployment_revision_observed"], 13)
         self.assertTrue(contract["backend"]["public_site_server_activation_gate_deployed"])
         self.assertFalse(contract["backend"]["public_site_account_enabled"])
         self.assertEqual(contract["backend"]["public_site_marker_header"], "X-OrdaX-Public-Site")
@@ -58,9 +60,26 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         self.assertEqual(hardening["status"], "public-auth-disabled-hardening-pending")
         self.assertEqual(
             hardening["current_observation"]["leaked_password_protection"],
-            "disabled-warn",
+            "enabled-product-gateway",
         )
         self.assertFalse(hardening["current_observation"]["public_login_enabled"])
+        self.assertEqual(hardening["current_observation"]["provider_plan"], "free")
+        self.assertFalse(
+            hardening["current_observation"]["provider_leaked_password_protection_enabled"]
+        )
+        self.assertEqual(
+            hardening["current_observation"]["provider_leaked_password_protection_advisor"],
+            "disabled-warn",
+        )
+        self.assertTrue(
+            hardening["current_observation"]["product_leaked_password_protection_verified"]
+        )
+        self.assertFalse(
+            hardening["current_observation"]["product_leaked_password_plaintext_sent"]
+        )
+        self.assertFalse(
+            hardening["current_observation"]["product_leaked_password_full_hash_sent"]
+        )
         self.assertTrue(
             hardening["rules"]["public_login_must_fail_closed_until_all_required_gates_pass"]
         )
