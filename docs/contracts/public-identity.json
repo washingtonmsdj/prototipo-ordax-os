@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-entry/1",
-  "status": "provider-adapter-source-v8-edge-revision-11-recovery-token-hash-gated-public-server-gated",
+  "status": "provider-adapter-source-v9-edge-revision-12-recovery-token-hash-gated-public-server-gated",
   "purpose": "public-site-account-entry-boundary",
   "routes": {
     "login_page": "/login/",
@@ -62,8 +62,8 @@
     "public_site_account_enabled": false,
     "public_site_marker_header": "X-OrdaX-Public-Site",
     "native_direct_account_gateway_remains_available": true,
-    "edge_deployment_revision_observed": 11,
-    "gateway_source_version": 8,
+    "edge_deployment_revision_observed": 12,
+    "gateway_source_version": 9,
     "password_recovery_request_implemented": true,
     "password_recovery_redirect_config_verified": false,
     "password_recovery_completion_flow_implemented": true,
