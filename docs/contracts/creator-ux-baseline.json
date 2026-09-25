@@ -42,6 +42,8 @@
     "internal_disk_safety_explained": true,
     "write_state_warns_keep_usb_connected": true,
     "completion_explains_boot_from_usb": true,
+    "interactive_boot_guidance": true,
+    "boot_guidance_stays_inside_creator": true,
     "illustration_slots_are_presentation_only": true,
     "native_visual_step_rail": true,
     "native_state_illustration": true,
