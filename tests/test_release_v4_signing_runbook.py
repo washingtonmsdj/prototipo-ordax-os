@@ -34,6 +34,13 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
             "stable public HTTPS URL without credentials, query or fragment",
             "prototype-ordax.release-trust/1",
             "prototype-ordax.local-ai-source-lock/1",
+            "prototype-ordax.canonical-v4-operator-artifact/1",
+            "OPERATOR_RECEIPTS_MATCH_SOURCE_COMMIT=YES",
+            "OPERATOR_RECEIPT_BYTES_REVERIFIED=YES",
+            "SystemReceiptPath",
+            "SurfaceReceiptPath",
+            "LocalAiReceiptPath",
+            "Get-FileHash",
         ):
             self.assertIn(marker, script)
         self.assertNotIn("ordax-release-signing.exe sign", script)
@@ -41,6 +48,7 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
         self.assertNotIn("activate-exact", script)
         self.assertNotIn("PhysicalDrive", script)
         self.assertNotIn("Get-Content -LiteralPath $PrivateKeyPath", script)
+        self.assertIn("operator receipt source commit does not match SourceCommit", script)
 
     def test_public_v4_handoff_preparer_never_accepts_private_material(self):
         script = PREPARE_SCRIPT.read_text(encoding="utf-8")
@@ -153,6 +161,10 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
         workflow = SIGNING_WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("GOOS=windows GOARCH=amd64", workflow)
         self.assertIn("ordax-release-agent-windows-amd64.exe", workflow)
+        self.assertIn("tools/release-signing/operator_receipt.py", workflow)
+        self.assertIn("system-receipt.json", workflow)
+        self.assertIn("surface-receipt.json", workflow)
+        self.assertIn("local-ai-receipt.json", workflow)
 
     def test_signing_doc_describes_v4_ai_binding_and_canonical_boundary(self):
         text = SIGNING_DOC.read_text(encoding="utf-8")
