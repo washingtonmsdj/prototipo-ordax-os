@@ -25,7 +25,7 @@
     "observed_date": "2026-09-25",
     "leaked_password_protection": "enabled-product-gateway",
     "public_login_enabled": false,
-    "edge_gateway": "source-v10-edge-revision-13-pwned-passwords-gated-public-server-gated",
+    "edge_gateway": "source-v12-close-source-ready-deployed-source-v11-revision-14",
     "csrf_state_change_protection": "pass-deployed",
     "secure_http_only_cookie_policy": "pass-source-and-edge",
     "same_origin_session_owner": "adapter-source-ready-not-deployed",
@@ -79,7 +79,9 @@
     "product_leaked_password_screening_fail_closed": true,
     "email_confirmation_provider_verified": false,
     "redirect_allowlist_provider_verified": false,
-    "provider_policy_contract": "docs/contracts/public-auth-provider-policy.json"
+    "provider_policy_contract": "docs/contracts/public-auth-provider-policy.json",
+    "account_close": "source-ready-lifecycle-rev1-disabled-main-gateway-route-not-deployed",
+    "account_export": "pass-source-db-edge-native-public-disabled"
   },
   "rules": {
     "public_login_must_fail_closed_until_all_required_gates_pass": true,
