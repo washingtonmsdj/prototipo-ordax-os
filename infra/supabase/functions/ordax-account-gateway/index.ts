@@ -14,6 +14,9 @@ const RECOVERY_SESSION_MAX_AGE = 10 * 60;
 const MAX_BODY = 64 * 1024;
 const MIN_REGISTRATION_PASSWORD_CHARS = 12;
 const MAX_REGISTRATION_PASSWORD_CHARS = 256;
+const PWNED_PASSWORDS_ORIGIN = "https://api.pwnedpasswords.com";
+const PWNED_PASSWORDS_MAX_RESPONSE = 256 * 1024;
+const PWNED_PASSWORDS_USER_AGENT = "OrdaX-Account-Gateway/1";
 const PUBLIC_SITE_ACCOUNT_ENABLED = false;
 const ACCOUNT_RECOVERY_REQUEST_ENABLED = false;
 const ACCOUNT_RECOVERY_COMPLETION_ENABLED = false;
@@ -114,6 +117,54 @@ function recoveryRedirect() {
     return split.toString();
   } catch {
     return null;
+  }
+}
+
+async function compromisedPasswordCount(password: string) {
+  const digestBuffer = await crypto.subtle.digest(
+    "SHA-1",
+    new TextEncoder().encode(password),
+  );
+  const digest = Array.from(new Uint8Array(digestBuffer))
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase();
+  const prefix = digest.slice(0, 5);
+  const suffix = digest.slice(5);
+
+  const response = await fetch(`${PWNED_PASSWORDS_ORIGIN}/range/${prefix}`, {
+    method: "GET",
+    headers: {
+      Accept: "text/plain",
+      "Add-Padding": "true",
+      "User-Agent": PWNED_PASSWORDS_USER_AGENT,
+    },
+  });
+  if (!response.ok) throw new Error("pwned-passwords-unavailable");
+  const body = await response.text();
+  if (body.length > PWNED_PASSWORDS_MAX_RESPONSE) {
+    throw new Error("pwned-passwords-response-too-large");
+  }
+  for (const line of body.split(/\r?\n/)) {
+    const separator = line.indexOf(":");
+    if (separator < 1) continue;
+    if (line.slice(0, separator).trim().toUpperCase() !== suffix) continue;
+    const count = Number(line.slice(separator + 1).trim());
+    if (!Number.isSafeInteger(count) || count < 0) {
+      throw new Error("pwned-passwords-invalid-response");
+    }
+    return count;
+  }
+  return 0;
+}
+
+async function screenNewPassword(password: string) {
+  try {
+    return (await compromisedPasswordCount(password)) > 0
+      ? "compromised"
+      : "safe";
+  } catch {
+    return "unavailable";
   }
 }
 
@@ -347,6 +398,14 @@ async function updateRecoveryPassword(req: Request) {
     return error(400, "recovery-password-policy", "Use uma senha válida e confirme exatamente o mesmo valor.");
   }
 
+  const screening = await screenNewPassword(password);
+  if (screening === "compromised") {
+    return error(400, "compromised-password", "Escolha outra senha; esta senha aparece em bases públicas de credenciais comprometidas.");
+  }
+  if (screening === "unavailable") {
+    return error(503, "password-screening-unavailable", "A validação de segurança da senha está temporariamente indisponível.");
+  }
+
   try {
     const { url, key } = config();
     const response = await fetch(`${url}/auth/v1/user`, {
@@ -412,6 +471,20 @@ async function credentials(req: Request, register: boolean) {
       : redirectResponse("/cadastro/?erro=senha");
   }
 
+  if (register) {
+    const screening = await screenNewPassword(password);
+    if (screening === "compromised") {
+      return wantsJson(req)
+        ? error(400, "compromised-password", "Escolha outra senha; esta senha aparece em bases públicas de credenciais comprometidas.")
+        : redirectResponse("/cadastro/?erro=senha-comprometida");
+    }
+    if (screening === "unavailable") {
+      return wantsJson(req)
+        ? error(503, "password-screening-unavailable", "A validação de segurança da senha está temporariamente indisponível.")
+        : redirectResponse("/cadastro/?erro=seguranca-indisponivel");
+    }
+  }
+
   const supabase = client();
   const result = register
     ? await supabase.auth.signUp({ email, password })
@@ -468,7 +541,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (path === "/health" && req.method === "GET") {
-    return json(200, { status: "ok", service: "ordax-account-gateway", version: 9 });
+    return json(200, { status: "ok", service: "ordax-account-gateway", version: 10 });
   }
 
   if (path === "/auth/session" && req.method === "GET") {
