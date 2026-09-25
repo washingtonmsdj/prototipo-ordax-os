@@ -2,7 +2,9 @@
   "$schema": "prototype-ordax.public-site-runtime/1",
   "identity": {
     "login_url": null,
-    "register_url": null
+    "register_url": null,
+    "recovery_url": null,
+    "recovery_complete_url": null
   },
   "downloads": {
     "catalog_url": "/releases/catalog.json"
