@@ -154,7 +154,7 @@ class CurrentStateFirstRunInputTests(unittest.TestCase):
         self.assertIn("CANONICAL_STABLE_GRAPHICAL_MODE=PENDING", self.current)
         self.assertIn("PUBLIC_PHYSICAL_APPLY=NO", self.current)
         self.assertIn("all 12 manual tour items", self.current)
-        self.assertIn("verified Stable/MVP runtime", self.current)
+        self.assertIn("verified Stable runtime", self.current)
 
 
 if __name__ == "__main__":
