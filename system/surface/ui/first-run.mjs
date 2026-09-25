@@ -661,20 +661,19 @@ export function mountFirstRunExperience(
 
   const runIdentity = async (kind) => {
     if (destroyed || identityPending || !isIdentityActionSupported(actionsSnapshot, kind)) return;
+    const credentialInput = credentialsPort && (kind === "sign-in" || kind === "register")
+      ? { email: identityEmailDraft, password: identityPasswordDraft }
+      : null;
+    identityPasswordDraft = "";
     identityPending = kind;
     identityMessage = "";
     render();
     try {
       let result = null;
-      if (credentialsPort && (kind === "sign-in" || kind === "register")) {
-        const credentials = {
-          email: identityEmailDraft,
-          password: identityPasswordDraft,
-        };
-        identityPasswordDraft = "";
+      if (credentialInput) {
         result = kind === "sign-in"
-          ? await credentialsPort.signIn(credentials)
-          : await credentialsPort.register(credentials);
+          ? await credentialsPort.signIn(credentialInput)
+          : await credentialsPort.register(credentialInput);
         if (typeof sessionPort.refresh === "function") {
           await sessionPort.refresh();
         }
