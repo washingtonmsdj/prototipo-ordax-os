@@ -168,6 +168,38 @@ def _atomic_write(path: Path, payload: bytes) -> None:
             pass
 
 
+def _assert_existing_binding_is_idempotent(
+    *,
+    status: str,
+    bindings: dict,
+    release_binding: dict,
+    proof: dict,
+    proof_sha: str,
+) -> None:
+    if status != POST_PROOF_STATUS:
+        return
+
+    if bindings.get("canonical_v4_release_proof_sha256") != proof_sha:
+        raise BindingError(
+            "canonical v4 release proof is already bound to different bytes; "
+            "reset to the pre-proof state before binding a replacement"
+        )
+
+    expected_release_binding = {
+        "proof_path": DESTINATION_PATH.as_posix(),
+        "proof_schema": PROOF_SCHEMA,
+        "source_commit": proof["source_commit"],
+        "canonical_envelope_url": proof["canonical_envelope_url"],
+        "release_manifest_sha256": proof["release_manifest_sha256"],
+        "release_envelope_sha256": proof["release_envelope_sha256"],
+    }
+    for key, expected in expected_release_binding.items():
+        if release_binding.get(key) != expected:
+            raise BindingError(
+                "canonical v4 release proof binding is inconsistent with the existing release binding"
+            )
+
+
 def bind(repo_root: Path, proof_path: Path) -> dict:
     root = repo_root.resolve()
     proof, proof_payload, proof_sha = validate_proof(root, proof_path.resolve())
@@ -198,6 +230,14 @@ def bind(repo_root: Path, proof_path: Path) -> dict:
     if not isinstance(release_binding, dict):
         raise BindingError("physical authorization release binding is missing")
 
+    _assert_existing_binding_is_idempotent(
+        status=auth["status"],
+        bindings=bindings,
+        release_binding=release_binding,
+        proof=proof,
+        proof_sha=proof_sha,
+    )
+
     bindings["canonical_v4_release_proof_sha256"] = proof_sha
     release_binding.update(
         {
@@ -212,11 +252,7 @@ def bind(repo_root: Path, proof_path: Path) -> dict:
     auth["status"] = POST_PROOF_STATUS
 
     destination = root / DESTINATION_PATH
-    if destination.resolve() != proof_path.resolve():
-        _atomic_write(destination, proof_payload)
-    else:
-        # Rewrite through the same bounded path only after validation, preserving bytes.
-        _atomic_write(destination, proof_payload)
+    _atomic_write(destination, proof_payload)
 
     encoded_auth = (json.dumps(auth, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
     _atomic_write(auth_path, encoded_auth)
