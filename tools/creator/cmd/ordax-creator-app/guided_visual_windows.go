@@ -11,11 +11,12 @@ import (
 const (
 	wmPaint = 0x000F
 
-	colorWindow     = 5
-	colorWindowText = 8
-	colorHighlight  = 13
-	colorBtnFace    = 15
-	colorGrayText   = 17
+	colorWindow        = 5
+	colorWindowText    = 8
+	colorHighlight     = 13
+	colorHighlightText = 14
+	colorBtnFace       = 15
+	colorGrayText      = 17
 
 	transparent = 1
 	dtCenter     = 0x00000001
@@ -117,7 +118,7 @@ func drawStepCircle(hdc uintptr, x, y int32, number int, active, complete bool) 
 	textColor := sysColor(colorWindowText)
 	if active || complete {
 		fillColor = sysColor(colorHighlight)
-		textColor = sysColor(colorWindow)
+		textColor = sysColor(colorHighlightText)
 	}
 	brush, _, _ := procCreateSolidBrush.Call(fillColor)
 	oldBrush, _, _ := procSelectObject.Call(hdc, brush)
@@ -188,7 +189,7 @@ func drawUSBIllustration(hdc uintptr, view creatorExperienceView) {
 	case creatorStepBlocked:
 		badge = "!"
 	}
-	drawTextInRect(hdc, badge, rect{Left: 806, Top: 142, Right: 836, Bottom: 172}, dtCenter|dtVCenter|dtSingleLine, sysColor(colorWindow))
+	drawTextInRect(hdc, badge, rect{Left: 806, Top: 142, Right: 836, Bottom: 172}, dtCenter|dtVCenter|dtSingleLine, sysColor(colorHighlightText))
 
 	procSelectObject.Call(hdc, oldBrush)
 	procDeleteObject.Call(brush)
