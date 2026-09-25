@@ -17,14 +17,15 @@
     "auth_rate_limits_reviewed": true,
     "account_recovery_flow_tested": true,
     "session_revocation_tested": true,
-    "privacy_terms_ready": true
+    "privacy_terms_ready": true,
+    "server_side_public_activation_gate": true
   },
   "current_observation": {
     "source": "supabase-security-advisor",
     "observed_date": "2026-09-24",
     "leaked_password_protection": "disabled-warn",
     "public_login_enabled": false,
-    "edge_gateway": "deployed-v6-registration-password-policy",
+    "edge_gateway": "deployed-v7-public-server-gated",
     "csrf_state_change_protection": "pass-deployed",
     "secure_http_only_cookie_policy": "pass-source-and-edge",
     "same_origin_session_owner": "adapter-source-ready-not-deployed",
@@ -34,7 +35,10 @@
     "provider_password_policy_verified": false,
     "auth_rate_limits": "reviewed-provider-defaults-present-real-client-ip-forwarding-not-verified",
     "rate_limit_provider_defaults_reviewed": true,
-    "rate_limit_real_client_ip_forwarding_verified": false
+    "rate_limit_real_client_ip_forwarding_verified": false,
+    "public_site_server_activation_gate": "pass-deployed-disabled",
+    "public_site_account_enabled": false,
+    "public_site_marker_header": "X-OrdaX-Public-Site"
   },
   "rules": {
     "public_login_must_fail_closed_until_all_required_gates_pass": true,
