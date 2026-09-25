@@ -46,21 +46,21 @@ class GatewayReply:
     body: bytes
 
 
-def _validated_origin(value: str) -> str:
+def _validated_base_url(value: str) -> str:
     if not isinstance(value, str):
-        raise TypeError("account gateway origin must be a string")
+        raise TypeError("account gateway base URL must be a string")
     split = urlsplit(value.strip())
     if (
         split.scheme != "https"
         or not split.netloc
         or split.username is not None
         or split.password is not None
-        or split.path not in ("", "/")
         or split.query
         or split.fragment
+        or split.path.endswith("/")
     ):
-        raise ValueError("account gateway must be an HTTPS origin")
-    return f"https://{split.netloc}"
+        raise ValueError("account gateway must be an HTTPS base URL without query, fragment or trailing slash")
+    return f"https://{split.netloc}{split.path}"
 
 
 def _response_headers(message) -> dict[str, tuple[str, ...]]:
@@ -105,7 +105,7 @@ class NativeAccountGateway:
         *,
         timeout_seconds: float = 15.0,
     ) -> None:
-        self.origin = _validated_origin(origin)
+        self.base_url = _validated_base_url(origin)
         if not os.path.isabs(session_path):
             raise ValueError("session path must be absolute")
         self.session_path = session_path
@@ -177,7 +177,7 @@ class NativeAccountGateway:
             headers["Cookie"] = _cookie_header(self._cookies)
         if body is not None:
             headers["Content-Type"] = content_type or "application/octet-stream"
-        request = Request(self.origin + path, data=body, headers=headers, method=method)
+        request = Request(self.base_url + path, data=body, headers=headers, method=method)
         try:
             response = self._opener.open(request, timeout=self.timeout_seconds)
             try:
