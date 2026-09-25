@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-site/1",
-  "status": "foundation-not-deployed",
+  "status": "foundation-same-origin-adapter-and-gated-forms-source-ready-not-deployed",
   "artifact_class": "public-site",
   "source_root": "sites/public",
   "build_recipe": "tools/public-site/build.py",
@@ -29,7 +29,12 @@
     "configured_target_policy": "same-origin",
     "contract": "docs/contracts/public-identity.json",
     "legal_readiness_contract": "docs/contracts/public-legal-readiness.json",
-    "account_activation_requires_legal_readiness": true
+    "account_activation_requires_legal_readiness": true,
+    "gated_native_credential_forms_prepared": true,
+    "client_javascript_reads_credentials": false,
+    "credential_submission": "native-browser-post-to-same-origin-gateway",
+    "auth_hardening_contract": "docs/contracts/public-auth-hardening.json",
+    "account_activation_requires_auth_hardening": true
   },
   "downloads": {
     "hard_coded_latest_allowed": false,
@@ -50,10 +55,13 @@
   },
   "deployment": {
     "contract": "docs/contracts/public-site-deployment.json",
-    "adapter_selected": false,
+    "adapter_selected": true,
     "preview_runtime": "tools/public-site/preview_server.py",
     "production_https_required": true,
-    "same_origin_identity_required": true
+    "same_origin_identity_required": true,
+    "adapter_source": "deploy/public-site/nginx.conf",
+    "adapter_deployed": false,
+    "same_origin_sync_required": true
   },
   "product_distribution": {
     "public_profile": "stable-mvp",
