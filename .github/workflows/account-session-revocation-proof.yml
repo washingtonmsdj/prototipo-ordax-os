@@ -55,12 +55,11 @@ jobs:
           assert data["scope"] == "local"
           assert data["two_independent_sessions"] is True
           assert data["session_a_anonymous_after_logout"] is True
-          assert data["captured_refresh_token_rejected"] is True
+          assert data["revoked_session_restore_rejected"] is True
           assert data["session_b_remained_authenticated"] is True
           assert data["credentials_persisted"] is False
           assert data["account_identifier_recorded"] is False
-          assert data["cookies_recorded"] is False
-          assert data["tokens_recorded"] is False
+          assert data["sensitive_auth_material_recorded"] is False
           assert data["source_commit"] == data["source_commit"].lower()
           assert len(data["source_commit"]) == 40
           int(data["source_commit"], 16)
