@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-entry/1",
-  "status": "provider-adapter-source-v6-edge-revision-7-public-server-gated-form-ready",
+  "status": "provider-adapter-source-v7-edge-revision-8-recovery-request-fail-closed-public-server-gated",
   "purpose": "public-site-account-entry-boundary",
   "routes": {
     "login_page": "/login/",
@@ -23,7 +23,8 @@
     "credential_form_submission": "native-browser-post-to-same-origin-gateway",
     "registration_password_minimum_chars": 12,
     "registration_password_policy_enforced_server_side": true,
-    "login_retroactive_minimum_enforced": false
+    "login_retroactive_minimum_enforced": false,
+    "password_recovery_account_enumeration_allowed": false
   },
   "session": {
     "owner": "future-ordax-identity-service",
@@ -61,8 +62,11 @@
     "public_site_account_enabled": false,
     "public_site_marker_header": "X-OrdaX-Public-Site",
     "native_direct_account_gateway_remains_available": true,
-    "edge_deployment_revision_observed": 7,
-    "gateway_source_version": 6
+    "edge_deployment_revision_observed": 8,
+    "gateway_source_version": 7,
+    "password_recovery_request_implemented": true,
+    "password_recovery_redirect_config_verified": false,
+    "password_recovery_completion_flow_implemented": false
   },
   "supabase_candidate": {
     "status": "dedicated-target-schema-and-edge-gateway-deployed",
