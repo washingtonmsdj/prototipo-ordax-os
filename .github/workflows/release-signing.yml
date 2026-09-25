@@ -115,11 +115,31 @@ jobs:
             '$schema' = 'prototype-ordax.local-ai-source-lock/1'
           } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'source-lock.json') -Encoding UTF8
 
+          python tools/release-signing/operator_receipt.py `
+            --kind system `
+            --source-commit 0123456789abcdef0123456789abcdef01234567 `
+            --file "system.erofs=$work/system.erofs" `
+            --out "$work/system-receipt.json"
+          python tools/release-signing/operator_receipt.py `
+            --kind surface `
+            --source-commit 0123456789abcdef0123456789abcdef01234567 `
+            --file "native-surface-runtime.erofs=$work/native-surface-runtime.erofs" `
+            --out "$work/surface-receipt.json"
+          python tools/release-signing/operator_receipt.py `
+            --kind local-ai `
+            --source-commit 0123456789abcdef0123456789abcdef01234567 `
+            --file "local-ai-runtime.erofs=$work/local-ai-runtime.erofs" `
+            --file "source-lock.json=$work/source-lock.json" `
+            --out "$work/local-ai-receipt.json"
+
           $args = @{
             SystemImagePath = Join-Path $work 'system.erofs'
             SurfaceRuntimePath = Join-Path $work 'native-surface-runtime.erofs'
             LocalAiRuntimePath = Join-Path $work 'local-ai-runtime.erofs'
             LocalAiSourceLockPath = Join-Path $work 'source-lock.json'
+            SystemReceiptPath = Join-Path $work 'system-receipt.json'
+            SurfaceReceiptPath = Join-Path $work 'surface-receipt.json'
+            LocalAiReceiptPath = Join-Path $work 'local-ai-receipt.json'
             SourceCommit = '0123456789abcdef0123456789abcdef01234567'
             SystemArtifactUrl = 'https://releases.example.invalid/system.erofs'
             SurfaceArtifactUrl = 'https://releases.example.invalid/native-surface-runtime.erofs'
