@@ -398,3 +398,228 @@ test("missing durable checkpoint store degrades to safe session checkpoint", asy
   sync.destroy();
   preferenceSync.destroy();
 });
+
+
+test("portable preference conflict rebases once and treats idempotent acceptance as confirmed", async () => {
+  const preferences = preferencesRuntime();
+  const preferenceSync = createPreferenceSyncRuntime(preferences, {
+    createIdempotencyKey: keyFactory("pref-conflict"),
+  });
+  const bridge = createWorkspaceMetadataBridge(workspaceStore());
+  const preferenceCalls = [];
+
+  const transport = {
+    schema: SYNC_TRANSPORT_SCHEMA,
+    async snapshot() {
+      return {
+        cursor: 50,
+        objects: [
+          {
+            objectId: "appearance/theme",
+            dataClass: "appearance",
+            objectSchemaVersion: 1,
+            resolverVersion: 1,
+            serverRevision: 2,
+            tombstone: false,
+            payload: { theme: "light" },
+          },
+          {
+            objectId: "preferences/surface",
+            dataClass: "preferences",
+            objectSchemaVersion: 1,
+            resolverVersion: 1,
+            serverRevision: 5,
+            tombstone: false,
+            payload: {
+              "accessibility.contrast": "standard",
+              "accessibility.motion": "full",
+              "accessibility.text-scale": "standard",
+            },
+          },
+          {
+            objectId: "workspace/portable",
+            dataClass: "workspace-metadata",
+            objectSchemaVersion: 1,
+            resolverVersion: 1,
+            serverRevision: 3,
+            tombstone: false,
+            payload: {
+              activeAreaId: "area-1",
+              areas: [{ id: "area-1", ordinal: 1, appIds: [] }],
+            },
+          },
+        ],
+      };
+    },
+    async pullChanges({ afterCursor }) {
+      return { afterCursor, nextCursor: afterCursor, changes: [] };
+    },
+    async applyMutation(value) {
+      if (value.objectId !== "preferences/surface") {
+        return {
+          $schema: "prototype-ordax.sync-ack/1",
+          objectId: value.objectId,
+          dataClass: value.dataClass,
+          serverRevision: value.baseServerRevision + 1,
+          tombstone: false,
+          applied: true,
+          conflict: false,
+          changeCursor: 51,
+        };
+      }
+      preferenceCalls.push(value);
+      if (preferenceCalls.length === 1) {
+        return {
+          $schema: "prototype-ordax.sync-ack/1",
+          objectId: value.objectId,
+          dataClass: value.dataClass,
+          serverRevision: 6,
+          tombstone: false,
+          applied: false,
+          conflict: true,
+          changeCursor: null,
+        };
+      }
+      return {
+        $schema: "prototype-ordax.sync-ack/1",
+        objectId: value.objectId,
+        dataClass: value.dataClass,
+        serverRevision: 7,
+        tombstone: false,
+        applied: false,
+        conflict: false,
+        changeCursor: 52,
+      };
+    },
+  };
+
+  const sync = createAccountSyncRuntime({
+    identitySession: signedInIdentity(),
+    transport,
+    checkpointStore: checkpointStore(),
+    preferenceSync,
+    preferences,
+    workspaceMetadataSource: bridge.source,
+    workspaceStore: bridge.store,
+    createIdempotencyKey: keyFactory("account-conflict"),
+  });
+
+  await sync.refresh();
+  preferences.set("accessibility.contrast", "high");
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(preferenceCalls.length, 2);
+  assert.equal(preferenceCalls[0].baseServerRevision, 5);
+  assert.equal(preferenceCalls[1].baseServerRevision, 6);
+  assert.equal(preferenceCalls[1].payload["accessibility.contrast"], "high");
+  assert.notEqual(preferenceCalls[1].idempotencyKey, preferenceCalls[0].idempotencyKey);
+  assert.equal(sync.getSnapshot().pendingMutationCount, 0);
+
+  sync.destroy();
+  preferenceSync.destroy();
+});
+
+test("repeated portable preference conflicts are bounded and leave rebased intent pending", async () => {
+  const preferences = preferencesRuntime();
+  const preferenceSync = createPreferenceSyncRuntime(preferences, {
+    createIdempotencyKey: keyFactory("pref-bounded"),
+  });
+  const bridge = createWorkspaceMetadataBridge(workspaceStore());
+  const preferenceCalls = [];
+
+  const transport = {
+    schema: SYNC_TRANSPORT_SCHEMA,
+    async snapshot() {
+      return {
+        cursor: 60,
+        objects: [
+          {
+            objectId: "appearance/theme",
+            dataClass: "appearance",
+            objectSchemaVersion: 1,
+            resolverVersion: 1,
+            serverRevision: 1,
+            tombstone: false,
+            payload: { theme: "light" },
+          },
+          {
+            objectId: "preferences/surface",
+            dataClass: "preferences",
+            objectSchemaVersion: 1,
+            resolverVersion: 1,
+            serverRevision: 8,
+            tombstone: false,
+            payload: {
+              "accessibility.contrast": "standard",
+              "accessibility.motion": "full",
+              "accessibility.text-scale": "standard",
+            },
+          },
+          {
+            objectId: "workspace/portable",
+            dataClass: "workspace-metadata",
+            objectSchemaVersion: 1,
+            resolverVersion: 1,
+            serverRevision: 1,
+            tombstone: false,
+            payload: {
+              activeAreaId: "area-1",
+              areas: [{ id: "area-1", ordinal: 1, appIds: [] }],
+            },
+          },
+        ],
+      };
+    },
+    async pullChanges({ afterCursor }) {
+      return { afterCursor, nextCursor: afterCursor, changes: [] };
+    },
+    async applyMutation(value) {
+      if (value.objectId !== "preferences/surface") {
+        return {
+          $schema: "prototype-ordax.sync-ack/1",
+          objectId: value.objectId,
+          dataClass: value.dataClass,
+          serverRevision: value.baseServerRevision + 1,
+          tombstone: false,
+          applied: true,
+          conflict: false,
+          changeCursor: 61,
+        };
+      }
+      preferenceCalls.push(value);
+      return {
+        $schema: "prototype-ordax.sync-ack/1",
+        objectId: value.objectId,
+        dataClass: value.dataClass,
+        serverRevision: value.baseServerRevision + 1,
+        tombstone: false,
+        applied: false,
+        conflict: true,
+        changeCursor: null,
+      };
+    },
+  };
+
+  const sync = createAccountSyncRuntime({
+    identitySession: signedInIdentity(),
+    transport,
+    checkpointStore: checkpointStore(),
+    preferenceSync,
+    preferences,
+    workspaceMetadataSource: bridge.source,
+    workspaceStore: bridge.store,
+    createIdempotencyKey: keyFactory("account-bounded"),
+  });
+
+  await sync.refresh();
+  preferences.set("accessibility.contrast", "high");
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(preferenceCalls.length, 2, "one original attempt plus one bounded rebase retry");
+  assert.equal(preferenceCalls[0].baseServerRevision, 8);
+  assert.equal(preferenceCalls[1].baseServerRevision, 9);
+  assert.equal(sync.getSnapshot().pendingMutationCount, 1);
+
+  sync.destroy();
+  preferenceSync.destroy();
+});
