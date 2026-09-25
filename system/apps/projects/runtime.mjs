@@ -1,5 +1,7 @@
 import { COMPONENT_RUNTIME_SCHEMA } from "../../contracts/component-runtime.mjs";
 import { PROJECTS_VERSION } from "./version.mjs";
+import { probeProjectsDeviceAgent } from "./device-agent-status.mjs";
+import { mountProjectsDeviceAgentStatus } from "./ui/device-agent-status.mjs";
 import { mountProjectsWorkspaceControls } from "./ui/workspace-controls.mjs";
 
 const PROJECTS_STYLESHEET_URL = new URL("./projects.css", import.meta.url).href;
@@ -53,28 +55,41 @@ export const componentRuntime = Object.freeze({
     projects = null,
     projectCloudLinks = null,
     appActivation = null,
+    deviceAgentCapabilities = null,
   } = {}) {
     const releaseStyles = await mountProjectsStyles(root);
     let controls = null;
+    let deviceAgentControls = null;
 
     try {
+      const deviceAgentStatus = await probeProjectsDeviceAgent(deviceAgentCapabilities);
       controls = mountProjectsWorkspaceControls(root, {
         surfaceLifecycle,
         projects,
         projectCloudLinks,
         appActivation,
       });
+      if (deviceAgentStatus !== null) {
+        deviceAgentControls = mountProjectsDeviceAgentStatus(
+          root,
+          deviceAgentStatus,
+          surfaceLifecycle,
+        );
+      }
 
       let destroyed = false;
       return Object.freeze({
+        deviceAgentStatus,
         destroy() {
           if (destroyed) return;
           destroyed = true;
+          deviceAgentControls?.destroy();
           controls?.destroy();
           releaseStyles();
         },
       });
     } catch (error) {
+      deviceAgentControls?.destroy();
       controls?.destroy();
       releaseStyles();
       throw error;
