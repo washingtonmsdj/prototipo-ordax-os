@@ -1,7 +1,9 @@
 import importlib.util
 import json
+import os
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -117,6 +119,78 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertTrue(all("HttpOnly" in value for value in cookies))
         self.assertTrue(all("Max-Age=0" in value for value in cookies))
 
+    def test_recovery_request_is_fail_closed_without_redirect_configuration(self):
+        class FakeProvider:
+            def __init__(self):
+                self.calls = []
+
+            def request_password_recovery(self, email, redirect_to):
+                self.calls.append((email, redirect_to))
+
+        provider = FakeProvider()
+        gateway = gateway_module.PublicIdentityGateway(
+            provider=provider,
+            sync_provider=None,
+        )
+        headers = {"content-type": "application/x-www-form-urlencoded"}
+        with patch.dict(os.environ, {"ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL": ""}, clear=False):
+            response = gateway.handle(
+                "POST",
+                "/auth/recover",
+                headers,
+                b"email=pessoa%40example.com",
+            )
+        self.assertEqual(response.status, 503)
+        self.assertEqual(self.payload(response)["error"], "account-recovery-unavailable")
+        self.assertEqual(provider.calls, [])
+
+    def test_recovery_request_is_generic_and_uses_clean_https_redirect(self):
+        class FakeProvider:
+            def __init__(self):
+                self.calls = []
+
+            def request_password_recovery(self, email, redirect_to):
+                self.calls.append((email, redirect_to))
+
+        provider = FakeProvider()
+        gateway = gateway_module.PublicIdentityGateway(
+            provider=provider,
+            sync_provider=None,
+        )
+        headers = {"content-type": "application/x-www-form-urlencoded"}
+        with patch.dict(
+            os.environ,
+            {"ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL": "https://accounts.ordax.example/recuperar/concluir"},
+            clear=False,
+        ):
+            response = gateway.handle(
+                "POST",
+                "/auth/recover",
+                headers,
+                b"email=pessoa%40example.com",
+            )
+        self.assertEqual(response.status, 202)
+        payload = self.payload(response)
+        self.assertTrue(payload["recoveryRequested"])
+        self.assertNotIn("exists", response.body.decode("utf-8").lower())
+        self.assertEqual(
+            provider.calls,
+            [("pessoa@example.com", "https://accounts.ordax.example/recuperar/concluir")],
+        )
+
+    def test_marked_public_recovery_request_remains_server_gated(self):
+        response = self.gateway.handle(
+            "POST",
+            "/auth/recover",
+            {
+                "X-OrdaX-Public-Site": "1",
+                "content-type": "application/x-www-form-urlencoded",
+            },
+            b"email=pessoa%40example.com",
+        )
+        self.assertEqual(response.status, 503)
+        self.assertEqual(self.payload(response)["error"], "public-account-access-disabled")
+
     def test_sync_routes_fail_closed_without_identity_provider(self):
         for path in ("/sync/snapshot", "/sync/changes", "/sync/objects"):
             with self.subTest(path=path):
@@ -135,6 +209,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
             ("POST", "/auth/session", "GET"),
             ("PUT", "/auth/login", "GET, POST"),
             ("GET", "/auth/logout", "POST"),
+            ("GET", "/auth/recover", "POST"),
             ("POST", "/sync/snapshot", "GET"),
             ("POST", "/sync/changes", "GET"),
             ("POST", "/sync/objects", "GET"),
