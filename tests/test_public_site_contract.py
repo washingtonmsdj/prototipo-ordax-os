@@ -15,6 +15,8 @@ class PublicSiteContractTests(unittest.TestCase):
             "download/index.html",
             "login/index.html",
             "cadastro/index.html",
+            "recuperar/index.html",
+            "recuperar/nova-senha/index.html",
             "conta/index.html",
             "licencas/index.html",
             "privacidade/index.html",
@@ -43,6 +45,11 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertFalse(distribution["authenticated_workspace_may_replace_landing"])
         self.assertEqual(contract["routes"]["landing"], "/")
         self.assertEqual(contract["routes"]["account"], "/conta/")
+        self.assertEqual(contract["routes"]["recovery"], "/recuperar/")
+        self.assertEqual(contract["routes"]["recovery_new_password"], "/recuperar/nova-senha/")
+        self.assertTrue(contract["identity"]["gated_recovery_forms_prepared"])
+        self.assertFalse(contract["identity"]["recovery_forms_enabled"])
+        self.assertTrue(contract["identity"]["recovery_server_side_token_hash"])
         account = contract["account_area"]
         self.assertTrue(account["requires_authenticated_session"])
         self.assertTrue(account["fail_closed_until_identity_ready"])
@@ -71,6 +78,8 @@ class PublicSiteContractTests(unittest.TestCase):
         config = json.loads((SITE / "config" / "public-site.json").read_text(encoding="utf-8"))
         self.assertIsNone(config["identity"]["login_url"])
         self.assertIsNone(config["identity"]["register_url"])
+        self.assertIsNone(config["identity"]["recovery_url"])
+        self.assertIsNone(config["identity"]["recovery_complete_url"])
         self.assertEqual(config["downloads"]["catalog_url"], "/releases/catalog.json")
         self.assertFalse(config["legal"]["account_activation_ready"])
         self.assertEqual(config["legal"]["privacy_url"], "/privacidade/")
@@ -78,10 +87,16 @@ class PublicSiteContractTests(unittest.TestCase):
 
         login = (SITE / "login" / "index.html").read_text(encoding="utf-8")
         register = (SITE / "cadastro" / "index.html").read_text(encoding="utf-8")
+        recovery = (SITE / "recuperar" / "index.html").read_text(encoding="utf-8")
+        recovery_complete = (SITE / "recuperar" / "nova-senha" / "index.html").read_text(encoding="utf-8")
         account = (SITE / "conta" / "index.html").read_text(encoding="utf-8")
         download = (SITE / "download" / "index.html").read_text(encoding="utf-8")
         self.assertIn("Serviço de identidade ainda não configurado", login)
+        self.assertIn('href="/recuperar/"', login)
+        self.assertIn("Esqueci minha senha", login)
         self.assertIn("Cadastro ainda não configurado", register)
+        self.assertIn("Recuperação ainda não configurada", recovery)
+        self.assertIn("Conclusão da recuperação ainda não ativada", recovery_complete)
         self.assertIn("Área da conta ainda indisponível", account)
         self.assertIn("não simula dados", account)
         self.assertIn("data-download-status", download)
@@ -105,6 +120,8 @@ class PublicSiteContractTests(unittest.TestCase):
     def test_gated_identity_forms_use_native_post_without_javascript_credential_access(self):
         login = (SITE / "login" / "index.html").read_text(encoding="utf-8")
         register = (SITE / "cadastro" / "index.html").read_text(encoding="utf-8")
+        recovery = (SITE / "recuperar" / "index.html").read_text(encoding="utf-8")
+        recovery_complete = (SITE / "recuperar" / "nova-senha" / "index.html").read_text(encoding="utf-8")
         script = (SITE / "assets" / "site.js").read_text(encoding="utf-8")
 
         self.assertIn('data-identity-form="login"', login)
@@ -113,7 +130,11 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertIn('autocomplete="new-password"', register)
         self.assertIn('minlength="12"', register)
         self.assertIn("Use pelo menos 12 caracteres.", register)
-        for page in (login, register):
+        self.assertIn('data-identity-form="recover"', recovery)
+        self.assertIn('data-identity-form="recover-complete"', recovery_complete)
+        self.assertIn('name="password_confirmation"', recovery_complete)
+        self.assertIn('minlength="12"', recovery_complete)
+        for page in (login, register, recovery, recovery_complete):
             self.assertIn('method="post"', page)
             self.assertIn(" hidden>", page)
             self.assertIn(" disabled>", page)
