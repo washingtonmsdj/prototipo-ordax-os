@@ -29,6 +29,30 @@ ordax-release-signing sign \
 
 The versioned pre-publication boundary is `docs/contracts/portable-v4-signing-handoff.json`; scripts 3/4/5 and their receipts must remain consistent with that contract.
 
+Before preparing the public signing handoff, the exact three EROFS inputs can be
+reproduced by the already-proven builders without publishing a release. Each builder
+supports `workflow_dispatch`; only a manual run exports its real image bytes, under a
+one-day GitHub Actions artifact whose name includes the exact Git SHA:
+
+```text
+portable-release-image.yml
+ -> canonical-v4-operator-system-<sha>/system.erofs
+
+surface-runtime-lock-discovery.yml
+ -> canonical-v4-operator-surface-<sha>/native-surface-runtime.erofs
+
+local-ai-runtime-candidate.yml
+ -> canonical-v4-operator-local-ai-<sha>/local-ai-runtime.erofs
+ -> source-lock.json
+```
+
+All three manual workflows must be dispatched against the **same exact commit**. These
+GitHub Actions artifacts are temporary operator-transfer material only: they are not the
+canonical public HTTPS release channel, are retained for one day, contain no canonical
+private key, do not sign or activate a release and do not authorize physical media.
+Normal push/PR CI continues to remove or withhold the unpromoted Surface/Local-AI image
+bytes and uploads proof metadata only.
+
 Before preparing the public signing handoff, the operator may run the read-only
 canonical v4 preflight:
 
