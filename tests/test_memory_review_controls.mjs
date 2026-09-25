@@ -14,6 +14,8 @@ for (const marker of [
   'dataset.memoryReviewSave',
   'dataset.memoryReviewRemove',
   'dataset.memoryReviewPage',
+  'article.dataset.sensitivity = item.sensitivity',
+  '${item.kind} · ${item.scope} · ${item.sensitivity} · ${item.provenance}',
   'viewModel.setQuery(target.value)',
   'viewModel.selectOwner({',
   'viewModel.previousPage()',
@@ -31,5 +33,6 @@ assert.equal(source.includes("fetch("), false);
 assert.equal(source.includes("OpenAI"), false);
 assert.equal(source.includes("llama"), false);
 assert.equal(source.includes("window.confirm"), false);
+assert.equal(source.includes("CSS.escape"), false);
 
 console.log("MEMORY_REVIEW_CONTROLS=PASS");
