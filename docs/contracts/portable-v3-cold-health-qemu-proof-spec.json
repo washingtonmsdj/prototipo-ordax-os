@@ -17,7 +17,7 @@
     "build-and-sign-candidate-release-v4",
     "build-and-sign-previous-release-from-real-previous-source-tree",
     "arm-ext4-activation-state-with-ordax-portable-state-prepare",
-    "boot-candidate-one-shot-with-network-disabled",
+    "boot-candidate-one-shot-with-network-disabled-and-real-virtio-drm",
     "run-shared-system-supervisor",
     "observe-real-surface-health-for-exact-candidate-sha",
     "commit-through-ordax-portable-state",
@@ -48,7 +48,10 @@
     "qemu_disk_cache_mode": "directsync",
     "final_state_inspection": "read-only-copy-fail-closed",
     "post_commit_marker_is_observation_only": true,
-    "marker_emitted_only_after_real_portable_state_commit": true
+    "marker_emitted_only_after_real_portable_state_commit": true,
+    "synthetic_surface_health": false,
+    "graphical_health_uses_product_stack": true,
+    "virtual_gpu_does_not_count_as_physical_hardware_proof": true
   },
   "promotion_effect": {
     "failure_fallback_proof_remains_separate": true,
@@ -57,5 +60,18 @@
     "physical_known_good_gate_closed": false,
     "physical_rollback_gate_closed": false,
     "physical_usb_gate_closed": false
+  },
+  "virtual_hardware": {
+    "graphics_adapter": "virtio-vga",
+    "kernel_requirements": [
+      "CONFIG_VIRTIO=y",
+      "CONFIG_VIRTIO_PCI=y",
+      "CONFIG_DRM_VIRTIO_GPU=y"
+    ],
+    "guest_memory_mib": 3072,
+    "input_path": "qemu-pc-default-ps2-through-real-evdev",
+    "host_display_window": false,
+    "guest_graphical_stack": "cage-wayland-webkit-seatd",
+    "synthetic_surface_health": false
   }
 }
