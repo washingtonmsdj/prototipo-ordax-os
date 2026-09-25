@@ -15,6 +15,7 @@ spec.loader.exec_module(preflight)
 REQUIRED = (
     preflight.LEGAL,
     preflight.HARDENING,
+    preflight.PROVIDER_POLICY,
     preflight.DEPLOYMENT,
     preflight.IDENTITY,
     preflight.LIFECYCLE,
@@ -45,10 +46,12 @@ class PublicAuthActivationPreflightTests(unittest.TestCase):
         )
         self.assertNotIn("leaked-password-protection", blockers)
         self.assertNotIn("account-data-export-implementation", blockers)
+        self.assertNotIn("email-confirmation-policy", blockers)
+        self.assertNotIn("redirect-allowlist", blockers)
         self.assertTrue(all(value is False for value in controls.values()))
         for expected in (
-            "email-confirmation-policy",
-            "redirect-allowlist",
+            "email-confirmation-provider-verification",
+            "redirect-allowlist-provider-verification",
             "same-origin-adapter-deployment",
             "public-rate-limit-deployment",
             "recovery-email-template",
