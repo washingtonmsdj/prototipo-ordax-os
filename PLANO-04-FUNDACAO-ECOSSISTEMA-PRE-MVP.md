@@ -261,7 +261,7 @@ Mutações de recursos sujeitos a quota/entitlement são **server-authoritative*
 17. Action Gateway read-only para device/project capabilities;
 18. Product MCP Gateway para ChatGPT/Grok;
 19. OrdaX Web sobre o mesmo Action Gateway;
-20. sync/cloud memory;
+20. sync/cloud memory completo — **P2**; a primeira fatia segura de continuidade (`appearance`, preferências portáveis e metadata do workspace) já está **PASS_SOURCE Web + Native/USB**, ainda sem disponibilidade pública;
 21. compartilhamento de Space;
 22. pack Legal/Advocacia com pipeline de fontes oficiais;
 23. Store pública;
@@ -270,3 +270,18 @@ Mutações de recursos sujeitos a quota/entitlement são **server-authoritative*
 ## 8. Regra de fechamento de escopo
 
 Depois de fechar essas fundações, novas features não entram no primeiro MVP apenas por serem boas ideias. O foco volta para release v4 canônica, primeira mídia Stable física, cold-health, known-good, rollback, recovery, smoke real e publicação.
+
+
+## Estado incremental de identidade e continuidade
+
+A fundação evoluiu sem tornar conta obrigatória:
+
+```text
+PUBLIC_IDENTITY_PASSWORD_FLOW=PASS_SOURCE_ACTIVATION_GATED
+ACCOUNT_SYNC_SAFE_STATE_BACKEND=PASS_APPLIED
+ACCOUNT_SYNC_WEB=PASS_SOURCE
+ACCOUNT_SYNC_NATIVE_USB=PASS_SOURCE_GATEWAY_DEPLOYMENT_PENDING
+ACCOUNT_SYNC_PUBLIC_AVAILABILITY=NO
+```
+
+A sessão Native fica no dispositivo e não é dado sincronizável. Senhas são entradas transitórias e não entram em estado do OOBE, memória, sync ou Git. A disponibilidade pública continua bloqueada pelos gates de Auth/legal/deployment e pelas provas físicas pertinentes.
