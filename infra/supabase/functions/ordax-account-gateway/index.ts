@@ -12,6 +12,7 @@ const REFRESH_COOKIE = "ordax_refresh";
 const MAX_BODY = 64 * 1024;
 const MIN_REGISTRATION_PASSWORD_CHARS = 12;
 const MAX_REGISTRATION_PASSWORD_CHARS = 256;
+const PUBLIC_SITE_ACCOUNT_ENABLED = false;
 const DATA_CLASSES = new Set([
   "appearance",
   "preferences",
@@ -106,6 +107,10 @@ function crossSiteStateChange(req: Request) {
   } catch {
     return true;
   }
+}
+
+function publicSiteRequest(req: Request) {
+  return (req.headers.get("x-ordax-public-site") ?? "") === "1";
 }
 
 function routePath(url: URL) {
@@ -221,6 +226,27 @@ Deno.serve(async (req: Request) => {
 
   if (crossSiteStateChange(req)) {
     return error(403, "cross-site-request-rejected", "Solicitação de outra origem rejeitada.");
+  }
+
+  if (publicSiteRequest(req) && !PUBLIC_SITE_ACCOUNT_ENABLED) {
+    if (path === "/auth/login" && req.method === "GET") return redirectResponse("/login/");
+    if (path === "/auth/register" && req.method === "GET") return redirectResponse("/cadastro/");
+    if (path === "/auth/logout" && req.method === "POST") {
+      return wantsJson(req)
+        ? json(200, { signedOut: true }, clearCookies())
+        : redirectResponse("/", clearCookies());
+    }
+    if (path === "/auth/session" && req.method === "GET") {
+      return json(200, {
+        $schema: SESSION_SCHEMA,
+        authenticated: false,
+        provider: "gated",
+        status: "anonymous",
+      }, clearCookies());
+    }
+    if (path.startsWith("/auth/") || path.startsWith("/sync/")) {
+      return error(503, "public-account-access-disabled", "O acesso público à Conta OrdaX ainda não foi ativado.");
+    }
   }
 
   if (path === "/health" && req.method === "GET") {
