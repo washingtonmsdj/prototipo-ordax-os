@@ -239,6 +239,16 @@ class NativeAccountGateway:
         with self._lock:
             return self._request("GET", "/sync/objects" + suffix)
 
+    def sync_snapshot(self, query: str = "") -> GatewayReply:
+        suffix = f"?{query}" if query else ""
+        with self._lock:
+            return self._request("GET", "/sync/snapshot" + suffix)
+
+    def pull_sync_changes(self, query: str = "") -> GatewayReply:
+        suffix = f"?{query}" if query else ""
+        with self._lock:
+            return self._request("GET", "/sync/changes" + suffix)
+
     def mutate_sync(self, body: bytes) -> GatewayReply:
         with self._lock:
             return self._request(
