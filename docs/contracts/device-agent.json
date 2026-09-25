@@ -96,6 +96,8 @@
     "product_credentials_may_authenticate_engineering_jobs": false,
     "product_action_gateway_may_reuse_development_operator_credentials": false,
     "historical_development_tables_are_product_authority": false,
-    "bootstrap_dependency": false
+    "bootstrap_dependency": false,
+    "existing_device_token_identity_recovery": true,
+    "github_runner_required_for_existing_device_recovery": false
   }
 }
