@@ -181,7 +181,7 @@ A separate product-domain foundation is now defined before public accounts carry
 
 Persistent Intelligence memory is now specified as OrdaX-owned through `ordax.memory/1`, with device/account/space/project/session scopes, provenance, user review/edit/delete requirements and a derived/rebuildable semantic index. `ordax.model-router/1` prepares future OpenAI/xAI adapters while requiring explicit external egress; Local AI remains the offline baseline and no inference provider owns persistent memory.
 
-The dedicated Supabase project `ordax-control-plane` is the selected pre-MVP backend target for the product schema. The source-controlled migrations under `infra/supabase/product/` have been applied: `ordax_accounts`, Spaces/membership, server-authoritative entitlement grants, versioned Profile Packs, memory metadata + pgvector embeddings and project-connection metadata all use RLS. The older duplicate `ordax_profiles` migration was removed so Auth has one OrdaX product bootstrap owner. The Supabase password provider and same-origin session gateway are now implemented in source: sign-in, sign-up, refresh, validated session state and logout use HttpOnly cookies and never expose provider tokens to public-site JavaScript. **Public login remains fail-closed** pending deployment configuration, leaked-password protection, remaining Auth hardening and legal readiness.
+The dedicated Supabase project `ordax-control-plane` is the selected pre-MVP backend target for the product schema. The source-controlled migrations under `infra/supabase/product/` have been applied: `ordax_accounts`, Spaces/membership, server-authoritative entitlement grants, versioned Profile Packs, memory metadata + pgvector embeddings and project-connection metadata all use RLS. The older duplicate `ordax_profiles` migration was removed so Auth has one OrdaX product bootstrap owner. The Supabase password provider is implemented and the OrdaX account gateway is deployed to the dedicated control-plane backend. Sign-in, sign-up, refresh, validated session state and logout use HttpOnly cookies and never expose provider tokens to Surface JavaScript. Account sync now uses an atomic initial snapshot plus a subject-bound persisted incremental cursor for appearance, portable preferences and workspace metadata on Web and Native/USB. **Public browser login remains fail-closed** pending the same-origin production hosting boundary, leaked-password protection, remaining Auth hardening and legal readiness.
 
 A Product MCP boundary is also specified separately from the owner/development Control Plane. Future ChatGPT/Grok clients authenticate to OrdaX OAuth, then receive only account/Space/project-scoped tools. GitHub is a separate connection, preferably through a GitHub App restricted to selected repositories; upstream GitHub credentials are never returned to the external model. Public Product MCP deployment, mutating tools, connectors and automations remain post-MVP functionality.
 
@@ -190,15 +190,17 @@ This foundation does not change the current physical release gate:
 ```text
 ECOSYSTEM_FOUNDATION=PASS_SOURCE_BACKEND_SCHEMA_PREPARED
 PUBLIC_IDENTITY_PASSWORD_FLOW=PASS_SOURCE_ACTIVATION_GATED
-PUBLIC_IDENTITY_EDGE_GATEWAY=DEPLOYED_ORDAX_CONTROL_PLANE_V1
+PUBLIC_IDENTITY_EDGE_GATEWAY=DEPLOYED_ORDAX_CONTROL_PLANE_V2
 PUBLIC_IDENTITY_NATIVE_SIGNED_GATEWAY_CONFIG=PASS_SOURCE
-ACCOUNT_SYNC_BACKEND_V1=PASS_APPLIED_PRIVATE_RLS
+ACCOUNT_SYNC_BACKEND_V2=PASS_APPLIED_PRIVATE_RLS_INCREMENTAL
 ACCOUNT_SYNC_WEB_DATA_CLASSES=APPEARANCE,PREFERENCES,WORKSPACE_METADATA
-ACCOUNT_SYNC_CURRENT_READ_MODE=SAFE_FULL_RESYNC
-ACCOUNT_SYNC_INCREMENTAL_CURSOR=NOT_IMPLEMENTED
+ACCOUNT_SYNC_CURRENT_READ_MODE=ATOMIC_SNAPSHOT_PLUS_PAGED_INCREMENTAL_CURSOR
+ACCOUNT_SYNC_INCREMENTAL_CURSOR=PASS_APPLIED_AND_CLIENT_CHECKPOINTED
 ACCOUNT_SYNC_CLIENT_INTEGRATION=PASS_SOURCE_WEB
 ACCOUNT_SYNC_OFFLINE_RECONNECT=PASS_SOURCE_WEB_NATIVE
 ACCOUNT_SYNC_OFFLINE_LOCAL_CHANGES_PRESERVED=PASS_SOURCE
+ACCOUNT_SYNC_CHECKPOINT_SCOPE=SUBJECT_BOUND_DEVICE_WITH_SESSION_FALLBACK
+ACCOUNT_SYNC_MULTI_DEVICE_E2E_PROOF=PENDING
 ACCOUNT_GATEWAY_STABLE_BOOTSTRAP_BINDING=PASS_SOURCE_OPTIONAL_HTTPS_ORIGIN
 ACCOUNT_SYNC_NATIVE_USB_INTEGRATION=PASS_SOURCE_GATEWAY_DEPLOYED_PHYSICAL_PROOF_PENDING
 ACCOUNT_SYNC_PUBLIC_AVAILABILITY=NO
