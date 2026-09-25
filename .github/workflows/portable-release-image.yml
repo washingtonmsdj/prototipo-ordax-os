@@ -222,12 +222,23 @@ jobs:
           test -s "$metadata/SHA256SUMS"
           echo 'SYSTEM_EROFS_ARTIFACT_PUBLISHED_AS_RELEASE=NO'
 
+      - name: Generate operator system provenance receipt
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python tools/release-signing/operator_receipt.py \
+            --kind system \
+            --source-commit "$GITHUB_SHA" \
+            --file "system.erofs=$RUNNER_TEMP/portable-release/a/system.erofs" \
+            --out "$RUNNER_TEMP/portable-release/a/operator-receipt.json"
+
       - name: Upload operator system EROFS only on manual run
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: canonical-v4-operator-system-${{ github.sha }}
-          path: ${{ runner.temp }}/portable-release/a/system.erofs
+          path: |
+            ${{ runner.temp }}/portable-release/a/system.erofs
+            ${{ runner.temp }}/portable-release/a/operator-receipt.json
           if-no-files-found: error
           retention-days: 1
 
