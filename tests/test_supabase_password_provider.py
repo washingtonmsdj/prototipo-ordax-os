@@ -58,7 +58,7 @@ class SupabasePasswordProviderTests(unittest.TestCase):
                 "user": {"id": "user-1", "email": "person@example.com"},
             })
         ])
-        result = provider.sign_in_with_password(" person@example.com ", "secret-pass")
+        result = provider.sign_in_with_password(" person@example.com ", "secret-pass-12")
 
         self.assertEqual(result.subject_id, "user-1")
         self.assertEqual(result.email, "person@example.com")
@@ -72,16 +72,36 @@ class SupabasePasswordProviderTests(unittest.TestCase):
         self.assertNotIn("Authorization", headers)
         self.assertEqual(
             json.loads(body),
-            {"email": "person@example.com", "password": "secret-pass"},
+            {"email": "person@example.com", "password": "secret-pass-12"},
         )
 
     def test_signup_without_session_is_reported_as_email_confirmation_required(self):
         provider, _ = self.provider([
             (200, {"user": {"id": "user-2", "email": "new@example.com"}})
         ])
-        result = provider.sign_up_with_password("new@example.com", "secret-pass")
+        result = provider.sign_up_with_password("new@example.com", "secret-pass-12")
         self.assertIsNone(result.session)
         self.assertTrue(result.email_confirmation_required)
+
+    def test_signup_rejects_passwords_shorter_than_ordax_policy(self):
+        provider, transport = self.provider([])
+        with self.assertRaises(ValueError):
+            provider.sign_up_with_password("new@example.com", "short-pass")
+        self.assertEqual(transport.calls, [])
+
+    def test_login_does_not_retroactively_reject_existing_shorter_password(self):
+        provider, transport = self.provider([
+            (200, {
+                "access_token": "access",
+                "refresh_token": "refresh",
+                "expires_in": 3600,
+                "token_type": "bearer",
+                "user": {"id": "user-1", "email": "person@example.com"},
+            })
+        ])
+        result = provider.sign_in_with_password("person@example.com", "old-pass")
+        self.assertEqual(result.subject_id, "user-1")
+        self.assertEqual(len(transport.calls), 1)
 
     def test_refresh_get_user_and_logout_use_bearer_token_only_when_needed(self):
         provider, transport = self.provider([
