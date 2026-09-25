@@ -1,0 +1,302 @@
+#!/usr/bin/env python3
+"""Disposable QEMU proof of the healthy Portable v3 cold-health commit path.
+
+The proof boots an already-armed one-shot candidate using the same verified
+portable-v2 kernel/initramfs handoff as the fallback proof. Unlike the fallback
+proof, it waits for a machine-readable marker emitted only after the real
+system/supervisor has observed Surface cold health and successfully committed
+the candidate through ordax-portable-state. It then inspects the persistent
+ext4 activation state and performs a second boot that must select the candidate
+as current.
+
+This is CI evidence only. It never selects or touches physical media and does
+not claim a physical USB, Secure Boot, or hardware cold-health proof.
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import os
+from pathlib import Path
+import shutil
+import sys
+import tempfile
+from typing import Any
+
+BASE = Path(__file__).with_name("qemu_boot.py")
+SCHEMA = "prototype-ordax.portable-v3-cold-health-qemu-proof-result/1"
+
+
+def _load_base():
+    spec = importlib.util.spec_from_file_location("ordax_portable_qemu_base", BASE)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("cannot load portable QEMU proof base")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+qemu = _load_base()
+
+
+def inspect_committed_state(
+    disk: Path,
+    work: Path,
+    *,
+    previous_commit: str,
+    candidate_commit: str,
+) -> dict[str, bool]:
+    loop = ""
+    data_mounted = False
+    state_mounted = False
+    data_mount = work / "inspect-commit-data"
+    state_mount = work / "inspect-commit-state"
+    data_mount.mkdir(exist_ok=True)
+    state_mount.mkdir(exist_ok=True)
+    try:
+        loop = qemu.capture(["losetup", "--find", "--show", "--partscan", str(disk)])
+        if not loop.startswith("/dev/loop"):
+            raise qemu.ProofError("cold-health inspection did not map a host loop device")
+        data = Path(loop + "p2")
+        qemu.wait_block(data)
+        qemu.run(["mount.exfat-fuse", "-o", "ro", str(data), str(data_mount)])
+        data_mounted = True
+
+        state_image = qemu.regular(
+            data_mount / ".ordax/state/persistent-state.img",
+            "cold-health persistent-state image",
+            minimum=16 * 1024 * 1024,
+        )
+        state_copy = work / "cold-health-persistent-state.img"
+        shutil.copyfile(state_image, state_copy)
+        qemu.unmount(data_mount)
+        data_mounted = False
+
+        qemu.run([
+            "mount",
+            "-t",
+            "ext4",
+            "-o",
+            "loop,ro,noload",
+            str(state_copy),
+            str(state_mount),
+        ])
+        state_mounted = True
+        release_state = state_mount / "ordax/portable-release"
+
+        def slot_value(name: str) -> str | None:
+            path = release_state / name
+            if not path.exists():
+                return None
+            value = path.read_text(encoding="ascii").strip()
+            if qemu.COMMIT_RE.fullmatch(value) is None:
+                raise qemu.ProofError(
+                    f"cold-health committed state has invalid {name} identity"
+                )
+            return value
+
+        current = slot_value("current")
+        known_good = slot_value("known-good")
+        rejected = slot_value("rejected")
+        candidate = slot_value("candidate")
+        transaction_present = (release_state / "activation-transaction.json").exists()
+
+        checks = {
+            "current_promoted_to_candidate": current == candidate_commit,
+            "known_good_rotated_to_previous": known_good == previous_commit,
+            "candidate_not_rejected": rejected != candidate_commit,
+            "candidate_file_removed": candidate is None,
+            "activation_transaction_removed": not transaction_present,
+        }
+        if not all(checks.values()):
+            raise qemu.ProofError(
+                "cold-health committed state mismatch: "
+                f"current={current!r}, known_good={known_good!r}, "
+                f"rejected={rejected!r}, candidate={candidate!r}, "
+                f"activation_transaction_present={transaction_present}, "
+                f"checks={checks}"
+            )
+        return checks
+    finally:
+        if state_mounted:
+            qemu.unmount(state_mount)
+        if data_mounted:
+            qemu.unmount(data_mount)
+        if loop:
+            qemu.run(["losetup", "-d", loop])
+
+
+def prove(args: argparse.Namespace) -> dict[str, Any]:
+    if os.name != "posix" or os.geteuid() != 0:
+        raise qemu.ProofError("portable cold-health QEMU proof requires root on POSIX CI")
+    if not args.previous_commit:
+        raise qemu.ProofError("previous commit is required for cold-health commit proof")
+
+    qemu.require_programs()
+    inputs = qemu.validate_inputs(args)
+    if inputs["previous"] is None:
+        raise qemu.ProofError("previous release is not staged")
+
+    work = Path(tempfile.mkdtemp(prefix="ordax-portable-cold-health-qemu-"))
+    disk: Path | None = None
+    try:
+        disk = qemu.stage_disk(args, inputs, work)
+        commit_marker = "ORDAX_PORTABLE_COLD_HEALTH_COMMIT=" + args.source_commit
+
+        first_serial, first_checks = qemu.boot_qemu_expected(
+            args,
+            inputs,
+            disk,
+            work,
+            expected_slot="candidate",
+            expected_commit=args.source_commit,
+            serial_name="serial-candidate-health.log",
+            required_post_marker=commit_marker,
+        )
+        state_checks = inspect_committed_state(
+            disk,
+            work,
+            previous_commit=args.previous_commit,
+            candidate_commit=args.source_commit,
+        )
+        second_serial, second_checks = qemu.boot_qemu_expected(
+            args,
+            inputs,
+            disk,
+            work,
+            expected_slot="current",
+            expected_commit=args.source_commit,
+            serial_name="serial-committed-current.log",
+        )
+
+        checks = {
+            "candidate_boot_selected": first_checks["expected_slot_selected"],
+            "candidate_source_sha_exact": first_checks["portable_source_sha_exact"],
+            "candidate_stable_source_sha_exact": first_checks["stable_init_source_sha_exact"],
+            "candidate_surface_runtime_exact": first_checks["surface_runtime_sha_exact"],
+            "candidate_local_ai_requirement_satisfied": first_checks[
+                "local_ai_runtime_requirement_satisfied"
+            ],
+            "cold_health_commit_marker_seen": first_checks["required_post_marker_seen"],
+            "second_boot_current_selected": second_checks["expected_slot_selected"],
+            "second_boot_candidate_source_sha_exact": second_checks[
+                "portable_source_sha_exact"
+            ],
+            "second_boot_stable_source_sha_exact": second_checks[
+                "stable_init_source_sha_exact"
+            ],
+            "second_boot_surface_runtime_exact": second_checks[
+                "surface_runtime_sha_exact"
+            ],
+            "second_boot_local_ai_requirement_satisfied": second_checks[
+                "local_ai_runtime_requirement_satisfied"
+            ],
+            "network_disabled_both_boots": (
+                first_checks["qemu_network_disabled"]
+                and second_checks["qemu_network_disabled"]
+            ),
+            "durable_cache_both_boots": (
+                first_checks["qemu_durable_cache_mode"]
+                and second_checks["qemu_durable_cache_mode"]
+            ),
+            **state_checks,
+        }
+        if not all(checks.values()):
+            raise qemu.ProofError(f"cold-health QEMU checks incomplete: {checks}")
+
+        disk_sha = qemu.sha256_file(disk)
+        disk.unlink()
+        guest_destroyed = not disk.exists()
+        if not guest_destroyed:
+            raise qemu.ProofError("cold-health QEMU guest disk was retained")
+
+        result = {
+            "$schema": SCHEMA,
+            "status": "pass",
+            "source_commit": args.source_commit,
+            "previous_commit": args.previous_commit,
+            "cold_health_commit_proven": True,
+            "candidate_boot_count": 1,
+            "committed_current_boot_count": 1,
+            "failure_fallback_proven_by_this_receipt": False,
+            "physical_target_device_touched": False,
+            "physical_write_authorized": False,
+            "physical_usb_boot_proven": False,
+            "secure_boot_proven": False,
+            "public_physical_promotion_allowed": False,
+            "network_required": False,
+            "guest_disk": {
+                "sha256_before_destruction": disk_sha,
+                "retained": False,
+                "layout": ["ORDAX-ESP", "ORDAX-DATA"],
+            },
+            "serial_markers": [
+                commit_marker,
+                "ORDAX_PORTABLE_V2_SLOT=candidate",
+                "ORDAX_PORTABLE_V2_SLOT=current",
+                "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit,
+            ],
+            "checks": checks,
+        }
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(
+            json.dumps(result, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return result
+    finally:
+        if disk is not None and disk.exists():
+            disk.unlink()
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--kernel", required=True, type=Path)
+    parser.add_argument("--initramfs", required=True, type=Path)
+    parser.add_argument("--initramfs-provenance", required=True, type=Path)
+    parser.add_argument("--capsule", required=True, type=Path)
+    parser.add_argument("--stable-base", required=True, type=Path)
+    parser.add_argument("--state-image", required=True, type=Path)
+    parser.add_argument("--portable-root", required=True, type=Path)
+    parser.add_argument("--trust", required=True, type=Path)
+    parser.add_argument("--source-commit", required=True)
+    parser.add_argument("--previous-commit", required=True)
+    parser.add_argument("--out", required=True, type=Path)
+    args = parser.parse_args()
+    for name in (
+        "kernel",
+        "initramfs",
+        "initramfs_provenance",
+        "capsule",
+        "stable_base",
+        "state_image",
+        "portable_root",
+        "trust",
+        "out",
+    ):
+        setattr(args, name, getattr(args, name).resolve())
+
+    try:
+        result = prove(args)
+    except (
+        qemu.ProofError,
+        OSError,
+        json.JSONDecodeError,
+        KeyError,
+        RuntimeError,
+    ) as exc:
+        print(f"portable-v3-cold-health-qemu-proof: ERROR: {exc}", file=sys.stderr)
+        return 1
+
+    print(json.dumps(result, indent=2, sort_keys=True))
+    print("PORTABLE_V4_QEMU_COLD_HEALTH_COMMIT_PROOF=PASS")
+    print("PORTABLE_V4_PHYSICAL_BOOT_PROVEN=NO")
+    print("PORTABLE_V4_PHYSICAL_WRITE_AUTHORIZED=NO")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
