@@ -29,7 +29,8 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
 
     def test_gateway_boundary_does_not_claim_live_public_provider(self):
         text = SERVICE_README.read_text(encoding="utf-8")
-        self.assertIn("PUBLIC PROVIDER NOT ENABLED", text)
+        self.assertIn("PUBLIC SAME-ORIGIN ACTIVATION GATED", text)
+        self.assertIn("no public same-origin identity surface is enabled yet", text)
         self.assertIn("GET  /auth/login", text)
         self.assertIn("GET  /auth/register", text)
         self.assertIn("POST /auth/logout", text)
