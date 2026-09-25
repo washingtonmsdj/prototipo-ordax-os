@@ -1,12 +1,13 @@
 export const INTELLIGENCE_PORT_SCHEMA = "ordax.intelligence/1";
 export const INTELLIGENCE_RESPONSE_SCHEMA = "ordax.intelligence-response/1";
+export const INTELLIGENCE_MAX_PROMPT_CHARS = 32000;
+export const INTELLIGENCE_MAX_CONTEXT_ITEMS = 16;
+export const INTELLIGENCE_MAX_CONTEXT_ITEM_CHARS = 8192;
+export const INTELLIGENCE_MAX_CONTEXT_TOTAL_CHARS = 65536;
 
 const STATES = new Set(["degraded", "ready", "busy", "error"]);
 const INTENTS = new Set(["ask", "explain", "summarize", "diagnose"]);
 const CONTEXT_SCOPES = new Set(["user", "workspace", "system", "document"]);
-const MAX_CONTEXT_ITEMS = 16;
-const MAX_CONTEXT_ITEM_CHARS = 8192;
-const MAX_CONTEXT_TOTAL_CHARS = 65536;
 
 function boundedText(value, label, max) {
   if (typeof value !== "string" || value.includes("\0")) {
@@ -55,7 +56,7 @@ export function validateIntelligenceSnapshot(value) {
 
 function validateContext(value) {
   if (value == null) return Object.freeze([]);
-  if (!Array.isArray(value) || value.length > MAX_CONTEXT_ITEMS) {
+  if (!Array.isArray(value) || value.length > INTELLIGENCE_MAX_CONTEXT_ITEMS) {
     throw new TypeError("Intelligence context must be a bounded array");
   }
   let total = 0;
@@ -67,14 +68,18 @@ function validateContext(value) {
       throw new TypeError("Intelligence context scope is invalid");
     }
     const id = boundedText(entry.id, "Intelligence context id", 160);
-    const text = boundedText(entry.text, "Intelligence context text", MAX_CONTEXT_ITEM_CHARS);
+    const text = boundedText(
+      entry.text,
+      "Intelligence context text",
+      INTELLIGENCE_MAX_CONTEXT_ITEM_CHARS,
+    );
     const provenance = boundedText(
       entry.provenance,
       "Intelligence context provenance",
       512,
     );
     total += text.length;
-    if (total > MAX_CONTEXT_TOTAL_CHARS) {
+    if (total > INTELLIGENCE_MAX_CONTEXT_TOTAL_CHARS) {
       throw new TypeError("Intelligence context exceeds its total bound");
     }
     return Object.freeze({ id, scope: entry.scope, text, provenance });
@@ -92,7 +97,7 @@ export function validateIntelligenceRequest(value) {
   }
   return Object.freeze({
     intent,
-    prompt: boundedText(value.prompt, "Intelligence prompt", 32768),
+    prompt: boundedText(value.prompt, "Intelligence prompt", INTELLIGENCE_MAX_PROMPT_CHARS),
     context: validateContext(value.context),
     maxTokens:
       Number.isSafeInteger(value.maxTokens)
