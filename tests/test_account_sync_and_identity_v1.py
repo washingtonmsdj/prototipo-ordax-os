@@ -64,6 +64,10 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertIn('ordax_apply_sync_mutation_v2', text)
         self.assertIn('ordax_sync_snapshot_v1', text)
         self.assertIn('ordax_pull_sync_changes_v1', text)
+        self.assertIn('crossSiteStateChange', text)
+        self.assertIn('sec-fetch-site', text)
+        self.assertIn('cross-site-request-rejected', text)
+        self.assertIn('x-forwarded-host', text)
         self.assertNotIn('service_role', text.lower())
         self.assertNotIn('SUPABASE_SERVICE_ROLE_KEY', text)
 
