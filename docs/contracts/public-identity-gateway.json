@@ -1,13 +1,15 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-and-account-sync-gateway-implemented-public-activation-gated",
+  "status": "real-auth-and-account-sync-gateway-v2-deployed-public-same-origin-activation-gated",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
     "external_dependencies": false,
     "listener_owned_here": false,
     "provider_adapter": "supabase-password-and-sync-rest",
-    "provider_configuration": "runtime-environment"
+    "provider_configuration": "runtime-environment",
+    "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
+    "deployed_edge_adapter_version": 2
   },
   "routes": [
     {
@@ -48,15 +50,27 @@
     },
     {
       "method": "GET",
-      "path": "/sync/objects",
+      "path": "/sync/snapshot",
       "unconfigured_status": 503,
-      "purpose": "authenticated-account-sync-full-read"
+      "purpose": "authenticated-atomic-sync-snapshot"
+    },
+    {
+      "method": "GET",
+      "path": "/sync/changes",
+      "unconfigured_status": 503,
+      "purpose": "authenticated-incremental-sync-pull"
     },
     {
       "method": "POST",
       "path": "/sync/mutate",
       "unconfigured_status": 503,
       "purpose": "authenticated-account-sync-mutation"
+    },
+    {
+      "method": "GET",
+      "path": "/sync/objects",
+      "unconfigured_status": 503,
+      "purpose": "legacy-authenticated-full-read-compatibility"
     }
   ],
   "baseline": {
@@ -72,11 +86,16 @@
     "refresh_session_supported": true,
     "sync_gateway_implemented": true,
     "sync_tokens_exposed_to_surface": false,
-    "sync_provider_rows_exposed_to_surface": false
+    "sync_provider_rows_exposed_to_surface": false,
+    "incremental_sync_cursor_implemented": true,
+    "atomic_sync_snapshot_implemented": true,
+    "subject_bound_client_checkpoint": true
   },
   "deployment": {
     "same_origin_required_for_public_site": true,
     "tls_required_in_production": true,
-    "reverse_proxy_or_platform_adapter_expected": true
+    "reverse_proxy_or_platform_adapter_expected": true,
+    "edge_gateway_deployed": true,
+    "public_browser_same_origin_activated": false
   }
 }
