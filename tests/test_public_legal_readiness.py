@@ -40,8 +40,12 @@ class PublicLegalReadinessTests(unittest.TestCase):
     def test_auth_hardening_gate_is_not_ready(self):
         contract = json.loads(AUTH_HARDENING.read_text(encoding="utf-8"))
         self.assertEqual(contract["status"], "public-auth-disabled-hardening-pending")
-        self.assertEqual(contract["current_observation"]["leaked_password_protection"], "disabled-warn")
-        self.assertFalse(contract["current_observation"]["public_login_enabled"])
+        observation = contract["current_observation"]
+        self.assertEqual(observation["leaked_password_protection"], "enabled-product-gateway")
+        self.assertTrue(observation["product_leaked_password_protection_verified"])
+        self.assertFalse(observation["provider_leaked_password_protection_enabled"])
+        self.assertEqual(observation["provider_leaked_password_protection_advisor"], "disabled-warn")
+        self.assertFalse(observation["public_login_enabled"])
 
     def test_runtime_config_matches_not_ready_gate(self):
         config = json.loads((SITE / "config" / "public-site.json").read_text(encoding="utf-8"))
