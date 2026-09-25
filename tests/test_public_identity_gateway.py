@@ -40,7 +40,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "real-auth-sync-and-account-export-gateway-source-v11-edge-revision-14-public-server-gated",
+            "real-auth-sync-export-gateway-source-v12-close-source-ready-deployed-source-v11-revision-14",
         )
         self.assertFalse(contract["baseline"]["provider_configured"])
         self.assertTrue(contract["baseline"]["http_only_session_cookies"])
@@ -70,8 +70,12 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertEqual(contract["baseline"]["registration_password_minimum_chars"], 12)
         self.assertTrue(contract["baseline"]["registration_password_policy_enforced_at_edge"])
         self.assertFalse(contract["baseline"]["existing_login_passwords_retroactively_rejected"])
-        self.assertEqual(contract["runtime"]["gateway_source_version"], 11)
+        self.assertEqual(contract["runtime"]["gateway_source_version"], 12)
+        self.assertEqual(contract["runtime"]["deployed_gateway_source_version"], 11)
         self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 14)
+        self.assertTrue(contract["runtime"]["lifecycle_service_deployed"])
+        self.assertEqual(contract["runtime"]["lifecycle_service_deployment_revision_observed"], 1)
+        self.assertFalse(contract["runtime"]["lifecycle_service_enabled"])
         self.assertTrue(contract["baseline"]["account_export_implemented"])
         self.assertEqual(contract["baseline"]["account_export_rpc"], "ordax_account_export_v1")
         self.assertTrue(contract["baseline"]["account_export_requires_authenticated_user"])
@@ -79,6 +83,13 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertFalse(contract["baseline"]["account_export_anon_execute_allowed"])
         self.assertFalse(contract["baseline"]["account_export_opaque_metadata_included"])
         self.assertFalse(contract["baseline"]["public_site_account_export_enabled"])
+        self.assertTrue(contract["baseline"]["account_close_source_implemented"])
+        self.assertFalse(contract["baseline"]["account_close_enabled"])
+        self.assertFalse(contract["baseline"]["account_close_gateway_route_deployed"])
+        self.assertTrue(contract["baseline"]["account_close_requires_recent_reauthentication"])
+        self.assertTrue(contract["baseline"]["account_close_requires_explicit_confirmation"])
+        self.assertFalse(contract["baseline"]["account_close_service_role_in_public_gateway"])
+        self.assertTrue(contract["baseline"]["account_close_service_role_isolated_to_lifecycle_service"])
         self.assertTrue(contract["baseline"]["public_site_server_activation_gate"])
         self.assertFalse(contract["baseline"]["public_site_account_enabled"])
         self.assertEqual(contract["baseline"]["public_site_marker_header"], "X-OrdaX-Public-Site")
@@ -114,6 +125,15 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         export = self.gateway.handle("GET", "/account/export", marker)
         self.assertEqual(export.status, 503)
         self.assertEqual(self.payload(export)["error"], "public-account-access-disabled")
+
+        close = self.gateway.handle(
+            "POST",
+            "/account/close",
+            {**marker, "content-type": "application/x-www-form-urlencoded"},
+            b"password=secret&confirmation=close-account",
+        )
+        self.assertEqual(close.status, 503)
+        self.assertEqual(self.payload(close)["error"], "public-account-access-disabled")
 
     def test_registration_rejects_compromised_password_before_provider(self):
         class FakeProvider:
@@ -444,6 +464,98 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertEqual(response.status, 503)
         self.assertEqual(self.payload(response)["error"], "public-account-access-disabled")
 
+    def test_account_close_is_disabled_before_reauthentication(self):
+        class MustNotRunIdentity:
+            def get_user(self, access_token):
+                raise AssertionError("identity provider must not run while close is disabled")
+
+        class MustNotRunLifecycle:
+            def close_account(self, access_token, confirmation):
+                raise AssertionError("lifecycle service must not run while close is disabled")
+
+        gateway = gateway_module.PublicIdentityGateway(
+            provider=MustNotRunIdentity(),
+            sync_provider=None,
+            lifecycle_provider=MustNotRunLifecycle(),
+        )
+        response = gateway.handle(
+            "POST",
+            "/account/close",
+            {"content-type": "application/x-www-form-urlencoded"},
+            b"password=secret&confirmation=close-account",
+        )
+        self.assertEqual(response.status, 503)
+        self.assertEqual(self.payload(response)["error"], "account-close-disabled")
+
+    def test_enabled_account_close_requires_confirmation_and_uses_fresh_session(self):
+        class FakeIdentity:
+            def __init__(self):
+                self.login_calls = []
+
+            def get_user(self, access_token):
+                self.last_get_user = access_token
+                return ("user-1", "person@example.com")
+
+            def sign_in_with_password(self, email, password):
+                self.login_calls.append((email, password))
+                session = type(
+                    "Session",
+                    (),
+                    {
+                        "access_token": "fresh-access",
+                        "refresh_token": "fresh-refresh",
+                        "expires_in": 3600,
+                    },
+                )()
+                return type("Result", (), {"session": session})()
+
+        class FakeLifecycle:
+            def __init__(self):
+                self.calls = []
+
+            def close_account(self, access_token, confirmation):
+                self.calls.append((access_token, confirmation))
+
+        identity = FakeIdentity()
+        lifecycle = FakeLifecycle()
+        gateway = gateway_module.PublicIdentityGateway(
+            provider=identity,
+            sync_provider=None,
+            lifecycle_provider=lifecycle,
+        )
+
+        with patch.object(gateway_module, "ACCOUNT_CLOSE_ENABLED", True):
+            bad = gateway.handle(
+                "POST",
+                "/account/close",
+                {
+                    "content-type": "application/x-www-form-urlencoded",
+                    "cookie": "ordax_access=existing-access",
+                },
+                b"password=secret&confirmation=wrong",
+            )
+        self.assertEqual(bad.status, 400)
+        self.assertEqual(identity.login_calls, [])
+        self.assertEqual(lifecycle.calls, [])
+
+        with patch.object(gateway_module, "ACCOUNT_CLOSE_ENABLED", True):
+            ok = gateway.handle(
+                "POST",
+                "/account/close",
+                {
+                    "content-type": "application/x-www-form-urlencoded",
+                    "cookie": "ordax_access=existing-access",
+                },
+                b"password=secret&confirmation=close-account",
+            )
+        self.assertEqual(ok.status, 303)
+        self.assertEqual(dict(ok.headers)["Location"], "/")
+        self.assertEqual(identity.login_calls, [("person@example.com", "secret")])
+        self.assertEqual(lifecycle.calls, [("fresh-access", "close-account")])
+        cleared = [value for key, value in ok.headers if key == "Set-Cookie"]
+        self.assertEqual(len(cleared), 3)
+        self.assertTrue(all("Max-Age=0" in value for value in cleared))
+
     def test_account_export_uses_authenticated_user_and_neutral_provider(self):
         class FakeIdentityProvider:
             def get_user(self, access_token):
@@ -516,6 +628,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
             ("POST", "/sync/objects", "GET"),
             ("GET", "/sync/mutate", "POST"),
             ("POST", "/account/export", "GET"),
+            ("GET", "/account/close", "POST"),
         )
         for method, path, allowed in cases:
             with self.subTest(method=method, path=path):
