@@ -38,7 +38,10 @@
     "rate_limit_real_client_ip_forwarding_verified": false,
     "public_site_server_activation_gate": "pass-deployed-disabled",
     "public_site_account_enabled": false,
-    "public_site_marker_header": "X-OrdaX-Public-Site"
+    "public_site_marker_header": "X-OrdaX-Public-Site",
+    "session_revocation": "proof-harness-ready-real-account-proof-pending",
+    "session_revocation_scope": "local-current-session",
+    "session_revocation_proof_requires_credentials": true
   },
   "rules": {
     "public_login_must_fail_closed_until_all_required_gates_pass": true,
