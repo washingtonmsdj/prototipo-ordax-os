@@ -6,6 +6,7 @@ import { createWebPreferenceStore } from "../../adapters/web/preferences.mjs";
 import { createWebSurfaceHost } from "../../adapters/web/runtime.mjs";
 import { createWebWorkspaceStore } from "../../adapters/web/workspace.mjs";
 import { createWebSyncStateStore } from "../../adapters/web/sync-state.mjs";
+import { createWebSyncTransport } from "../../adapters/web/sync-transport.mjs";
 import { validateAccountRuntime } from "../../services/account/runtime.mjs";
 import { createAppActivationChannel } from "../../services/apps/activation.mjs";
 import { listSystemComponents } from "../../apps/component-catalog.mjs";
@@ -13,6 +14,7 @@ import { createComponentManager } from "../../services/components/manager.mjs";
 import { loadOptionalComponentRuntime } from "../../services/components/runtime-loader.mjs";
 import { createNotificationsRuntime } from "../../services/notifications/runtime.mjs";
 import { createPreferenceSyncRuntime } from "../../services/sync/preference-runtime.mjs";
+import { createAccountSyncRuntime } from "../../services/sync/account-runtime.mjs";
 import { createWorkspaceMetadataBridge } from "../../services/sync/workspace-metadata.mjs";
 import { translateSurfaceMessage } from "../../services/i18n/surface.mjs";
 import { mountAccountOverviewControls } from "../../surface/ui/account-overview-controls.mjs";
@@ -34,7 +36,14 @@ if (!root) {
   throw new Error("OrdaX composition root is missing #ordax-root");
 }
 
-const host = createWebSurfaceHost(window);
+const identitySession = createWebIdentitySession(window);
+await identitySession.refresh();
+const identityActions = createWebIdentityActions(window, identitySession);
+const identityAvailable = identitySession.getSnapshot().state !== "unavailable";
+const host = createWebSurfaceHost(window, {
+  accountIdentityAvailable: identityAvailable,
+  syncSafeStateAvailable: identityAvailable,
+});
 const browserSession = createWebBrowserSession();
 const preferenceStore = createWebPreferenceStore(window);
 bootLocale = preferenceStore.load()?.["regional.locale"] ?? "pt-BR";
@@ -43,8 +52,7 @@ const localWorkspaceStore = createWebWorkspaceStore(window);
 const workspaceMetadata = createWorkspaceMetadataBridge(localWorkspaceStore);
 const workspaceStore = workspaceMetadata.store;
 const syncStateStore = createWebSyncStateStore(window);
-const identitySession = createWebIdentitySession();
-const identityActions = createWebIdentityActions();
+const syncTransport = identityAvailable ? createWebSyncTransport(window) : null;
 const appActivation = createAppActivationChannel();
 const componentManager = createComponentManager({
   manifests: listSystemComponents(),
@@ -81,12 +89,30 @@ const preferenceSync = createPreferenceSyncRuntime(surface.preferences, {
     return `pref:${uuid ? uuid.replaceAll("-", "") : `${Date.now().toString(36)}:${syncMutationOrdinal}`}`;
   },
 });
+let accountSync = preferenceSync;
+if (syncTransport) {
+  let accountSyncOrdinal = 0;
+  accountSync = createAccountSyncRuntime({
+    identitySession,
+    transport: syncTransport,
+    preferenceSync,
+    preferences: surface.preferences,
+    workspaceMetadataSource: workspaceMetadata.source,
+    workspaceStore,
+    createIdempotencyKey(kind = "state") {
+      accountSyncOrdinal += 1;
+      const uuid = window.crypto?.randomUUID?.();
+      return `sync:${kind}:${uuid ? uuid.replaceAll("-", "") : `${Date.now().toString(36)}:${accountSyncOrdinal}`}`;
+    },
+  });
+  window.addEventListener("online", () => void accountSync.flush(), { passive: true });
+}
 const accountOverviewControls = mountAccountOverviewControls(
   root,
   identitySession,
   identityActions,
   surface,
-  preferenceSync,
+  accountSync,
   workspaceMetadata.source,
   appActivation,
 );
@@ -172,6 +198,7 @@ window.addEventListener(
     notificationCenter.destroy();
     settingsOverviewControls.destroy();
     accountOverviewControls.destroy();
+    if (accountSync !== preferenceSync) accountSync.destroy();
     preferenceSync.destroy();
     browserSession.dispose();
     componentManager.destroy();
