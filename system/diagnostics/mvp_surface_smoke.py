@@ -55,8 +55,11 @@ REQUIRED_SOURCE_FILES = (
     "apps/internet/app.mjs",
     "apps/settings/app.mjs",
     "apps/system/app.mjs",
+    "apps/account/app.mjs",
     "composition/native/main.mjs",
     "surface/ui/surface.mjs",
+    "surface/ui/account-overview-controls.mjs",
+    "surface/ui/memory-review-controls.mjs",
 )
 
 TOUR_ITEMS = (
@@ -68,6 +71,7 @@ TOUR_ITEMS = (
     "system",
     "network-power",
     "keyboard-layout",
+    "account-memory",
     "failure-isolation",
     "continuity",
     "post-tour",
