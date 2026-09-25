@@ -166,6 +166,9 @@ jobs:
           python bootstrap/kernel/verify.py "$work/kernel"
           test -s "$work/kernel/vmlinuz-6.6.52"
           test -s "$work/kernel/kernel-modules-6.6.52.tar"
+          grep -Fx 'CONFIG_VIRTIO=y' "$work/kernel/kernel-6.6.52.config"
+          grep -Fx 'CONFIG_VIRTIO_PCI=y' "$work/kernel/kernel-6.6.52.config"
+          grep -Fx 'CONFIG_DRM_VIRTIO_GPU=y' "$work/kernel/kernel-6.6.52.config"
 
       - name: Build and verify exact Stable Base
         env:
@@ -581,6 +584,10 @@ jobs:
           assert proof['secure_boot_proven'] is False
           assert proof['public_physical_promotion_allowed'] is False
           assert proof['network_required'] is False
+          assert proof['virtual_graphics']['adapter'] == 'virtio-vga'
+          assert proof['virtual_graphics']['host_display_window'] is False
+          assert proof['virtual_graphics']['surface_path'] == 'cage-wayland-webkit-seatd'
+          assert proof['virtual_graphics']['synthetic_health'] is False
           assert proof['guest_disk']['retained'] is False
           assert all(proof['checks'].values())
           marker = 'ORDAX_PORTABLE_COLD_HEALTH_COMMIT=' + proof['source_commit']
