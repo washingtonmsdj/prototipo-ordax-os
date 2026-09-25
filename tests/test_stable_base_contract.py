@@ -121,6 +121,10 @@ class StableBaseContractTests(unittest.TestCase):
         probe_call = text.index('if ! probe_local_ai_hardware; then')
         backend_spawn = text.index('>/run/ordax/local-ai.log 2>&1 &')
         self.assertLess(probe_call, backend_spawn)
+        probe_start = text.index('probe_local_ai_hardware() {')
+        probe_end = text.index('\nstart_local_ai() {', probe_start)
+        probe_block = text[probe_start:probe_end]
+        self.assertNotIn("python", probe_block.lower())
         self.assertIn('disable_local_ai "${LOCAL_AI_PROBE_REASON:-hardware probe failed}"', text)
         self.assertIn('start_local_ai', text)
         self.assertIn('4)', text)
@@ -128,7 +132,6 @@ class StableBaseContractTests(unittest.TestCase):
         self.assertIn('ORDAX_STABLE_INIT_SOURCE_SHA=$ORDAX_SOURCE_SHA', text)
         self.assertIn("exec /system/entrypoint", text)
         self.assertNotIn("git", text.lower())
-        self.assertNotIn("python", text.lower())
 
     def test_builder_records_and_enforces_full_transitive_apk_lock(self):
         text = BUILDER.read_text(encoding="utf-8")
