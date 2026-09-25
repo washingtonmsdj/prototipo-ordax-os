@@ -40,7 +40,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "real-auth-and-account-sync-gateway-source-v10-edge-revision-13-pwned-passwords-gated-public-server-gated",
+            "real-auth-sync-and-account-export-gateway-source-v11-edge-revision-14-public-server-gated",
         )
         self.assertFalse(contract["baseline"]["provider_configured"])
         self.assertTrue(contract["baseline"]["http_only_session_cookies"])
@@ -70,8 +70,15 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertEqual(contract["baseline"]["registration_password_minimum_chars"], 12)
         self.assertTrue(contract["baseline"]["registration_password_policy_enforced_at_edge"])
         self.assertFalse(contract["baseline"]["existing_login_passwords_retroactively_rejected"])
-        self.assertEqual(contract["runtime"]["gateway_source_version"], 10)
-        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 13)
+        self.assertEqual(contract["runtime"]["gateway_source_version"], 11)
+        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 14)
+        self.assertTrue(contract["baseline"]["account_export_implemented"])
+        self.assertEqual(contract["baseline"]["account_export_rpc"], "ordax_account_export_v1")
+        self.assertTrue(contract["baseline"]["account_export_requires_authenticated_user"])
+        self.assertTrue(contract["baseline"]["account_export_uses_security_invoker"])
+        self.assertFalse(contract["baseline"]["account_export_anon_execute_allowed"])
+        self.assertFalse(contract["baseline"]["account_export_opaque_metadata_included"])
+        self.assertFalse(contract["baseline"]["public_site_account_export_enabled"])
         self.assertTrue(contract["baseline"]["public_site_server_activation_gate"])
         self.assertFalse(contract["baseline"]["public_site_account_enabled"])
         self.assertEqual(contract["baseline"]["public_site_marker_header"], "X-OrdaX-Public-Site")
@@ -103,6 +110,10 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         sync = self.gateway.handle("GET", "/sync/snapshot?limit=1", marker)
         self.assertEqual(sync.status, 503)
         self.assertEqual(self.payload(sync)["error"], "public-account-access-disabled")
+
+        export = self.gateway.handle("GET", "/account/export", marker)
+        self.assertEqual(export.status, 503)
+        self.assertEqual(self.payload(export)["error"], "public-account-access-disabled")
 
     def test_registration_rejects_compromised_password_before_provider(self):
         class FakeProvider:
@@ -433,6 +444,52 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertEqual(response.status, 503)
         self.assertEqual(self.payload(response)["error"], "public-account-access-disabled")
 
+    def test_account_export_uses_authenticated_user_and_neutral_provider(self):
+        class FakeIdentityProvider:
+            def get_user(self, access_token):
+                self.assert_token = access_token
+                return ("user-1", "person@example.com")
+
+        class FakeAccountProvider:
+            def __init__(self):
+                self.calls = []
+
+            def export_account(self, access_token):
+                self.calls.append(access_token)
+                return {
+                    "$schema": "prototype-ordax.account-export/1",
+                    "subject": "user-1",
+                    "exported_at": "2026-09-25T00:00:00Z",
+                    "account": {},
+                    "spaces": [],
+                    "memberships": [],
+                    "space_profile_packs": [],
+                    "entitlements": [],
+                    "projects": [],
+                    "devices": [],
+                    "project_connections": [],
+                    "memory_items": [],
+                    "sync_objects": [],
+                }
+
+        account_provider = FakeAccountProvider()
+        gateway = gateway_module.PublicIdentityGateway(
+            provider=FakeIdentityProvider(),
+            sync_provider=None,
+            account_provider=account_provider,
+        )
+        response = gateway.handle(
+            "GET",
+            "/account/export",
+            {"cookie": "ordax_access=user-access-token"},
+        )
+        self.assertEqual(response.status, 200)
+        self.assertEqual(
+            self.payload(response)["$schema"],
+            "prototype-ordax.account-export/1",
+        )
+        self.assertEqual(account_provider.calls, ["user-access-token"])
+
     def test_sync_routes_fail_closed_without_identity_provider(self):
         for path in ("/sync/snapshot", "/sync/changes", "/sync/objects"):
             with self.subTest(path=path):
@@ -458,6 +515,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
             ("POST", "/sync/changes", "GET"),
             ("POST", "/sync/objects", "GET"),
             ("GET", "/sync/mutate", "POST"),
+            ("POST", "/account/export", "GET"),
         )
         for method, path, allowed in cases:
             with self.subTest(method=method, path=path):
@@ -466,7 +524,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
                 self.assertEqual(dict(response.headers)["Allow"], allowed)
 
     def test_unknown_gateway_route_is_not_accepted(self):
-        for path in ("/auth/admin", "/sync/admin"):
+        for path in ("/auth/admin", "/sync/admin", "/account/admin"):
             with self.subTest(path=path):
                 response = self.gateway.handle("GET", path)
                 self.assertEqual(response.status, 404)
