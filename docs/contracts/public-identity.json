@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-entry/1",
-  "status": "provider-adapter-deployed-same-origin-adapter-source-ready-activation-gated",
+  "status": "provider-adapter-deployed-form-ready-same-origin-adapter-source-ready-activation-gated",
   "purpose": "public-site-account-entry-boundary",
   "routes": {
     "login_page": "/login/",
@@ -14,11 +14,13 @@
     "browser_direct_provider_coupling_required": false
   },
   "credentials": {
-    "static_site_collects_passwords": false,
     "static_site_stores_passwords": false,
     "static_site_stores_bearer_tokens": false,
     "service_role_key_in_browser_allowed": false,
-    "private_key_in_browser_allowed": false
+    "private_key_in_browser_allowed": false,
+    "static_site_renders_gated_credential_form": true,
+    "static_site_javascript_reads_credentials": false,
+    "credential_form_submission": "native-browser-post-to-same-origin-gateway"
   },
   "session": {
     "owner": "future-ordax-identity-service",
@@ -48,10 +50,11 @@
     "password_auth_flow_implemented": true,
     "session_refresh_implemented": true,
     "edge_gateway_deployed": true,
-    "edge_gateway_version": 4,
+    "edge_gateway_version": 5,
     "same_origin_adapter_source": "deploy/public-site/nginx.conf",
     "same_origin_adapter_deployed": false,
-    "csrf_state_change_protection_deployed": true
+    "csrf_state_change_protection_deployed": true,
+    "browser_form_redirects_implemented": true
   },
   "supabase_candidate": {
     "status": "dedicated-target-schema-and-edge-gateway-deployed",
@@ -68,6 +71,7 @@
   "legal_readiness": {
     "contract": "docs/contracts/public-legal-readiness.json",
     "required_before_provider_activation": true,
-    "runtime_identity_urls_must_remain_null_while_not_ready": true
+    "runtime_identity_urls_must_remain_null_while_not_ready": true,
+    "auth_hardening_required_before_provider_activation": true
   }
 }
