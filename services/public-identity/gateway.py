@@ -30,6 +30,7 @@ from supabase_password import (
 from supabase_sync import SupabaseSyncError, SupabaseSyncProvider
 
 SESSION_SCHEMA = "prototype-ordax.public-identity-session/1"
+ACCOUNT_SPACES_SCHEMA = "prototype-ordax.account-spaces/1"
 SYNC_BATCH_SCHEMA = "prototype-ordax.sync-batch/1"
 SYNC_SNAPSHOT_SCHEMA = "prototype-ordax.sync-snapshot/1"
 SYNC_CHANGES_SCHEMA = "prototype-ordax.sync-changes/1"
@@ -755,6 +756,37 @@ class PublicIdentityGateway:
             )
         return _json_response(200, export, set_cookies=set_cookies)
 
+    def _account_spaces(
+        self,
+        request_headers: Mapping[str, str],
+    ) -> GatewayResponse:
+        if not self.provider or not self.account_provider:
+            return self._provider_unavailable()
+        access, set_cookies = self._authenticated_access(request_headers)
+        if not access:
+            return _json_response(
+                401,
+                {
+                    "$schema": ERROR_SCHEMA,
+                    "error": "authentication-required",
+                    "message": "Entre na Conta OrdaX para ver seus Spaces.",
+                },
+                set_cookies=set_cookies,
+            )
+        try:
+            spaces = self.account_provider.list_spaces(access)
+        except (ValueError, SupabaseAccountError):
+            return _error(
+                502,
+                "spaces-read-failed",
+                "Não foi possível ler seus Spaces.",
+            )
+        return _json_response(
+            200,
+            {"$schema": ACCOUNT_SPACES_SCHEMA, "spaces": spaces},
+            set_cookies=set_cookies,
+        )
+
     def _sync_snapshot(
         self,
         request_headers: Mapping[str, str],
@@ -970,6 +1002,11 @@ class PublicIdentityGateway:
             if method != "GET":
                 return self._method_not_allowed("GET")
             return self._account_export(request_headers)
+
+        if path == "/account/spaces":
+            if method != "GET":
+                return self._method_not_allowed("GET")
+            return self._account_spaces(request_headers)
 
         if path == "/account/close":
             if method != "POST":
