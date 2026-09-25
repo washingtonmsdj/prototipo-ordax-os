@@ -253,7 +253,7 @@ Mutações de recursos sujeitos a quota/entitlement são **server-authoritative*
 12. integrar o conceito OrdaX Device Agent ao app Projetos sem torná-lo boot-critical;
 13. preservar GitHub como conexão first-class e preparar vínculo Conta/Space -> repositórios selecionados — **PASS_SOURCE READ-ONLY BOUNDARY**; vínculo explícito Space + Project + repositório, sem tokens/segredos na Surface e sem autoridade de mutação;
 14. catálogo de packs consumível pela Surface;
-15. primeiro app externo assinado de teste.
+15. primeiro app externo assinado de teste — **PASS_SOURCE NON-PRIVILEGED PROOF**; fixture fora do catálogo first-party, assinatura Ed25519 de teste, hash exato, zero capabilities e nenhuma instalação/Store pública habilitada.
 
 ### P2 — pós-MVP inicial
 
