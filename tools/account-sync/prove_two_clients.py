@@ -11,10 +11,11 @@ from __future__ import annotations
 import http.cookiejar
 import json
 import os
+from pathlib import Path
 import secrets
 import sys
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -113,6 +114,50 @@ def mutation(object_id: str, base_revision: int, tombstone: bool, key: str) -> d
     }
 
 
+def write_receipt(
+    path: str,
+    base_url: str,
+    create_cursor: int,
+    delete_cursor: int,
+) -> None:
+    if not path:
+        return
+    parsed = urlsplit(base_url)
+    source_commit = os.environ.get("GITHUB_SHA", "").strip()
+    if len(source_commit) != 40:
+        source_commit = None
+    else:
+        try:
+            int(source_commit, 16)
+        except ValueError:
+            source_commit = None
+
+    payload = {
+        "$schema": "prototype-ordax.account-sync-two-client-proof/1",
+        "status": "pass",
+        "proof_scope": "two-independent-sessions-same-account",
+        "gateway_origin": f"{parsed.scheme}://{parsed.netloc}",
+        "source_commit": source_commit,
+        "workflow_run_id": os.environ.get("GITHUB_RUN_ID") or None,
+        "create_cursor": create_cursor,
+        "delete_cursor": delete_cursor,
+        "proof_object_tombstoned": True,
+        "credentials_persisted": False,
+        "account_identifier_recorded": False,
+        "cookies_recorded": False,
+        "tokens_recorded": False,
+    }
+    output = Path(path).resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temp = output.with_name(f".{output.name}.tmp-{os.getpid()}")
+    temp.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    os.replace(temp, output)
+
+
 def main() -> int:
     email = os.environ.get("ORDAX_PROOF_ACCOUNT_EMAIL", "").strip()
     password = os.environ.get("ORDAX_PROOF_ACCOUNT_PASSWORD", "")
@@ -177,6 +222,12 @@ def main() -> int:
         if len(tombstones) != 1:
             fail("tombstone-not-delivered-to-second-session")
 
+        write_receipt(
+            os.environ.get("ORDAX_PROOF_RECEIPT_PATH", "").strip(),
+            base_url,
+            change_cursor,
+            deleted_cursor,
+        )
         print(
             "ACCOUNT_SYNC_TWO_CLIENT_PROOF=PASS "
             f"create_cursor={change_cursor} delete_cursor={deleted_cursor}"
