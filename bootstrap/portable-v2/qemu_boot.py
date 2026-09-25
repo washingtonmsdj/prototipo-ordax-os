@@ -463,6 +463,7 @@ def boot_qemu_expected(
     expected_commit: str,
     serial_name: str,
     required_post_marker: str | None = None,
+    graphical_hardware: bool = False,
 ) -> tuple[str, dict[str, bool]]:
     if expected_slot not in {"candidate", "current", "known-good"}:
         raise ProofError("unexpected QEMU expected slot")
@@ -497,7 +498,7 @@ def boot_qemu_expected(
         "qemu-system-x86_64",
         "-machine", "pc",
         "-accel", "tcg,thread=multi",
-        "-m", "1536",
+        "-m", "3072" if graphical_hardware else "1536",
         "-smp", "2",
         "-kernel", str(inputs["kernel"]),
         "-initrd", str(inputs["initramfs"]),
@@ -509,6 +510,14 @@ def boot_qemu_expected(
         "-net", "none",
         "-no-reboot",
     ]
+    if graphical_hardware:
+        # Use a real DRM/KMS device in the guest so Cage/Wayland/WebKit and
+        # the normal Surface heartbeat path run unchanged. -display none only
+        # suppresses a host UI window; it does not replace the guest graphics.
+        command[command.index("-display"):command.index("-display")] = [
+            "-vga", "virtio",
+        ]
+
     with stderr.open("wb") as error_stream:
         process = subprocess.Popen(
             command,
@@ -568,6 +577,13 @@ def boot_qemu_expected(
                     "qemu_durable_cache_mode": any(
                         "cache=directsync" in item for item in command
                     ),
+                    "qemu_graphical_hardware_requested": (
+                        (not graphical_hardware)
+                        or (
+                            "-vga" in command
+                            and "virtio" in command
+                        )
+                    ),
                     "candidate_rdinit_used": any(
                         "rdinit=/sbin/ordax-portable-init" in item for item in command
                     ),
@@ -595,7 +611,8 @@ def boot_qemu_expected(
         raise ProofError(
             "QEMU did not reach portable-v2 handoff markers "
             f"(slot={expected_slot}, source={expected_commit}, schema={schema_version}, "
-            f"post_marker={required_post_marker!r}, exit={process.poll()}, "
+            f"post_marker={required_post_marker!r}, graphical_hardware={graphical_hardware}, "
+            f"exit={process.poll()}, "
             f"stderr_tail={tail!r}, serial_tail={serial_tail!r})"
         )
     finally:
