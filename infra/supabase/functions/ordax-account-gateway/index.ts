@@ -541,7 +541,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (path === "/health" && req.method === "GET") {
-    return json(200, { status: "ok", service: "ordax-account-gateway", version: 10 });
+    return json(200, { status: "ok", service: "ordax-account-gateway", version: 11 });
   }
 
   if (path === "/auth/session" && req.method === "GET") {
@@ -729,7 +729,10 @@ Deno.serve(async (req: Request) => {
     }, session.cookies);
   }
 
-  if ((path.startsWith("/auth/") || path.startsWith("/sync/")) && !["GET", "POST"].includes(req.method)) {
+  if (
+    (path.startsWith("/auth/") || path.startsWith("/sync/") || path.startsWith("/account/")) &&
+    !["GET", "POST"].includes(req.method)
+  ) {
     return error(405, "method-not-allowed", "Método não permitido.");
   }
   return error(404, "gateway-route-not-found", "Rota inexistente.");
