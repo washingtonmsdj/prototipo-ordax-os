@@ -33,3 +33,31 @@ GitHub documents `/releases/latest/download/<asset>` as the direct download form
 - changing this URL is a source-controlled bootstrap policy change;
 - no access token, credential or private signing material belongs in this file;
 - physical write remains blocked while the release trust owner is unresolved and until the remaining promotion gates pass.
+
+
+## Optional account gateway configuration
+
+Stable/MVP may also provide:
+
+```text
+/ordax/bootstrap/config/account-gateway-origin
+```
+
+This file is optional because the OS must remain usable offline and without an
+OrdaX account. When present, it contains exactly one HTTPS origin, for example:
+
+```text
+https://accounts.example.invalid
+```
+
+The bootstrap validates that it is an HTTPS origin without path, query,
+fragment, credentials or whitespace before exporting
+`ORDAX_ACCOUNT_GATEWAY_ORIGIN` to the verified product runtime. The Native
+Surface then talks only to its loopback host; the host forwards `/auth/*` and
+`/sync/*` to this configured OrdaX gateway while keeping provider/session
+cookies outside Surface JavaScript.
+
+Absence or rejection of this file disables online account continuity only. It
+must never block local boot, OOBE completion, files, notes, settings, recovery
+or local Intelligence. No Supabase URL, service-role key, user token or other
+provider credential belongs in this bootstrap file.
