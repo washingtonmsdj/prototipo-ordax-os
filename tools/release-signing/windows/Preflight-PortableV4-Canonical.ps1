@@ -4,6 +4,9 @@ param(
     [Parameter(Mandatory = $true)][string]$SurfaceRuntimePath,
     [Parameter(Mandatory = $true)][string]$LocalAiRuntimePath,
     [Parameter(Mandatory = $true)][string]$LocalAiSourceLockPath,
+    [Parameter(Mandatory = $true)][string]$SystemReceiptPath,
+    [Parameter(Mandatory = $true)][string]$SurfaceReceiptPath,
+    [Parameter(Mandatory = $true)][string]$LocalAiReceiptPath,
     [Parameter(Mandatory = $true)][string]$SourceCommit,
     [Parameter(Mandatory = $true)][string]$SystemArtifactUrl,
     [Parameter(Mandatory = $true)][string]$SurfaceArtifactUrl,
@@ -65,6 +68,65 @@ function Get-JsonObject {
     return $value
 }
 
+function Assert-OperatorReceipt {
+    param(
+        [string]$ReceiptPath,
+        [string]$Kind,
+        [string]$ExpectedCommit,
+        [hashtable]$ExpectedFiles
+    )
+
+    $receipt = Get-JsonObject $ReceiptPath "$Kind operator receipt"
+    if ([string]$receipt.'$schema' -cne 'prototype-ordax.canonical-v4-operator-artifact/1') {
+        throw "$Kind operator receipt schema is invalid."
+    }
+    if ([string]$receipt.kind -cne $Kind) {
+        throw "$Kind operator receipt kind does not match."
+    }
+    if ([string]$receipt.source_commit -cne $ExpectedCommit) {
+        throw "$Kind operator receipt source commit does not match SourceCommit."
+    }
+    foreach ($field in @(
+        'publication_performed',
+        'signing_performed',
+        'release_activated',
+        'physical_target_selected',
+        'physical_write_authorized',
+        'physical_write_performed'
+    )) {
+        if ($receipt.$field -ne $false) {
+            throw "$Kind operator receipt unexpectedly claims $field."
+        }
+    }
+
+    $received = @{}
+    foreach ($entry in @($receipt.files)) {
+        $name = [string]$entry.name
+        if ([string]::IsNullOrWhiteSpace($name) -or $received.ContainsKey($name)) {
+            throw "$Kind operator receipt contains an invalid or duplicate file entry."
+        }
+        $received[$name] = $entry
+    }
+    if ($received.Count -ne $ExpectedFiles.Count) {
+        throw "$Kind operator receipt file count does not match the expected set."
+    }
+
+    foreach ($name in $ExpectedFiles.Keys) {
+        if (-not $received.ContainsKey($name)) {
+            throw "$Kind operator receipt is missing $name."
+        }
+        $path = [string]$ExpectedFiles[$name]
+        $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant()
+        $actualSize = (Get-Item -LiteralPath $path -Force).Length
+        if ([string]$received[$name].sha256 -cne $actualHash) {
+            throw "$Kind operator receipt SHA-256 does not match $name."
+        }
+        if ([int64]$received[$name].size -ne [int64]$actualSize) {
+            throw "$Kind operator receipt size does not match $name."
+        }
+    }
+}
+
 if ($SourceCommit -cnotmatch '^[0-9a-f]{40}$') {
     throw 'SourceCommit must be an exact lowercase 40-hex Git commit.'
 }
@@ -93,6 +155,9 @@ $SystemImagePath = Get-RealFile $SystemImagePath 'system.erofs'
 $SurfaceRuntimePath = Get-RealFile $SurfaceRuntimePath 'native-surface-runtime.erofs'
 $LocalAiRuntimePath = Get-RealFile $LocalAiRuntimePath 'local-ai-runtime.erofs'
 $LocalAiSourceLockPath = Get-RealFile $LocalAiSourceLockPath 'local AI source lock'
+$SystemReceiptPath = Get-RealFile $SystemReceiptPath 'system operator receipt'
+$SurfaceReceiptPath = Get-RealFile $SurfaceReceiptPath 'Surface operator receipt'
+$LocalAiReceiptPath = Get-RealFile $LocalAiReceiptPath 'Local AI operator receipt'
 $ManifestToolPath = Get-RealFile $ManifestToolPath 'release manifest tool'
 $SignerPath = Get-RealFile $SignerPath 'release signing tool'
 $ReleaseAgentPath = Get-RealFile $ReleaseAgentPath 'release acquisition agent'
@@ -104,6 +169,17 @@ if (
     $PrivateKeyPath.Equals($Root, [StringComparison]::OrdinalIgnoreCase)
 ) {
     throw 'The canonical private key must remain outside the public signing/tooling directory.'
+}
+
+Assert-OperatorReceipt $SystemReceiptPath 'system' $SourceCommit @{
+    'system.erofs' = $SystemImagePath
+}
+Assert-OperatorReceipt $SurfaceReceiptPath 'surface' $SourceCommit @{
+    'native-surface-runtime.erofs' = $SurfaceRuntimePath
+}
+Assert-OperatorReceipt $LocalAiReceiptPath 'local-ai' $SourceCommit @{
+    'local-ai-runtime.erofs' = $LocalAiRuntimePath
+    'source-lock.json' = $LocalAiSourceLockPath
 }
 
 $SystemArtifactUrl = Get-StableHttpsUrl $SystemArtifactUrl 'SystemArtifactUrl'
@@ -136,6 +212,8 @@ foreach ($artifactPath in @($SystemImagePath, $SurfaceRuntimePath, $LocalAiRunti
 Write-Host ''
 Write-Host 'PORTABLE_V4_CANONICAL_OPERATOR_PREFLIGHT=PASS'
 Write-Host "SOURCE_COMMIT=$SourceCommit"
+Write-Host 'OPERATOR_RECEIPTS_MATCH_SOURCE_COMMIT=YES'
+Write-Host 'OPERATOR_RECEIPT_BYTES_REVERIFIED=YES'
 Write-Host "SYSTEM_ARTIFACT_URL=$SystemArtifactUrl"
 Write-Host "SURFACE_ARTIFACT_URL=$SurfaceArtifactUrl"
 Write-Host "LOCAL_AI_ARTIFACT_URL=$LocalAiArtifactUrl"
