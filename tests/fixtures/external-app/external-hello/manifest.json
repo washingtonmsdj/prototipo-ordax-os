@@ -1,0 +1,12 @@
+{
+  "$schema": "prototype-ordax.external-app-manifest/1",
+  "app_id": "external-hello",
+  "version": "0.1.0",
+  "publisher": "external-proof.example",
+  "entrypoint": "index.mjs",
+  "supported_modes": ["web"],
+  "required_contracts": [],
+  "requested_capabilities": [],
+  "content_hash": "4b46d40d6e30cbac99a5795b31f1386e75e1502934f460062233a6f21229d0e2",
+  "update_policy": "manual-test-only"
+}
