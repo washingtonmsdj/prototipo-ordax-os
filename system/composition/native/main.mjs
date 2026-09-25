@@ -31,7 +31,9 @@ import { createNativeWorkspaceStore } from "../../adapters/native/workspace.mjs"
 import { createNativeSyncStateStore } from "../../adapters/native/sync-state.mjs";
 import { createNativeSurfaceHeartbeat } from "../../adapters/native/surface-heartbeat.mjs";
 import { createWebIdentityActions } from "../../adapters/web/identity-actions.mjs";
+import { createSameOriginIdentityCredentials } from "../../adapters/web/identity-credentials.mjs";
 import { createWebIdentitySession } from "../../adapters/web/identity.mjs";
+import { createWebSyncTransport } from "../../adapters/web/sync-transport.mjs";
 import { validateAccountRuntime } from "../../services/account/runtime.mjs";
 import { createAppActivationChannel } from "../../services/apps/activation.mjs";
 import { listSystemComponents } from "../../apps/component-catalog.mjs";
@@ -49,6 +51,7 @@ import { createLocalAiRuntime } from "../../services/local-ai/runtime.mjs";
 import { createIntelligenceRuntime } from "../../services/intelligence/runtime.mjs";
 import { createUpdateDiagnosticRecorder } from "../../services/diagnostics/update-recorder.mjs";
 import { createPreferenceSyncRuntime } from "../../services/sync/preference-runtime.mjs";
+import { createAccountSyncRuntime } from "../../services/sync/account-runtime.mjs";
 import { createWorkspaceMetadataBridge } from "../../services/sync/workspace-metadata.mjs";
 import { seedMissingRegionalPreferencesFromFirstRun } from "../../services/state/first-run.mjs";
 import { translateSurfaceMessage } from "../../services/i18n/surface.mjs";
@@ -239,6 +242,9 @@ async function start() {
   const identitySession = createWebIdentitySession(window);
   await identitySession.refresh();
   const identityActions = createWebIdentityActions(window, identitySession);
+  const identityAvailable = identitySession.getSnapshot().state !== "unavailable";
+  const identityCredentials = identityAvailable ? createSameOriginIdentityCredentials(window) : null;
+  const syncTransport = identityAvailable ? createWebSyncTransport(window) : null;
   const appActivation = createAppActivationChannel();
   const updateWatcher = createNativeUpdateWatcher(window);
   const notifications = createNotificationsRuntime({
@@ -290,8 +296,8 @@ async function start() {
     browserWebContentAvailable,
     intelligenceSystemAvailable,
     localSessionAvailable,
-    accountIdentityAvailable: identitySession.getSnapshot().state !== "unavailable",
-    syncSafeStateAvailable: false,
+    accountIdentityAvailable: identityAvailable,
+    syncSafeStateAvailable: identityAvailable,
   });
 
   validateAccountRuntime(
@@ -361,17 +367,35 @@ async function start() {
       return `pref:${uuid ? uuid.replaceAll("-", "") : `${Date.now().toString(36)}:${syncMutationOrdinal}`}`;
     },
   });
+  let accountSync = preferenceSync;
+  if (syncTransport) {
+    let accountSyncOrdinal = 0;
+    accountSync = createAccountSyncRuntime({
+      identitySession,
+      transport: syncTransport,
+      preferenceSync,
+      preferences: surface.preferences,
+      workspaceMetadataSource: workspaceMetadata.source,
+      workspaceStore,
+      createIdempotencyKey(kind = "state") {
+        accountSyncOrdinal += 1;
+        const uuid = window.crypto?.randomUUID?.();
+        return `sync:${kind}:${uuid ? uuid.replaceAll("-", "") : `${Date.now().toString(36)}:${accountSyncOrdinal}`}`;
+      },
+    });
+    window.addEventListener("online", () => void accountSync.flush(), { passive: true });
+  }
   const accountOverviewControls = mountAccountOverviewControls(
     root,
     identitySession,
     identityActions,
     surface,
-    preferenceSync,
+    accountSync,
     workspaceMetadata.source,
     appActivation,
   );
   const homeContinuation = mountHomeContinuation(root, { projects, recentFiles, surfaceLifecycle: surface });
-  const homePending = mountHomePending(root, { notifications, syncRuntime: preferenceSync, surfaceLifecycle: surface });
+  const homePending = mountHomePending(root, { notifications, syncRuntime: accountSync, surfaceLifecycle: surface });
   const filesOwnerSpace = fileSpace === null
     ? null
     : createProjectContinuityFileSpace(fileSpace, projects, {
@@ -502,6 +526,7 @@ async function start() {
       networkManagement,
       identitySession,
       identityActions,
+      identityCredentials,
       localSession,
     });
   } catch (error) {
@@ -544,6 +569,7 @@ async function start() {
       projectReferences?.destroy();
       projectCloudLinks?.destroy();
       accountOverviewControls.destroy();
+      if (accountSync !== preferenceSync) accountSync.destroy();
       preferenceSync.destroy();
       browserSession.dispose();
       updateNotificationBridge.destroy();
