@@ -38,6 +38,13 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
         self.assertNotIn('"Ativa"', controls)
         self.assertNotIn("SYNC_CORE_STATUS", controls)
         self.assertIn("account.continuity.subtitle", controls)
+        self.assertIn('syncSnapshot?.accountContinuity === "active"', controls)
+        self.assertIn('syncSnapshot?.transport === "available"', controls)
+        self.assertIn('syncSnapshot.transport === "host-required"', controls)
+        self.assertIn("account.card.accountContinuity", controls)
+        self.assertIn("account.card.continuityActive.detail", controls)
+        self.assertIn("account.card.continuityHostRequired.detail", controls)
+        self.assertIn("account.card.continuityInactive.detail", controls)
         self.assertIn("account.card.noPending.detail", controls)
         self.assertIn("account.card.pending.detail", controls)
         self.assertIn(
@@ -46,6 +53,14 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
         )
         self.assertIn(
             "A fila local está vazia; isso não prova que exista uma conta ou nuvem sincronizada.",
+            catalog,
+        )
+        self.assertIn(
+            "A sessão autenticada concluiu a reconciliação inicial das classes suportadas neste dispositivo.",
+            catalog,
+        )
+        self.assertIn(
+            "Isso não substitui a prova física nem o rollout público.",
             catalog,
         )
         self.assertIn("nada foi anunciado como enviado à nuvem", catalog)
