@@ -27,7 +27,9 @@ on:
       - 'system/surface/ui/system-overview-controls.mjs'
       - 'tools/creator/pre_usb_nova_ordax_audit.py'
       - 'tools/creator/physical_promotion.py'
+      - 'tools/creator/stable_mvp_usb_readiness.py'
       - 'tests/test_pre_usb_nova_ordax_audit.py'
+      - 'tests/test_stable_mvp_usb_readiness.py'
       - 'tests/test_physical_promotion_boundary.py'
       - '.github/workflows/pre-usb-nova-ordax-audit.yml'
   pull_request:
@@ -55,7 +57,9 @@ on:
       - 'system/surface/ui/system-overview-controls.mjs'
       - 'tools/creator/pre_usb_nova_ordax_audit.py'
       - 'tools/creator/physical_promotion.py'
+      - 'tools/creator/stable_mvp_usb_readiness.py'
       - 'tests/test_pre_usb_nova_ordax_audit.py'
+      - 'tests/test_stable_mvp_usb_readiness.py'
       - 'tests/test_physical_promotion_boundary.py'
       - '.github/workflows/pre-usb-nova-ordax-audit.yml'
   workflow_dispatch:
@@ -89,13 +93,19 @@ jobs:
           python -m py_compile \
             tools/creator/pre_usb_nova_ordax_audit.py \
             tools/creator/physical_promotion.py \
-            tests/test_pre_usb_nova_ordax_audit.py
+            tools/creator/stable_mvp_usb_readiness.py \
+            tests/test_pre_usb_nova_ordax_audit.py \
+            tests/test_stable_mvp_usb_readiness.py
 
       - name: Execute Nova OrdaX source audit
         run: python tools/creator/pre_usb_nova_ordax_audit.py --repo-root .
+
+      - name: Report aggregate Stable MVP USB readiness
+        run: python tools/creator/stable_mvp_usb_readiness.py --repo-root .
 
       - name: Regress source audit and physical pre-authorization integration
         run: |
           python -m unittest \
             tests.test_pre_usb_nova_ordax_audit \
+            tests.test_stable_mvp_usb_readiness \
             tests.test_physical_promotion_boundary -v
