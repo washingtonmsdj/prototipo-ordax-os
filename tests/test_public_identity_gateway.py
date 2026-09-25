@@ -132,6 +132,10 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertEqual(export.status, 503)
         self.assertEqual(self.payload(export)["error"], "public-account-access-disabled")
 
+        spaces = self.gateway.handle("GET", "/account/spaces", marker)
+        self.assertEqual(spaces.status, 503)
+        self.assertEqual(self.payload(spaces)["error"], "public-account-access-disabled")
+
         close = self.gateway.handle(
             "POST",
             "/account/close",
@@ -140,6 +144,45 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         )
         self.assertEqual(close.status, 503)
         self.assertEqual(self.payload(close)["error"], "public-account-access-disabled")
+
+    def test_spaces_route_uses_authenticated_subject_and_neutral_account_provider(self):
+        class FakeIdentityProvider:
+            def get_user(self, access_token):
+                self.last_token = access_token
+                return "user-1", "user@example.com"
+
+        class FakeAccountProvider:
+            def list_spaces(self, access_token):
+                self.last_token = access_token
+                return [{
+                    "id": "space-1",
+                    "ownerId": "user-1",
+                    "name": "Developer",
+                    "kind": "professional",
+                    "state": "active",
+                    "profilePack": "developer",
+                }]
+
+        identity = FakeIdentityProvider()
+        account = FakeAccountProvider()
+        gateway = gateway_module.PublicIdentityGateway(
+            provider=identity,
+            sync_provider=None,
+            account_provider=account,
+            password_checker=SafePasswordChecker(),
+        )
+        response = gateway.handle(
+            "GET",
+            "/account/spaces",
+            {"cookie": "ordax_access=user-access-token"},
+        )
+
+        self.assertEqual(response.status, 200)
+        payload = self.payload(response)
+        self.assertEqual(payload["$schema"], "prototype-ordax.account-spaces/1")
+        self.assertEqual(payload["spaces"][0]["id"], "space-1")
+        self.assertEqual(identity.last_token, "user-access-token")
+        self.assertEqual(account.last_token, "user-access-token")
 
     def test_registration_rejects_compromised_password_before_provider(self):
         class FakeProvider:
