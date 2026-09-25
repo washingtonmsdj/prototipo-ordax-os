@@ -21,6 +21,7 @@ LEGAL = Path("docs/contracts/public-legal-readiness.json")
 HARDENING = Path("docs/contracts/public-auth-hardening.json")
 DEPLOYMENT = Path("docs/contracts/public-site-deployment.json")
 IDENTITY = Path("docs/contracts/public-identity.json")
+LIFECYCLE = Path("docs/contracts/account-lifecycle.json")
 RUNTIME = Path("sites/public/config/public-site.json")
 EDGE = Path("infra/supabase/functions/ordax-account-gateway/index.ts")
 REFERENCE_GATEWAY = Path("services/public-identity/gateway.py")
@@ -69,6 +70,7 @@ def readiness(root: Path) -> tuple[list[str], dict[str, bool]]:
     hardening = load_json(root, HARDENING)
     deployment = load_json(root, DEPLOYMENT)
     identity = load_json(root, IDENTITY)
+    lifecycle = load_json(root, LIFECYCLE)
     runtime = load_json(root, RUNTIME)
     switches = source_switches(root)
 
@@ -77,6 +79,8 @@ def readiness(root: Path) -> tuple[list[str], dict[str, bool]]:
     adapter = deployment.get("adapter", {})
     routing = deployment.get("routing", {})
     backend = identity.get("backend", {})
+    lifecycle_operations = lifecycle.get("operations", {})
+    lifecycle_activation = lifecycle.get("activation", {})
     runtime_identity = runtime.get("identity", {})
     runtime_legal = runtime.get("legal", {})
 
@@ -89,6 +93,23 @@ def readiness(root: Path) -> tuple[list[str], dict[str, bool]]:
     terms = documents.get("terms", {})
     need(legal.get("status") == "ready", "legal-status")
     need(legal.get("account_activation_ready") is True, "legal-account-activation")
+    need(lifecycle.get("identity_owner") == "ordax-account-gateway", "account-lifecycle-owner")
+    need(
+        lifecycle_operations.get("account_close", {}).get("implemented") is True,
+        "account-close-implementation",
+    )
+    need(
+        lifecycle_operations.get("account_data_export", {}).get("implemented") is True,
+        "account-data-export-implementation",
+    )
+    need(
+        lifecycle_activation.get("public_login_may_open_before_account_close_implementation") is False,
+        "account-close-gate-contract",
+    )
+    need(
+        lifecycle_activation.get("public_login_may_open_before_data_export_implementation") is False,
+        "account-export-gate-contract",
+    )
     for name, document in (("privacy", privacy), ("terms", terms)):
         need(document.get("final") is True, f"{name}-final")
         need(bool(document.get("version")), f"{name}-version")
