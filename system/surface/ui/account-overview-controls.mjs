@@ -380,10 +380,39 @@ export function mountAccountOverviewControls(
     const pendingMutationCount = syncSnapshot?.pendingMutationCount ?? 0;
     const appearanceTracked = syncSnapshot?.trackedDataClasses.includes("appearance") ?? false;
     const queueIsDurable = syncSnapshot?.queuePersistence === "device";
+    const continuityActive = syncSnapshot?.accountContinuity === "active";
+    const continuityTransportAvailable = syncSnapshot?.transport === "available";
     const workspaceAreaCount = workspaceMetadataSnapshot?.areas.length ?? 0;
     const workspaceAppCount = workspaceMetadataSnapshot
       ? workspaceMetadataSnapshot.areas.reduce((total, area) => total + area.appIds.length, 0)
       : 0;
+
+    appendStateCard(
+      documentObject,
+      grid,
+      t("account.card.accountContinuity"),
+      syncSnapshot
+        ? continuityActive && continuityTransportAvailable
+          ? t("account.card.continuityActive")
+          : syncSnapshot.transport === "host-required"
+            ? t("account.card.continuityHostRequired")
+            : t("account.card.continuityInactive")
+        : t("account.card.unavailable"),
+      syncSnapshot
+        ? continuityActive && continuityTransportAvailable
+          ? t("account.card.continuityActive.detail")
+          : syncSnapshot.transport === "host-required"
+            ? t("account.card.continuityHostRequired.detail")
+            : t("account.card.continuityInactive.detail")
+        : t("account.card.continuityUnavailable.detail"),
+      syncSnapshot
+        ? continuityActive && continuityTransportAvailable
+          ? "available"
+          : syncSnapshot.transport === "host-required"
+            ? "unavailable"
+            : "neutral"
+        : "unavailable",
+    );
 
     appendStateCard(
       documentObject,
