@@ -64,6 +64,7 @@ class SyncApplyResult:
     tombstone: bool
     applied: bool
     conflict: bool
+    change_cursor: int | None
 
 
 class SupabaseSyncProvider:
@@ -102,11 +103,95 @@ class SupabaseSyncProvider:
             raise SupabaseSyncError("provider-sync-failed", status=status)
         return value
 
+    @staticmethod
+    def _sync_object(item: dict) -> dict:
+        if not isinstance(item, dict):
+            raise SupabaseSyncError("provider-invalid-sync-object")
+        return {
+            "objectId": item.get("stable_object_id"),
+            "dataClass": item.get("data_class"),
+            "objectSchemaVersion": item.get("object_schema_version"),
+            "resolverVersion": item.get("resolver_version"),
+            "serverRevision": item.get("server_revision"),
+            "tombstone": item.get("tombstone"),
+            "payload": item.get("payload"),
+            "updatedAt": item.get("updated_at", item.get("changed_at")),
+        }
+
+    @staticmethod
+    def _limit(value: int) -> int:
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1 or value > 500:
+            raise ValueError("limit must be between 1 and 500")
+        return value
+
+    def snapshot(self, access_token: str, *, limit: int = 200) -> dict:
+        value = self._request(
+            "/rest/v1/rpc/ordax_sync_snapshot_v1",
+            access_token,
+            {"p_limit": self._limit(limit)},
+        )
+        if not isinstance(value, dict):
+            raise SupabaseSyncError("provider-invalid-sync-snapshot")
+        cursor = value.get("cursor")
+        objects = value.get("objects")
+        if (
+            not isinstance(cursor, int)
+            or isinstance(cursor, bool)
+            or cursor < 0
+            or not isinstance(objects, list)
+        ):
+            raise SupabaseSyncError("provider-invalid-sync-snapshot")
+        return {
+            "cursor": cursor,
+            "objects": [self._sync_object(item) for item in objects],
+        }
+
+    def pull_changes(
+        self,
+        access_token: str,
+        *,
+        after_cursor: int = 0,
+        limit: int = 200,
+    ) -> dict:
+        if (
+            not isinstance(after_cursor, int)
+            or isinstance(after_cursor, bool)
+            or after_cursor < 0
+        ):
+            raise ValueError("after_cursor must be a non-negative integer")
+        value = self._request(
+            "/rest/v1/rpc/ordax_pull_sync_changes_v1",
+            access_token,
+            {"p_after_cursor": after_cursor, "p_limit": self._limit(limit)},
+        )
+        if not isinstance(value, list):
+            raise SupabaseSyncError("provider-invalid-sync-changes")
+        changes = []
+        next_cursor = after_cursor
+        for item in value:
+            if not isinstance(item, dict):
+                raise SupabaseSyncError("provider-invalid-sync-change")
+            cursor = item.get("change_cursor")
+            if (
+                not isinstance(cursor, int)
+                or isinstance(cursor, bool)
+                or cursor <= next_cursor
+            ):
+                raise SupabaseSyncError("provider-invalid-sync-cursor")
+            change = self._sync_object(item)
+            change["cursor"] = cursor
+            changes.append(change)
+            next_cursor = cursor
+        return {
+            "afterCursor": after_cursor,
+            "nextCursor": next_cursor,
+            "changes": changes,
+        }
+
     def list_objects(self, access_token: str, *, after_revision: int = 0, limit: int = 200) -> list[dict]:
         if not isinstance(after_revision, int) or isinstance(after_revision, bool) or after_revision < 0:
             raise ValueError("after_revision must be a non-negative integer")
-        if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1 or limit > 500:
-            raise ValueError("limit must be between 1 and 500")
+        limit = self._limit(limit)
         value = self._request(
             "/rest/v1/rpc/ordax_list_sync_objects_v1",
             access_token,
@@ -118,23 +203,14 @@ class SupabaseSyncProvider:
         for item in value:
             if not isinstance(item, dict):
                 raise SupabaseSyncError("provider-invalid-sync-object")
-            result.append({
-                "objectId": item.get("stable_object_id"),
-                "dataClass": item.get("data_class"),
-                "objectSchemaVersion": item.get("object_schema_version"),
-                "resolverVersion": item.get("resolver_version"),
-                "serverRevision": item.get("server_revision"),
-                "tombstone": item.get("tombstone"),
-                "payload": item.get("payload"),
-                "updatedAt": item.get("updated_at"),
-            })
+            result.append(self._sync_object(item))
         return result
 
     def apply_mutation(self, access_token: str, mutation: dict) -> SyncApplyResult:
         if not isinstance(mutation, dict):
             raise ValueError("mutation must be an object")
         value = self._request(
-            "/rest/v1/rpc/ordax_apply_sync_mutation_v1",
+            "/rest/v1/rpc/ordax_apply_sync_mutation_v2",
             access_token,
             {
                 "p_idempotency_key": mutation.get("idempotencyKey"),
@@ -153,10 +229,16 @@ class SupabaseSyncProvider:
         revision = item.get("server_revision")
         if not isinstance(revision, int) or isinstance(revision, bool) or revision < 0:
             raise SupabaseSyncError("provider-invalid-sync-revision")
+        cursor = item.get("change_cursor")
+        if cursor is not None and (
+            not isinstance(cursor, int) or isinstance(cursor, bool) or cursor < 0
+        ):
+            raise SupabaseSyncError("provider-invalid-sync-cursor")
         return SyncApplyResult(
             sync_object_id=item.get("sync_object_id"),
             server_revision=revision,
             tombstone=bool(item.get("tombstone")),
             applied=bool(item.get("applied")),
             conflict=bool(item.get("conflict")),
+            change_cursor=cursor,
         )
