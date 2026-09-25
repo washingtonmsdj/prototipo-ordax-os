@@ -49,14 +49,16 @@
 
   function renderIdentity(config) {
     const state = document.querySelector("[data-identity-state]");
-    const action = document.querySelector("[data-identity-action]");
-    if (!state || !action) return;
+    const form = document.querySelector("[data-identity-form]");
+    if (!state || !form) return;
 
-    const kind = action.dataset.identityAction;
+    const kind = form.dataset.identityForm;
+    const expectedTarget = kind === "login" ? "/auth/login" : "/auth/register";
     const target = kind === "login"
       ? config?.identity?.login_url
       : config?.identity?.register_url;
-    const available = sameOriginPath(target);
+    const legalReady = config?.legal?.account_activation_ready === true;
+    const available = legalReady && target === expectedTarget && sameOriginPath(target);
     const [title, detail] = identityCopy(kind, available);
 
     const strong = state.querySelector("strong");
@@ -64,12 +66,15 @@
     if (strong) strong.textContent = title;
     if (paragraph) paragraph.textContent = detail;
 
+    const controls = form.querySelectorAll("input, button");
     if (available) {
-      action.href = target;
-      action.hidden = false;
+      form.action = target;
+      form.hidden = false;
+      for (const control of controls) control.disabled = false;
     } else {
-      action.removeAttribute("href");
-      action.hidden = true;
+      form.removeAttribute("action");
+      form.hidden = true;
+      for (const control of controls) control.disabled = true;
     }
   }
 
