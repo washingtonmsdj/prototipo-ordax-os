@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "sites" / "public"
 PUBLICATIONS = ROOT / "platform" / "releases" / "publications.json"
 LEGAL_READINESS = ROOT / "docs" / "contracts" / "public-legal-readiness.json"
+AUTH_HARDENING = ROOT / "docs" / "contracts" / "public-auth-hardening.json"
 PUBLIC_CATALOG_RELATIVE = Path("releases/catalog.json")
 MANIFEST_NAME = "public-site-manifest.json"
 SCHEMA = "prototype-ordax.public-site-bundle/1"
@@ -142,6 +143,9 @@ def validate_source(root: Path = SOURCE) -> list[Path]:
     legal_contract = json.loads(LEGAL_READINESS.read_text(encoding="utf-8"))
     if legal_contract.get("$schema") != "prototype-ordax.public-legal-readiness/1":
         raise PublicSiteError("unexpected public legal-readiness schema")
+    hardening_contract = json.loads(AUTH_HARDENING.read_text(encoding="utf-8"))
+    if hardening_contract.get("$schema") != "prototype-ordax.public-auth-hardening/1":
+        raise PublicSiteError("unexpected public auth-hardening schema")
     contract_ready = legal_contract.get("account_activation_ready")
     if legal["account_activation_ready"] is not contract_ready:
         raise PublicSiteError("runtime legal readiness must match canonical legal-readiness contract")
@@ -152,6 +156,10 @@ def validate_source(root: Path = SOURCE) -> list[Path]:
     else:
         if legal_contract.get("status") != "ready":
             raise PublicSiteError("ready legal contract must have status=ready")
+        if hardening_contract.get("status") != "ready":
+            raise PublicSiteError("public auth hardening must be ready before account activation")
+        if identity.get("login_url") != "/auth/login" or identity.get("register_url") != "/auth/register":
+            raise PublicSiteError("ready account activation requires canonical same-origin auth routes")
         documents = legal_contract.get("documents")
         if not isinstance(documents, dict):
             raise PublicSiteError("ready legal contract documents are missing")

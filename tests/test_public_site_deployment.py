@@ -5,6 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "docs" / "contracts" / "public-site-deployment.json"
 NGINX = ROOT / "deploy" / "public-site" / "nginx.conf"
+DEPLOYMENT_PROOF = ROOT / "tools" / "public-site" / "prove_deployment.py"
 
 
 class PublicSiteDeploymentTests(unittest.TestCase):
@@ -47,6 +48,20 @@ class PublicSiteDeploymentTests(unittest.TestCase):
         self.assertIn("proxy_hide_header Cache-Control;", self.nginx)
         self.assertIn("proxy_set_header X-Forwarded-Proto https;", self.nginx)
         self.assertIn("proxy_set_header X-Forwarded-Host $host;", self.nginx)
+
+    def test_deployment_proof_is_credential_free_and_checks_real_same_origin_routes(self):
+        text = DEPLOYMENT_PROOF.read_text(encoding="utf-8")
+        self.assertIn("PUBLIC_SITE_DEPLOYMENT_PROOF=PASS", text)
+        self.assertIn('"/auth/session"', text)
+        self.assertIn('"/sync/snapshot?limit=1"', text)
+        self.assertIn("authentication-required", text)
+        self.assertIn("origin-must-be-clean-https-origin", text)
+        for forbidden in (
+            "ORDAX_PROOF_ACCOUNT_PASSWORD",
+            "service_role",
+            "SUPABASE_SERVICE_ROLE_KEY",
+        ):
+            self.assertNotIn(forbidden, text)
 
     def test_public_activation_still_requires_auth_and_legal_hardening(self):
         requirements = self.contract["production_requirements"]

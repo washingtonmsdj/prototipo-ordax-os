@@ -33,6 +33,22 @@ function error(status: number, code: string, message: string) {
   return json(status, { $schema: ERROR_SCHEMA, error: code, message });
 }
 
+function redirectResponse(location: string, cookies: string[] = []) {
+  const headers = new Headers({
+    location,
+    "cache-control": "no-store, max-age=0",
+    pragma: "no-cache",
+    "x-content-type-options": "nosniff",
+  });
+  for (const cookie of cookies) headers.append("set-cookie", cookie);
+  return new Response(null, { status: 303, headers });
+}
+
+function wantsJson(req: Request) {
+  const accept = (req.headers.get("accept") ?? "").toLowerCase();
+  return accept.includes("application/json") && !accept.includes("text/html");
+}
+
 function parseCookies(req: Request) {
   const result = new Map<string, string>();
   for (const part of (req.headers.get("cookie") ?? "").split(";")) {
@@ -149,12 +165,18 @@ async function credentials(req: Request, register: boolean) {
   try { raw = await boundedBody(req); } catch { return error(413, "request-too-large", "A solicitação excede o limite permitido."); }
   const type = req.headers.get("content-type") ?? "";
   if (!type.toLowerCase().startsWith("application/x-www-form-urlencoded")) {
-    return error(400, "invalid-credentials-form", "Revise o e-mail e a senha informados.");
+    return wantsJson(req)
+      ? error(400, "invalid-credentials-form", "Revise o e-mail e a senha informados.")
+      : redirectResponse(register ? "/cadastro/?erro=formulario" : "/login/?erro=formulario");
   }
   const form = new URLSearchParams(raw);
   const email = (form.get("email") ?? "").trim();
   const password = form.get("password") ?? "";
-  if (!email || !password) return error(400, "invalid-credentials-form", "Revise o e-mail e a senha informados.");
+  if (!email || !password) {
+    return wantsJson(req)
+      ? error(400, "invalid-credentials-form", "Revise o e-mail e a senha informados.")
+      : redirectResponse(register ? "/cadastro/?erro=formulario" : "/login/?erro=formulario");
+  }
 
   const supabase = client();
   const result = register
@@ -162,16 +184,24 @@ async function credentials(req: Request, register: boolean) {
     : await supabase.auth.signInWithPassword({ email, password });
 
   if (result.error) {
+    if (!wantsJson(req)) {
+      return redirectResponse(register ? "/cadastro/?erro=cadastro" : "/login/?erro=credenciais");
+    }
     return error(register ? 400 : 401, register ? "registration-failed" : "authentication-failed", "Não foi possível concluir esta operação de conta.");
   }
   if (!result.data.session) {
-    return json(202, { authenticated: false, confirmationRequired: true });
+    return wantsJson(req)
+      ? json(202, { authenticated: false, confirmationRequired: true })
+      : redirectResponse("/login/?cadastro=verifique-email");
   }
-  return json(200, { authenticated: true, confirmationRequired: false }, sessionCookies(
+  const cookies = sessionCookies(
     result.data.session.access_token,
     result.data.session.refresh_token,
     result.data.session.expires_in,
-  ));
+  );
+  return wantsJson(req)
+    ? json(200, { authenticated: true, confirmationRequired: false }, cookies)
+    : redirectResponse("/conta/", cookies);
 }
 
 Deno.serve(async (req: Request) => {
@@ -205,6 +235,8 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  if (path === "/auth/login" && req.method === "GET") return redirectResponse("/login/");
+  if (path === "/auth/register" && req.method === "GET") return redirectResponse("/cadastro/");
   if (path === "/auth/login" && req.method === "POST") return credentials(req, false);
   if (path === "/auth/register" && req.method === "POST") return credentials(req, true);
 
@@ -215,7 +247,9 @@ Deno.serve(async (req: Request) => {
     } catch {
       // Idempotent logout: cookie removal still wins.
     }
-    return json(200, { signedOut: true }, clearCookies());
+    return wantsJson(req)
+      ? json(200, { signedOut: true }, clearCookies())
+      : redirectResponse("/", clearCookies());
   }
 
 

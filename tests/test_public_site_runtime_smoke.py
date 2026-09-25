@@ -105,6 +105,14 @@ class PublicSiteRuntimeSmokeTests(unittest.TestCase):
         payload = json.loads(caught.exception.read().decode("utf-8"))
         self.assertEqual(payload["error"], "identity-provider-unavailable")
 
+    def test_sync_route_is_same_origin_and_fails_closed_without_provider(self):
+        with self.assertRaises(HTTPError) as caught:
+            self.fetch("/sync/snapshot?limit=1")
+        self.assertEqual(caught.exception.code, 503)
+        payload = json.loads(caught.exception.read().decode("utf-8"))
+        self.assertEqual(payload["error"], "identity-provider-unavailable")
+        self.assertEqual(caught.exception.headers["Cache-Control"], "no-store, max-age=0")
+
     def test_unknown_path_and_traversal_do_not_escape_site_root(self):
         for path in ("/missing", "/%2e%2e/README.md"):
             with self.subTest(path=path):

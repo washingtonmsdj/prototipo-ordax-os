@@ -11,6 +11,7 @@ PUBLIC_SITE_TOOLS = ROOT / "tools" / "public-site"
 sys.path.insert(0, str(PUBLIC_SITE_TOOLS))
 BUILD_PATH = PUBLIC_SITE_TOOLS / "build.py"
 LEGAL_CONTRACT = ROOT / "docs" / "contracts" / "public-legal-readiness.json"
+AUTH_HARDENING = ROOT / "docs" / "contracts" / "public-auth-hardening.json"
 SITE = ROOT / "sites" / "public"
 
 
@@ -36,6 +37,12 @@ class PublicLegalReadinessTests(unittest.TestCase):
         self.assertIsNone(contract["documents"]["privacy"]["version"])
         self.assertIsNone(contract["documents"]["terms"]["version"])
 
+    def test_auth_hardening_gate_is_not_ready(self):
+        contract = json.loads(AUTH_HARDENING.read_text(encoding="utf-8"))
+        self.assertEqual(contract["status"], "public-auth-disabled-hardening-pending")
+        self.assertEqual(contract["current_observation"]["leaked_password_protection"], "disabled-warn")
+        self.assertFalse(contract["current_observation"]["public_login_enabled"])
+
     def test_runtime_config_matches_not_ready_gate(self):
         config = json.loads((SITE / "config" / "public-site.json").read_text(encoding="utf-8"))
         self.assertFalse(config["legal"]["account_activation_ready"])
@@ -57,6 +64,42 @@ class PublicLegalReadinessTests(unittest.TestCase):
             with self.assertRaises(build.PublicSiteError) as caught:
                 build.validate_source(copied)
             self.assertIn("identity URLs must remain null", str(caught.exception))
+
+    def test_legal_ready_alone_cannot_activate_accounts_while_auth_hardening_is_pending(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            copied = root / "public"
+            shutil.copytree(SITE, copied)
+
+            config_path = copied / "config" / "public-site.json"
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            config["legal"]["account_activation_ready"] = True
+            config["identity"]["login_url"] = "/auth/login"
+            config["identity"]["register_url"] = "/auth/register"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+
+            legal_path = root / "legal.json"
+            legal = json.loads(LEGAL_CONTRACT.read_text(encoding="utf-8"))
+            legal["status"] = "ready"
+            legal["account_activation_ready"] = True
+            for name in ("privacy", "terms"):
+                legal["documents"][name]["final"] = True
+                legal["documents"][name]["version"] = "test-v1"
+                legal["documents"][name]["effective_date"] = "2099-01-01"
+            legal_path.write_text(json.dumps(legal), encoding="utf-8")
+
+            original_legal = build.LEGAL_READINESS
+            original_hardening = build.AUTH_HARDENING
+            try:
+                build.LEGAL_READINESS = legal_path
+                build.AUTH_HARDENING = AUTH_HARDENING
+                with self.assertRaises(build.PublicSiteError) as caught:
+                    build.validate_source(copied)
+            finally:
+                build.LEGAL_READINESS = original_legal
+                build.AUTH_HARDENING = original_hardening
+
+            self.assertIn("auth hardening must be ready", str(caught.exception))
 
     def test_readiness_pages_do_not_claim_final_legal_status(self):
         privacy = (SITE / "privacidade" / "index.html").read_text(encoding="utf-8")

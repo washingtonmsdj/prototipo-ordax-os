@@ -184,3 +184,18 @@ The required route shape, cache policy and security headers are machine-readable
 The public account entry points are also gated by `docs/contracts/public-legal-readiness.json`. While that contract is not ready, `sites/public/config/public-site.json` must keep both login and registration targets null. The build fails if someone tries to enable them early.
 
 The readiness pages under `/privacidade/` and `/termos/` intentionally describe only the current prototype state. Final legal documents, versions and effective dates must be reviewed and published before this gate can move to ready.
+
+
+### Production deployment proof
+
+After a conforming HTTPS origin is deployed, validate it without account
+credentials:
+
+```bash
+python tools/public-site/prove_deployment.py --origin https://example.invalid
+```
+
+The proof checks the public landing/cache/security headers, runtime config,
+anonymous `/auth/session`, fail-closed anonymous `/sync/snapshot`, and real
+404 behavior. A passing local build is not accepted as production deployment
+evidence.
