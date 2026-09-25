@@ -5,6 +5,7 @@ SYSTEM_ROOT=${ORDAX_SYSTEM_ROOT:-}
 DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}
 PRODUCT_MODE=${ORDAX_PRODUCT_MODE:-}
 NATIVE_INSTALL_CAPABILITY=${ORDAX_NATIVE_INSTALL_CAPABILITY:-disabled}
+ACCOUNT_GATEWAY_ORIGIN=${ORDAX_ACCOUNT_GATEWAY_ORIGIN:-}
 SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
 SOURCE_SHA=unknown
 STATE_ROOT=${ORDAX_STATE_DIR:-/state/ordax}
@@ -1272,6 +1273,7 @@ export ORDAX_SURFACE_MODE=native-graphical
     --component-channel-bin /srv/ordax-system/bin/ordax-runtime-component-channel \
     --component-trust /srv/ordax-system/trust/runtime-components-ed25519.json \
     --component-slot-root /var/lib/ordax/components \
+    --account-gateway-origin "$ACCOUNT_GATEWAY_ORIGIN" \
     --telemetry-config /srv/ordax-system/services/telemetry/relay.json \
     >"$HTTP_LOG" 2>&1 &
 HTTP_PID=$!
