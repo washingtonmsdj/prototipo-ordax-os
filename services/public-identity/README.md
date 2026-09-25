@@ -1,6 +1,6 @@
 # OrdaX Public Identity Gateway
 
-Status: GATEWAY CORE IMPLEMENTED / DEDICATED SUPABASE TARGET PREPARED / PUBLIC PROVIDER NOT ENABLED
+Status: GATEWAY DEPLOYED / DEDICATED SUPABASE TARGET ACTIVE / PUBLIC SAME-ORIGIN ACTIVATION GATED
 
 This directory defines the backend responsibility that will sit behind the public site's login and registration entry points.
 
@@ -33,11 +33,13 @@ GET  /auth/register
 POST /auth/register
 POST /auth/logout
 GET  /auth/session
-GET  /sync/objects
+GET  /sync/snapshot
+GET  /sync/changes
 POST /sync/mutate
+GET  /sync/objects   # compatibility full-read route
 ```
 
-GET login/register routes lead only to the canonical same-origin pages. Credential POST, account sync and authenticated session behavior fail closed when runtime provider configuration is absent. `/auth/session` remains anonymous/unconfigured in that state. The gateway owns no public listener; deployment stays external and same-origin.
+GET login/register routes lead only to the canonical same-origin pages. Credential POST, account sync and authenticated session behavior fail closed when runtime provider configuration is absent. `/auth/session` remains anonymous/unconfigured in that state. The deployed Edge Function is the current Native/USB backend adapter; browser publication still requires an OrdaX-owned same-origin routing boundary.
 
 The public site configuration therefore keeps login/register disabled until these routes are deployed behind the same origin. The runtime shape is pinned in `docs/contracts/public-identity-gateway.json`.
 
@@ -84,19 +86,19 @@ The provider-specific email/password adapter in `supabase_password.py` and accou
 
 The product domain remains provider-neutral, so the Supabase project can later be migrated without changing Surface account semantics.
 
-## Non-goals of this foundation
+## Current rollout boundary
 
-- no production identity provider is enabled;
-- no password form is added to the static site;
-- no publishable/service key is committed;
-- no migration is applied to an existing Supabase project;
-- no account is claimed to exist until the provider and gateway are live.
+- no public same-origin identity surface is enabled yet;
+- no public password form is activated until the security/legal gates pass;
+- no service-role or private provider key is committed;
+- product migrations and the account gateway are applied only to the dedicated OrdaX control-plane project;
+- public account/sync availability is not claimed until same-origin browser hosting, Auth hardening and end-to-end device proof pass.
 
 
 ## Deployed account gateway adapter
 
 The dedicated `ordax-control-plane` project now has the
-`ordax-account-gateway` Edge Function deployed. Its source-controlled owner is
+`ordax-account-gateway` Edge Function deployed as gateway protocol v2. Its source-controlled owner is
 `infra/supabase/functions/ordax-account-gateway/index.ts`.
 
 The function deliberately has platform JWT pre-verification disabled because
@@ -109,3 +111,19 @@ Native/USB consumes the provider-neutral gateway base URL from the signed
 system configuration `system/services/account/gateway-base-url`. Browser
 public rollout still requires a same-origin hosting/rewrite boundary; direct
 cross-origin browser use is not the public contract.
+
+
+## Incremental sync transport
+
+Gateway v2 separates per-object conflict revision from account-wide change
+progress. The first client reconciliation reads one atomic snapshot containing
+both the current objects and its baseline cursor. Later reconciliations use the
+immutable mutation log through an opaque monotonically increasing change
+cursor. Web and Native/USB persist that cursor together with per-object server
+revisions and bind the checkpoint to the authenticated subject. A subject
+mismatch forces a fresh snapshot. If Native durable checkpoint storage is
+temporarily unavailable, the sync runtime degrades to a session checkpoint
+instead of making boot depend on cloud continuity.
+
+`/sync/objects` remains a compatibility full-read route; it is no longer the
+authoritative incremental mechanism.
