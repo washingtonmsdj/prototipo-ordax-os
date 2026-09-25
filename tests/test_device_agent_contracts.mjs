@@ -1,10 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   validateDeviceCapabilityGrant,
   validateDeviceProjectBinding,
 } from "../system/contracts/device-agent.mjs";
+
+const DEVICE_AGENT_CONTRACT = JSON.parse(
+  readFileSync(new URL("../docs/contracts/device-agent.json", import.meta.url), "utf8"),
+);
 
 test("local project does not require GitHub", () => {
   const binding = validateDeviceProjectBinding({
@@ -74,4 +79,18 @@ test("remote writes require approval and generic shell remains forbidden", () =>
     capability: "shell.generic",
     mode: "read",
   }));
+});
+
+
+test("shared control plane keeps product and development authority separate", () => {
+  const control = DEVICE_AGENT_CONTRACT.control_plane;
+  assert.equal(control.backend_project, "ordax-control-plane");
+  assert.equal(control.shared_backend_project_allowed, true);
+  assert.equal(control.development_authority_separate_from_product_authority, true);
+  assert.equal(control.development_device_agent_transport_allowed, true);
+  assert.equal(control.development_credentials_may_authenticate_product_users, false);
+  assert.equal(control.product_credentials_may_authenticate_engineering_jobs, false);
+  assert.equal(control.product_action_gateway_may_reuse_development_operator_credentials, false);
+  assert.equal(control.historical_development_tables_are_product_authority, false);
+  assert.equal(control.bootstrap_dependency, false);
 });
