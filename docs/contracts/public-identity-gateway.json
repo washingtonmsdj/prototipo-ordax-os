@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-sync-export-gateway-source-v12-deployed-revision-15-close-disabled",
+  "status": "real-auth-sync-export-spaces-gateway-source-v13-deployed-v12-revision-15-close-disabled",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
@@ -9,7 +9,7 @@
     "provider_adapter": "supabase-password-and-sync-rest",
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
-    "gateway_source_version": 12,
+    "gateway_source_version": 13,
     "edge_deployment_revision_observed": 15,
     "deployed_gateway_source_version": 12,
     "lifecycle_service_source": "infra/supabase/functions/ordax-account-lifecycle/index.ts",
@@ -83,6 +83,12 @@
       "path": "/account/export",
       "unconfigured_status": 503,
       "purpose": "authenticated-rls-scoped-account-data-export"
+    },
+    {
+      "method": "GET",
+      "path": "/account/spaces",
+      "unconfigured_status": 503,
+      "purpose": "authenticated-rls-scoped-read-only-spaces-catalog"
     },
     {
       "method": "GET",
@@ -176,7 +182,13 @@
     "account_close_requires_recent_reauthentication": true,
     "account_close_requires_explicit_confirmation": true,
     "account_close_service_role_in_public_gateway": false,
-    "account_close_service_role_isolated_to_lifecycle_service": true
+    "account_close_service_role_isolated_to_lifecycle_service": true,
+    "account_spaces_read_source_implemented": true,
+    "account_spaces_requires_authenticated_user": true,
+    "account_spaces_uses_user_bearer_rls": true,
+    "account_spaces_max_visible_items": 64,
+    "account_spaces_mutation_exposed": false,
+    "account_spaces_edge_deployed": false
   },
   "deployment": {
     "same_origin_required_for_public_site": true,
