@@ -369,6 +369,7 @@ func updateSelectionUI() {
 	if writeInProgress() || len(state.Targets) == 0 {
 		return
 	}
+	resetWriteResult()
 	renderSelectionExperience(state)
 }
 
@@ -410,6 +411,7 @@ func beginRefresh() {
 	if writeInProgress() {
 		return
 	}
+	resetWriteResult()
 	setText(statusLabel, "Procurando pendrives…")
 	setText(hintLabel, "Atualizando a lista de dispositivos USB disponíveis. Seus discos internos continuam fora da seleção do Creator.")
 	enable(refreshButton, false)
