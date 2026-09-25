@@ -24,9 +24,19 @@ def fail(reason: str) -> "NoReturn":
     raise SystemExit(f"PUBLIC_SITE_DEPLOYMENT_PROOF=FAIL reason={reason}")
 
 
-def request(base: str, path: str, method: str = "GET"):
+def request(
+    base: str,
+    path: str,
+    method: str = "GET",
+    *,
+    body: bytes | None = None,
+    content_type: str | None = None,
+):
     target = urljoin(base.rstrip("/") + "/", path.lstrip("/"))
-    req = Request(target, method=method, headers={"User-Agent": "OrdaX-Public-Deployment-Proof/1"})
+    headers = {"User-Agent": "OrdaX-Public-Deployment-Proof/1"}
+    if content_type:
+        headers["Content-Type"] = content_type
+    req = Request(target, data=body, method=method, headers=headers)
     try:
         return urlopen(req, timeout=15, context=ssl.create_default_context())
     except HTTPError as exc:
@@ -75,6 +85,12 @@ def main(argv=None) -> int:
 
     activation_ready = config_payload.get("legal", {}).get("account_activation_ready") is True
 
+    for static_path in ("/recuperar/", "/recuperar/nova-senha/"):
+        static_response = request(origin, static_path)
+        if static_response.status != 200:
+            fail(f"recovery-static-route:{static_path}:{static_response.status}")
+        expect_headers(static_response)
+
     session = request(origin, "/auth/session")
     if session.status != 200:
         fail(f"auth-session-status:{session.status}")
@@ -97,6 +113,20 @@ def main(argv=None) -> int:
     expected_error = "authentication-required" if activation_ready else "public-account-access-disabled"
     if sync_payload.get("error") != expected_error:
         fail("anonymous-sync-error")
+
+    if not activation_ready:
+        recovery = request(
+            origin,
+            "/auth/recover",
+            "POST",
+            body=b"email=deployment-proof%40invalid.example",
+            content_type="application/x-www-form-urlencoded",
+        )
+        if recovery.status != 503:
+            fail(f"public-recovery-gate-status:{recovery.status}")
+        recovery_payload = read_json(recovery)
+        if recovery_payload.get("error") != "public-account-access-disabled":
+            fail("public-recovery-gate-not-enforced")
 
     missing = request(origin, "/__ordax-deployment-proof-missing")
     if missing.status != 404:
