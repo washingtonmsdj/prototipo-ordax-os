@@ -37,14 +37,27 @@
   }
 
   function identityCopy(kind, available) {
-    if (available) {
-      return kind === "login"
-        ? ["Acesso disponível", "Continue para o serviço seguro de identidade OrdaX."]
-        : ["Cadastro disponível", "Continue para o serviço seguro de criação da conta OrdaX."];
-    }
-    return kind === "login"
-      ? ["Serviço de identidade ainda não configurado", "Quando a integração for ativada, o acesso será encaminhado ao owner real de identidade e sessão."]
-      : ["Cadastro ainda não configurado", "O botão será habilitado somente quando existir um endpoint de identidade aprovado para o portal."];
+    const copy = {
+      login: {
+        ready: ["Acesso disponível", "Continue para o serviço seguro de identidade OrdaX."],
+        gated: ["Serviço de identidade ainda não configurado", "Quando a integração for ativada, o acesso será encaminhado ao owner real de identidade e sessão."],
+      },
+      register: {
+        ready: ["Cadastro disponível", "Continue para o serviço seguro de criação da conta OrdaX."],
+        gated: ["Cadastro ainda não configurado", "O botão será habilitado somente quando existir um endpoint de identidade aprovado para o portal."],
+      },
+      recover: {
+        ready: ["Recuperação disponível", "Informe o e-mail da Conta OrdaX para receber as instruções de recuperação."],
+        gated: ["Recuperação ainda não configurada", "Este recurso será habilitado somente depois que o fluxo completo e o endereço HTTPS forem aprovados."],
+      },
+      "recover-complete": {
+        ready: ["Sessão de recuperação validada", "Defina e confirme a nova credencial para concluir a recuperação."],
+        gated: ["Conclusão da recuperação ainda não ativada", "O formulário será habilitado somente quando o fluxo de recuperação estiver aprovado de ponta a ponta."],
+      },
+    };
+    const selected = copy[kind];
+    if (!selected) return ["Indisponível", "Este fluxo não está configurado."];
+    return available ? selected.ready : selected.gated;
   }
 
   function renderIdentity(config) {
@@ -53,10 +66,15 @@
     if (!state || !form) return;
 
     const kind = form.dataset.identityForm;
-    const expectedTarget = kind === "login" ? "/auth/login" : "/auth/register";
-    const target = kind === "login"
-      ? config?.identity?.login_url
-      : config?.identity?.register_url;
+    const routes = {
+      login: ["/auth/login", config?.identity?.login_url],
+      register: ["/auth/register", config?.identity?.register_url],
+      recover: ["/auth/recover", config?.identity?.recovery_url],
+      "recover-complete": ["/auth/recover/complete", config?.identity?.recovery_complete_url],
+    };
+    const route = routes[kind];
+    const expectedTarget = route?.[0] ?? null;
+    const target = route?.[1] ?? null;
     const legalReady = config?.legal?.account_activation_ready === true;
     const available = legalReady && target === expectedTarget && sameOriginPath(target);
     const [title, detail] = identityCopy(kind, available);
@@ -352,7 +370,12 @@
       await initDownload(config);
     } else if (page === "licencas") {
       await initCompliance(config);
-    } else if (page === "login" || page === "cadastro") {
+    } else if (
+      page === "login"
+      || page === "cadastro"
+      || page === "recuperar"
+      || page === "recuperar-nova-senha"
+    ) {
       renderIdentity(config);
     }
   }
