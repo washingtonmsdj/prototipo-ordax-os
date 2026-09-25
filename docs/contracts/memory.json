@@ -5,9 +5,27 @@
   "stable_port": "ordax.memory/1",
   "provider_neutral": true,
   "model_owns_memory": false,
+  "owner_kinds": ["device", "account"],
   "scopes": ["device", "account", "space", "project", "session"],
   "kinds": ["preference", "fact", "instruction", "summary", "artifact-reference"],
   "sensitivity": ["normal", "private", "restricted"],
+  "ownership": {
+    "identity_key": "owner-kind+owner-id+memory-id",
+    "memory_id_is_globally_unique_across_owners": false,
+    "same_memory_id_may_coexist_for_distinct_owners": true,
+    "device_owner_requires_account_subject": false,
+    "device_owner_uses_synthetic_account_id": false,
+    "device_owner_cloud_sync_allowed": false,
+    "device_owner_may_use_account_scope": false,
+    "account_owner_requires_subject_id": true,
+    "account_scope_requires_account_owner": true,
+    "account_owned_cloud_sync_still_requires_entitlement": true,
+    "local_project_memory_may_be_device_owned": true,
+    "owner_kind_is_part_of_authorization_boundary": true,
+    "owner_kind_is_part_of_update_delete_identity": true,
+    "signed_in_account_owner_replaces_device_owner": false,
+    "device_owner_remains_available_while_signed_in": true
+  },
   "requirements": {
     "local_first": true,
     "works_without_account": true,
@@ -20,13 +38,45 @@
     "cross_space_retrieval_without_membership_allowed": false,
     "provider_specific_memory_silos_allowed": false,
     "secret_material_as_memory_allowed": false,
-    "retrieval_must_respect_current_authorization": true
+    "retrieval_must_respect_current_authorization": true,
+    "store_save_rejection_must_not_mutate_runtime_state": true,
+    "durable_flush_confirmation_available": true,
+    "native_async_persistence_failure_must_surface_on_flush": true,
+    "native_host_revalidates_full_persisted_item_contract": true,
+    "native_host_uses_same_owner_scoped_identity": true,
+    "web_session_fallback_is_explicitly_ephemeral": true,
+    "session_store_accepts_durable_scopes": false
+  },
+  "persistence": {
+    "snapshot_max_bytes": 8388608,
+    "snapshot_uniqueness_key": "owner-kind+owner-id+memory-id",
+    "native_http_envelope_max_bytes": 50332672,
+    "native_get_is_bounded_before_json_parse": true,
+    "native_post_is_checked_before_fetch": true,
+    "native_http_envelope_limit_matches_host": true,
+    "native_request_timeout_default_ms": 3000,
+    "native_request_timeout_covers_response_body": true,
+    "native_persistence_probe_must_not_block_surface_startup": true,
+    "native_flush_retries_current_desired_revision_once": true,
+    "newer_durable_revision_supersedes_older_failure": true
   },
   "retrieval": {
     "structured_filters_before_semantic_ranking": true,
     "semantic_index_is_derived_and_rebuildable": true,
     "embedding_model_is_not_memory_identity": true,
-    "result_budget_is_bounded": true
+    "result_budget_is_bounded": true,
+    "query_accepts_text_only": true,
+    "query_implicit_string_coercion_allowed": false,
+    "multi_owner_context_requires_explicit_authorization_per_owner": true,
+    "multi_owner_context_budget_is_shared_and_bounded": true,
+    "multi_owner_dedup_identity": "owner-kind+owner-id+memory-id",
+    "same_memory_id_from_distinct_authorized_owners_is_preserved": true
+  },
+  "review": {
+    "owner_switching_is_explicit": true,
+    "sign_out_falls_back_to_device_owner": true,
+    "pagination_uses_bounded_lookahead": true,
+    "persistence_state_is_exposed_without_host_error_details": true
   },
   "external_models": {
     "local_ai": "may-receive-authorized-context",
