@@ -19,6 +19,8 @@ from supabase_sync import SupabaseSyncError, SupabaseSyncProvider
 
 SESSION_SCHEMA = "prototype-ordax.public-identity-session/1"
 SYNC_BATCH_SCHEMA = "prototype-ordax.sync-batch/1"
+SYNC_SNAPSHOT_SCHEMA = "prototype-ordax.sync-snapshot/1"
+SYNC_CHANGES_SCHEMA = "prototype-ordax.sync-changes/1"
 SYNC_ACK_SCHEMA = "prototype-ordax.sync-ack/1"
 ERROR_SCHEMA = "prototype-ordax.public-identity-error/1"
 JSON_CONTENT_TYPE = "application/json; charset=utf-8"
@@ -319,6 +321,74 @@ class PublicIdentityGateway:
             ),
         )
 
+    def _sync_snapshot(
+        self,
+        request_headers: Mapping[str, str],
+        query: str,
+    ) -> GatewayResponse:
+        if not self.provider or not self.sync_provider:
+            return self._provider_unavailable()
+        access, set_cookies = self._authenticated_access(request_headers)
+        if not access:
+            return _json_response(
+                401,
+                {"$schema": ERROR_SCHEMA, "error": "authentication-required", "message": "Entre na Conta OrdaX para sincronizar."},
+                set_cookies=set_cookies,
+            )
+        try:
+            values = parse_qs(query, keep_blank_values=False)
+            limit = int(values.get("limit", ["200"])[-1])
+            snapshot = self.sync_provider.snapshot(access, limit=limit)
+        except ValueError:
+            return _error(400, "invalid-sync-query", "Consulta de sincronização inválida.")
+        except SupabaseSyncError:
+            return _error(502, "sync-snapshot-failed", "Não foi possível ler o snapshot sincronizado.")
+        return _json_response(
+            200,
+            {
+                "$schema": SYNC_SNAPSHOT_SCHEMA,
+                "cursor": snapshot["cursor"],
+                "objects": snapshot["objects"],
+            },
+            set_cookies=set_cookies,
+        )
+
+    def _sync_changes(
+        self,
+        request_headers: Mapping[str, str],
+        query: str,
+    ) -> GatewayResponse:
+        if not self.provider or not self.sync_provider:
+            return self._provider_unavailable()
+        access, set_cookies = self._authenticated_access(request_headers)
+        if not access:
+            return _json_response(
+                401,
+                {"$schema": ERROR_SCHEMA, "error": "authentication-required", "message": "Entre na Conta OrdaX para sincronizar."},
+                set_cookies=set_cookies,
+            )
+        try:
+            values = parse_qs(query, keep_blank_values=False)
+            after_cursor = int(values.get("afterCursor", ["0"])[-1])
+            limit = int(values.get("limit", ["200"])[-1])
+            result = self.sync_provider.pull_changes(
+                access, after_cursor=after_cursor, limit=limit
+            )
+        except ValueError:
+            return _error(400, "invalid-sync-query", "Consulta de sincronização inválida.")
+        except SupabaseSyncError:
+            return _error(502, "sync-pull-failed", "Não foi possível ler as mudanças sincronizadas.")
+        return _json_response(
+            200,
+            {
+                "$schema": SYNC_CHANGES_SCHEMA,
+                "afterCursor": result["afterCursor"],
+                "nextCursor": result["nextCursor"],
+                "changes": result["changes"],
+            },
+            set_cookies=set_cookies,
+        )
+
     def _sync_list(
         self,
         request_headers: Mapping[str, str],
@@ -385,6 +455,7 @@ class PublicIdentityGateway:
                 "tombstone": result.tombstone,
                 "applied": result.applied,
                 "conflict": result.conflict,
+                "changeCursor": result.change_cursor,
             },
             set_cookies=set_cookies,
         )
@@ -440,6 +511,16 @@ class PublicIdentityGateway:
                 "/",
                 set_cookies=(_clear_cookie(ACCESS_COOKIE), _clear_cookie(REFRESH_COOKIE)),
             )
+
+        if path == "/sync/snapshot":
+            if method != "GET":
+                return self._method_not_allowed("GET")
+            return self._sync_snapshot(request_headers, split.query)
+
+        if path == "/sync/changes":
+            if method != "GET":
+                return self._method_not_allowed("GET")
+            return self._sync_changes(request_headers, split.query)
 
         if path == "/sync/objects":
             if method != "GET":
