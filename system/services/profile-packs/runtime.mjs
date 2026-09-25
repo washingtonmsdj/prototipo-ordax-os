@@ -77,8 +77,8 @@ export function createProfilePackRuntime({ packs = [] } = {}) {
       }
       const pack = catalog.get(`${slug}@${version}`);
       if (!pack) throw new Error("Requested Profile Pack is not in the local catalog");
-      if (pack.state !== "draft" && pack.state !== "internal-proof") {
-        throw new Error("Published Profile Packs require the future distribution authority");
+      if (pack.state !== "draft") {
+        throw new Error("Internal Profile Pack proof accepts only draft packs; active/retired packs require product distribution authority");
       }
       if (pack.intelligence.externalProviderRequired) {
         throw new Error("Internal Profile Pack proof cannot require external model egress");
