@@ -7,12 +7,47 @@ const DECIMAL_ID_RE = /^[1-9][0-9]{0,19}$/;
 const REPOSITORY_NAME_RE = /^[^\s/]+\/[^\s/]+$/;
 const ACCESS_MODES = new Set(["read", "read-write"]);
 const SURFACE_STATES = new Set(["active", "error"]);
+const SURFACE_ENTRY_FIELDS = Object.freeze([
+  "schema",
+  "connectionId",
+  "spaceId",
+  "projectId",
+  "provider",
+  "repositoryId",
+  "repositoryFullName",
+  "defaultBranch",
+  "accessMode",
+  "state",
+  "selection",
+  "mutationAuthority",
+  "credentialExposure",
+]);
+const FORBIDDEN_PORT_METHODS = Object.freeze([
+  "connect",
+  "disconnect",
+  "execute",
+  "link",
+  "mutate",
+  "unlink",
+  "update",
+]);
 
 function objectValue(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new TypeError(`${label} must be an object`);
   }
   return value;
+}
+
+function exactKeys(value, keys, label) {
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  if (
+    actual.length !== expected.length
+    || actual.some((key, index) => key !== expected[index])
+  ) {
+    throw new TypeError(`${label} fields are incompatible`);
+  }
 }
 
 function boundedText(value, label, max) {
@@ -53,6 +88,7 @@ function projection(fields) {
     schema: REPOSITORY_CONNECTION_SCHEMA,
     connectionId: fields.connectionId,
     spaceId: fields.spaceId,
+    projectId: fields.projectId,
     provider: "github",
     repositoryId: fields.repositoryId,
     repositoryFullName: fields.repositoryFullName,
@@ -70,6 +106,7 @@ export function validateRepositoryConnectionRow(value, label = "Repository conne
   if (row.provider !== "github") throw new TypeError(`${label} provider is unsupported`);
   const connectionId = uuid(row.connection_id, `${label} connection_id`);
   const spaceId = uuid(row.space_id, `${label} space_id`);
+  const projectId = uuid(row.project_id, `${label} project_id`);
   const repositoryId = decimalId(row.repository_id, `${label} repository_id`);
   const fullName = repositoryFullName(row.repository_full_name, `${label} repository_full_name`);
   const defaultBranch = row.default_branch == null
@@ -82,6 +119,7 @@ export function validateRepositoryConnectionRow(value, label = "Repository conne
   return projection({
     connectionId,
     spaceId,
+    projectId,
     repositoryId,
     repositoryFullName: fullName,
     defaultBranch,
@@ -92,6 +130,7 @@ export function validateRepositoryConnectionRow(value, label = "Repository conne
 
 export function validateRepositoryConnection(value, label = "Repository connection") {
   const entry = objectValue(value, label);
+  exactKeys(entry, SURFACE_ENTRY_FIELDS, label);
   if (entry.schema !== REPOSITORY_CONNECTION_SCHEMA) {
     throw new TypeError(`${label} schema is incompatible`);
   }
@@ -101,6 +140,7 @@ export function validateRepositoryConnection(value, label = "Repository connecti
   if (entry.credentialExposure !== "none") throw new TypeError(`${label} cannot expose credentials`);
   const connectionId = uuid(entry.connectionId, `${label} connectionId`);
   const spaceId = uuid(entry.spaceId, `${label} spaceId`);
+  const projectId = uuid(entry.projectId, `${label} projectId`);
   const repositoryId = decimalId(entry.repositoryId, `${label} repositoryId`);
   const fullName = repositoryFullName(entry.repositoryFullName, `${label} repositoryFullName`);
   const defaultBranch = entry.defaultBranch == null
@@ -111,6 +151,7 @@ export function validateRepositoryConnection(value, label = "Repository connecti
   return projection({
     connectionId,
     spaceId,
+    projectId,
     repositoryId,
     repositoryFullName: fullName,
     defaultBranch,
@@ -128,8 +169,11 @@ export function validateRepositoryConnections(value) {
   if (new Set(entries.map((entry) => entry.connectionId)).size !== entries.length) {
     throw new TypeError("Repository connection ids must be unique");
   }
-  if (new Set(entries.map((entry) => `${entry.spaceId}:${entry.repositoryId}`)).size !== entries.length) {
-    throw new TypeError("A repository may be selected only once per Space");
+  if (
+    new Set(entries.map((entry) => `${entry.spaceId}:${entry.projectId}:${entry.repositoryId}`)).size
+    !== entries.length
+  ) {
+    throw new TypeError("A repository may be selected only once per project");
   }
   return entries;
 }
@@ -143,8 +187,10 @@ export function assertRepositoryConnectionsPort(port) {
       throw new TypeError(`Repository connections port must implement ${method}()`);
     }
   }
-  if ("connect" in port || "disconnect" in port || "mutate" in port) {
-    throw new TypeError("Surface repository-connections port must be read-only");
+  for (const method of FORBIDDEN_PORT_METHODS) {
+    if (method in port) {
+      throw new TypeError(`Surface repository-connections port must not expose ${method}()`);
+    }
   }
   return port;
 }
