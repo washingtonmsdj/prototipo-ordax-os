@@ -684,6 +684,8 @@ export function mountAccountOverviewControls(
     if (destroyed) return;
     const slot = findSlot();
     if (!slot) {
+      memoryReviewControls?.dispose();
+      memoryReviewControls = null;
       mountedSlot = null;
       return;
     }
