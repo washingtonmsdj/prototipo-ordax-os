@@ -68,6 +68,12 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertIn('sec-fetch-site', text)
         self.assertIn('cross-site-request-rejected', text)
         self.assertIn('x-forwarded-host', text)
+        self.assertIn('redirectResponse', text)
+        self.assertIn('wantsJson', text)
+        self.assertIn('path === "/auth/login" && req.method === "GET"', text)
+        self.assertIn('path === "/auth/register" && req.method === "GET"', text)
+        self.assertIn('redirectResponse("/conta/", cookies)', text)
+        self.assertIn('Accept', (ROOT / "system" / "surface" / "runtime" / "native_account_gateway.py").read_text(encoding="utf-8"))
         self.assertNotIn('service_role', text.lower())
         self.assertNotIn('SUPABASE_SERVICE_ROLE_KEY', text)
 
