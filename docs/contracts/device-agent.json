@@ -86,5 +86,16 @@
     "local_ai_dependency": false,
     "physical_usb_gate_changed": false,
     "ci_or_qemu_counts_as_physical_proof": false
+  },
+  "control_plane": {
+    "backend_project": "ordax-control-plane",
+    "shared_backend_project_allowed": true,
+    "development_authority_separate_from_product_authority": true,
+    "development_device_agent_transport_allowed": true,
+    "development_credentials_may_authenticate_product_users": false,
+    "product_credentials_may_authenticate_engineering_jobs": false,
+    "product_action_gateway_may_reuse_development_operator_credentials": false,
+    "historical_development_tables_are_product_authority": false,
+    "bootstrap_dependency": false
   }
 }
