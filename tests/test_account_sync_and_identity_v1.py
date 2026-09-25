@@ -10,6 +10,7 @@ EDGE_GATEWAY = ROOT / "infra" / "supabase" / "functions" / "ordax-account-gatewa
 NATIVE_GATEWAY_CONFIG = ROOT / "system" / "services" / "account" / "gateway-base-url"
 CURSOR_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925013355_account_sync_incremental_cursor_v1.sql"
 SNAPSHOT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925013524_account_sync_atomic_snapshot_v1.sql"
+TWO_CLIENT_PROOF = ROOT / "tools" / "account-sync" / "prove_two_clients.py"
 
 
 class AccountSyncAndIdentityV1Tests(unittest.TestCase):
@@ -72,6 +73,16 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertIn("/functions/v1/ordax-account-gateway", value)
         self.assertNotIn("?", value)
         self.assertNotIn("#", value)
+
+    def test_two_client_proof_never_embeds_or_prints_account_credentials(self):
+        text = TWO_CLIENT_PROOF.read_text(encoding="utf-8")
+        self.assertIn("ORDAX_PROOF_ACCOUNT_EMAIL", text)
+        self.assertIn("ORDAX_PROOF_ACCOUNT_PASSWORD", text)
+        self.assertIn("ACCOUNT_SYNC_TWO_CLIENT_PROOF=PASS", text)
+        self.assertIn("proof/two-client/", text)
+        self.assertNotIn("print(password", text)
+        self.assertNotIn("print(email", text)
+        self.assertNotIn("service_role", text.lower())
 
     def test_identity_gateway_keeps_provider_tokens_out_of_browser_javascript(self):
         text = GATEWAY.read_text(encoding="utf-8")
