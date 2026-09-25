@@ -38,9 +38,13 @@ class PublicAuthActivationPreflightTests(unittest.TestCase):
     def test_current_repository_is_coherently_safe_disabled_with_explicit_blockers(self):
         blockers, controls = preflight.readiness(ROOT)
         self.assertTrue(blockers)
+        hardening = preflight.load_json(ROOT, preflight.HARDENING)
+        self.assertTrue(
+            hardening["current_observation"]["product_leaked_password_protection_verified"]
+        )
+        self.assertNotIn("leaked-password-protection", blockers)
         self.assertTrue(all(value is False for value in controls.values()))
         for expected in (
-            "leaked-password-protection",
             "email-confirmation-policy",
             "redirect-allowlist",
             "same-origin-adapter-deployment",
