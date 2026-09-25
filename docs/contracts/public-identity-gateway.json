@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-and-account-sync-gateway-v7-deployed-public-server-gated-activation-disabled",
+  "status": "real-auth-and-account-sync-gateway-source-v6-edge-revision-7-public-server-gated",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
@@ -10,7 +10,7 @@
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
     "deployed_edge_adapter_version": 7,
-    "gateway_source_version": 7,
+    "gateway_source_version": 6,
     "edge_deployment_revision_observed": 7
   },
   "routes": [
