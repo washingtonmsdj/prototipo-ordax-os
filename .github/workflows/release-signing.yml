@@ -161,7 +161,36 @@ jobs:
           }
           if (-not $failedClosed) { throw 'preflight accepted an unstable artifact URL' }
 
+          $args.SystemArtifactUrl = 'https://releases.example.invalid/system.erofs'
+          $systemReceiptPath = Join-Path $work 'system-receipt.json'
+          $systemReceipt = Get-Content -LiteralPath $systemReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
+          $systemReceipt.source_commit = 'fedcba9876543210fedcba9876543210fedcba98'
+          $systemReceipt | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $systemReceiptPath -Encoding UTF8
+          $failedClosed = $false
+          try {
+            & ./tools/release-signing/windows/Preflight-PortableV4-Canonical.ps1 @args
+          } catch {
+            $failedClosed = $true
+          }
+          if (-not $failedClosed) { throw 'preflight accepted an operator receipt from another source commit' }
+
+          python tools/release-signing/operator_receipt.py `
+            --kind system `
+            --source-commit 0123456789abcdef0123456789abcdef01234567 `
+            --file "system.erofs=$work/system.erofs" `
+            --out "$work/system-receipt.json"
+          'tampered-after-receipt' | Add-Content -LiteralPath (Join-Path $work 'system.erofs') -Encoding UTF8
+          $failedClosed = $false
+          try {
+            & ./tools/release-signing/windows/Preflight-PortableV4-Canonical.ps1 @args
+          } catch {
+            $failedClosed = $true
+          }
+          if (-not $failedClosed) { throw 'preflight accepted bytes changed after the operator receipt was created' }
+
           Write-Host 'CANONICAL_V4_OPERATOR_PREFLIGHT_TEST=PASS'
+          Write-Host 'OPERATOR_RECEIPT_WRONG_COMMIT_REJECTED=YES'
+          Write-Host 'OPERATOR_RECEIPT_BYTE_TAMPER_REJECTED=YES'
           Write-Host 'PRIVATE_KEY_CONTENT_USED=NO'
           Write-Host 'PHYSICAL_WRITE_AUTHORIZED=NO'
 
