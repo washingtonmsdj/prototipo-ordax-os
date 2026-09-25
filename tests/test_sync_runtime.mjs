@@ -197,3 +197,23 @@ test("failed durable store reports session fallback", () => {
   assert.equal(sync.getSnapshot().queuePersistence, "session");
   sync.destroy();
 });
+
+
+test("pending appearance can be rebased onto an authoritative server revision", () => {
+  const preferences = createFakePreferenceRuntime("light");
+  const sync = createPreferenceSyncRuntime(preferences, {
+    createIdempotencyKey: createKeyFactory("pref:rebase"),
+  });
+
+  preferences.setTheme("dark");
+  const before = sync.pendingMutations()[0];
+  assert.equal(before.baseServerRevision, 0);
+
+  assert.equal(sync.rebasePending(7), true);
+  const after = sync.pendingMutations()[0];
+  assert.equal(after.baseServerRevision, 7);
+  assert.equal(after.payload.theme, "dark");
+  assert.notEqual(after.idempotencyKey, before.idempotencyKey);
+
+  sync.destroy();
+});
