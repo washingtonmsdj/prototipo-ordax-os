@@ -34,6 +34,12 @@ The account-scoped synchronization backend is applied to the dedicated `ordax-co
 
 Web and USB/Native now use the same OrdaX-owned transport semantics for `appearance`, portable accessibility preferences and portable workspace metadata. Each client persists a subject-bound checkpoint containing the opaque account cursor plus known object revisions; Native stores it in private device state and degrades to an in-memory session checkpoint if durable checkpoint persistence is unavailable. Provider tokens remain outside Surface JavaScript. A credential-safe two-client proof harness now has a manual-only GitHub Actions wrapper: it opens two independent cookie jars for the same dedicated proof account, proves A -> B incremental delivery, tombstones the unique proof object and uploads only a sanitized receipt with cursors/source provenance. The workflow requires encrypted repository secrets and does not persist account identifiers, credentials, cookies or tokens. It has not yet been executed with a real proof account, so multi-device E2E remains pending. Mobile still lacks its final integration. Native/USB physical proof and public same-origin browser activation also remain pending, so synchronization remains **Em breve** in public copy and is not yet advertised as a released MVP capability.
 
+### Live proof execution boundary
+
+The real continuity and session-revocation proofs are deliberately **manual-only**. They require a dedicated, non-admin OrdaX proof account that is already valid for password sign-in; do not use a personal or production user account. Store its credentials only as GitHub encrypted repository secrets named `ORDAX_PROOF_ACCOUNT_EMAIL` and `ORDAX_PROOF_ACCOUNT_PASSWORD`. Never commit them, paste them into workflow inputs or save them in proof artifacts.
+
+Run `Account Sync Two Client Proof` to prove two independent sessions observe the same incremental account stream and the temporary proof object is tombstoned. Run `Account Session Revocation Proof` to prove local logout invalidates session A and its captured refresh token without revoking independent session B. Both workflows upload only sanitized receipts and remain pending until a real credentialled execution succeeds. The receipts intentionally exclude account identifiers, credentials, cookies and tokens.
+
 The architecture remains prepared for future synchronized state such as:
 
 - appearance and theme;
