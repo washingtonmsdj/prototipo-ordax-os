@@ -16,7 +16,6 @@ from __future__ import annotations
 import http.cookiejar
 import json
 import os
-import ssl
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import HTTPCookieProcessor, Request, build_opener
@@ -57,20 +56,9 @@ class Client:
         req = Request(self.base_url + path, data=body, headers=headers, method=method)
         opener = build_opener() if cookie_header else self.opener
         try:
-            with opener.open(req, timeout=20, context=ssl.create_default_context() if cookie_header else None) as response:
+            with opener.open(req, timeout=20) as response:
                 raw = response.read(1024 * 1024)
                 status = response.status
-        except TypeError:
-            # OpenerDirector.open() does not accept a context parameter.
-            try:
-                with opener.open(req, timeout=20) as response:
-                    raw = response.read(1024 * 1024)
-                    status = response.status
-            except HTTPError as exc:
-                raw = exc.read(1024 * 1024)
-                status = exc.code
-            except (URLError, OSError, TimeoutError) as exc:
-                fail(f"gateway-unreachable:{type(exc).__name__}")
         except HTTPError as exc:
             raw = exc.read(1024 * 1024)
             status = exc.code
