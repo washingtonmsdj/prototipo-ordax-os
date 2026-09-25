@@ -59,6 +59,17 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
         self.assertNotIn('"Protocolo de sync"', controls)
         self.assertNotIn('"Segredos de dispositivo"', controls)
 
+    def test_signed_in_account_exposes_same_origin_data_export(self):
+        controls = ACCOUNT.read_text(encoding="utf-8")
+        catalog = ACCOUNT_CATALOG.read_text(encoding="utf-8")
+        self.assertIn('sessionSnapshot.state === "signed-in"', controls)
+        self.assertIn('exportLink.href = "/account/export"', controls)
+        self.assertIn('exportLink.download = "ordax-account-export.json"', controls)
+        self.assertIn('exportLink.dataset.accountExport = ""', controls)
+        self.assertIn('"account.action.exportData"', catalog)
+        self.assertIn('"Exportar meus dados"', catalog)
+        self.assertIn('"Export my data"', catalog)
+
     def test_navigation_is_responsive_and_privacy_debug_list_was_removed(self):
         css = CSS.read_text(encoding="utf-8")
         controls = ACCOUNT.read_text(encoding="utf-8")
