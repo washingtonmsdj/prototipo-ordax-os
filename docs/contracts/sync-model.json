@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.sync-model/1",
-  "status": "account-sync-backend-web-native-source-integration-implemented-public-rollout-gated",
+  "status": "account-sync-incremental-web-native-source-integration-implemented-public-rollout-gated",
   "authority": {
     "domain_owner": "system/services/sync",
     "platform_integration_owner": "system/adapters",
@@ -134,7 +134,7 @@
     "migration": "20260925004832_account_sync_private_store_v1",
     "object_table": "private.ordax_sync_objects",
     "mutation_table": "private.ordax_sync_mutations",
-    "mutation_rpc": "ordax_apply_sync_mutation_v1",
+    "mutation_rpc": "ordax_apply_sync_mutation_v2",
     "rls_owner_scoped": true,
     "idempotent_mutations": true,
     "optimistic_conflict_detection": true,
@@ -142,11 +142,13 @@
     "list_rpc": "ordax_list_sync_objects_v1",
     "public_tables_exposed": false,
     "security_invoker_api": true,
-    "current_read_mode": "safe-full-resync",
-    "incremental_cursor_implemented": false,
+    "current_read_mode": "atomic-snapshot-plus-paged-incremental-cursor",
+    "incremental_cursor_implemented": true,
     "web_gateway_routes": [
-      "/sync/objects",
-      "/sync/mutate"
+      "/sync/snapshot",
+      "/sync/changes",
+      "/sync/mutate",
+      "/sync/objects"
     ],
     "web_transport_contract": "ordax.sync-transport/1",
     "web_client_data_classes": [
@@ -159,12 +161,25 @@
       "/auth/login",
       "/auth/register",
       "/auth/logout",
-      "/sync/objects",
-      "/sync/mutate"
+      "/sync/snapshot",
+      "/sync/changes",
+      "/sync/mutate",
+      "/sync/objects"
     ],
     "native_remote_gateway_https_required": true,
     "native_session_storage": "device-private-0600",
     "native_session_is_sync_data": false,
-    "native_provider_specific_dependency": false
+    "native_provider_specific_dependency": false,
+    "incremental_cursor_migration": "20260925013355_account_sync_incremental_cursor_v1",
+    "atomic_snapshot_migration": "20260925013524_account_sync_atomic_snapshot_v1",
+    "legacy_mutation_rpc": "ordax_apply_sync_mutation_v1",
+    "snapshot_rpc": "ordax_sync_snapshot_v1",
+    "pull_rpc": "ordax_pull_sync_changes_v1",
+    "list_rpc_role": "legacy-full-read-compatibility",
+    "cursor_source": "private.ordax_sync_mutations.change_seq",
+    "cursor_is_client_wall_clock": false,
+    "checkpoint_subject_bound": true,
+    "checkpoint_revisions_persisted": true,
+    "native_checkpoint_storage": "device-private-0600-with-session-fallback"
   }
 }
