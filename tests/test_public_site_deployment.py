@@ -44,6 +44,30 @@ class PublicSiteDeploymentTests(unittest.TestCase):
         self.assertTrue(self.contract["routing"]["gateway_public_activation_gate_required"])
         self.assertFalse(self.contract["routing"]["gateway_public_activation_currently_enabled"])
 
+    def test_adapter_restores_real_ip_only_from_loopback_and_rate_limits_auth_abuse(self):
+        self.assertIn("set_real_ip_from 127.0.0.1;", self.nginx)
+        self.assertIn("set_real_ip_from ::1;", self.nginx)
+        self.assertIn("real_ip_header X-Forwarded-For;", self.nginx)
+        self.assertIn("real_ip_recursive on;", self.nginx)
+        self.assertIn("ordax_auth_credentials:10m rate=10r/m", self.nginx)
+        self.assertIn("ordax_auth_recovery_request:10m rate=3r/m", self.nginx)
+        self.assertIn("ordax_auth_recovery_completion:10m rate=10r/m", self.nginx)
+        self.assertIn("limit_req_status 429;", self.nginx)
+        self.assertIn("limit_req zone=ordax_auth_credentials burst=5 nodelay;", self.nginx)
+        self.assertIn("limit_req zone=ordax_auth_recovery_request burst=2 nodelay;", self.nginx)
+        self.assertIn("limit_req zone=ordax_auth_recovery_completion burst=5 nodelay;", self.nginx)
+        self.assertIn("proxy_set_header X-Forwarded-For $remote_addr;", self.nginx)
+        self.assertIn("proxy_set_header X-Real-IP $remote_addr;", self.nginx)
+        adapter = self.contract["adapter"]
+        self.assertEqual(
+            adapter["real_ip_source"],
+            "trusted-loopback-tls-terminator-x-forwarded-for",
+        )
+        self.assertEqual(adapter["real_ip_trusted_sources"], ["127.0.0.1", "::1"])
+        self.assertTrue(adapter["public_auth_rate_limit_source_ready"])
+        self.assertFalse(adapter["public_auth_rate_limit_deployed"])
+        self.assertEqual(self.contract["security_rate_limits"]["status_code"], 429)
+
     def test_adapter_preserves_same_origin_security_and_no_store_account_routes(self):
         for name, value in self.contract["security_headers"].items():
             self.assertIn(name, self.nginx)
@@ -82,6 +106,9 @@ class PublicSiteDeploymentTests(unittest.TestCase):
         self.assertTrue(requirements["leaked_password_protection_required_before_identity_activation"])
         self.assertTrue(requirements["host_adapter_must_mark_public_account_requests"])
         self.assertTrue(requirements["gateway_server_side_public_activation_gate_required"])
+        self.assertTrue(requirements["tls_terminator_must_append_real_client_ip"])
+        self.assertTrue(requirements["adapter_must_trust_only_loopback_real_ip_source"])
+        self.assertTrue(requirements["public_auth_rate_limits_required"])
 
 
 if __name__ == "__main__":
