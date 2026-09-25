@@ -28,13 +28,16 @@ The gateway core in `gateway.py` now exposes this contract:
 
 ```text
 GET  /auth/login
+POST /auth/login
 GET  /auth/register
-GET  /auth/callback
+POST /auth/register
 POST /auth/logout
 GET  /auth/session
+GET  /sync/objects
+POST /sync/mutate
 ```
 
-The exact deployment host is deliberately not fixed here. `gateway.py` provides a dependency-free WSGI entrypoint and deliberately owns no public listener. Until a provider and same-origin deployment are configured, `/auth/login`, `/auth/register`, `/auth/callback` and `/auth/logout` fail closed with HTTP 503; `/auth/session` reports an anonymous, unauthenticated session.
+GET login/register routes lead only to the canonical same-origin pages. Credential POST, account sync and authenticated session behavior fail closed when runtime provider configuration is absent. `/auth/session` remains anonymous/unconfigured in that state. The gateway owns no public listener; deployment stays external and same-origin.
 
 The public site configuration therefore keeps login/register disabled until these routes are deployed behind the same origin. The runtime shape is pinned in `docs/contracts/public-identity-gateway.json`.
 
@@ -68,7 +71,7 @@ The dedicated Supabase project `ordax-control-plane` is now the selected pre-MVP
 
 The previously suggested shared `Ordax-2026-1` project remains rejected for OrdaX identity because it already has another product's `public.profiles` lifecycle and an unrelated signup trigger.
 
-The provider-specific email/password HTTP adapter remains implemented in `supabase_password.py`. It uses only a Supabase publishable key and the public Auth API; passwords are transient request inputs and are never written by the adapter.
+The provider-specific email/password adapter in `supabase_password.py` and account-sync adapter in `supabase_sync.py` use only the Supabase publishable key plus the authenticated user's bearer token. Passwords are transient request inputs; provider tokens stay in HttpOnly cookies owned by the gateway and are never returned to Surface JavaScript.
 
 **Target prepared does not mean public identity enabled.** The gateway still fails closed until all of the following are true:
 
