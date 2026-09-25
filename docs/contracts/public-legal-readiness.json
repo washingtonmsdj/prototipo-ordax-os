@@ -23,7 +23,10 @@
     "effective_dates": true,
     "same_origin_identity_gateway": true,
     "production_https": true,
-    "account_lifecycle_owner_defined": true
+    "account_lifecycle_owner_defined": true,
+    "account_lifecycle_contract": "docs/contracts/account-lifecycle.json",
+    "account_close_flow": true,
+    "account_data_export_flow": true
   },
   "build_gate": {
     "identity_urls_must_remain_null_while_not_ready": true,
