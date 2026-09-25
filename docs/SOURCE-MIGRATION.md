@@ -194,8 +194,8 @@ TESTS=tests/test_device_agent_contracts.mjs in this repository + tests/test_deve
 ARTIFACT_SHA256=NOT_APPLICABLE_SOURCE_REIMPLEMENTATION
 DECISION=REIMPLEMENTED
 TARGET_PATH=infra/supabase/development
-IMPLEMENTATION=SOURCE_COMPLETE_BACKEND_APPLY_PENDING
-NOTES=Legacy source is protocol reference/provenance only. The prototype owns the new ordax.dev.adapter.invoke extension and keeps infra/supabase/product authority separate.
+IMPLEMENTATION=COMPLETE_BACKEND_APPLIED
+NOTES=Legacy source is protocol reference/provenance only. The prototype owns the new ordax.dev.adapter.invoke extension and GitHub OIDC development-device enrollment, both applied to ordax-control-plane, while infra/supabase/product authority remains separate.
 ```
 
 ## Current ledger state
