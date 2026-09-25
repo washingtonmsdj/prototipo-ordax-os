@@ -33,12 +33,17 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "real-auth-and-account-sync-gateway-v2-deployed-public-same-origin-activation-gated",
+            "real-auth-and-account-sync-gateway-v4-deployed-same-origin-adapter-source-ready-activation-gated",
         )
         self.assertFalse(contract["baseline"]["provider_configured"])
         self.assertTrue(contract["baseline"]["http_only_session_cookies"])
         self.assertTrue(contract["baseline"]["refresh_session_supported"])
         self.assertFalse(contract["baseline"]["tokens_in_response_body_allowed"])
+        self.assertFalse(contract["baseline"]["cross_site_state_changes_allowed"])
+        self.assertTrue(contract["baseline"]["csrf_state_change_protection"])
+        self.assertTrue(contract["deployment"]["same_origin_adapter_source_ready"])
+        self.assertFalse(contract["deployment"]["same_origin_adapter_deployed"])
+        self.assertFalse(contract["deployment"]["public_browser_same_origin_activated"])
 
     def test_session_is_anonymous_and_contains_no_tokens_without_runtime_config(self):
         response = self.gateway.handle("GET", "/auth/session")
