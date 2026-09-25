@@ -174,7 +174,9 @@ The candidate workflow builds the site twice and compares outputs to protect det
 
 It refuses non-loopback binds and is **not** the production server.
 
-Production hosting remains adapter-neutral. The required route shape, cache policy and security headers are machine-readable in `docs/contracts/public-site-deployment.json`. A future host adapter must preserve the public site's status codes and apply the declared CSP, anti-framing, MIME-sniffing, referrer and permissions policies. HTTPS is mandatory before enabling live identity routes.
+Production hosting remains provider-neutral. A production-shaped Nginx adapter now exists at `deploy/public-site/nginx.conf`: it serves the deterministic static artifact from loopback and forwards only `/auth/*` and `/sync/*` to the deployed OrdaX account gateway. A public HTTPS terminator must sit in front of that loopback listener, so browser requests remain same-origin and provider-specific CORS is not part of the product contract.
+
+The required route shape, cache policy and security headers are machine-readable in `docs/contracts/public-site-deployment.json`. The adapter preserves account status codes and `Set-Cookie`, applies the declared CSP, anti-framing, MIME-sniffing, referrer and permissions policies, and keeps account/sync responses `no-store`. Source readiness is not deployment evidence: public login remains disabled until this adapter (or an equivalent conforming host adapter) is actually deployed over HTTPS.
 
 
 ## Legal readiness before live accounts
