@@ -74,6 +74,23 @@ def _sync_provider_from_environment() -> SupabaseSyncProvider | None:
         return None
 
 
+def _recovery_redirect_from_environment() -> str | None:
+    value = os.environ.get("ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL", "").strip()
+    if not value:
+        return None
+    split = urlsplit(value)
+    if (
+        split.scheme != "https"
+        or not split.netloc
+        or split.username is not None
+        or split.password is not None
+        or split.query
+        or split.fragment
+    ):
+        return None
+    return f"https://{split.netloc}{split.path or '/'}"
+
+
 def _secure_cookies() -> bool:
     return os.environ.get("ORDAX_IDENTITY_SECURE_COOKIES", "1") != "0"
 
@@ -359,6 +376,58 @@ class PublicIdentityGateway:
             ),
         )
 
+    def _recovery_action(
+        self,
+        request_headers: Mapping[str, str],
+        body: bytes,
+    ) -> GatewayResponse:
+        if not self.provider:
+            return self._provider_unavailable()
+        redirect_to = _recovery_redirect_from_environment()
+        if redirect_to is None:
+            return _error(
+                503,
+                "account-recovery-unavailable",
+                "A recuperação da Conta OrdaX ainda não está configurada.",
+            )
+        if not _same_origin_state_change(request_headers):
+            return _error(
+                403,
+                "cross-site-request-rejected",
+                "A solicitação cross-site foi rejeitada.",
+            )
+        try:
+            form = _form(body, request_headers.get("content-type", ""))
+            email = form.get("email", "")
+            self.provider.request_password_recovery(email, redirect_to)
+        except ValueError:
+            return _error(
+                400,
+                "invalid-recovery-form",
+                "Revise o e-mail informado.",
+            )
+        except SupabaseIdentityError as exc:
+            if exc.status == 429:
+                return _error(
+                    429,
+                    "account-recovery-rate-limited",
+                    "Tente novamente mais tarde.",
+                )
+            if exc.status is None or exc.status >= 500:
+                return _error(
+                    503,
+                    "account-recovery-unavailable",
+                    "A recuperação da Conta OrdaX está temporariamente indisponível.",
+                )
+            # Keep account existence private for provider-level 4xx responses.
+        return _json_response(
+            202,
+            {
+                "recoveryRequested": True,
+                "message": "Se a conta puder ser recuperada, as instruções serão enviadas por e-mail.",
+            },
+        )
+
     def _sync_snapshot(
         self,
         request_headers: Mapping[str, str],
@@ -537,6 +606,11 @@ class PublicIdentityGateway:
             return self._credentials_action(
                 registration=True, request_headers=request_headers, body=body
             )
+
+        if path == "/auth/recover":
+            if method != "POST":
+                return self._method_not_allowed("POST")
+            return self._recovery_action(request_headers, body)
 
         if path == "/auth/logout":
             if method != "POST":
