@@ -107,6 +107,8 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertIn('autocomplete="current-password"', login)
         self.assertIn('data-identity-form="register"', register)
         self.assertIn('autocomplete="new-password"', register)
+        self.assertIn('minlength="12"', register)
+        self.assertIn("Use pelo menos 12 caracteres.", register)
         for page in (login, register):
             self.assertIn('method="post"', page)
             self.assertIn(" hidden>", page)
