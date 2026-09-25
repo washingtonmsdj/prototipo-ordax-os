@@ -1937,6 +1937,7 @@ handle_portable_candidate_boot() {
         clear_update_context
         write_update_state "$candidate_sha" running signed-release
         log "Portable Stable/MVP candidate committed after cold health: $candidate_sha"
+        echo "ORDAX_PORTABLE_COLD_HEALTH_COMMIT=$candidate_sha" >&2
         return 0
     fi
 
