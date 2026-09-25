@@ -33,7 +33,7 @@
     "password_policy": "pass-product-registration-min-12-provider-config-not-verified",
     "password_policy_product_minimum_chars": 12,
     "provider_password_policy_verified": false,
-    "auth_rate_limits": "reviewed-provider-defaults-present-real-client-ip-forwarding-not-verified",
+    "auth_rate_limits": "pass-source-public-nginx-by-restored-client-ip-provider-defaults-reviewed-deployment-proof-pending",
     "rate_limit_provider_defaults_reviewed": true,
     "rate_limit_real_client_ip_forwarding_verified": false,
     "public_site_server_activation_gate": "pass-deployed-disabled",
@@ -51,7 +51,11 @@
     "password_recovery_server_side_token_hash": "pass-source-and-edge-disabled",
     "password_recovery_completion_enabled": false,
     "password_recovery_email_template_source": "pass-source",
-    "password_recovery_email_template_applied": false
+    "password_recovery_email_template_applied": false,
+    "public_adapter_rate_limit_source_ready": true,
+    "public_adapter_rate_limit_deployed": false,
+    "public_adapter_real_ip_source": "trusted-loopback-tls-terminator-x-forwarded-for",
+    "public_adapter_real_ip_source_verified_in_source": true
   },
   "rules": {
     "public_login_must_fail_closed_until_all_required_gates_pass": true,
