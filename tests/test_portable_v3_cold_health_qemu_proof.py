@@ -23,6 +23,7 @@ class PortableV3ColdHealthQemuProofTests(unittest.TestCase):
         self.assertLess(health, commit)
         self.assertLess(commit, applied)
         self.assertLess(applied, marker)
+        self.assertIn('>/dev/console', handler)
 
     def test_base_qemu_runner_can_wait_for_post_health_observation(self):
         text = BASE_RUNNER.read_text(encoding="utf-8")
