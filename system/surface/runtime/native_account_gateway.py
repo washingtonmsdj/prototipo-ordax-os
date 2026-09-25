@@ -120,7 +120,7 @@ class NativeAccountGateway:
     def _load_session(self) -> dict[str, str]:
         try:
             st = os.stat(self.session_path, follow_symlinks=False)
-            if not os.path.isfile(self.session_path) or st.st_size > MAX_SESSION_BYTES:
+            if not stat.S_ISREG(st.st_mode) or st.st_size > MAX_SESSION_BYTES:
                 return {}
             if st.st_mode & 0o077:
                 return {}
@@ -141,8 +141,11 @@ class NativeAccountGateway:
         os.makedirs(directory, mode=0o700, exist_ok=True)
         temporary = f"{self.session_path}.tmp.{os.getpid()}.{threading.get_ident()}"
         try:
-            with open(temporary, "w", encoding="utf-8") as handle:
-                os.chmod(temporary, 0o600)
+            flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
+            descriptor = os.open(temporary, flags, 0o600)
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
                 json.dump(self._cookies, handle, separators=(",", ":"), sort_keys=True)
                 handle.write("\n")
                 handle.flush()
