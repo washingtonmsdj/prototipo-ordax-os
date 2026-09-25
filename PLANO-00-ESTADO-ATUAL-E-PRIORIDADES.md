@@ -51,7 +51,7 @@ Isso ainda **não prova lançamento público de sync nem continuidade física en
 
 ### Surface e prova física
 
-O harness read-only do smoke integrado existe no source com coleta baseline/pós-tour, checklist machine-readable gerado por `tour-template` e `finalize` fail-closed que recalcula a comparação e exige os 11 itens do tour em PASS. O resolver do harness reconhece tanto o runtime dinâmico Owner/Development quanto o runtime WebKit verificado Stable/MVP, e a coleta automática inclui o layout físico de teclado configurado/aplicado. Isso melhora a qualidade da evidência, mas não converte execução pendente em PASS físico.
+O harness read-only do smoke integrado existe no source com coleta baseline/pós-tour, checklist machine-readable gerado por `tour-template` e `finalize` fail-closed que recalcula a comparação e exige os 12 itens do tour em PASS, incluindo Conta/Memória sem tornar login online requisito do boot. O resolver do harness reconhece tanto o runtime dinâmico Owner/Development quanto o runtime WebKit verificado Stable/MVP, e a coleta automática inclui o layout físico de teclado configurado/aplicado. Isso melhora a qualidade da evidência, mas não converte execução pendente em PASS físico.
 
 Estados canônicos que permanecem explícitos em `docs/PROMOTION-GATES.md`:
 
