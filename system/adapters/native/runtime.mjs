@@ -21,6 +21,8 @@ export function createNativeSurfaceHost(
     browserWebContentAvailable = false,
     intelligenceSystemAvailable = false,
     localSessionAvailable = false,
+    accountIdentityAvailable = false,
+    syncSafeStateAvailable = false,
   } = {},
 ) {
   if (!windowRef?.navigator) {
@@ -29,7 +31,12 @@ export function createNativeSurfaceHost(
 
   const listeners = new Set();
   const readSnapshot = () => {
+    if (syncSafeStateAvailable && !accountIdentityAvailable) {
+      throw new TypeError("sync.safe-state requires account.identity");
+    }
     const capabilityIds = [...BASE_CAPABILITIES];
+    if (accountIdentityAvailable) capabilityIds.push("account.identity");
+    if (syncSafeStateAvailable) capabilityIds.push("sync.safe-state");
     if (userFileSpaceAvailable) {
       capabilityIds.push("filesystem.user-space");
     }
