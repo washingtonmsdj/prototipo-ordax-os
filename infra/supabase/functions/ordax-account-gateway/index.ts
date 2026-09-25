@@ -468,7 +468,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (path === "/health" && req.method === "GET") {
-    return json(200, { status: "ok", service: "ordax-account-gateway", version: 8 });
+    return json(200, { status: "ok", service: "ordax-account-gateway", version: 9 });
   }
 
   if (path === "/auth/session" && req.method === "GET") {
