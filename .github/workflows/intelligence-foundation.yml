@@ -22,6 +22,7 @@ on:
       - 'system/services/local-ai/**'
       - 'system/services/memory/**'
       - 'system/services/profile-packs/**'
+      - 'system/surface/ui/memory-review-controls.mjs'
       - 'system/adapters/web/memory.mjs'
       - 'system/adapters/native/memory.mjs'
       - 'system/surface/runtime/native_memory_state.py'
@@ -51,6 +52,7 @@ on:
       - 'tests/test_memory_owners.mjs'
       - 'tests/test_memory_review_session.mjs'
       - 'tests/test_memory_review_view_model.mjs'
+      - 'tests/test_memory_review_controls.mjs'
       - 'tests/test_memory_session_store_policy.mjs'
       - 'tests/test_memory_store_adapters.mjs'
       - 'tests/test_memory_native_adapter_bounds.mjs'
@@ -79,6 +81,7 @@ on:
       - 'system/services/local-ai/**'
       - 'system/services/memory/**'
       - 'system/services/profile-packs/**'
+      - 'system/surface/ui/memory-review-controls.mjs'
       - 'system/adapters/web/memory.mjs'
       - 'system/adapters/native/memory.mjs'
       - 'system/surface/runtime/native_memory_state.py'
@@ -108,6 +111,7 @@ on:
       - 'tests/test_memory_owners.mjs'
       - 'tests/test_memory_review_session.mjs'
       - 'tests/test_memory_review_view_model.mjs'
+      - 'tests/test_memory_review_controls.mjs'
       - 'tests/test_memory_session_store_policy.mjs'
       - 'tests/test_memory_store_adapters.mjs'
       - 'tests/test_memory_native_adapter_bounds.mjs'
@@ -150,6 +154,7 @@ jobs:
           find system/services/intelligence system/services/local-ai system/services/memory system/services/profile-packs -type f -name '*.mjs' -print0 \
             | sort -z \
             | xargs -0 -n1 node --check
+          node --check system/surface/ui/memory-review-controls.mjs
           node --check system/adapters/web/memory.mjs
           node --check system/adapters/native/memory.mjs
           python -m py_compile system/surface/runtime/native_memory_state.py
@@ -184,6 +189,7 @@ jobs:
           node --test tests/test_memory_owners.mjs
           node --test tests/test_memory_review_session.mjs
           node --test tests/test_memory_review_view_model.mjs
+          node --test tests/test_memory_review_controls.mjs
           node --test tests/test_memory_session_store_policy.mjs
           node --test tests/test_memory_store_adapters.mjs
           node --test tests/test_memory_native_adapter_bounds.mjs
