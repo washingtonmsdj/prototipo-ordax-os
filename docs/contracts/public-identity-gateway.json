@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-sync-export-spaces-gateway-source-v13-deployed-v12-revision-15-close-disabled",
+  "status": "real-auth-sync-export-spaces-gateway-source-v13-deployed-v13-revision-16-close-disabled",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
@@ -10,8 +10,8 @@
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
     "gateway_source_version": 13,
-    "edge_deployment_revision_observed": 15,
-    "deployed_gateway_source_version": 12,
+    "edge_deployment_revision_observed": 16,
+    "deployed_gateway_source_version": 13,
     "lifecycle_service_source": "infra/supabase/functions/ordax-account-lifecycle/index.ts",
     "lifecycle_service_deployed": true,
     "lifecycle_service_deployment_revision_observed": 1,
@@ -188,7 +188,7 @@
     "account_spaces_uses_user_bearer_rls": true,
     "account_spaces_max_visible_items": 64,
     "account_spaces_mutation_exposed": false,
-    "account_spaces_edge_deployed": false
+    "account_spaces_edge_deployed": true
   },
   "deployment": {
     "same_origin_required_for_public_site": true,
