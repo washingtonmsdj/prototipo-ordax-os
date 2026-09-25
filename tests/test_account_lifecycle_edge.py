@@ -1,0 +1,44 @@
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE = ROOT / "infra" / "supabase" / "functions" / "ordax-account-lifecycle" / "index.ts"
+
+
+class AccountLifecycleEdgeTests(unittest.TestCase):
+    def setUp(self):
+        self.text = SOURCE.read_text(encoding="utf-8")
+
+    def test_account_close_is_disabled_by_default_and_requires_recent_auth(self):
+        self.assertIn("const ACCOUNT_CLOSE_ENABLED = false;", self.text)
+        self.assertIn('const CLOSE_CONFIRMATION = "close-account";', self.text)
+        self.assertIn("MAX_FRESH_TOKEN_AGE_SECONDS = 5 * 60", self.text)
+        self.assertIn("recent-authentication-required", self.text)
+        self.assertIn("auth.getUser(token)", self.text)
+
+    def test_service_role_is_isolated_to_dedicated_lifecycle_service(self):
+        self.assertIn("SUPABASE_SERVICE_ROLE_KEY", self.text)
+        self.assertIn("auth.admin.deleteUser(userId)", self.text)
+        public_gateway = (
+            ROOT
+            / "infra"
+            / "supabase"
+            / "functions"
+            / "ordax-account-gateway"
+            / "index.ts"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", public_gateway)
+        self.assertNotIn("auth.admin.deleteUser", public_gateway)
+
+    def test_close_requires_explicit_confirmation_before_admin_delete(self):
+        confirmation = self.text.index("payload.confirmation !== CLOSE_CONFIRMATION")
+        delete = self.text.index("auth.admin.deleteUser(userId)")
+        self.assertLess(confirmation, delete)
+
+    def test_health_reports_disabled_state(self):
+        self.assertIn('service: "ordax-account-lifecycle"', self.text)
+        self.assertIn("accountCloseEnabled: ACCOUNT_CLOSE_ENABLED", self.text)
+
+
+if __name__ == "__main__":
+    unittest.main()
