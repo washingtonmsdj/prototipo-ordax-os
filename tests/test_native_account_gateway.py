@@ -18,15 +18,23 @@ spec.loader.exec_module(gateway)
 
 
 class NativeAccountGatewayTests(unittest.TestCase):
-    def test_only_https_ordax_gateway_origin_is_accepted(self):
+    def test_only_https_ordax_gateway_base_url_is_accepted(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = str(Path(temporary) / "session.json")
             with self.assertRaises(ValueError):
                 gateway.NativeAccountGateway("http://accounts.example", path)
             with self.assertRaises(ValueError):
                 gateway.NativeAccountGateway("https://user@example.com", path)
-            client = gateway.NativeAccountGateway("https://accounts.example", path)
-            self.assertEqual(client.origin, "https://accounts.example")
+            with self.assertRaises(ValueError):
+                gateway.NativeAccountGateway("https://accounts.example/path/", path)
+            client = gateway.NativeAccountGateway(
+                "https://accounts.example/functions/v1/ordax-account-gateway",
+                path,
+            )
+            self.assertEqual(
+                client.base_url,
+                "https://accounts.example/functions/v1/ordax-account-gateway",
+            )
 
     def test_device_session_is_private_and_contains_only_account_cookies(self):
         with tempfile.TemporaryDirectory() as temporary:
