@@ -30,6 +30,9 @@ class PortableV3ColdHealthQemuProofTests(unittest.TestCase):
         self.assertIn("required_post_marker: str | None = None", text)
         self.assertIn("required_post_marker in text", text)
         self.assertIn('"required_post_marker_seen"', text)
+        self.assertIn("graphical_hardware: bool = False", text)
+        self.assertIn('"-vga", "virtio"', text)
+        self.assertIn('"qemu_graphical_hardware_requested"', text)
         self.assertIn('"-net", "none"', text)
         self.assertIn("cache=directsync", text)
 
@@ -39,6 +42,10 @@ class PortableV3ColdHealthQemuProofTests(unittest.TestCase):
         self.assertIn('expected_slot="candidate"', text)
         self.assertIn('expected_slot="current"', text)
         self.assertIn("required_post_marker=commit_marker", text)
+        self.assertGreaterEqual(text.count("graphical_hardware=True"), 2)
+        self.assertIn('"virtio_graphics_both_boots"', text)
+        self.assertIn('"adapter": "virtio-vga"', text)
+        self.assertIn('"synthetic_health": False', text)
         self.assertIn('"current_promoted_to_candidate"', text)
         self.assertIn('"known_good_rotated_to_previous"', text)
         self.assertIn('"candidate_file_removed"', text)
@@ -79,6 +86,22 @@ class PortableV3ColdHealthQemuProofTests(unittest.TestCase):
         self.assertFalse(spec["safety"]["physical_write_authorized"])
         self.assertFalse(spec["safety"]["physical_usb_boot_proven"])
         self.assertFalse(spec["safety"]["secure_boot_proven"])
+        self.assertFalse(spec["safety"]["synthetic_surface_health"])
+        self.assertTrue(spec["safety"]["graphical_health_uses_product_stack"])
+        self.assertTrue(
+            spec["safety"]["virtual_gpu_does_not_count_as_physical_hardware_proof"]
+        )
+        self.assertEqual(spec["virtual_hardware"]["graphics_adapter"], "virtio-vga")
+        self.assertEqual(spec["virtual_hardware"]["guest_memory_mib"], 3072)
+        self.assertEqual(
+            spec["virtual_hardware"]["guest_graphical_stack"],
+            "cage-wayland-webkit-seatd",
+        )
+        self.assertFalse(spec["virtual_hardware"]["synthetic_surface_health"])
+        self.assertIn(
+            "CONFIG_DRM_VIRTIO_GPU=y",
+            spec["virtual_hardware"]["kernel_requirements"],
+        )
         self.assertFalse(spec["promotion_effect"]["physical_cold_health_gate_closed"])
         self.assertFalse(spec["promotion_effect"]["physical_known_good_gate_closed"])
         self.assertFalse(spec["promotion_effect"]["physical_rollback_gate_closed"])
