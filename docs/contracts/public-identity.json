@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-entry/1",
-  "status": "provider-adapter-source-v9-edge-revision-12-recovery-token-hash-gated-public-server-gated",
+  "status": "provider-adapter-source-v10-edge-revision-13-pwned-passwords-gated-public-server-gated",
   "purpose": "public-site-account-entry-boundary",
   "routes": {
     "login_page": "/login/",
@@ -24,7 +24,9 @@
     "registration_password_minimum_chars": 12,
     "registration_password_policy_enforced_server_side": true,
     "login_retroactive_minimum_enforced": false,
-    "password_recovery_account_enumeration_allowed": false
+    "password_recovery_account_enumeration_allowed": false,
+    "compromised_password_plaintext_sent_to_screening_provider": false,
+    "compromised_password_full_hash_sent_to_screening_provider": false
   },
   "session": {
     "owner": "future-ordax-identity-service",
@@ -62,8 +64,8 @@
     "public_site_account_enabled": false,
     "public_site_marker_header": "X-OrdaX-Public-Site",
     "native_direct_account_gateway_remains_available": true,
-    "edge_deployment_revision_observed": 12,
-    "gateway_source_version": 9,
+    "edge_deployment_revision_observed": 13,
+    "gateway_source_version": 10,
     "password_recovery_request_implemented": true,
     "password_recovery_redirect_config_verified": false,
     "password_recovery_completion_flow_implemented": true,
@@ -71,7 +73,9 @@
     "password_recovery_server_side_token_hash_implemented": true,
     "password_recovery_completion_enabled": false,
     "password_recovery_email_template_source": "infra/supabase/identity/email-templates/recovery.html",
-    "password_recovery_email_template_applied": false
+    "password_recovery_email_template_applied": false,
+    "compromised_password_screening_implemented": true,
+    "compromised_password_screening_fail_closed": true
   },
   "supabase_candidate": {
     "status": "dedicated-target-schema-and-edge-gateway-deployed",
