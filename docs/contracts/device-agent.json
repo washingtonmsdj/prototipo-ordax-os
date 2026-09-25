@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.device-agent/1",
-  "status": "pre-mvp-foundation",
+  "status": "pre-mvp-projects-integration-source",
   "product_name": "OrdaX Device Agent",
   "historical_incubation_repository": "washingtonmsdj/mcp-blender",
   "purpose": "provide one typed local capability runtime for Projects, Web control and external MCP clients",
@@ -26,6 +26,22 @@
     "product_mcp": true,
     "same_action_gateway_required": true,
     "parallel_web_control_backend_forbidden": true
+  },
+  "projects_integration": {
+    "component_port_optional": true,
+    "capability_discovery_schema": "ordax.device-agent-capabilities/1",
+    "capability_reader_schema": "ordax.device-agent-capability-reader/1",
+    "projects_status_schema": "ordax.projects-device-agent-status/1",
+    "capability_probe_timeout_ms": 1500,
+    "surface_presentation_read_only": true,
+    "surface_execute_action_exposed": false,
+    "full_device_agent_port_passed_to_projects": false,
+    "capability_reader_exposes_execute": false,
+    "authority_narrowing_owner": "system/services/device-agent/capability-reader.mjs",
+    "missing_port_hidden": true,
+    "probe_failure_degrades_projects": false,
+    "probe_failure_degrades_boot": false,
+    "mutation_authority_from_status": "none"
   },
   "adapters": {
     "initial": [
