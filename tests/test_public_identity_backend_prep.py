@@ -17,20 +17,23 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         contract = json.loads(IDENTITY_CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "provider-adapter-source-v7-edge-revision-8-recovery-request-fail-closed-public-server-gated",
+            "provider-adapter-source-v8-edge-revision-9-recovery-pkce-gated-public-server-gated",
         )
         self.assertFalse(contract["backend"]["provider_configured"])
         self.assertTrue(contract["backend"]["password_auth_flow_implemented"])
         self.assertTrue(contract["backend"]["session_refresh_implemented"])
         self.assertTrue(contract["backend"]["dedicated_or_isolated_target_required"])
         self.assertFalse(contract["backend"]["conflicting_auth_user_trigger_allowed"])
-        self.assertEqual(contract["backend"]["gateway_source_version"], 7)
-        self.assertEqual(contract["backend"]["edge_deployment_revision_observed"], 8)
+        self.assertEqual(contract["backend"]["gateway_source_version"], 8)
+        self.assertEqual(contract["backend"]["edge_deployment_revision_observed"], 9)
         self.assertTrue(contract["backend"]["public_site_server_activation_gate_deployed"])
         self.assertFalse(contract["backend"]["public_site_account_enabled"])
         self.assertEqual(contract["backend"]["public_site_marker_header"], "X-OrdaX-Public-Site")
         self.assertTrue(contract["backend"]["native_direct_account_gateway_remains_available"])
         self.assertTrue(contract["backend"]["password_recovery_request_implemented"])
+        self.assertFalse(contract["backend"]["password_recovery_request_enabled"])
+        self.assertTrue(contract["backend"]["password_recovery_pkce_required"])
+        self.assertFalse(contract["backend"]["password_recovery_pkce_completion_implemented"])
         self.assertFalse(contract["backend"]["password_recovery_redirect_config_verified"])
         self.assertFalse(contract["backend"]["password_recovery_completion_flow_implemented"])
         candidate = contract["supabase_candidate"]
@@ -70,7 +73,7 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         self.assertFalse(observation["rate_limit_real_client_ip_forwarding_verified"])
         self.assertEqual(
             observation["password_recovery_request"],
-            "pass-source-and-edge-fail-closed",
+            "pass-source-and-edge-disabled",
         )
         self.assertFalse(observation["password_recovery_redirect_config_verified"])
         self.assertFalse(observation["password_recovery_account_enumeration_allowed"])

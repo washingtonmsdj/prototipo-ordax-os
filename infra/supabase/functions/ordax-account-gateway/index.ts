@@ -9,11 +9,14 @@ const SYNC_ACK_SCHEMA = "prototype-ordax.sync-ack/1";
 const ERROR_SCHEMA = "prototype-ordax.public-identity-error/1";
 const ACCESS_COOKIE = "ordax_access";
 const REFRESH_COOKIE = "ordax_refresh";
+const RECOVERY_COOKIE = "ordax_recovery";
+const RECOVERY_SESSION_MAX_AGE = 10 * 60;
 const MAX_BODY = 64 * 1024;
 const MIN_REGISTRATION_PASSWORD_CHARS = 12;
 const MAX_REGISTRATION_PASSWORD_CHARS = 256;
 const PUBLIC_SITE_ACCOUNT_ENABLED = false;
 const ACCOUNT_RECOVERY_REQUEST_ENABLED = false;
+const ACCOUNT_RECOVERY_COMPLETION_ENABLED = false;
 const DATA_CLASSES = new Set([
   "appearance",
   "preferences",
@@ -78,6 +81,14 @@ function sessionCookies(access: string, refresh: string, expiresIn: number) {
 
 function clearCookies() {
   return [cookie(ACCESS_COOKIE, "", 0), cookie(REFRESH_COOKIE, "", 0)];
+}
+
+function recoveryCookie() {
+  return cookie(RECOVERY_COOKIE, "1", RECOVERY_SESSION_MAX_AGE);
+}
+
+function clearRecoveryCookie() {
+  return cookie(RECOVERY_COOKIE, "", 0);
 }
 
 function config() {
@@ -250,6 +261,130 @@ async function recovery(req: Request) {
     : redirectResponse("/login/?recuperacao=verifique-email");
 }
 
+async function verifyRecoveryLink(req: Request, url: URL) {
+  if (!ACCOUNT_RECOVERY_COMPLETION_ENABLED) {
+    return error(503, "account-recovery-completion-disabled", "A conclusão da recuperação da Conta OrdaX ainda não foi ativada.");
+  }
+  const tokenHash = url.searchParams.get("token_hash") ?? "";
+  const recoveryType = url.searchParams.get("type") ?? "";
+  if (
+    recoveryType !== "recovery" ||
+    tokenHash.length < 16 ||
+    tokenHash.length > 2048 ||
+    /\s/.test(tokenHash)
+  ) {
+    return error(400, "invalid-recovery-link", "O link de recuperação é inválido ou expirou.");
+  }
+
+  try {
+    const supabase = client();
+    const { data, error: verifyError } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: "recovery",
+    });
+    if (verifyError || !data.session) {
+      return error(400, "invalid-recovery-link", "O link de recuperação é inválido ou expirou.");
+    }
+    const expiresIn = Math.min(
+      Number(data.session.expires_in ?? RECOVERY_SESSION_MAX_AGE),
+      RECOVERY_SESSION_MAX_AGE,
+    );
+    return redirectResponse(
+      "/recuperar/?modo=nova-senha",
+      [
+        ...sessionCookies(
+          data.session.access_token,
+          data.session.refresh_token,
+          expiresIn,
+        ),
+        recoveryCookie(),
+      ],
+    );
+  } catch {
+    return error(400, "invalid-recovery-link", "O link de recuperação é inválido ou expirou.");
+  }
+}
+
+async function updateRecoveryPassword(req: Request) {
+  if (!ACCOUNT_RECOVERY_COMPLETION_ENABLED) {
+    return error(503, "account-recovery-completion-disabled", "A conclusão da recuperação da Conta OrdaX ainda não foi ativada.");
+  }
+  const cookies = parseCookies(req);
+  if (cookies.get(RECOVERY_COOKIE) !== "1") {
+    return error(401, "recovery-session-required", "Inicie novamente a recuperação da Conta OrdaX.");
+  }
+
+  const session = await authenticated(req);
+  if (!session.user || !session.access) {
+    return json(
+      401,
+      {
+        $schema: ERROR_SCHEMA,
+        error: "recovery-session-required",
+        message: "Inicie novamente a recuperação da Conta OrdaX.",
+      },
+      [...session.cookies, clearRecoveryCookie()],
+    );
+  }
+
+  let raw = "";
+  try { raw = await boundedBody(req); } catch {
+    return error(413, "request-too-large", "A solicitação excede o limite permitido.");
+  }
+  const type = req.headers.get("content-type") ?? "";
+  if (!type.toLowerCase().startsWith("application/x-www-form-urlencoded")) {
+    return error(400, "recovery-password-policy", "Use uma senha válida e confirme exatamente o mesmo valor.");
+  }
+  const form = new URLSearchParams(raw);
+  const password = form.get("password") ?? "";
+  const confirmation = form.get("password_confirmation") ?? "";
+  if (
+    password !== confirmation ||
+    password.length < MIN_REGISTRATION_PASSWORD_CHARS ||
+    password.length > MAX_REGISTRATION_PASSWORD_CHARS ||
+    password.includes("\0")
+  ) {
+    return error(400, "recovery-password-policy", "Use uma senha válida e confirme exatamente o mesmo valor.");
+  }
+
+  try {
+    const { url, key } = config();
+    const response = await fetch(`${url}/auth/v1/user`, {
+      method: "PUT",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${session.access}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ password }),
+    });
+    if (!response.ok) {
+      if (response.status === 429) {
+        return error(429, "account-recovery-rate-limited", "Tente novamente mais tarde.");
+      }
+      return error(503, "account-recovery-unavailable", "Não foi possível concluir a recuperação da Conta OrdaX.");
+    }
+    try {
+      await client(session.access).auth.signOut({ scope: "local" });
+    } catch {
+      // Password was already changed; local cookie clearing still wins.
+    }
+  } catch {
+    return error(503, "account-recovery-unavailable", "Não foi possível concluir a recuperação da Conta OrdaX.");
+  }
+
+  return wantsJson(req)
+    ? json(
+        200,
+        { recoveryCompleted: true },
+        [...clearCookies(), clearRecoveryCookie()],
+      )
+    : redirectResponse(
+        "/login/?recuperacao=concluida",
+        [...clearCookies(), clearRecoveryCookie()],
+      );
+}
+
 async function credentials(req: Request, register: boolean) {
   let raw = "";
   try { raw = await boundedBody(req); } catch { return error(413, "request-too-large", "A solicitação excede o limite permitido."); }
@@ -360,6 +495,8 @@ Deno.serve(async (req: Request) => {
   if (path === "/auth/login" && req.method === "POST") return credentials(req, false);
   if (path === "/auth/register" && req.method === "POST") return credentials(req, true);
   if (path === "/auth/recover" && req.method === "POST") return recovery(req);
+  if (path === "/auth/recover/verify" && req.method === "GET") return verifyRecoveryLink(req, url);
+  if (path === "/auth/recover/complete" && req.method === "POST") return updateRecoveryPassword(req);
 
   if (path === "/auth/logout" && req.method === "POST") {
     try {

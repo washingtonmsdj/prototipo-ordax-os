@@ -35,7 +35,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "real-auth-and-account-sync-gateway-source-v7-edge-revision-8-recovery-request-fail-closed-public-server-gated",
+            "real-auth-and-account-sync-gateway-source-v8-edge-revision-10-recovery-token-hash-gated-public-server-gated",
         )
         self.assertFalse(contract["baseline"]["provider_configured"])
         self.assertTrue(contract["baseline"]["http_only_session_cookies"])
@@ -51,8 +51,8 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertEqual(contract["baseline"]["registration_password_minimum_chars"], 12)
         self.assertTrue(contract["baseline"]["registration_password_policy_enforced_at_edge"])
         self.assertFalse(contract["baseline"]["existing_login_passwords_retroactively_rejected"])
-        self.assertEqual(contract["runtime"]["gateway_source_version"], 7)
-        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 8)
+        self.assertEqual(contract["runtime"]["gateway_source_version"], 8)
+        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 10)
         self.assertTrue(contract["baseline"]["public_site_server_activation_gate"])
         self.assertFalse(contract["baseline"]["public_site_account_enabled"])
         self.assertEqual(contract["baseline"]["public_site_marker_header"], "X-OrdaX-Public-Site")
@@ -60,10 +60,17 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertTrue(contract["baseline"]["native_json_account_flow_remains_enabled"])
         self.assertTrue(contract["deployment"]["public_site_proxy_marker_required"])
         self.assertTrue(contract["baseline"]["password_recovery_request_implemented"])
+        self.assertFalse(contract["baseline"]["password_recovery_request_enabled"])
+        self.assertTrue(contract["baseline"]["password_recovery_server_side_token_hash_required"])
+        self.assertTrue(contract["baseline"]["password_recovery_server_side_token_hash_implemented"])
         self.assertTrue(contract["baseline"]["password_recovery_redirect_required"])
         self.assertFalse(contract["baseline"]["password_recovery_redirect_verified"])
         self.assertFalse(contract["baseline"]["password_recovery_account_enumeration_allowed"])
-        self.assertFalse(contract["baseline"]["password_recovery_completion_flow_implemented"])
+        self.assertTrue(contract["baseline"]["password_recovery_completion_flow_implemented"])
+        self.assertFalse(contract["baseline"]["password_recovery_completion_enabled"])
+        self.assertTrue(contract["baseline"]["password_recovery_short_lived_session_cookie"])
+        self.assertEqual(contract["baseline"]["password_recovery_session_max_age_seconds"], 600)
+        self.assertFalse(contract["baseline"]["password_recovery_email_template_applied"])
 
     def test_marked_public_site_requests_are_server_gated(self):
         marker = {"X-OrdaX-Public-Site": "1"}
@@ -124,7 +131,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertTrue(all("HttpOnly" in value for value in cookies))
         self.assertTrue(all("Max-Age=0" in value for value in cookies))
 
-    def test_recovery_request_is_fail_closed_without_redirect_configuration(self):
+    def test_recovery_request_is_disabled_even_if_redirect_were_configured(self):
         class FakeProvider:
             def __init__(self):
                 self.calls = []
@@ -138,7 +145,40 @@ class PublicIdentityGatewayTests(unittest.TestCase):
             sync_provider=None,
         )
         headers = {"content-type": "application/x-www-form-urlencoded"}
-        with patch.dict(os.environ, {"ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL": ""}, clear=False):
+        with patch.dict(
+            os.environ,
+            {"ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL": "https://accounts.ordax.example/auth/recover/verify"},
+            clear=False,
+        ):
+            response = gateway.handle(
+                "POST",
+                "/auth/recover",
+                headers,
+                b"email=pessoa%40example.com",
+            )
+        self.assertEqual(response.status, 503)
+        self.assertEqual(self.payload(response)["error"], "account-recovery-disabled")
+        self.assertEqual(provider.calls, [])
+
+    def test_enabled_recovery_still_fails_closed_without_redirect_configuration(self):
+        class FakeProvider:
+            def __init__(self):
+                self.calls = []
+
+            def request_password_recovery(self, email, redirect_to):
+                self.calls.append((email, redirect_to))
+
+        provider = FakeProvider()
+        gateway = gateway_module.PublicIdentityGateway(
+            provider=provider,
+            sync_provider=None,
+        )
+        headers = {"content-type": "application/x-www-form-urlencoded"}
+        with patch.object(gateway_module, "ACCOUNT_RECOVERY_REQUEST_ENABLED", True), patch.dict(
+            os.environ,
+            {"ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL": ""},
+            clear=False,
+        ):
             response = gateway.handle(
                 "POST",
                 "/auth/recover",
@@ -163,9 +203,9 @@ class PublicIdentityGatewayTests(unittest.TestCase):
             sync_provider=None,
         )
         headers = {"content-type": "application/x-www-form-urlencoded"}
-        with patch.dict(
+        with patch.object(gateway_module, "ACCOUNT_RECOVERY_REQUEST_ENABLED", True), patch.dict(
             os.environ,
-            {"ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL": "https://accounts.ordax.example/recuperar/concluir"},
+            {"ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL": "https://accounts.ordax.example/auth/recover/verify"},
             clear=False,
         ):
             response = gateway.handle(
@@ -180,8 +220,98 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertNotIn("exists", response.body.decode("utf-8").lower())
         self.assertEqual(
             provider.calls,
-            [("pessoa@example.com", "https://accounts.ordax.example/recuperar/concluir")],
+            [("pessoa@example.com", "https://accounts.ordax.example/auth/recover/verify")],
         )
+
+    def test_recovery_completion_is_disabled_even_with_valid_token_hash(self):
+        class FakeProvider:
+            def __init__(self):
+                self.verify_calls = []
+
+            def verify_recovery_token(self, token_hash):
+                self.verify_calls.append(token_hash)
+                return type(
+                    "Session",
+                    (),
+                    {
+                        "access_token": "recovery-access",
+                        "refresh_token": "recovery-refresh",
+                        "expires_in": 600,
+                    },
+                )()
+
+        provider = FakeProvider()
+        gateway = gateway_module.PublicIdentityGateway(provider=provider, sync_provider=None)
+        response = gateway.handle(
+            "GET",
+            "/auth/recover/verify?token_hash=" + ("a" * 64) + "&type=recovery",
+        )
+        self.assertEqual(response.status, 503)
+        self.assertEqual(self.payload(response)["error"], "account-recovery-completion-disabled")
+        self.assertEqual(provider.verify_calls, [])
+
+    def test_enabled_recovery_completion_uses_short_lived_http_only_marker_and_logs_out(self):
+        class FakeProvider:
+            def __init__(self):
+                self.updated = []
+                self.signed_out = []
+
+            def verify_recovery_token(self, token_hash):
+                return type(
+                    "Session",
+                    (),
+                    {
+                        "access_token": "recovery-access",
+                        "refresh_token": "recovery-refresh",
+                        "expires_in": 3600,
+                    },
+                )()
+
+            def get_user(self, access_token):
+                if access_token != "recovery-access":
+                    raise AssertionError(access_token)
+                return ("user-1", "person@example.com")
+
+            def update_password(self, access_token, new_password):
+                self.updated.append((access_token, new_password))
+
+            def sign_out(self, access_token):
+                self.signed_out.append(access_token)
+
+        provider = FakeProvider()
+        gateway = gateway_module.PublicIdentityGateway(provider=provider, sync_provider=None)
+        with patch.object(gateway_module, "ACCOUNT_RECOVERY_COMPLETION_ENABLED", True):
+            verify = gateway.handle(
+                "GET",
+                "/auth/recover/verify?token_hash=" + ("a" * 64) + "&type=recovery",
+            )
+        self.assertEqual(verify.status, 303)
+        self.assertEqual(dict(verify.headers)["Location"], "/recuperar/?modo=nova-senha")
+        cookies = [value for key, value in verify.headers if key == "Set-Cookie"]
+        self.assertEqual(len(cookies), 3)
+        self.assertTrue(any(value.startswith("ordax_recovery=1;") for value in cookies))
+        self.assertTrue(all("HttpOnly" in value for value in cookies))
+        recovery_cookie = next(value for value in cookies if value.startswith("ordax_recovery=1;"))
+        self.assertIn("Max-Age=600", recovery_cookie)
+
+        headers = {
+            "content-type": "application/x-www-form-urlencoded",
+            "cookie": "ordax_access=recovery-access; ordax_recovery=1",
+        }
+        with patch.object(gateway_module, "ACCOUNT_RECOVERY_COMPLETION_ENABLED", True):
+            complete = gateway.handle(
+                "POST",
+                "/auth/recover/complete",
+                headers,
+                b"password=new-password-12&password_confirmation=new-password-12",
+            )
+        self.assertEqual(complete.status, 303)
+        self.assertEqual(dict(complete.headers)["Location"], "/login/?recuperacao=concluida")
+        self.assertEqual(provider.updated, [("recovery-access", "new-password-12")])
+        self.assertEqual(provider.signed_out, ["recovery-access"])
+        cleared = [value for key, value in complete.headers if key == "Set-Cookie"]
+        self.assertEqual(len(cleared), 3)
+        self.assertTrue(all("Max-Age=0" in value for value in cleared))
 
     def test_marked_public_recovery_request_remains_server_gated(self):
         response = self.gateway.handle(
@@ -215,6 +345,8 @@ class PublicIdentityGatewayTests(unittest.TestCase):
             ("PUT", "/auth/login", "GET, POST"),
             ("GET", "/auth/logout", "POST"),
             ("GET", "/auth/recover", "POST"),
+            ("POST", "/auth/recover/verify", "GET"),
+            ("GET", "/auth/recover/complete", "POST"),
             ("POST", "/sync/snapshot", "GET"),
             ("POST", "/sync/changes", "GET"),
             ("POST", "/sync/objects", "GET"),

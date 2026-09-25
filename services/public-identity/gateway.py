@@ -28,8 +28,11 @@ NO_STORE = "no-store, max-age=0"
 MAX_REQUEST_BODY = 64 * 1024
 ACCESS_COOKIE = "ordax_access"
 REFRESH_COOKIE = "ordax_refresh"
+RECOVERY_COOKIE = "ordax_recovery"
+RECOVERY_SESSION_MAX_AGE = 10 * 60
 PUBLIC_SITE_ACCOUNT_ENABLED = False
 ACCOUNT_RECOVERY_REQUEST_ENABLED = False
+ACCOUNT_RECOVERY_COMPLETION_ENABLED = False
 PUBLIC_SITE_MARKER_HEADER = "x-ordax-public-site"
 SYNC_DATA_CLASSES = frozenset((
     "appearance",
@@ -111,6 +114,10 @@ def _cookie(name: str, value: str, *, max_age: int) -> str:
 
 def _clear_cookie(name: str) -> str:
     return _cookie(name, "", max_age=0)
+
+
+def _recovery_cookie() -> str:
+    return _cookie(RECOVERY_COOKIE, "1", max_age=RECOVERY_SESSION_MAX_AGE)
 
 
 def _session_cookies(access_token: str, refresh_token: str, expires_in: int) -> tuple[str, str]:
@@ -435,6 +442,126 @@ class PublicIdentityGateway:
             },
         )
 
+    def _recovery_verify(
+        self,
+        request_headers: Mapping[str, str],
+        query: str,
+    ) -> GatewayResponse:
+        if not ACCOUNT_RECOVERY_COMPLETION_ENABLED:
+            return _error(
+                503,
+                "account-recovery-completion-disabled",
+                "A conclusão da recuperação da Conta OrdaX ainda não foi ativada.",
+            )
+        if not self.provider:
+            return self._provider_unavailable()
+        values = parse_qs(query, keep_blank_values=False)
+        token_hash = values.get("token_hash", [""])[-1]
+        recovery_type = values.get("type", [""])[-1]
+        if recovery_type != "recovery":
+            return _error(
+                400,
+                "invalid-recovery-link",
+                "O link de recuperação é inválido ou expirou.",
+            )
+        try:
+            session = self.provider.verify_recovery_token(token_hash)
+        except (ValueError, SupabaseIdentityError):
+            return _error(
+                400,
+                "invalid-recovery-link",
+                "O link de recuperação é inválido ou expirou.",
+            )
+        return _redirect(
+            "/recuperar/?modo=nova-senha",
+            set_cookies=(
+                *_session_cookies(
+                    session.access_token,
+                    session.refresh_token,
+                    min(session.expires_in, RECOVERY_SESSION_MAX_AGE),
+                ),
+                _recovery_cookie(),
+            ),
+        )
+
+    def _recovery_complete(
+        self,
+        request_headers: Mapping[str, str],
+        body: bytes,
+    ) -> GatewayResponse:
+        if not ACCOUNT_RECOVERY_COMPLETION_ENABLED:
+            return _error(
+                503,
+                "account-recovery-completion-disabled",
+                "A conclusão da recuperação da Conta OrdaX ainda não foi ativada.",
+            )
+        if not self.provider:
+            return self._provider_unavailable()
+        if not _same_origin_state_change(request_headers):
+            return _error(
+                403,
+                "cross-site-request-rejected",
+                "A solicitação cross-site foi rejeitada.",
+            )
+        cookies = _read_cookies(request_headers.get("cookie"))
+        if cookies.get(RECOVERY_COOKIE) != "1":
+            return _error(
+                401,
+                "recovery-session-required",
+                "Inicie novamente a recuperação da Conta OrdaX.",
+            )
+        access, refreshed_cookies = self._authenticated_access(request_headers)
+        if not access:
+            return _json_response(
+                401,
+                {
+                    "$schema": ERROR_SCHEMA,
+                    "error": "recovery-session-required",
+                    "message": "Inicie novamente a recuperação da Conta OrdaX.",
+                },
+                set_cookies=(
+                    *refreshed_cookies,
+                    _clear_cookie(RECOVERY_COOKIE),
+                ),
+            )
+        try:
+            form = _form(body, request_headers.get("content-type", ""))
+            password = form.get("password", "")
+            confirmation = form.get("password_confirmation", "")
+            if password != confirmation:
+                raise ValueError("password-confirmation-mismatch")
+            self.provider.update_password(access, password)
+        except ValueError:
+            return _error(
+                400,
+                "recovery-password-policy",
+                "Use uma senha válida e confirme exatamente o mesmo valor.",
+            )
+        except SupabaseIdentityError as exc:
+            if exc.status == 429:
+                return _error(
+                    429,
+                    "account-recovery-rate-limited",
+                    "Tente novamente mais tarde.",
+                )
+            return _error(
+                503,
+                "account-recovery-unavailable",
+                "Não foi possível concluir a recuperação da Conta OrdaX.",
+            )
+        try:
+            self.provider.sign_out(access)
+        except SupabaseIdentityError:
+            pass
+        return _redirect(
+            "/login/?recuperacao=concluida",
+            set_cookies=(
+                _clear_cookie(ACCESS_COOKIE),
+                _clear_cookie(REFRESH_COOKIE),
+                _clear_cookie(RECOVERY_COOKIE),
+            ),
+        )
+
     def _sync_snapshot(
         self,
         request_headers: Mapping[str, str],
@@ -618,6 +745,16 @@ class PublicIdentityGateway:
             if method != "POST":
                 return self._method_not_allowed("POST")
             return self._recovery_action(request_headers, body)
+
+        if path == "/auth/recover/verify":
+            if method != "GET":
+                return self._method_not_allowed("GET")
+            return self._recovery_verify(request_headers, split.query)
+
+        if path == "/auth/recover/complete":
+            if method != "POST":
+                return self._method_not_allowed("POST")
+            return self._recovery_complete(request_headers, body)
 
         if path == "/auth/logout":
             if method != "POST":

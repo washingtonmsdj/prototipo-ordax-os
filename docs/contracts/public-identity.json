@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-entry/1",
-  "status": "provider-adapter-source-v7-edge-revision-8-recovery-request-fail-closed-public-server-gated",
+  "status": "provider-adapter-source-v8-edge-revision-10-recovery-token-hash-gated-public-server-gated",
   "purpose": "public-site-account-entry-boundary",
   "routes": {
     "login_page": "/login/",
@@ -62,11 +62,16 @@
     "public_site_account_enabled": false,
     "public_site_marker_header": "X-OrdaX-Public-Site",
     "native_direct_account_gateway_remains_available": true,
-    "edge_deployment_revision_observed": 8,
-    "gateway_source_version": 7,
+    "edge_deployment_revision_observed": 10,
+    "gateway_source_version": 8,
     "password_recovery_request_implemented": true,
     "password_recovery_redirect_config_verified": false,
-    "password_recovery_completion_flow_implemented": false
+    "password_recovery_completion_flow_implemented": true,
+    "password_recovery_request_enabled": false,
+    "password_recovery_server_side_token_hash_implemented": true,
+    "password_recovery_completion_enabled": false,
+    "password_recovery_email_template_source": "infra/supabase/identity/email-templates/recovery.html",
+    "password_recovery_email_template_applied": false
   },
   "supabase_candidate": {
     "status": "dedicated-target-schema-and-edge-gateway-deployed",
