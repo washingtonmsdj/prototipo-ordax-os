@@ -1,0 +1,41 @@
+{
+  "$schema": "prototype-ordax.profile-pack-runtime/1",
+  "status": "pre-mvp-internal-proof",
+  "manifest_schema": "ordax.profile-pack/1",
+  "runtime_schema": "ordax.profile-pack-runtime/1",
+  "surface_catalog_schema": "ordax.profile-pack-surface-catalog/1",
+  "pack_states": ["draft", "active", "retired"],
+  "activation": {
+    "internal_proof_mode": "internal-proof",
+    "authority": "composition-explicit",
+    "persistence": "session-only",
+    "entitlement_required": false,
+    "billing_required": false,
+    "cloud_required": false,
+    "draft_only": true,
+    "public_activation_enabled": false
+  },
+  "surface_catalog": {
+    "mutation_authority": "none",
+    "public_activation_enabled": false,
+    "availability_values": [
+      "internal-proof-only",
+      "unavailable",
+      "catalog-only",
+      "retired"
+    ],
+    "does_not_expose_provider_tokens": true,
+    "does_not_grant_capabilities": true
+  },
+  "security": {
+    "auto_grant_privileges": false,
+    "allow_unsigned_apps": false,
+    "generic_shell_implied": false,
+    "cross_space_memory": false,
+    "external_provider_egress_implicit": false
+  },
+  "initial_proof": {
+    "developer": "internal-proof-eligible",
+    "legal-br": "catalog-visible-but-activation-blocked-by-manifest"
+  }
+}
