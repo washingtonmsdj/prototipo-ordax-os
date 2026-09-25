@@ -130,7 +130,15 @@ def readiness(root: Path) -> tuple[list[str], dict[str, bool]]:
     )
     need(observation.get("provider_password_policy_verified") is True, "provider-password-policy")
     need(observation.get("email_confirmation_policy_reviewed") is True, "email-confirmation-policy")
+    need(
+        observation.get("email_confirmation_provider_verified") is True,
+        "email-confirmation-provider-verification",
+    )
     need(observation.get("redirect_allowlist_reviewed") is True, "redirect-allowlist")
+    need(
+        observation.get("redirect_allowlist_provider_verified") is True,
+        "redirect-allowlist-provider-verification",
+    )
     need(observation.get("same_origin_session_owner_deployed") is True, "same-origin-session-owner")
     need(observation.get("secure_http_only_cookie_policy_verified") is True, "secure-cookie-policy")
     need(observation.get("csrf_state_change_protection_verified") is True, "csrf-protection")
