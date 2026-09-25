@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-entry/1",
-  "status": "provider-adapter-source-v11-edge-revision-14-account-export-gated-public-server-gated",
+  "status": "provider-adapter-source-v12-close-source-ready-deployed-source-v11-revision-14",
   "purpose": "public-site-account-entry-boundary",
   "routes": {
     "login_page": "/login/",
@@ -65,7 +65,7 @@
     "public_site_marker_header": "X-OrdaX-Public-Site",
     "native_direct_account_gateway_remains_available": true,
     "edge_deployment_revision_observed": 14,
-    "gateway_source_version": 11,
+    "gateway_source_version": 12,
     "password_recovery_request_implemented": true,
     "password_recovery_redirect_config_verified": false,
     "password_recovery_completion_flow_implemented": true,
@@ -78,7 +78,15 @@
     "compromised_password_screening_fail_closed": true,
     "account_data_export_implemented": true,
     "account_data_export_route": "/account/export",
-    "account_data_export_public_enabled": false
+    "account_data_export_public_enabled": false,
+    "deployed_gateway_source_version": 11,
+    "account_close_source_implemented": true,
+    "account_close_gateway_route": "/account/close",
+    "account_close_gateway_route_deployed": false,
+    "account_close_enabled": false,
+    "account_lifecycle_service_deployed": true,
+    "account_lifecycle_service_deployment_revision_observed": 1,
+    "account_lifecycle_service_enabled": false
   },
   "supabase_candidate": {
     "status": "dedicated-target-schema-and-edge-gateway-deployed",
