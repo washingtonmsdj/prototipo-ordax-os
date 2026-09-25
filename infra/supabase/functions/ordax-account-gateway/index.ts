@@ -584,6 +584,28 @@ Deno.serve(async (req: Request) => {
   }
 
 
+  if (path === "/account/export" && req.method === "GET") {
+    const session = await authenticated(req);
+    if (!session.user || !session.access) {
+      return json(401, {
+        $schema: ERROR_SCHEMA,
+        error: "authentication-required",
+        message: "Entre na Conta OrdaX para exportar seus dados.",
+      }, session.cookies);
+    }
+    const supabase = client(session.access);
+    const { data, error: rpcError } = await supabase.rpc("ordax_account_export_v1");
+    if (
+      rpcError ||
+      !data ||
+      typeof data !== "object" ||
+      data.$schema !== "prototype-ordax.account-export/1"
+    ) {
+      return error(502, "account-export-failed", "Não foi possível gerar a exportação da Conta OrdaX.");
+    }
+    return json(200, data, session.cookies);
+  }
+
   if (path === "/sync/snapshot" && req.method === "GET") {
     const session = await authenticated(req);
     if (!session.user || !session.access) {
