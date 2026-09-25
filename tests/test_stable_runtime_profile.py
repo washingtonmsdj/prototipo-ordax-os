@@ -46,6 +46,12 @@ class StableRuntimeProfileTests(unittest.TestCase):
         self.assertIn('ORDAX_SOURCE_SHA="$source_sha"', text)
         self.assertIn('ORDAX_PRODUCT_MODE="$mode"', text)
         self.assertIn('PRODUCT_MODE_FILE=/ordax/bootstrap/config/product-mode', text)
+        self.assertIn('ACCOUNT_GATEWAY_FILE=/ordax/bootstrap/config/account-gateway-origin', text)
+        self.assertIn('account_gateway_origin() {', text)
+        self.assertIn('https://*)', text)
+        self.assertIn('ORDAX_ACCOUNT_GATEWAY_ORIGIN=$gateway_origin', text)
+        self.assertIn('export ORDAX_ACCOUNT_GATEWAY_ORIGIN', text)
+        self.assertIn('unset ORDAX_ACCOUNT_GATEWAY_ORIGIN', text)
         self.assertIn('boot_current || recovery "verified release handoff failed"', text)
 
     def test_owner_handoff_binds_git_head_to_owner_profile(self):
