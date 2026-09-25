@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import stat
 import threading
 from dataclasses import dataclass
 from http.cookies import SimpleCookie
@@ -45,21 +46,21 @@ class GatewayReply:
     body: bytes
 
 
-def _validated_origin(value: str) -> str:
+def _validated_base_url(value: str) -> str:
     if not isinstance(value, str):
-        raise TypeError("account gateway origin must be a string")
+        raise TypeError("account gateway base URL must be a string")
     split = urlsplit(value.strip())
     if (
         split.scheme != "https"
         or not split.netloc
         or split.username is not None
         or split.password is not None
-        or split.path not in ("", "/")
         or split.query
         or split.fragment
+        or split.path.endswith("/")
     ):
-        raise ValueError("account gateway must be an HTTPS origin")
-    return f"https://{split.netloc}"
+        raise ValueError("account gateway must be an HTTPS base URL without query, fragment or trailing slash")
+    return f"https://{split.netloc}{split.path}"
 
 
 def _response_headers(message) -> dict[str, tuple[str, ...]]:
@@ -104,7 +105,7 @@ class NativeAccountGateway:
         *,
         timeout_seconds: float = 15.0,
     ) -> None:
-        self.origin = _validated_origin(origin)
+        self.base_url = _validated_base_url(origin)
         if not os.path.isabs(session_path):
             raise ValueError("session path must be absolute")
         self.session_path = session_path
@@ -120,7 +121,7 @@ class NativeAccountGateway:
     def _load_session(self) -> dict[str, str]:
         try:
             st = os.stat(self.session_path, follow_symlinks=False)
-            if not os.path.isfile(self.session_path) or st.st_size > MAX_SESSION_BYTES:
+            if not stat.S_ISREG(st.st_mode) or st.st_size > MAX_SESSION_BYTES:
                 return {}
             if st.st_mode & 0o077:
                 return {}
@@ -141,8 +142,11 @@ class NativeAccountGateway:
         os.makedirs(directory, mode=0o700, exist_ok=True)
         temporary = f"{self.session_path}.tmp.{os.getpid()}.{threading.get_ident()}"
         try:
-            with open(temporary, "w", encoding="utf-8") as handle:
-                os.chmod(temporary, 0o600)
+            flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
+            descriptor = os.open(temporary, flags, 0o600)
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
                 json.dump(self._cookies, handle, separators=(",", ":"), sort_keys=True)
                 handle.write("\n")
                 handle.flush()
@@ -173,7 +177,7 @@ class NativeAccountGateway:
             headers["Cookie"] = _cookie_header(self._cookies)
         if body is not None:
             headers["Content-Type"] = content_type or "application/octet-stream"
-        request = Request(self.origin + path, data=body, headers=headers, method=method)
+        request = Request(self.base_url + path, data=body, headers=headers, method=method)
         try:
             response = self._opener.open(request, timeout=self.timeout_seconds)
             try:

@@ -32,7 +32,7 @@ Profile Packs may compose apps, templates, knowledge-source policy and Intellige
 
 The first account-scoped synchronization backend is now applied to the dedicated `ordax-control-plane` project. It provides owner-scoped RLS, stable object IDs, server revisions, idempotent mutation keys, explicit tombstones and optimistic conflict detection through `ordax_apply_sync_mutation_v1`. This is the real backend foundation for the same account to carry approved state between devices.
 
-The Web source now has an end-to-end OrdaX-owned transport boundary for `appearance`, portable accessibility preferences and portable workspace metadata. It uses the real account session without exposing provider tokens to Surface JavaScript. USB/Native and Mobile still lack their final secure transport/device-session integration, so synchronization remains **Em breve** in public copy and is not yet advertised as a released MVP capability.
+The Web source now has an end-to-end OrdaX-owned transport boundary for `appearance`, portable accessibility preferences and portable workspace metadata. It uses the real account session without exposing provider tokens to Surface JavaScript. USB/Native now has the same OrdaX-owned source transport through a loopback host bridge to an HTTPS account gateway, with device-private session storage; Mobile still lacks its final integration. Native/USB physical proof and public deployment remain pending, so synchronization remains **Em breve** in public copy and is not yet advertised as a released MVP capability.
 
 The architecture remains prepared for future synchronized state such as:
 
@@ -129,3 +129,8 @@ system/services/sync
 ```
 
 No platform gets its own incompatible synchronization model.
+
+
+## Device-private account session
+
+On Native/USB, provider bearer tokens never enter Surface JavaScript. The local host owns an OrdaX gateway session in private device state (mode `0600`) and exposes only sanitized `/auth/*` and `/sync/*` responses to the loopback Surface. That session is explicitly outside the sync data model.

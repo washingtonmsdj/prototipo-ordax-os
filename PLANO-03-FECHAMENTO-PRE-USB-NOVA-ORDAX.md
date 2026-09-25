@@ -263,8 +263,8 @@ nem criar owners duplicados no MVP.
 | C05 | Checkpoint de sessão | **Parcial.** janelas/targets persistem, mas não existe checkpoint genérico de estado interno por app/documento/posição/rascunho. | A mínimo; riqueza pós-MVP |
 | C06 | Home contextual/continuar trabalho | **Implementado em recorte útil.** Projetos, Recentes e Pendências existem. | Fechado para MVP |
 | C07 | Inventário/suporte de hardware | **Política mínima fechada em source.** `hardware-support-matrix/1` separa driver presente, evidência física e claim de suporte; não generaliza o notebook de desenvolvimento para outras famílias. | **PASS_SOURCE; prova física=B** |
-| C08 | Conta/identidade entre modos | **Arquitetura pronta, backend real ainda não ativo.** Conta online é opcional no MVP. | C |
-| C09 | Sync/continuidade cloud | **Core offline existe; identity/transport remoto não.** | C |
+| C08 | Conta/identidade entre modos | **Backend real + gateway de sessão implementados em source.** Ativação pública continua bloqueada por deployment/hardening/legal; conta segue opcional no MVP. | C |
+| C09 | Sync/continuidade cloud | **Backend account-scoped, transporte Web e ponte Native/USB existem em source.** Rollout público, gateway implantado e prova real entre dispositivos continuam pendentes. | C |
 | C10 | Mobile Companion | **Futuro.** | C |
 | C11 | Desktop instalado e Creator | Creator é trilha MVP; Desktop como produto é futuro. | Creator=A/B; Desktop=C |
 | C12 | Apps instaláveis/SDK | **FUNDAÇÃO PRÉ-MVP.** Contrato de distribuição/manifesto assinado existe; instalação externa e SDK público continuam fora do primeiro USB. | **PASS_SOURCE foundation; C para instalação/SDK** |

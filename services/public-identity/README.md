@@ -91,3 +91,21 @@ The product domain remains provider-neutral, so the Supabase project can later b
 - no publishable/service key is committed;
 - no migration is applied to an existing Supabase project;
 - no account is claimed to exist until the provider and gateway are live.
+
+
+## Deployed account gateway adapter
+
+The dedicated `ordax-control-plane` project now has the
+`ordax-account-gateway` Edge Function deployed. Its source-controlled owner is
+`infra/supabase/functions/ordax-account-gateway/index.ts`.
+
+The function deliberately has platform JWT pre-verification disabled because
+`/auth/login` and `/auth/register` must accept unauthenticated requests. It
+implements its own account/session boundary, validates sessions through
+Supabase Auth, uses the signed-in user's JWT for RLS-scoped sync RPC calls and
+never uses a service-role key.
+
+Native/USB consumes the provider-neutral gateway base URL from the signed
+system configuration `system/services/account/gateway-base-url`. Browser
+public rollout still requires a same-origin hosting/rewrite boundary; direct
+cross-origin browser use is not the public contract.

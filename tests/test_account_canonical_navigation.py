@@ -77,11 +77,13 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
             "    identitySession,\n"
             "    identityActions,\n"
             "    surface,\n"
-            "    preferenceSync,\n"
+            "    accountSync,\n"
             "    workspaceMetadata.source,\n"
             "    appActivation,"
         )
         self.assertIn(expected, native)
+        self.assertIn("let accountSync = preferenceSync;", native)
+        self.assertIn("createAccountSyncRuntime({", native)
         expected_web = (
             "root,\n"
             "  identitySession,\n"

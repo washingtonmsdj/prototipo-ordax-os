@@ -1,4 +1,5 @@
 import { createWebIdentityActions } from "../../adapters/web/identity-actions.mjs";
+import { createSameOriginIdentityCredentials } from "../../adapters/web/identity-credentials.mjs";
 import { createWebIdentitySession } from "../../adapters/web/identity.mjs";
 import { createWebNotesStore } from "../../adapters/web/notes.mjs";
 import { createWebBrowserSession } from "../../adapters/web/browser-session.mjs";
@@ -40,6 +41,7 @@ const identitySession = createWebIdentitySession(window);
 await identitySession.refresh();
 const identityActions = createWebIdentityActions(window, identitySession);
 const identityAvailable = identitySession.getSnapshot().state !== "unavailable";
+const identityCredentials = identityAvailable ? createSameOriginIdentityCredentials(window) : null;
 const host = createWebSurfaceHost(window, {
   accountIdentityAvailable: identityAvailable,
   syncSafeStateAvailable: identityAvailable,
@@ -52,7 +54,7 @@ const localWorkspaceStore = createWebWorkspaceStore(window);
 const workspaceMetadata = createWorkspaceMetadataBridge(localWorkspaceStore);
 const workspaceStore = workspaceMetadata.store;
 const syncStateStore = createWebSyncStateStore(window);
-const syncTransport = identityAvailable ? createWebSyncTransport(window) : null;
+const syncTransport = createWebSyncTransport(window);
 const appActivation = createAppActivationChannel();
 const componentManager = createComponentManager({
   manifests: listSystemComponents(),
@@ -89,10 +91,8 @@ const preferenceSync = createPreferenceSyncRuntime(surface.preferences, {
     return `pref:${uuid ? uuid.replaceAll("-", "") : `${Date.now().toString(36)}:${syncMutationOrdinal}`}`;
   },
 });
-let accountSync = preferenceSync;
-if (syncTransport) {
-  let accountSyncOrdinal = 0;
-  accountSync = createAccountSyncRuntime({
+let accountSyncOrdinal = 0;
+const accountSync = createAccountSyncRuntime({
     identitySession,
     transport: syncTransport,
     preferenceSync,
@@ -105,8 +105,11 @@ if (syncTransport) {
       return `sync:${kind}:${uuid ? uuid.replaceAll("-", "") : `${Date.now().toString(36)}:${accountSyncOrdinal}`}`;
     },
   });
-  window.addEventListener("online", () => void accountSync.flush(), { passive: true });
-}
+const resumeAccountConnectivity = async () => {
+  await identitySession.refresh();
+  await accountSync.refresh();
+};
+window.addEventListener("online", () => void resumeAccountConnectivity(), { passive: true });
 const accountOverviewControls = mountAccountOverviewControls(
   root,
   identitySession,
@@ -115,6 +118,7 @@ const accountOverviewControls = mountAccountOverviewControls(
   accountSync,
   workspaceMetadata.source,
   appActivation,
+  identityCredentials,
 );
 const settingsOverviewControls = mountSettingsOverviewControls(
   root,
@@ -198,7 +202,7 @@ window.addEventListener(
     notificationCenter.destroy();
     settingsOverviewControls.destroy();
     accountOverviewControls.destroy();
-    if (accountSync !== preferenceSync) accountSync.destroy();
+    accountSync.destroy();
     preferenceSync.destroy();
     browserSession.dispose();
     componentManager.destroy();

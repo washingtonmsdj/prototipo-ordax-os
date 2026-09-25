@@ -24,6 +24,11 @@ export const ACCOUNT_SOURCE_MESSAGES = Object.freeze({
   "account.action.unavailable": "Ações de conta indisponíveis neste host.",
   "account.action.none": "Nenhuma ação de sessão disponível.",
   "account.action.failed": "A ação de conta não pôde ser concluída por este host.",
+  "account.action.register": "Criar conta",
+  "account.action.registering": "Criando conta…",
+  "account.credentials.email": "E-mail",
+  "account.credentials.password": "Senha",
+  "account.credentials.confirmationRequired": "Cadastro recebido. Confirme seu e-mail para entrar.",
 
   "account.continuity.eyebrow": "Estado local",
   "account.continuity.title": "Continuidade preparada neste dispositivo",
@@ -89,6 +94,11 @@ export const ACCOUNT_ENGLISH_MESSAGES = Object.freeze({
   "account.action.unavailable": "Account actions are unavailable on this host.",
   "account.action.none": "No session action is available.",
   "account.action.failed": "The account action could not be completed by this host.",
+  "account.action.register": "Create account",
+  "account.action.registering": "Creating account…",
+  "account.credentials.email": "Email",
+  "account.credentials.password": "Password",
+  "account.credentials.confirmationRequired": "Sign-up received. Confirm your email to sign in.",
 
   "account.continuity.eyebrow": "Local state",
   "account.continuity.title": "Continuity prepared on this device",

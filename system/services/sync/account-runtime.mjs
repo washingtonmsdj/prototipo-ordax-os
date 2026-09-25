@@ -143,6 +143,8 @@ export function createAccountSyncRuntime({
   let destroyed = false;
   let suppressPreferences = false;
   let suppressWorkspace = false;
+  let preferencesDirty = false;
+  let workspaceDirty = false;
   let syncing = false;
   let retryRequested = false;
   let lastPreferenceFingerprint = fingerprint(portablePreferences(preferencePort.getSnapshot()));
@@ -151,7 +153,7 @@ export function createAccountSyncRuntime({
   const currentSnapshot = () => {
     const identitySnapshot = identity.getSnapshot();
     const preferenceSnapshot = preferenceSync.getSnapshot();
-    const otherPending = pending.size;
+    const otherPending = pending.size + Number(preferencesDirty) + Number(workspaceDirty);
     return validateSyncRuntimeSnapshot({
       transport: identitySnapshot.state === "unavailable" ? "host-required" : "available",
       accountContinuity:
@@ -170,6 +172,7 @@ export function createAccountSyncRuntime({
 
   const queuePreferences = () => {
     const payload = portablePreferences(preferencePort.getSnapshot());
+    preferencesDirty = false;
     lastPreferenceFingerprint = fingerprint(payload);
     pending.set(
       PORTABLE_PREFERENCES_OBJECT_ID,
@@ -187,6 +190,7 @@ export function createAccountSyncRuntime({
 
   const queueWorkspace = () => {
     const metadata = workspaceSource.getSnapshot();
+    workspaceDirty = false;
     lastWorkspaceFingerprint = fingerprint(metadata);
     pending.set(
       PORTABLE_WORKSPACE_OBJECT_ID,
@@ -303,7 +307,11 @@ export function createAccountSyncRuntime({
       const prefs = byId.get(PORTABLE_PREFERENCES_OBJECT_ID);
       if (prefs && !prefs.tombstone) {
         revisions.set(PORTABLE_PREFERENCES_OBJECT_ID, prefs.serverRevision);
-        applyRemotePreferences(prefs);
+        if (preferencesDirty) {
+          queuePreferences();
+        } else {
+          applyRemotePreferences(prefs);
+        }
       } else {
         queuePreferences();
       }
@@ -311,7 +319,11 @@ export function createAccountSyncRuntime({
       const workspace = byId.get(PORTABLE_WORKSPACE_OBJECT_ID);
       if (workspace && !workspace.tombstone) {
         revisions.set(PORTABLE_WORKSPACE_OBJECT_ID, workspace.serverRevision);
-        applyRemoteWorkspace(workspace);
+        if (workspaceDirty) {
+          queueWorkspace();
+        } else {
+          applyRemoteWorkspace(workspace);
+        }
       } else {
         queueWorkspace();
       }
@@ -329,14 +341,24 @@ export function createAccountSyncRuntime({
     const next = fingerprint(portablePreferences(snapshot));
     if (suppressPreferences || next === lastPreferenceFingerprint) return;
     lastPreferenceFingerprint = next;
-    if (initialized && identity.getSnapshot().state === "signed-in") queuePreferences();
+    if (initialized && identity.getSnapshot().state === "signed-in") {
+      queuePreferences();
+    } else {
+      preferencesDirty = true;
+      emit();
+    }
   });
 
   const unsubscribeWorkspace = workspaceSource.subscribe((snapshot) => {
     const next = fingerprint(snapshot);
     if (suppressWorkspace || next === lastWorkspaceFingerprint) return;
     lastWorkspaceFingerprint = next;
-    if (initialized && identity.getSnapshot().state === "signed-in") queueWorkspace();
+    if (initialized && identity.getSnapshot().state === "signed-in") {
+      queueWorkspace();
+    } else {
+      workspaceDirty = true;
+      emit();
+    }
   });
 
   const unsubscribePreferenceSync = preferenceSync.subscribe(() => {

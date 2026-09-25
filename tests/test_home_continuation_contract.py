@@ -117,7 +117,7 @@ class HomeContinuationContractTests(unittest.TestCase):
         composition = COMPOSITION.read_text(encoding="utf-8")
         self.assertIn('from "../../surface/ui/home-pending.mjs"', composition)
         self.assertIn(
-            "const homePending = mountHomePending(root, { notifications, syncRuntime: preferenceSync, surfaceLifecycle: surface });",
+            "const homePending = mountHomePending(root, { notifications, syncRuntime: accountSync, surfaceLifecycle: surface });",
             composition,
         )
         self.assertIn("homePending.dispose();", composition)

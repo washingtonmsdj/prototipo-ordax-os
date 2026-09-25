@@ -6,6 +6,7 @@ DISTRIBUTION_PROFILE=${ORDAX_DISTRIBUTION_PROFILE:-owner-development}
 PRODUCT_MODE=${ORDAX_PRODUCT_MODE:-}
 NATIVE_INSTALL_CAPABILITY=${ORDAX_NATIVE_INSTALL_CAPABILITY:-disabled}
 ACCOUNT_GATEWAY_ORIGIN=${ORDAX_ACCOUNT_GATEWAY_ORIGIN:-}
+ACCOUNT_GATEWAY_CONFIG=$SYSTEM_ROOT/services/account/gateway-base-url
 SOURCE_SHA_HINT=${ORDAX_SOURCE_SHA:-}
 SOURCE_SHA=unknown
 STATE_ROOT=${ORDAX_STATE_DIR:-/state/ordax}
@@ -94,6 +95,39 @@ chmod 700 "$SESSION_DIR" "$PERSISTENT_NATIVE_STATE" "$PERSISTENT_USER_HOME" "$RE
 : > "$NETWORK_LOG"
 : > "$NATIVE_INSTALL_LOG"
 rm -f "$RUNTIME_PROOF_CONTEXT" >/dev/null 2>&1 || true
+
+valid_account_gateway_base_url() {
+    value=${1:-}
+    case "$value" in
+        https://*) ;;
+        *) return 1 ;;
+    esac
+    remainder=${value#https://}
+    [ -n "$remainder" ] || return 1
+    case "$remainder" in
+        *\?*|*\#*|*@*|*[!A-Za-z0-9._:/-]*|*/) return 1 ;;
+    esac
+    authority=${remainder%%/*}
+    [ -n "$authority" ] || return 1
+    return 0
+}
+
+resolve_account_gateway_base_url() {
+    if [ -n "$ACCOUNT_GATEWAY_ORIGIN" ]; then
+        valid_account_gateway_base_url "$ACCOUNT_GATEWAY_ORIGIN" || {
+            echo "ordax-surface: configured account gateway URL is invalid; disabling online account" >>"$HOST_LOG"
+            ACCOUNT_GATEWAY_ORIGIN=
+        }
+        return 0
+    fi
+    [ -f "$ACCOUNT_GATEWAY_CONFIG" ] && [ ! -L "$ACCOUNT_GATEWAY_CONFIG" ] || return 0
+    configured=$(/bin/busybox cat "$ACCOUNT_GATEWAY_CONFIG" 2>/dev/null || true)
+    if valid_account_gateway_base_url "$configured"; then
+        ACCOUNT_GATEWAY_ORIGIN=$configured
+    else
+        echo "ordax-surface: signed account gateway config is invalid; disabling online account" >>"$HOST_LOG"
+    fi
+}
 
 case "$PRODUCT_MODE" in
     usb|native-disk) ;;
