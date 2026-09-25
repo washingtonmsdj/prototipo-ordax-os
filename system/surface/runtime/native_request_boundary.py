@@ -12,6 +12,7 @@ import hmac
 from urllib.parse import urlsplit
 
 NATIVE_API_PREFIX = "/__ordax/native/"
+ACCOUNT_API_PREFIXES = ("/auth/", "/sync/")
 TRUSTED_BIND_HOST = "127.0.0.1"
 _ALLOWED_FETCH_SITES = frozenset({"same-origin", "none"})
 
@@ -113,6 +114,8 @@ def request_is_trusted(headers, server_address, request_target: str) -> bool:
 
     if not host_header_is_trusted(headers, authority):
         return False
-    if path.startswith(NATIVE_API_PREFIX):
+    if path.startswith(NATIVE_API_PREFIX) or any(
+        path.startswith(prefix) for prefix in ACCOUNT_API_PREFIXES
+    ):
         return browser_context_is_trusted(headers, origin)
     return True
