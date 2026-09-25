@@ -268,7 +268,6 @@ def validate_portable_release(
         "ai_runtime": ai_runtime,
         "ai_runtime_sha256": ai_runtime_sha,
     }
-
 def validate_inputs(args: argparse.Namespace) -> dict[str, Any]:
     if COMMIT_RE.fullmatch(args.source_commit) is None:
         raise ProofError("source commit must be lowercase 40-hex")
@@ -525,7 +524,7 @@ def boot_qemu_expected(
             stderr=error_stream,
         )
     try:
-        deadline = time.monotonic() + 150.0
+        deadline = time.monotonic() + (300.0 if graphical_hardware else 150.0)
         while time.monotonic() < deadline:
             text = serial.read_text(encoding="utf-8", errors="replace") if serial.exists() else ""
             source_marker = "ORDAX_PORTABLE_V2_SOURCE_SHA=" + expected_commit
