@@ -18,12 +18,14 @@ import {
   validateWorkspaceMetadata,
 } from "../../contracts/workspace-metadata-source.mjs";
 import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
+import { assertSpacesPort, validateSpacesSnapshot } from "../../contracts/spaces.mjs";
 
 const ACCOUNT_WINDOW_SELECTOR = '[data-window-id="account"]';
 const ACCOUNT_EXTENSION_SELECTOR = '[data-app-extension="account-overview"]';
 
 const ACCOUNT_SECTIONS = Object.freeze([
   Object.freeze({ id: "overview", messageId: "account.section.overview" }),
+  Object.freeze({ id: "spaces", messageId: "account.section.spaces" }),
   Object.freeze({ id: "sync", messageId: "account.section.sync" }),
 ]);
 
@@ -84,6 +86,7 @@ export function mountAccountOverviewControls(
   workspaceMetadataSource = null,
   appActivation = null,
   identityCredentials = null,
+  spaces = null,
 ) {
   if (!(root instanceof Element)) {
     throw new TypeError("Account overview controls require a Surface root Element");
@@ -99,6 +102,7 @@ export function mountAccountOverviewControls(
     ? null
     : assertWorkspaceMetadataSource(workspaceMetadataSource);
   const activationPort = appActivation === null ? null : assertAppActivationPort(appActivation);
+  const spacesPort = spaces === null ? null : assertSpacesPort(spaces);
   const lifecycle = assertSurfaceRenderLifecycle(surfaceLifecycle);
   const localization = lifecycle.localization;
   const t = localization.translate;
@@ -109,6 +113,9 @@ export function mountAccountOverviewControls(
   let syncSnapshot = syncPort ? validateSyncRuntimeSnapshot(syncPort.getSnapshot()) : null;
   let workspaceMetadataSnapshot = workspaceMetadataPort
     ? validateWorkspaceMetadata(workspaceMetadataPort.getSnapshot())
+    : null;
+  let spacesSnapshot = spacesPort
+    ? validateSpacesSnapshot(spacesPort.getSnapshot())
     : null;
   let pendingAction = null;
   let actionMessage = "";
@@ -363,6 +370,113 @@ export function mountAccountOverviewControls(
     view.append(section);
   };
 
+  const refreshSpaces = () => {
+    if (!spacesPort || sessionSnapshot.state !== "signed-in") return;
+    void spacesPort.refresh().catch(() => {});
+  };
+
+  const renderSpaces = (view) => {
+    const section = node(documentObject, "section", "ordax-account-section");
+    section.append(
+      node(documentObject, "span", "ordax-account-eyebrow", t("account.spaces.eyebrow")),
+      node(documentObject, "h4", "ordax-account-section-title", t("account.spaces.title")),
+      node(documentObject, "p", "ordax-account-subtitle", t("account.spaces.subtitle")),
+    );
+
+    if (sessionSnapshot.state !== "signed-in") {
+      const grid = node(documentObject, "div", "ordax-account-grid");
+      appendStateCard(
+        documentObject,
+        grid,
+        t("account.spaces.status"),
+        t("account.spaces.signIn"),
+        t("account.spaces.signIn.detail"),
+        "unavailable",
+      );
+      section.append(grid);
+      view.append(section);
+      return;
+    }
+
+    if (!spacesPort || !spacesSnapshot) {
+      const grid = node(documentObject, "div", "ordax-account-grid");
+      appendStateCard(
+        documentObject,
+        grid,
+        t("account.spaces.status"),
+        t("account.spaces.unavailable"),
+        t("account.spaces.unavailable.detail"),
+        "unavailable",
+      );
+      section.append(grid);
+      view.append(section);
+      return;
+    }
+
+    const actions = node(documentObject, "div", "ordax-account-actions");
+    const refresh = node(
+      documentObject,
+      "button",
+      "ordax-account-action",
+      spacesSnapshot.state === "loading"
+        ? t("account.spaces.refreshing")
+        : t("account.spaces.refresh"),
+    );
+    refresh.type = "button";
+    refresh.dataset.accountSpacesRefresh = "";
+    refresh.disabled = spacesSnapshot.state === "loading";
+    actions.append(refresh);
+    section.append(actions);
+
+    if (spacesSnapshot.state === "loading" || spacesSnapshot.state === "idle") {
+      section.append(node(documentObject, "p", "ordax-account-message", t("account.spaces.loading")));
+      view.append(section);
+      return;
+    }
+    if (spacesSnapshot.state === "error") {
+      section.append(node(documentObject, "p", "ordax-account-message", t("account.spaces.error")));
+      view.append(section);
+      return;
+    }
+    if (spacesSnapshot.state !== "ready") {
+      section.append(node(documentObject, "p", "ordax-account-message", t("account.spaces.unavailable.detail")));
+      view.append(section);
+      return;
+    }
+    if (spacesSnapshot.spaces.length === 0) {
+      section.append(node(documentObject, "p", "ordax-account-message", t("account.spaces.empty")));
+      view.append(section);
+      return;
+    }
+
+    const grid = node(documentObject, "div", "ordax-account-grid");
+    for (const space of spacesSnapshot.spaces) {
+      const access = space.ownerId === sessionSnapshot.subjectId
+        ? t("account.spaces.access.owner")
+        : t("account.spaces.access.member");
+      const kind = t(`account.spaces.kind.${space.kind}`);
+      const state = t(`account.spaces.state.${space.state}`);
+      const detail = space.profilePack
+        ? t("account.spaces.card.detailPack", {
+            kind,
+            state,
+            access,
+            pack: space.profilePack,
+          })
+        : t("account.spaces.card.detail", { kind, state, access });
+      appendStateCard(
+        documentObject,
+        grid,
+        t("account.spaces.card.label"),
+        space.name,
+        detail,
+        space.state === "active" ? "available" : "neutral",
+      );
+    }
+    section.append(grid);
+    view.append(section);
+  };
+
   const renderContinuity = (view) => {
     const section = node(documentObject, "section", "ordax-account-section");
     section.append(
@@ -505,6 +619,8 @@ export function mountAccountOverviewControls(
     renderSectionNavigation(view);
     if (activeSection === "overview") {
       renderIdentity(view);
+    } else if (activeSection === "spaces") {
+      renderSpaces(view);
     } else if (activeSection === "sync") {
       renderContinuity(view);
     }
@@ -598,7 +714,14 @@ export function mountAccountOverviewControls(
       } else {
         activeSection = nextSection;
         replaceView();
+        if (nextSection === "spaces") refreshSpaces();
       }
+      return;
+    }
+
+    const refreshButton = event.target.closest("[data-account-spaces-refresh]");
+    if (refreshButton && root.contains(refreshButton)) {
+      refreshSpaces();
       return;
     }
 
@@ -626,12 +749,19 @@ export function mountAccountOverviewControls(
       activeSection = activation.target;
       actionMessage = "";
       replaceView();
+      if (activeSection === "spaces") refreshSpaces();
     }
   });
   const unsubscribeSession = sessionPort.subscribe((snapshot) => {
     sessionSnapshot = validateIdentitySessionSnapshot(snapshot);
+    if (sessionSnapshot.state !== "signed-in") {
+      spacesPort?.reset();
+    }
     actionMessage = "";
     replaceView();
+    if (activeSection === "spaces" && sessionSnapshot.state === "signed-in") {
+      refreshSpaces();
+    }
   });
   const unsubscribeActions = actionsPort.subscribe((snapshot) => {
     actionsSnapshot = validateIdentityActionsSnapshot(snapshot);
@@ -646,11 +776,19 @@ export function mountAccountOverviewControls(
     workspaceMetadataSnapshot = validateWorkspaceMetadata(snapshot);
     replaceView();
   });
+  const unsubscribeSpaces = spacesPort?.subscribe((snapshot) => {
+    spacesSnapshot = validateSpacesSnapshot(snapshot);
+    replaceView();
+  });
+  if (activeSection === "spaces" && sessionSnapshot.state === "signed-in") {
+    refreshSpaces();
+  }
 
   return Object.freeze({
     destroy() {
       destroyed = true;
       actionOrdinal += 1;
+      unsubscribeSpaces?.();
       unsubscribeWorkspaceMetadata?.();
       unsubscribeSync?.();
       unsubscribeActions?.();
