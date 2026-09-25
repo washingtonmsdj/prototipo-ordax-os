@@ -178,11 +178,31 @@ IMPLEMENTATION=COMPLETE
 NOTES=Preserve the legacy separation Ordax Intelligence -> AI Runtime/Inference Broker while reimplementing clean-room in the current architecture. Assistant UI is a client, not the intelligence owner.
 ```
 
+
+## Ledger 005 - Development Device Agent control-plane protocol
+
+```text
+COMPONENT=ordax-device-agent-development-control-plane
+LEGACY_REPOSITORY=washingtonmsdj/novo-ordax-os
+LEGACY_COMMIT=49fe41fa67d9032f2e349e86592304e64d6c2d88
+LEGACY_PATH=tools/ordax-control-plane/supabase/migrations/20260905180845_add_boot_capsule_preflight_capability.sql + tools/ordax-control-plane/supabase/migrations/20260829005500_ordax_internal_develop_fastpath_v2.sql
+RESPONSIBILITY=typed engineering job queue, authorization, leasing/fencing and Device Agent delivery semantics
+WHY_NEEDED=the OrdaX Device Agent historically incubated in mcp-blender needs one shared development control plane without creating a second backend or merging product credentials with engineering authority
+DEPENDENCIES=ordax-control-plane engineering tables/functions; device-scoped development credential; OrdaX Device Agent typed ActionRegistry
+SECURITY_REVIEW=product and development credentials remain separate; adapter envelope is DEVELOP-only, Blender-only in v1, project-scoped, bounded and cannot grant generic shell/raw disk/release signing/SYSTEM authority
+TESTS=tests/test_device_agent_contracts.mjs in this repository + tests/test_development_control_plane.py in washingtonmsdj/mcp-blender
+ARTIFACT_SHA256=NOT_APPLICABLE_SOURCE_REIMPLEMENTATION
+DECISION=REIMPLEMENTED
+TARGET_PATH=infra/supabase/development
+IMPLEMENTATION=SOURCE_COMPLETE_BACKEND_APPLY_PENDING
+NOTES=Legacy source is protocol reference/provenance only. The prototype owns the new ordax.dev.adapter.invoke extension and keeps infra/supabase/product authority separate.
+```
+
 ## Current ledger state
 
 ```text
-REVIEWED_COMPONENT_COUNT=4
-IMPLEMENTED_MIGRATION_COUNT=1
+REVIEWED_COMPONENT_COUNT=5
+IMPLEMENTED_MIGRATION_COUNT=2
 BULK_LEGACY_IMPORT=NO
 LEGACY_REPOSITORY_CHANGED_BY_MIGRATION=NO
 ```
