@@ -1,9 +1,8 @@
-"""OrdaX same-origin public identity gateway.
+"""OrdaX same-origin identity and account-sync gateway.
 
-The gateway owns browser credentials/session boundaries while Supabase Auth is
-only a provider adapter. Access and refresh tokens never enter public-site
-JavaScript: they are stored in HttpOnly cookies owned by this same-origin
-service. Provider configuration is runtime-only.
+Browser credentials and provider bearer tokens remain inside HttpOnly cookies.
+The public Surface talks only to OrdaX-owned /auth/* and /sync/* routes; Supabase
+is a replaceable provider adapter behind that boundary.
 """
 
 from __future__ import annotations
@@ -16,14 +15,24 @@ from typing import Mapping
 from urllib.parse import parse_qs, urlsplit
 
 from supabase_password import SupabaseIdentityError, SupabasePasswordProvider
+from supabase_sync import SupabaseSyncError, SupabaseSyncProvider
 
 SESSION_SCHEMA = "prototype-ordax.public-identity-session/1"
+SYNC_BATCH_SCHEMA = "prototype-ordax.sync-batch/1"
+SYNC_ACK_SCHEMA = "prototype-ordax.sync-ack/1"
 ERROR_SCHEMA = "prototype-ordax.public-identity-error/1"
 JSON_CONTENT_TYPE = "application/json; charset=utf-8"
 NO_STORE = "no-store, max-age=0"
-MAX_REQUEST_BODY = 16 * 1024
+MAX_REQUEST_BODY = 64 * 1024
 ACCESS_COOKIE = "ordax_access"
 REFRESH_COOKIE = "ordax_refresh"
+SYNC_DATA_CLASSES = frozenset((
+    "appearance",
+    "preferences",
+    "workspace-metadata",
+    "app-state-metadata",
+    "user-selected-cloud-content",
+))
 
 
 @dataclass(frozen=True)
@@ -33,17 +42,30 @@ class GatewayResponse:
     body: bytes
 
 
-class ProviderUnavailable(RuntimeError):
-    pass
-
-
-def _provider_from_environment() -> SupabasePasswordProvider | None:
+def _provider_config() -> tuple[str, str] | None:
     project_url = os.environ.get("ORDAX_SUPABASE_URL", "").strip()
     publishable_key = os.environ.get("ORDAX_SUPABASE_PUBLISHABLE_KEY", "").strip()
     if not project_url or not publishable_key:
         return None
+    return project_url, publishable_key
+
+
+def _provider_from_environment() -> SupabasePasswordProvider | None:
+    config = _provider_config()
+    if config is None:
+        return None
     try:
-        return SupabasePasswordProvider(project_url, publishable_key)
+        return SupabasePasswordProvider(*config)
+    except (TypeError, ValueError):
+        return None
+
+
+def _sync_provider_from_environment() -> SupabaseSyncProvider | None:
+    config = _provider_config()
+    if config is None:
+        return None
+    try:
+        return SupabaseSyncProvider(*config)
     except (TypeError, ValueError):
         return None
 
@@ -125,17 +147,6 @@ def _error(status: int, code: str, message: str) -> GatewayResponse:
     )
 
 
-def _safe_same_origin_path(value: str) -> bool:
-    split = urlsplit(value)
-    return (
-        value.startswith("/")
-        and not value.startswith("//")
-        and not split.scheme
-        and not split.netloc
-        and not split.fragment
-    )
-
-
 def _form(body: bytes, content_type: str) -> dict[str, str]:
     if len(body) > MAX_REQUEST_BODY:
         raise ValueError("request-too-large")
@@ -146,6 +157,20 @@ def _form(body: bytes, content_type: str) -> dict[str, str]:
     except (UnicodeError, ValueError) as exc:
         raise ValueError("invalid-form") from exc
     return {key: items[-1] for key, items in values.items() if items}
+
+
+def _json_body(body: bytes, content_type: str) -> dict:
+    if len(body) > MAX_REQUEST_BODY:
+        raise ValueError("request-too-large")
+    if not content_type.lower().startswith("application/json"):
+        raise ValueError("unsupported-content-type")
+    try:
+        value = json.loads(body.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("invalid-json") from exc
+    if not isinstance(value, dict):
+        raise ValueError("json-object-required")
+    return value
 
 
 def _same_origin_state_change(headers: Mapping[str, str]) -> bool:
@@ -160,8 +185,15 @@ def _same_origin_state_change(headers: Mapping[str, str]) -> bool:
 
 
 class PublicIdentityGateway:
-    def __init__(self, provider: SupabasePasswordProvider | None = None) -> None:
+    def __init__(
+        self,
+        provider: SupabasePasswordProvider | None = None,
+        sync_provider: SupabaseSyncProvider | None = None,
+    ) -> None:
         self.provider = provider if provider is not None else _provider_from_environment()
+        self.sync_provider = (
+            sync_provider if sync_provider is not None else _sync_provider_from_environment()
+        )
 
     @property
     def provider_configured(self) -> bool:
@@ -174,9 +206,37 @@ class PublicIdentityGateway:
             "O serviço de identidade OrdaX ainda não está configurado.",
         )
 
-    def _session(
+    def _authenticated_access(
         self, request_headers: Mapping[str, str]
-    ) -> GatewayResponse:
+    ) -> tuple[str | None, tuple[str, ...]]:
+        if not self.provider:
+            return None, ()
+        cookies = _read_cookies(request_headers.get("cookie"))
+        access = cookies.get(ACCESS_COOKIE)
+        refresh = cookies.get(REFRESH_COOKIE)
+        if access:
+            try:
+                self.provider.get_user(access)
+                return access, ()
+            except SupabaseIdentityError:
+                pass
+        if refresh:
+            try:
+                session = self.provider.refresh_session(refresh)
+                self.provider.get_user(session.access_token)
+                return (
+                    session.access_token,
+                    _session_cookies(
+                        session.access_token,
+                        session.refresh_token,
+                        session.expires_in,
+                    ),
+                )
+            except SupabaseIdentityError:
+                pass
+        return None, (_clear_cookie(ACCESS_COOKIE), _clear_cookie(REFRESH_COOKIE))
+
+    def _session(self, request_headers: Mapping[str, str]) -> GatewayResponse:
         if not self.provider:
             return _json_response(
                 200,
@@ -188,9 +248,7 @@ class PublicIdentityGateway:
                 },
             )
 
-        cookies = _read_cookies(request_headers.get("cookie"))
-        access = cookies.get(ACCESS_COOKIE)
-        refresh = cookies.get(REFRESH_COOKIE)
+        access, set_cookies = self._authenticated_access(request_headers)
         if access:
             try:
                 subject, email = self.provider.get_user(access)
@@ -204,27 +262,7 @@ class PublicIdentityGateway:
                         "subject": subject,
                         "email": email,
                     },
-                )
-            except SupabaseIdentityError:
-                pass
-
-        if refresh:
-            try:
-                session = self.provider.refresh_session(refresh)
-                subject, email = self.provider.get_user(session.access_token)
-                return _json_response(
-                    200,
-                    {
-                        "$schema": SESSION_SCHEMA,
-                        "authenticated": True,
-                        "provider": "supabase",
-                        "status": "authenticated",
-                        "subject": subject,
-                        "email": email,
-                    },
-                    set_cookies=_session_cookies(
-                        session.access_token, session.refresh_token, session.expires_in
-                    ),
+                    set_cookies=set_cookies,
                 )
             except SupabaseIdentityError:
                 pass
@@ -237,7 +275,7 @@ class PublicIdentityGateway:
                 "provider": "supabase",
                 "status": "anonymous",
             },
-            set_cookies=(_clear_cookie(ACCESS_COOKIE), _clear_cookie(REFRESH_COOKIE)),
+            set_cookies=set_cookies,
         )
 
     def _credentials_action(
@@ -279,6 +317,76 @@ class PublicIdentityGateway:
                 result.session.refresh_token,
                 result.session.expires_in,
             ),
+        )
+
+    def _sync_list(
+        self,
+        request_headers: Mapping[str, str],
+        query: str,
+    ) -> GatewayResponse:
+        if not self.provider or not self.sync_provider:
+            return self._provider_unavailable()
+        access, set_cookies = self._authenticated_access(request_headers)
+        if not access:
+            return _json_response(
+                401,
+                {"$schema": ERROR_SCHEMA, "error": "authentication-required", "message": "Entre na Conta OrdaX para sincronizar."},
+                set_cookies=set_cookies,
+            )
+        try:
+            values = parse_qs(query, keep_blank_values=False)
+            after = int(values.get("afterRevision", ["0"])[-1])
+            limit = int(values.get("limit", ["200"])[-1])
+            objects = self.sync_provider.list_objects(
+                access, after_revision=after, limit=limit
+            )
+        except (ValueError, SupabaseSyncError):
+            return _error(502, "sync-read-failed", "Não foi possível ler o estado sincronizado.")
+        return _json_response(
+            200,
+            {"$schema": SYNC_BATCH_SCHEMA, "objects": objects},
+            set_cookies=set_cookies,
+        )
+
+    def _sync_mutate(
+        self,
+        request_headers: Mapping[str, str],
+        body: bytes,
+    ) -> GatewayResponse:
+        if not self.provider or not self.sync_provider:
+            return self._provider_unavailable()
+        if not _same_origin_state_change(request_headers):
+            return _error(403, "cross-site-request-rejected", "A solicitação cross-site foi rejeitada.")
+        access, set_cookies = self._authenticated_access(request_headers)
+        if not access:
+            return _json_response(
+                401,
+                {"$schema": ERROR_SCHEMA, "error": "authentication-required", "message": "Entre na Conta OrdaX para sincronizar."},
+                set_cookies=set_cookies,
+            )
+        try:
+            mutation = _json_body(body, request_headers.get("content-type", ""))
+            if mutation.get("$schema") != "ordax.sync-mutation/1":
+                raise ValueError("unsupported-sync-mutation")
+            if mutation.get("dataClass") not in SYNC_DATA_CLASSES:
+                raise ValueError("unsupported-sync-data-class")
+            result = self.sync_provider.apply_mutation(access, mutation)
+        except ValueError:
+            return _error(400, "invalid-sync-mutation", "A alteração de sincronização é inválida.")
+        except SupabaseSyncError:
+            return _error(502, "sync-write-failed", "Não foi possível gravar o estado sincronizado.")
+        return _json_response(
+            200,
+            {
+                "$schema": SYNC_ACK_SCHEMA,
+                "objectId": mutation.get("objectId"),
+                "dataClass": mutation.get("dataClass"),
+                "serverRevision": result.server_revision,
+                "tombstone": result.tombstone,
+                "applied": result.applied,
+                "conflict": result.conflict,
+            },
+            set_cookies=set_cookies,
         )
 
     def handle(
@@ -333,8 +441,18 @@ class PublicIdentityGateway:
                 set_cookies=(_clear_cookie(ACCESS_COOKIE), _clear_cookie(REFRESH_COOKIE)),
             )
 
-        if path.startswith("/auth/"):
-            return _error(404, "identity-route-not-found", "Rota de identidade inexistente.")
+        if path == "/sync/objects":
+            if method != "GET":
+                return self._method_not_allowed("GET")
+            return self._sync_list(request_headers, split.query)
+
+        if path == "/sync/mutate":
+            if method != "POST":
+                return self._method_not_allowed("POST")
+            return self._sync_mutate(request_headers, body)
+
+        if path.startswith("/auth/") or path.startswith("/sync/"):
+            return _error(404, "gateway-route-not-found", "Rota inexistente.")
         return _error(404, "not-found", "Recurso inexistente.")
 
     @staticmethod
@@ -389,6 +507,7 @@ def application(environ, start_response):
         404: "Not Found",
         405: "Method Not Allowed",
         413: "Payload Too Large",
+        502: "Bad Gateway",
         503: "Service Unavailable",
     }.get(response.status, "Error")
     start_response(f"{response.status} {reason}", list(response.headers))
