@@ -54,7 +54,15 @@
     "max_completion_chars": 131072,
     "completion_nul_allowed": false,
     "stale_probe_may_override_newer_activity": false,
-    "newest_concurrent_probe_owns_probe_state": true
+    "newest_concurrent_probe_owns_probe_state": true,
+    "hardware_probe_runtime_owner": "bootstrap/stable-base/ordax-stable-init",
+    "hardware_probe_runtime_language": "posix-shell-busybox-compatible",
+    "hardware_probe_before_backend_exec": true,
+    "hardware_probe_current_start_blocker": "runtime-artifact-architecture-mismatch",
+    "hardware_probe_required_architecture": "x86_64",
+    "hardware_probe_cpu_and_memory_are_observational_only": true,
+    "hardware_probe_adds_runtime_dependency": false,
+    "hardware_probe_failure_degrades_local_ai_only": true
   },
   "storage": {
     "release_artifact_name": "local-ai-runtime.erofs",
