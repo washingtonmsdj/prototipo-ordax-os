@@ -1,0 +1,61 @@
+{
+  "$schema": "prototype-ordax.portable-v3-cold-health-qemu-proof-spec/1",
+  "status": "candidate-proof-not-yet-promoted",
+  "product_scope": "stable-mvp-usb-only",
+  "workflow": ".github/workflows/portable-v2-qemu-boot-proof.yml",
+  "runner": "bootstrap/portable-v2/qemu_cold_health_commit.py",
+  "base_runner": "bootstrap/portable-v2/qemu_boot.py",
+  "proof_mode": "armed-candidate-real-supervisor-cold-health-commit",
+  "source_identity": {
+    "candidate": "exact-current-head",
+    "previous": "exact-pr-base-or-main-parent",
+    "previous_source_tree_required": true,
+    "same_ephemeral_ci_trust_required": true,
+    "content_addressed_surface_runtime_reuse_required": true
+  },
+  "required_sequence": [
+    "build-and-sign-candidate-release-v4",
+    "build-and-sign-previous-release-from-real-previous-source-tree",
+    "arm-ext4-activation-state-with-ordax-portable-state-prepare",
+    "boot-candidate-one-shot-with-network-disabled",
+    "run-shared-system-supervisor",
+    "observe-real-surface-health-for-exact-candidate-sha",
+    "commit-through-ordax-portable-state",
+    "emit-post-commit-serial-marker",
+    "inspect-persistent-ext4-state-read-only",
+    "boot-again-on-the-same-disposable-disk",
+    "select-candidate-as-current",
+    "destroy-disposable-guest-disk"
+  ],
+  "post_commit_marker": "ORDAX_PORTABLE_COLD_HEALTH_COMMIT=<candidate-sha>",
+  "required_final_state": {
+    "current": "candidate",
+    "known_good": "previous",
+    "rejected": "not-candidate",
+    "candidate_file": "absent",
+    "activation_transaction": "absent",
+    "second_boot_slot": "current",
+    "second_boot_source_commit": "candidate"
+  },
+  "safety": {
+    "qemu_network": "disabled",
+    "physical_target_device_touched": false,
+    "physical_write_authorized": false,
+    "public_physical_promotion_allowed": false,
+    "guest_disk_retained": false,
+    "physical_usb_boot_proven": false,
+    "secure_boot_proven": false,
+    "qemu_disk_cache_mode": "directsync",
+    "final_state_inspection": "read-only-copy-fail-closed",
+    "post_commit_marker_is_observation_only": true,
+    "marker_emitted_only_after_real_portable_state_commit": true
+  },
+  "promotion_effect": {
+    "failure_fallback_proof_remains_separate": true,
+    "disposable_qemu_cold_health_commit_gate_can_close_after_exact_main_proof": true,
+    "physical_cold_health_gate_closed": false,
+    "physical_known_good_gate_closed": false,
+    "physical_rollback_gate_closed": false,
+    "physical_usb_gate_closed": false
+  }
+}
