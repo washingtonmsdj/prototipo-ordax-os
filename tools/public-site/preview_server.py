@@ -140,19 +140,19 @@ class PublicPortalPreviewHandler(BaseHTTPRequestHandler):
             self.wfile.write(payload)
 
     def do_GET(self):  # noqa: N802
-        if urlsplit(self.path).path.startswith("/auth/"):
+        if urlsplit(self.path).path.startswith(("/auth/", "/sync/")):
             self._send_gateway("GET")
             return
         self._send_static("GET")
 
     def do_HEAD(self):  # noqa: N802
-        if urlsplit(self.path).path.startswith("/auth/"):
+        if urlsplit(self.path).path.startswith(("/auth/", "/sync/")):
             self._send_gateway("HEAD")
             return
         self._send_static("HEAD")
 
     def do_POST(self):  # noqa: N802
-        if urlsplit(self.path).path.startswith("/auth/"):
+        if urlsplit(self.path).path.startswith(("/auth/", "/sync/")):
             self._send_gateway("POST")
             return
         body = b"Method Not Allowed\n"
