@@ -322,6 +322,7 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
 
     def test_surface_smoke_gate_tracks_fail_closed_finalizer(self):
         promotion_text = PROMOTION_GATES.read_text(encoding="utf-8")
+        current_state_text = CURRENT_STATE.read_text(encoding="utf-8")
         promotion = assignment_map(promotion_text)
 
         self.assertEqual(promotion["MVP_SURFACE_SMOKE_HARNESS"], "PASS_SOURCE")
