@@ -4,6 +4,7 @@ export const PROFILE_PACK_ACTIVATION_SCHEMA = "ordax.profile-pack-activation/1";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SPACE_KINDS = new Set(["personal", "work", "professional"]);
+const PACK_STATES = new Set(["draft", "active", "retired"]);
 const MEMORY_SCOPES = new Set(["device", "account", "space", "project", "session"]);
 
 function objectValue(value, label) {
@@ -33,9 +34,7 @@ export function validateProfilePack(value, label = "Profile Pack") {
   const slug = text(pack.slug, `${label} slug`, 80);
   if (!SLUG_PATTERN.test(slug)) throw new TypeError(`${label} slug is invalid`);
   if (!Number.isSafeInteger(pack.version) || pack.version < 1) throw new TypeError(`${label} version is invalid`);
-  if (pack.state !== "draft" && pack.state !== "internal-proof" && pack.state !== "published") {
-    throw new TypeError(`${label} state is invalid`);
-  }
+  if (!PACK_STATES.has(pack.state)) throw new TypeError(`${label} state is invalid`);
   if (!SPACE_KINDS.has(pack.space_kind)) throw new TypeError(`${label} space kind is invalid`);
 
   const security = objectValue(pack.security, `${label} security`);
