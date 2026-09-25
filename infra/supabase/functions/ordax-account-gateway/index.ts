@@ -445,6 +445,88 @@ async function updateRecoveryPassword(req: Request) {
       );
 }
 
+async function closeAccount(req: Request) {
+  if (!ACCOUNT_CLOSE_ENABLED) {
+    return error(503, "account-close-disabled", "O fechamento da Conta OrdaX ainda não está ativado.");
+  }
+
+  const session = await authenticated(req);
+  if (!session.user || !session.access || !session.user.email) {
+    return json(401, {
+      $schema: ERROR_SCHEMA,
+      error: "authentication-required",
+      message: "Entre novamente na Conta OrdaX.",
+    }, session.cookies);
+  }
+
+  let raw = "";
+  try {
+    raw = await boundedBody(req);
+  } catch {
+    return error(413, "request-too-large", "A solicitação excede o limite permitido.");
+  }
+  const type = (req.headers.get("content-type") ?? "").toLowerCase();
+  if (!type.startsWith("application/x-www-form-urlencoded")) {
+    return error(400, "invalid-account-close-request", "Solicitação de fechamento inválida.");
+  }
+  const form = new URLSearchParams(raw);
+  const password = form.get("password") ?? "";
+  const confirmation = form.get("confirmation") ?? "";
+  if (!password || confirmation !== "close-account") {
+    return error(
+      400,
+      "account-close-confirmation-required",
+      "Confirmação explícita e senha atual são obrigatórias.",
+    );
+  }
+
+  const authClient = client();
+  const { data: fresh, error: reauthError } = await authClient.auth.signInWithPassword({
+    email: session.user.email,
+    password,
+  });
+  if (reauthError || !fresh.session) {
+    return error(401, "recent-authentication-required", "Confirme sua senha atual para fechar a conta.");
+  }
+
+  const { url, key } = config();
+  let lifecycleResponse: Response;
+  try {
+    lifecycleResponse = await fetch(url + "/functions/v1/ordax-account-lifecycle/close", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "apikey": key,
+        "authorization": "Bearer " + fresh.session.access_token,
+      },
+      body: JSON.stringify({ confirmation: "close-account" }),
+    });
+  } catch {
+    return error(503, "account-close-unavailable", "O serviço de fechamento está indisponível.");
+  }
+
+  if (!lifecycleResponse.ok) {
+    let code = "account-close-unavailable";
+    try {
+      const payload = await lifecycleResponse.json();
+      if (payload && typeof payload.error === "string") code = payload.error;
+    } catch {
+      // Keep a neutral error code.
+    }
+    if (lifecycleResponse.status === 401) {
+      return error(401, "recent-authentication-required", "Reautenticação recente obrigatória.");
+    }
+    if (lifecycleResponse.status === 409) {
+      return error(409, "account-close-blocked", "Não foi possível concluir o fechamento da conta.");
+    }
+    return error(503, code, "O serviço de fechamento está indisponível.");
+  }
+
+  return wantsJson(req)
+    ? json(200, { closed: true }, clearCookies())
+    : redirectResponse("/", clearCookies());
+}
+
 async function credentials(req: Request, register: boolean) {
   let raw = "";
   try { raw = await boundedBody(req); } catch { return error(413, "request-too-large", "A solicitação excede o limite permitido."); }
