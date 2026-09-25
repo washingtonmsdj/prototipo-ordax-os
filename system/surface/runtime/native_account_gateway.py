@@ -234,6 +234,10 @@ class NativeAccountGateway:
             self._persist_session()
             return reply
 
+    def account_export(self) -> GatewayReply:
+        with self._lock:
+            return self._request("GET", "/account/export")
+
     def list_sync_objects(self, query: str = "") -> GatewayReply:
         suffix = f"?{query}" if query else ""
         with self._lock:
