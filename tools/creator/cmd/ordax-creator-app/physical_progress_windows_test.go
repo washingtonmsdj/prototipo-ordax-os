@@ -2,7 +2,10 @@
 
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestPhysicalProgressPresentationUsesByteProgressForWriteAndVerify(t *testing.T) {
 	write := physicalProgressDocument{Schema: physicalProgressSchema, Phase: "writing", CompletedBytes: 50, TotalBytes: 100}
@@ -28,5 +31,18 @@ func TestPhysicalProgressPresentationCompletesAtOneHundred(t *testing.T) {
 	_, _, percent, ok := physicalProgressPresentation(physicalProgressDocument{Schema: physicalProgressSchema, Phase: "complete", CompletedBytes: 1, TotalBytes: 1})
 	if !ok || percent != 100 {
 		t.Fatalf("complete progress=(%d,%v) want=(100,true)", percent, ok)
+	}
+}
+
+func TestGuidedPhysicalProgressCopyKeepsSafetyInstructionVisible(t *testing.T) {
+	status, hint := guidedPhysicalProgressCopy("Gravando OrdaX no pendrive…", "Gravação: 1.0 de 2.0 MiB.")
+	if !strings.Contains(status, "Criando o OrdaX USB") {
+		t.Fatalf("status=%q must carry guided creation stage", status)
+	}
+	if !strings.Contains(hint, "Não remova o pendrive") {
+		t.Fatalf("hint=%q must keep the removal warning visible", hint)
+	}
+	if !strings.Contains(hint, "Gravação: 1.0 de 2.0 MiB.") {
+		t.Fatalf("hint=%q must preserve backend byte progress", hint)
 	}
 }
