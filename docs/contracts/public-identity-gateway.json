@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-sync-and-account-export-gateway-source-v11-edge-revision-14-public-server-gated",
+  "status": "real-auth-sync-export-gateway-source-v12-close-source-ready-deployed-source-v11-revision-14",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
@@ -9,8 +9,13 @@
     "provider_adapter": "supabase-password-and-sync-rest",
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
-    "gateway_source_version": 11,
-    "edge_deployment_revision_observed": 14
+    "gateway_source_version": 12,
+    "edge_deployment_revision_observed": 14,
+    "deployed_gateway_source_version": 11,
+    "lifecycle_service_source": "infra/supabase/functions/ordax-account-lifecycle/index.ts",
+    "lifecycle_service_deployed": true,
+    "lifecycle_service_deployment_revision_observed": 1,
+    "lifecycle_service_enabled": false
   },
   "routes": [
     {
@@ -66,6 +71,12 @@
       "path": "/auth/logout",
       "unconfigured_status": 303,
       "purpose": "revoke-session-and-clear-cookies"
+    },
+    {
+      "method": "POST",
+      "path": "/account/close",
+      "unconfigured_status": 503,
+      "purpose": "reauthenticated-dedicated-lifecycle-account-close-disabled"
     },
     {
       "method": "GET",
@@ -158,7 +169,14 @@
     "account_export_uses_security_invoker": true,
     "account_export_anon_execute_allowed": false,
     "account_export_opaque_metadata_included": false,
-    "public_site_account_export_enabled": false
+    "public_site_account_export_enabled": false,
+    "account_close_source_implemented": true,
+    "account_close_enabled": false,
+    "account_close_gateway_route_deployed": false,
+    "account_close_requires_recent_reauthentication": true,
+    "account_close_requires_explicit_confirmation": true,
+    "account_close_service_role_in_public_gateway": false,
+    "account_close_service_role_isolated_to_lifecycle_service": true
   },
   "deployment": {
     "same_origin_required_for_public_site": true,
