@@ -187,6 +187,20 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
             "prototype-ordax.portable-v4-signed-handoff-verification/1",
         )
         self.assertEqual(
+            contract["operator_artifact_receipt_schema"],
+            "prototype-ordax.canonical-v4-operator-artifact/1",
+        )
+        operator_boundary = contract["operator_input_boundary"]
+        self.assertTrue(operator_boundary["receipt_required_for_each_manual_builder"])
+        self.assertTrue(operator_boundary["same_source_commit_required"])
+        self.assertTrue(operator_boundary["preflight_rehashes_artifact_bytes"])
+        self.assertTrue(operator_boundary["preflight_rechecks_artifact_sizes"])
+        self.assertTrue(operator_boundary["local_ai_source_lock_bound_by_receipt"])
+        self.assertFalse(operator_boundary["publication_performed"])
+        self.assertFalse(operator_boundary["signing_performed"])
+        self.assertFalse(operator_boundary["physical_write_authorized"])
+        self.assertFalse(operator_boundary["physical_write_performed"])
+        self.assertEqual(
             [artifact["name"] for artifact in contract["canonical_artifacts"]],
             ["system.erofs", "native-surface-runtime.erofs", "local-ai-runtime.erofs"],
         )
