@@ -150,12 +150,23 @@ jobs:
           cmp "$a" "$b"
           echo 'SURFACE_RUNTIME_EROFS_REPEAT_DIGEST=PASS'
 
+      - name: Generate operator Surface provenance receipt
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python tools/release-signing/operator_receipt.py \
+            --kind surface \
+            --source-commit "$GITHUB_SHA" \
+            --file "native-surface-runtime.erofs=$RUNNER_TEMP/surface-runtime/build-a/native-surface-runtime.erofs" \
+            --out "$RUNNER_TEMP/surface-runtime/build-a/operator-receipt.json"
+
       - name: Upload operator Surface EROFS only on manual run
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: canonical-v4-operator-surface-${{ github.sha }}
-          path: ${{ runner.temp }}/surface-runtime/build-a/native-surface-runtime.erofs
+          path: |
+            ${{ runner.temp }}/surface-runtime/build-a/native-surface-runtime.erofs
+            ${{ runner.temp }}/surface-runtime/build-a/operator-receipt.json
           if-no-files-found: error
           retention-days: 1
 
