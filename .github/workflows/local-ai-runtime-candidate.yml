@@ -415,6 +415,16 @@ jobs:
           echo "PORTABLE_V4_ACTIVATION_ALLOWED=NO"
           echo "PHYSICAL_WRITE_AUTHORIZED=NO"
 
+      - name: Generate operator Local AI provenance receipt
+        if: github.event_name == 'workflow_dispatch' && success()
+        run: |
+          python tools/release-signing/operator_receipt.py \
+            --kind local-ai \
+            --source-commit "$GITHUB_SHA" \
+            --file "local-ai-runtime.erofs=$RUNNER_TEMP/local-ai-runtime/build-a/local-ai-runtime.erofs" \
+            --file "source-lock.json=system/services/local-ai/source-lock.json" \
+            --out "$RUNNER_TEMP/local-ai-runtime/build-a/operator-receipt.json"
+
       - name: Upload operator Local AI EROFS and source lock only on manual run
         if: github.event_name == 'workflow_dispatch' && success()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -422,6 +432,7 @@ jobs:
           name: canonical-v4-operator-local-ai-${{ github.sha }}
           path: |
             ${{ runner.temp }}/local-ai-runtime/build-a/local-ai-runtime.erofs
+            ${{ runner.temp }}/local-ai-runtime/build-a/operator-receipt.json
             system/services/local-ai/source-lock.json
           if-no-files-found: error
           retention-days: 1
