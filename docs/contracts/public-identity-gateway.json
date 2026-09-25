@@ -1,12 +1,12 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-password-session-flow-implemented-public-activation-gated",
+  "status": "real-auth-and-account-sync-gateway-implemented-public-activation-gated",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
     "external_dependencies": false,
     "listener_owned_here": false,
-    "provider_adapter": "supabase-password",
+    "provider_adapter": "supabase-password-and-sync-rest",
     "provider_configuration": "runtime-environment"
   },
   "routes": [
@@ -45,6 +45,18 @@
       "path": "/auth/logout",
       "unconfigured_status": 303,
       "purpose": "revoke-session-and-clear-cookies"
+    },
+    {
+      "method": "GET",
+      "path": "/sync/objects",
+      "unconfigured_status": 503,
+      "purpose": "authenticated-account-sync-full-read"
+    },
+    {
+      "method": "POST",
+      "path": "/sync/mutate",
+      "unconfigured_status": 503,
+      "purpose": "authenticated-account-sync-mutation"
     }
   ],
   "baseline": {
@@ -57,7 +69,10 @@
     "tokens_in_response_body_allowed": false,
     "provider_adapter_implemented": true,
     "http_only_session_cookies": true,
-    "refresh_session_supported": true
+    "refresh_session_supported": true,
+    "sync_gateway_implemented": true,
+    "sync_tokens_exposed_to_surface": false,
+    "sync_provider_rows_exposed_to_surface": false
   },
   "deployment": {
     "same_origin_required_for_public_site": true,
