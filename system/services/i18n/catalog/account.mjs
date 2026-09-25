@@ -36,6 +36,15 @@ export const ACCOUNT_SOURCE_MESSAGES = Object.freeze({
   "account.continuity.title": "Continuidade preparada neste dispositivo",
   "account.continuity.subtitle": "Estes dados descrevem apenas a fila e o metadata locais. Nada é chamado de sincronizado sem confirmação de um transporte autenticado.",
 
+  "account.card.accountContinuity": "Continuidade da conta",
+  "account.card.continuityActive": "Ativa",
+  "account.card.continuityHostRequired": "Host necessário",
+  "account.card.continuityInactive": "Sem sessão ativa",
+  "account.card.continuityActive.detail": "A sessão autenticada concluiu a reconciliação inicial das classes suportadas neste dispositivo. Isso não substitui a prova física nem o rollout público.",
+  "account.card.continuityHostRequired.detail": "Esta composição precisa de um host autorizado para oferecer identidade e transporte de sincronização.",
+  "account.card.continuityInactive.detail": "O transporte de conta está disponível, mas a continuidade só fica ativa depois de uma sessão autenticada e uma reconciliação bem-sucedida.",
+  "account.card.continuityUnavailable.detail": "Esta composição não expõe estado de continuidade da conta.",
+
   "account.card.localChanges": "Alterações locais",
   "account.card.pending.one": "1 pendente",
   "account.card.pending.many": "{count} pendentes",
@@ -107,6 +116,15 @@ export const ACCOUNT_ENGLISH_MESSAGES = Object.freeze({
   "account.continuity.eyebrow": "Local state",
   "account.continuity.title": "Continuity prepared on this device",
   "account.continuity.subtitle": "These values describe only the local queue and metadata. Nothing is called synchronized without confirmation from an authenticated transport.",
+
+  "account.card.accountContinuity": "Account continuity",
+  "account.card.continuityActive": "Active",
+  "account.card.continuityHostRequired": "Host required",
+  "account.card.continuityInactive": "No active session",
+  "account.card.continuityActive.detail": "The authenticated session completed the initial reconciliation for the supported data classes on this device. This does not replace physical proof or public rollout.",
+  "account.card.continuityHostRequired.detail": "This composition needs an authorized host to provide identity and synchronization transport.",
+  "account.card.continuityInactive.detail": "Account transport is available, but continuity becomes active only after an authenticated session and a successful reconciliation.",
+  "account.card.continuityUnavailable.detail": "This composition does not expose account-continuity state.",
 
   "account.card.localChanges": "Local changes",
   "account.card.pending.one": "1 pending",
