@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.account-lifecycle/1",
-  "status": "account-export-implemented-account-close-source-ready-deployment-pending",
+  "status": "account-export-implemented-account-close-route-deployed-disabled",
   "identity_owner": "ordax-account-gateway",
   "provider": "supabase",
   "principles": {
@@ -51,7 +51,7 @@
       "public_enabled": false,
       "gateway_route": "/account/close",
       "gateway_route_source_implemented": true,
-      "gateway_route_deployed": false,
+      "gateway_route_deployed": true,
       "lifecycle_service": "ordax-account-lifecycle",
       "lifecycle_service_source_implemented": true,
       "lifecycle_service_deployed": true,
@@ -63,7 +63,9 @@
       "requires_explicit_confirmation": true,
       "browser_direct_delete_allowed": false,
       "service_role_isolated_to_lifecycle_service": true,
-      "required_before_public_account_lifecycle_is_complete": true
+      "required_before_public_account_lifecycle_is_complete": true,
+      "gateway_route_deployment_revision_observed": 15,
+      "gateway_source_version": 12
     },
     "account_data_export": {
       "owner": "ordax-account-gateway",
