@@ -13,7 +13,6 @@ jobs:
     env:
       ORDAX_PROOF_ACCOUNT_EMAIL: ${{ secrets.ORDAX_PROOF_ACCOUNT_EMAIL }}
       ORDAX_PROOF_ACCOUNT_PASSWORD: ${{ secrets.ORDAX_PROOF_ACCOUNT_PASSWORD }}
-      ORDAX_PROOF_RECEIPT_PATH: ${{ runner.temp }}/account-sync-two-client-proof.json
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -36,6 +35,8 @@ jobs:
           echo 'ACCOUNT_SYNC_PROOF_CREDENTIALS_PRINTED=NO'
 
       - name: Prove two independent account-sync sessions
+        env:
+          ORDAX_PROOF_RECEIPT_PATH: ${{ runner.temp }}/account-sync-two-client-proof.json
         run: python tools/account-sync/prove_two_clients.py
 
       - name: Validate sanitized receipt shape
