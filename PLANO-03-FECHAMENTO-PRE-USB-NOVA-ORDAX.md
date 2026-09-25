@@ -382,6 +382,8 @@ PHYSICAL_WRITE=STILL_SEPARATE
 
 O bloco acima descreve o **estado exigido para liberar o preflight físico**, não o estado atual. Enquanto `CANONICAL_V4_RELEASE_PROOF=PENDING_OPERATOR_EXECUTION`, este requisito permanece pendente e `FIRST_STABLE_MVP_USB_WRITE` continua em HOLD.
 
+Os três inputs EROFS reais agora podem ser exportados sem publicação por `workflow_dispatch` nos builders canônicos de System, Surface e Local AI. A exportação é manual-only, retida por 1 dia, não contém chave privada e exige que os três artifacts venham do mesmo SHA. Ela reduz a preparação operacional, mas **não** substitui assinatura com a chave canônica, publicação HTTPS revisada, materialização canônica, agregação do recibo ou autorização física.
+
 O gate é de produto/source. Ele **não** substitui:
 
 - trust;
