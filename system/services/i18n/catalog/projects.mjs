@@ -17,6 +17,8 @@ export const PROJECTS_SOURCE_MESSAGES = Object.freeze({
   "projects.unavailable.title": "Projetos locais não disponíveis",
   "projects.unavailable.body": "Esta composição ainda não fornece um catálogo de projetos. Nenhum projeto fictício foi criado.",
   "projects.cloudSummary": "{linked} de {total} projetos têm vínculo com a Conta OrdaX.",
+  "projects.deviceAgent.ready": "Device Agent disponível · {count} capacidades tipadas",
+  "projects.deviceAgent.degraded": "Device Agent indisponível; Projetos continua local",
 });
 
 export const PROJECTS_ENGLISH_MESSAGES = Object.freeze({
@@ -38,4 +40,6 @@ export const PROJECTS_ENGLISH_MESSAGES = Object.freeze({
   "projects.unavailable.title": "Local projects unavailable",
   "projects.unavailable.body": "This composition does not provide a project catalog yet. No fake projects were created.",
   "projects.cloudSummary": "{linked} of {total} projects are linked to your OrdaX Account.",
+  "projects.deviceAgent.ready": "Device Agent available · {count} typed capabilities",
+  "projects.deviceAgent.degraded": "Device Agent unavailable; Projects remains local",
 });
