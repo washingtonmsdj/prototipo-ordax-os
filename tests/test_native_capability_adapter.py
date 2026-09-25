@@ -97,10 +97,15 @@ class NativeCapabilityAdapterTests(unittest.TestCase):
             text.index("void updateWatcher.markHealthy()"),
         )
 
-    def test_native_adapter_does_not_claim_unimplemented_account_or_sync(self):
+    def test_native_account_and_sync_capabilities_are_fail_closed_by_default(self):
         text = NATIVE_RUNTIME.read_text(encoding="utf-8")
-        self.assertNotIn('"account.identity"', text)
-        self.assertNotIn('"sync.safe-state"', text)
+        composition = NATIVE_COMPOSITION.read_text(encoding="utf-8")
+        self.assertIn("accountIdentityAvailable = false", text)
+        self.assertIn("syncSafeStateAvailable = false", text)
+        self.assertIn('if (accountIdentityAvailable) capabilityIds.push("account.identity")', text)
+        self.assertIn('if (syncSafeStateAvailable) capabilityIds.push("sync.safe-state")', text)
+        self.assertIn('throw new TypeError("sync.safe-state requires account.identity")', text)
+        self.assertIn("syncSafeStateAvailable: false", composition)
         self.assertNotIn('"system.release-activation"', text)
         self.assertNotIn('"system.recovery"', text)
 
