@@ -25,7 +25,7 @@
     "observed_date": "2026-09-24",
     "leaked_password_protection": "disabled-warn",
     "public_login_enabled": false,
-    "edge_gateway": "source-v6-edge-revision-7-public-server-gated",
+    "edge_gateway": "source-v7-edge-revision-8-recovery-request-fail-closed-public-server-gated",
     "csrf_state_change_protection": "pass-deployed",
     "secure_http_only_cookie_policy": "pass-source-and-edge",
     "same_origin_session_owner": "adapter-source-ready-not-deployed",
@@ -41,7 +41,12 @@
     "public_site_marker_header": "X-OrdaX-Public-Site",
     "session_revocation": "proof-harness-ready-real-account-proof-pending",
     "session_revocation_scope": "local-current-session",
-    "session_revocation_proof_requires_credentials": true
+    "session_revocation_proof_requires_credentials": true,
+    "password_recovery_request": "pass-source-and-edge-fail-closed",
+    "password_recovery_redirect_config_verified": false,
+    "password_recovery_account_enumeration_allowed": false,
+    "password_recovery_completion_flow": "not-implemented",
+    "account_recovery_flow_tested": false
   },
   "rules": {
     "public_login_must_fail_closed_until_all_required_gates_pass": true,
