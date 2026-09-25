@@ -35,6 +35,7 @@ import { createNativeSurfaceHeartbeat } from "../../adapters/native/surface-hear
 import { createWebIdentityActions } from "../../adapters/web/identity-actions.mjs";
 import { createSameOriginIdentityCredentials } from "../../adapters/web/identity-credentials.mjs";
 import { createWebIdentitySession } from "../../adapters/web/identity.mjs";
+import { createWebSpacesCatalog } from "../../adapters/web/spaces.mjs";
 import { createWebSyncTransport } from "../../adapters/web/sync-transport.mjs";
 import { validateAccountRuntime } from "../../services/account/runtime.mjs";
 import { createAppActivationChannel } from "../../services/apps/activation.mjs";
@@ -260,6 +261,7 @@ async function start() {
   const identityActions = createWebIdentityActions(window, identitySession);
   const identityAvailable = identitySession.getSnapshot().state !== "unavailable";
   const identityCredentials = identityAvailable ? createSameOriginIdentityCredentials(window) : null;
+  const spaces = createWebSpacesCatalog(window);
   const syncTransport = createWebSyncTransport(window);
   const appActivation = createAppActivationChannel();
   const updateWatcher = createNativeUpdateWatcher(window);
@@ -412,6 +414,7 @@ async function start() {
     workspaceMetadata.source,
     appActivation,
     identityCredentials,
+    spaces,
   );
   const homeContinuation = mountHomeContinuation(root, { projects, recentFiles, surfaceLifecycle: surface });
   const homePending = mountHomePending(root, { notifications, syncRuntime: accountSync, surfaceLifecycle: surface });
@@ -588,6 +591,7 @@ async function start() {
       projectReferences?.destroy();
       projectCloudLinks?.destroy();
       accountOverviewControls.destroy();
+      spaces.dispose();
       accountSync.destroy();
       preferenceSync.destroy();
       browserSession.dispose();
