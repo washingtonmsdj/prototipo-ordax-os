@@ -33,7 +33,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "real-auth-and-account-sync-gateway-v6-deployed-registration-password-policy-activation-gated",
+            "real-auth-and-account-sync-gateway-v7-deployed-public-server-gated-activation-disabled",
         )
         self.assertFalse(contract["baseline"]["provider_configured"])
         self.assertTrue(contract["baseline"]["http_only_session_cookies"])
@@ -49,6 +49,12 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertEqual(contract["baseline"]["registration_password_minimum_chars"], 12)
         self.assertTrue(contract["baseline"]["registration_password_policy_enforced_at_edge"])
         self.assertFalse(contract["baseline"]["existing_login_passwords_retroactively_rejected"])
+        self.assertTrue(contract["baseline"]["public_site_server_activation_gate"])
+        self.assertFalse(contract["baseline"]["public_site_account_enabled"])
+        self.assertEqual(contract["baseline"]["public_site_marker_header"], "X-OrdaX-Public-Site")
+        self.assertEqual(contract["baseline"]["public_site_disabled_error"], "public-account-access-disabled")
+        self.assertTrue(contract["baseline"]["native_json_account_flow_remains_enabled"])
+        self.assertTrue(contract["deployment"]["public_site_proxy_marker_required"])
 
     def test_session_is_anonymous_and_contains_no_tokens_without_runtime_config(self):
         response = self.gateway.handle("GET", "/auth/session")
