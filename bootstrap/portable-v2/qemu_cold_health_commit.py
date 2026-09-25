@@ -154,6 +154,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
             expected_commit=args.source_commit,
             serial_name="serial-candidate-health.log",
             required_post_marker=commit_marker,
+            graphical_hardware=True,
         )
         state_checks = inspect_committed_state(
             disk,
@@ -169,6 +170,7 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
             expected_slot="current",
             expected_commit=args.source_commit,
             serial_name="serial-committed-current.log",
+            graphical_hardware=True,
         )
 
         checks = {
@@ -196,6 +198,10 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
             "network_disabled_both_boots": (
                 first_checks["qemu_network_disabled"]
                 and second_checks["qemu_network_disabled"]
+            ),
+            "virtio_graphics_both_boots": (
+                first_checks["qemu_graphical_hardware_requested"]
+                and second_checks["qemu_graphical_hardware_requested"]
             ),
             "durable_cache_both_boots": (
                 first_checks["qemu_durable_cache_mode"]
@@ -227,6 +233,12 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
             "secure_boot_proven": False,
             "public_physical_promotion_allowed": False,
             "network_required": False,
+            "virtual_graphics": {
+                "adapter": "virtio-vga",
+                "host_display_window": False,
+                "surface_path": "cage-wayland-webkit-seatd",
+                "synthetic_health": False,
+            },
             "guest_disk": {
                 "sha256_before_destruction": disk_sha,
                 "retained": False,
