@@ -33,6 +33,7 @@ on:
       - 'tests/test_public_legal_readiness.py'
       - 'tests/test_public_auth_activation_preflight.py'
       - 'tests/test_pwned_passwords.py'
+      - 'tests/test_supabase_account_provider.py'
       - '.github/workflows/public-site-candidate.yml'
   pull_request:
     paths:
@@ -65,6 +66,7 @@ on:
       - 'tests/test_public_legal_readiness.py'
       - 'tests/test_public_auth_activation_preflight.py'
       - 'tests/test_pwned_passwords.py'
+      - 'tests/test_supabase_account_provider.py'
       - '.github/workflows/public-site-candidate.yml'
   workflow_dispatch:
 
@@ -97,6 +99,7 @@ jobs:
           python -m unittest tests.test_public_identity_backend_prep -v
           python -m unittest tests.test_public_identity_gateway -v
           python -m unittest tests.test_pwned_passwords -v
+          python -m unittest tests.test_supabase_account_provider -v
           python -m unittest tests.test_public_site_runtime_smoke -v
           python -m unittest tests.test_public_site_deployment -v
           python -m unittest tests.test_public_legal_readiness -v
