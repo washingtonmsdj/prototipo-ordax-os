@@ -12,6 +12,7 @@ CURSOR_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "202
 SNAPSHOT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925013524_account_sync_atomic_snapshot_v1.sql"
 TWO_CLIENT_PROOF = ROOT / "tools" / "account-sync" / "prove_two_clients.py"
 SESSION_REVOCATION_PROOF = ROOT / "tools" / "account-sync" / "prove_session_revocation.py"
+ACCOUNT_CLOSE_DISABLED_PROOF = ROOT / "tools" / "account-sync" / "prove_account_close_disabled.py"
 RECOVERY_EMAIL_TEMPLATE = ROOT / "infra" / "supabase" / "identity" / "email-templates" / "recovery.html"
 ACCOUNT_EXPORT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925031000_account_data_export_v1.sql"
 ACCOUNT_LIFECYCLE_EDGE = ROOT / "infra" / "supabase" / "functions" / "ordax-account-lifecycle" / "index.ts"
@@ -193,6 +194,15 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertNotIn("{{ .ConfirmationURL }}", text)
         self.assertNotIn("access_token", text)
         self.assertNotIn("refresh_token", text)
+
+    def test_account_close_disabled_proof_is_credential_free_and_fail_closed(self):
+        text = ACCOUNT_CLOSE_DISABLED_PROOF.read_text(encoding="utf-8")
+        self.assertIn("ACCOUNT_CLOSE_DISABLED_PROOF=PASS", text)
+        self.assertIn('"/account/close"', text)
+        self.assertIn('"account-close-disabled"', text)
+        self.assertNotIn("ORDAX_PROOF_ACCOUNT_PASSWORD", text)
+        self.assertNotIn("Authorization", text)
+        self.assertNotIn("service_role", text.lower())
 
     def test_identity_gateway_keeps_provider_tokens_out_of_browser_javascript(self):
         text = GATEWAY.read_text(encoding="utf-8")
