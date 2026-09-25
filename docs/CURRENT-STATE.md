@@ -1,6 +1,6 @@
 # Current State
 
-Status date: 2026-09-24
+Status date: 2026-09-25
 
 This is the canonical handoff snapshot. Architecture/contracts win if another document conflicts with it. Detailed historical evidence remains under `docs/evidence/`; this file records the current boundary without treating CI proof, development-hardware proof and product-release authorization as interchangeable. Values that mirror structured source — including product/app versions, component release modes and physical-media geometry — are regression-checked against their owners so this snapshot cannot silently drift from the implementation.
 
@@ -223,6 +223,7 @@ ACCOUNT_SYNC_MULTI_DEVICE_E2E_PROOF=PENDING
 ACCOUNT_SYNC_TWO_CLIENT_PROOF_HARNESS=PASS_SOURCE_CREDENTIAL_SAFE
 ACCOUNT_GATEWAY_STABLE_BOOTSTRAP_BINDING=PASS_SOURCE_OPTIONAL_HTTPS_ORIGIN
 ACCOUNT_SYNC_NATIVE_USB_INTEGRATION=PASS_SOURCE_GATEWAY_DEPLOYED_PHYSICAL_PROOF_PENDING
+ACCOUNT_SYNC_ACCOUNT_UI_CONTINUITY_STATUS=PASS_SOURCE_REAL_RUNTIME_SNAPSHOT
 ACCOUNT_SYNC_PUBLIC_AVAILABILITY=NO
 PUBLIC_IDENTITY=DISABLED_FAIL_CLOSED
 BILLING=NO
