@@ -1,42 +1,50 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "implemented-provider-unconfigured",
+  "status": "real-password-session-flow-implemented-public-activation-gated",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
     "external_dependencies": false,
-    "listener_owned_here": false
+    "listener_owned_here": false,
+    "provider_adapter": "supabase-password",
+    "provider_configuration": "runtime-environment"
   },
   "routes": [
     {
       "method": "GET",
       "path": "/auth/session",
       "unconfigured_status": 200,
-      "purpose": "anonymous-session-state"
+      "purpose": "validated-session-state-and-refresh"
     },
     {
       "method": "GET",
       "path": "/auth/login",
+      "unconfigured_status": 303,
+      "purpose": "canonical-login-page"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
       "unconfigured_status": 503,
-      "purpose": "begin-login"
+      "purpose": "password-login"
     },
     {
       "method": "GET",
       "path": "/auth/register",
-      "unconfigured_status": 503,
-      "purpose": "begin-registration"
+      "unconfigured_status": 303,
+      "purpose": "canonical-registration-page"
     },
     {
-      "method": "GET",
-      "path": "/auth/callback",
+      "method": "POST",
+      "path": "/auth/register",
       "unconfigured_status": 503,
-      "purpose": "complete-provider-callback"
+      "purpose": "password-registration"
     },
     {
       "method": "POST",
       "path": "/auth/logout",
-      "unconfigured_status": 503,
-      "purpose": "revoke-session"
+      "unconfigured_status": 303,
+      "purpose": "revoke-session-and-clear-cookies"
     }
   ],
   "baseline": {
@@ -46,7 +54,10 @@
     "cache_control": "no-store",
     "remote_redirect_allowed": false,
     "cross_site_logout_allowed": false,
-    "tokens_in_response_body_allowed": false
+    "tokens_in_response_body_allowed": false,
+    "provider_adapter_implemented": true,
+    "http_only_session_cookies": true,
+    "refresh_session_supported": true
   },
   "deployment": {
     "same_origin_required_for_public_site": true,

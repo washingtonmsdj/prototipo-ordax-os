@@ -1,22 +1,38 @@
-"""Provider-neutral public identity gateway core.
+"""OrdaX same-origin identity and account-sync gateway.
 
-The initial implementation is intentionally fail-closed: it defines the
-same-origin /auth/* surface without enabling an identity provider or accepting
-credentials. A provider adapter can replace DisabledIdentityProvider later
-without changing the public-site routes.
+Browser credentials and provider bearer tokens remain inside HttpOnly cookies.
+The public Surface talks only to OrdaX-owned /auth/* and /sync/* routes; Supabase
+is a replaceable provider adapter behind that boundary.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
-from typing import Mapping, Protocol
-from urllib.parse import urlsplit
+from http.cookies import SimpleCookie
+from typing import Mapping
+from urllib.parse import parse_qs, urlsplit
+
+from supabase_password import SupabaseIdentityError, SupabasePasswordProvider
+from supabase_sync import SupabaseSyncError, SupabaseSyncProvider
 
 SESSION_SCHEMA = "prototype-ordax.public-identity-session/1"
+SYNC_BATCH_SCHEMA = "prototype-ordax.sync-batch/1"
+SYNC_ACK_SCHEMA = "prototype-ordax.sync-ack/1"
 ERROR_SCHEMA = "prototype-ordax.public-identity-error/1"
 JSON_CONTENT_TYPE = "application/json; charset=utf-8"
 NO_STORE = "no-store, max-age=0"
+MAX_REQUEST_BODY = 64 * 1024
+ACCESS_COOKIE = "ordax_access"
+REFRESH_COOKIE = "ordax_refresh"
+SYNC_DATA_CLASSES = frozenset((
+    "appearance",
+    "preferences",
+    "workspace-metadata",
+    "app-state-metadata",
+    "user-selected-cloud-content",
+))
 
 
 @dataclass(frozen=True)
@@ -26,60 +42,90 @@ class GatewayResponse:
     body: bytes
 
 
-class IdentityProvider(Protocol):
-    @property
-    def configured(self) -> bool: ...
-
-    def begin_login(self) -> str: ...
-
-    def begin_registration(self) -> str: ...
-
-    def complete_callback(self, query: str) -> str: ...
-
-    def revoke_session(self, cookie_header: str | None) -> tuple[str, ...]: ...
+def _provider_config() -> tuple[str, str] | None:
+    project_url = os.environ.get("ORDAX_SUPABASE_URL", "").strip()
+    publishable_key = os.environ.get("ORDAX_SUPABASE_PUBLISHABLE_KEY", "").strip()
+    if not project_url or not publishable_key:
+        return None
+    return project_url, publishable_key
 
 
-class ProviderUnavailable(RuntimeError):
-    pass
+def _provider_from_environment() -> SupabasePasswordProvider | None:
+    config = _provider_config()
+    if config is None:
+        return None
+    try:
+        return SupabasePasswordProvider(*config)
+    except (TypeError, ValueError):
+        return None
 
 
-class DisabledIdentityProvider:
-    @property
-    def configured(self) -> bool:
-        return False
-
-    def _unavailable(self) -> str:
-        raise ProviderUnavailable("identity provider is not configured")
-
-    def begin_login(self) -> str:
-        return self._unavailable()
-
-    def begin_registration(self) -> str:
-        return self._unavailable()
-
-    def complete_callback(self, query: str) -> str:
-        del query
-        return self._unavailable()
-
-    def revoke_session(self, cookie_header: str | None) -> tuple[str, ...]:
-        del cookie_header
-        self._unavailable()
-        raise AssertionError("unreachable")
+def _sync_provider_from_environment() -> SupabaseSyncProvider | None:
+    config = _provider_config()
+    if config is None:
+        return None
+    try:
+        return SupabaseSyncProvider(*config)
+    except (TypeError, ValueError):
+        return None
 
 
-def _json_response(status: int, payload: Mapping[str, object]) -> GatewayResponse:
-    body = (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
-    return GatewayResponse(
-        status=status,
-        headers=(
-            ("Content-Type", JSON_CONTENT_TYPE),
-            ("Cache-Control", NO_STORE),
-            ("Pragma", "no-cache"),
-            ("X-Content-Type-Options", "nosniff"),
-            ("Content-Length", str(len(body))),
-        ),
-        body=body,
+def _secure_cookies() -> bool:
+    return os.environ.get("ORDAX_IDENTITY_SECURE_COOKIES", "1") != "0"
+
+
+def _cookie(name: str, value: str, *, max_age: int) -> str:
+    parts = [
+        f"{name}={value}",
+        "Path=/",
+        "HttpOnly",
+        "SameSite=Lax",
+        f"Max-Age={max_age}",
+    ]
+    if _secure_cookies():
+        parts.append("Secure")
+    return "; ".join(parts)
+
+
+def _clear_cookie(name: str) -> str:
+    return _cookie(name, "", max_age=0)
+
+
+def _session_cookies(access_token: str, refresh_token: str, expires_in: int) -> tuple[str, str]:
+    return (
+        _cookie(ACCESS_COOKIE, access_token, max_age=max(60, int(expires_in))),
+        _cookie(REFRESH_COOKIE, refresh_token, max_age=60 * 60 * 24 * 30),
     )
+
+
+def _read_cookies(cookie_header: str | None) -> dict[str, str]:
+    if not cookie_header:
+        return {}
+    cookie = SimpleCookie()
+    try:
+        cookie.load(cookie_header)
+    except Exception:
+        return {}
+    return {key: morsel.value for key, morsel in cookie.items()}
+
+
+def _json_response(
+    status: int,
+    payload: Mapping[str, object],
+    *,
+    set_cookies: tuple[str, ...] = (),
+) -> GatewayResponse:
+    body = (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+    headers: list[tuple[str, str]] = [
+        ("Content-Type", JSON_CONTENT_TYPE),
+        ("Cache-Control", NO_STORE),
+        ("Pragma", "no-cache"),
+        ("X-Content-Type-Options", "nosniff"),
+        ("Content-Length", str(len(body))),
+    ]
+    for cookie in set_cookies:
+        headers.append(("Set-Cookie", cookie))
+    return GatewayResponse(status=status, headers=tuple(headers), body=body)
 
 
 def _redirect(location: str, *, set_cookies: tuple[str, ...] = ()) -> GatewayResponse:
@@ -97,28 +143,61 @@ def _redirect(location: str, *, set_cookies: tuple[str, ...] = ()) -> GatewayRes
 def _error(status: int, code: str, message: str) -> GatewayResponse:
     return _json_response(
         status,
-        {
-            "$schema": ERROR_SCHEMA,
-            "error": code,
-            "message": message,
-        },
+        {"$schema": ERROR_SCHEMA, "error": code, "message": message},
     )
 
 
-def _safe_same_origin_path(value: str) -> bool:
-    split = urlsplit(value)
-    return (
-        value.startswith("/")
-        and not value.startswith("//")
-        and not split.scheme
-        and not split.netloc
-        and not split.fragment
-    )
+def _form(body: bytes, content_type: str) -> dict[str, str]:
+    if len(body) > MAX_REQUEST_BODY:
+        raise ValueError("request-too-large")
+    if not content_type.lower().startswith("application/x-www-form-urlencoded"):
+        raise ValueError("unsupported-content-type")
+    try:
+        values = parse_qs(body.decode("utf-8"), keep_blank_values=True, strict_parsing=False)
+    except (UnicodeError, ValueError) as exc:
+        raise ValueError("invalid-form") from exc
+    return {key: items[-1] for key, items in values.items() if items}
+
+
+def _json_body(body: bytes, content_type: str) -> dict:
+    if len(body) > MAX_REQUEST_BODY:
+        raise ValueError("request-too-large")
+    if not content_type.lower().startswith("application/json"):
+        raise ValueError("unsupported-content-type")
+    try:
+        value = json.loads(body.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("invalid-json") from exc
+    if not isinstance(value, dict):
+        raise ValueError("json-object-required")
+    return value
+
+
+def _same_origin_state_change(headers: Mapping[str, str]) -> bool:
+    if headers.get("sec-fetch-site") == "cross-site":
+        return False
+    origin = headers.get("origin")
+    host = headers.get("host")
+    if not origin or not host:
+        return True
+    split = urlsplit(origin)
+    return split.netloc == host and split.scheme in ("https", "http")
 
 
 class PublicIdentityGateway:
-    def __init__(self, provider: IdentityProvider | None = None) -> None:
-        self.provider = provider or DisabledIdentityProvider()
+    def __init__(
+        self,
+        provider: SupabasePasswordProvider | None = None,
+        sync_provider: SupabaseSyncProvider | None = None,
+    ) -> None:
+        self.provider = provider if provider is not None else _provider_from_environment()
+        self.sync_provider = (
+            sync_provider if sync_provider is not None else _sync_provider_from_environment()
+        )
+
+    @property
+    def provider_configured(self) -> bool:
+        return self.provider is not None
 
     def _provider_unavailable(self) -> GatewayResponse:
         return _error(
@@ -127,11 +206,195 @@ class PublicIdentityGateway:
             "O serviço de identidade OrdaX ainda não está configurado.",
         )
 
+    def _authenticated_access(
+        self, request_headers: Mapping[str, str]
+    ) -> tuple[str | None, tuple[str, ...]]:
+        if not self.provider:
+            return None, ()
+        cookies = _read_cookies(request_headers.get("cookie"))
+        access = cookies.get(ACCESS_COOKIE)
+        refresh = cookies.get(REFRESH_COOKIE)
+        if access:
+            try:
+                self.provider.get_user(access)
+                return access, ()
+            except SupabaseIdentityError:
+                pass
+        if refresh:
+            try:
+                session = self.provider.refresh_session(refresh)
+                self.provider.get_user(session.access_token)
+                return (
+                    session.access_token,
+                    _session_cookies(
+                        session.access_token,
+                        session.refresh_token,
+                        session.expires_in,
+                    ),
+                )
+            except SupabaseIdentityError:
+                pass
+        return None, (_clear_cookie(ACCESS_COOKIE), _clear_cookie(REFRESH_COOKIE))
+
+    def _session(self, request_headers: Mapping[str, str]) -> GatewayResponse:
+        if not self.provider:
+            return _json_response(
+                200,
+                {
+                    "$schema": SESSION_SCHEMA,
+                    "authenticated": False,
+                    "provider": "unconfigured",
+                    "status": "anonymous",
+                },
+            )
+
+        access, set_cookies = self._authenticated_access(request_headers)
+        if access:
+            try:
+                subject, email = self.provider.get_user(access)
+                return _json_response(
+                    200,
+                    {
+                        "$schema": SESSION_SCHEMA,
+                        "authenticated": True,
+                        "provider": "supabase",
+                        "status": "authenticated",
+                        "subject": subject,
+                        "email": email,
+                    },
+                    set_cookies=set_cookies,
+                )
+            except SupabaseIdentityError:
+                pass
+
+        return _json_response(
+            200,
+            {
+                "$schema": SESSION_SCHEMA,
+                "authenticated": False,
+                "provider": "supabase",
+                "status": "anonymous",
+            },
+            set_cookies=set_cookies,
+        )
+
+    def _credentials_action(
+        self,
+        *,
+        registration: bool,
+        request_headers: Mapping[str, str],
+        body: bytes,
+    ) -> GatewayResponse:
+        if not self.provider:
+            return self._provider_unavailable()
+        if not _same_origin_state_change(request_headers):
+            return _error(403, "cross-site-request-rejected", "A solicitação cross-site foi rejeitada.")
+        try:
+            form = _form(body, request_headers.get("content-type", ""))
+            email = form.get("email", "")
+            password = form.get("password", "")
+            result = (
+                self.provider.sign_up_with_password(email, password)
+                if registration
+                else self.provider.sign_in_with_password(email, password)
+            )
+        except ValueError:
+            return _error(400, "invalid-credentials-form", "Revise o e-mail e a senha informados.")
+        except SupabaseIdentityError:
+            return _error(
+                401 if not registration else 400,
+                "authentication-failed" if not registration else "registration-failed",
+                "Não foi possível concluir esta operação de conta.",
+            )
+
+        if result.session is None:
+            return _redirect("/login/?cadastro=verifique-email")
+
+        return _redirect(
+            "/conta/",
+            set_cookies=_session_cookies(
+                result.session.access_token,
+                result.session.refresh_token,
+                result.session.expires_in,
+            ),
+        )
+
+    def _sync_list(
+        self,
+        request_headers: Mapping[str, str],
+        query: str,
+    ) -> GatewayResponse:
+        if not self.provider or not self.sync_provider:
+            return self._provider_unavailable()
+        access, set_cookies = self._authenticated_access(request_headers)
+        if not access:
+            return _json_response(
+                401,
+                {"$schema": ERROR_SCHEMA, "error": "authentication-required", "message": "Entre na Conta OrdaX para sincronizar."},
+                set_cookies=set_cookies,
+            )
+        try:
+            values = parse_qs(query, keep_blank_values=False)
+            after = int(values.get("afterRevision", ["0"])[-1])
+            limit = int(values.get("limit", ["200"])[-1])
+            objects = self.sync_provider.list_objects(
+                access, after_revision=after, limit=limit
+            )
+        except (ValueError, SupabaseSyncError):
+            return _error(502, "sync-read-failed", "Não foi possível ler o estado sincronizado.")
+        return _json_response(
+            200,
+            {"$schema": SYNC_BATCH_SCHEMA, "objects": objects},
+            set_cookies=set_cookies,
+        )
+
+    def _sync_mutate(
+        self,
+        request_headers: Mapping[str, str],
+        body: bytes,
+    ) -> GatewayResponse:
+        if not self.provider or not self.sync_provider:
+            return self._provider_unavailable()
+        if not _same_origin_state_change(request_headers):
+            return _error(403, "cross-site-request-rejected", "A solicitação cross-site foi rejeitada.")
+        access, set_cookies = self._authenticated_access(request_headers)
+        if not access:
+            return _json_response(
+                401,
+                {"$schema": ERROR_SCHEMA, "error": "authentication-required", "message": "Entre na Conta OrdaX para sincronizar."},
+                set_cookies=set_cookies,
+            )
+        try:
+            mutation = _json_body(body, request_headers.get("content-type", ""))
+            if mutation.get("$schema") != "ordax.sync-mutation/1":
+                raise ValueError("unsupported-sync-mutation")
+            if mutation.get("dataClass") not in SYNC_DATA_CLASSES:
+                raise ValueError("unsupported-sync-data-class")
+            result = self.sync_provider.apply_mutation(access, mutation)
+        except ValueError:
+            return _error(400, "invalid-sync-mutation", "A alteração de sincronização é inválida.")
+        except SupabaseSyncError:
+            return _error(502, "sync-write-failed", "Não foi possível gravar o estado sincronizado.")
+        return _json_response(
+            200,
+            {
+                "$schema": SYNC_ACK_SCHEMA,
+                "objectId": mutation.get("objectId"),
+                "dataClass": mutation.get("dataClass"),
+                "serverRevision": result.server_revision,
+                "tombstone": result.tombstone,
+                "applied": result.applied,
+                "conflict": result.conflict,
+            },
+            set_cookies=set_cookies,
+        )
+
     def handle(
         self,
         method: str,
         target: str,
         headers: Mapping[str, str] | None = None,
+        body: bytes = b"",
     ) -> GatewayResponse:
         method = method.upper()
         request_headers = {key.lower(): value for key, value in (headers or {}).items()}
@@ -141,70 +404,55 @@ class PublicIdentityGateway:
         if path == "/auth/session":
             if method != "GET":
                 return self._method_not_allowed("GET")
-            return _json_response(
-                200,
-                {
-                    "$schema": SESSION_SCHEMA,
-                    "authenticated": False,
-                    "provider": "configured" if self.provider.configured else "unconfigured",
-                    "status": "anonymous",
-                },
-            )
+            return self._session(request_headers)
 
         if path == "/auth/login":
-            if method != "GET":
-                return self._method_not_allowed("GET")
-            if not self.provider.configured:
-                return self._provider_unavailable()
-            try:
-                location = self.provider.begin_login()
-            except ProviderUnavailable:
-                return self._provider_unavailable()
-            if not _safe_same_origin_path(location):
-                return _error(502, "invalid-provider-redirect", "O provedor retornou um destino inválido.")
-            return _redirect(location)
+            if method == "GET":
+                return _redirect("/login/")
+            if method != "POST":
+                return self._method_not_allowed("GET, POST")
+            return self._credentials_action(
+                registration=False, request_headers=request_headers, body=body
+            )
 
         if path == "/auth/register":
-            if method != "GET":
-                return self._method_not_allowed("GET")
-            if not self.provider.configured:
-                return self._provider_unavailable()
-            try:
-                location = self.provider.begin_registration()
-            except ProviderUnavailable:
-                return self._provider_unavailable()
-            if not _safe_same_origin_path(location):
-                return _error(502, "invalid-provider-redirect", "O provedor retornou um destino inválido.")
-            return _redirect(location)
-
-        if path == "/auth/callback":
-            if method != "GET":
-                return self._method_not_allowed("GET")
-            if not self.provider.configured:
-                return self._provider_unavailable()
-            try:
-                location = self.provider.complete_callback(split.query)
-            except ProviderUnavailable:
-                return self._provider_unavailable()
-            if not _safe_same_origin_path(location):
-                return _error(502, "invalid-provider-redirect", "O callback retornou um destino inválido.")
-            return _redirect(location)
+            if method == "GET":
+                return _redirect("/cadastro/")
+            if method != "POST":
+                return self._method_not_allowed("GET, POST")
+            return self._credentials_action(
+                registration=True, request_headers=request_headers, body=body
+            )
 
         if path == "/auth/logout":
             if method != "POST":
                 return self._method_not_allowed("POST")
-            if not self.provider.configured:
-                return self._provider_unavailable()
-            if request_headers.get("sec-fetch-site") == "cross-site":
+            if not _same_origin_state_change(request_headers):
                 return _error(403, "cross-site-request-rejected", "A solicitação cross-site foi rejeitada.")
-            try:
-                cookies = self.provider.revoke_session(request_headers.get("cookie"))
-            except ProviderUnavailable:
-                return self._provider_unavailable()
-            return _redirect("/", set_cookies=cookies)
+            cookies = _read_cookies(request_headers.get("cookie"))
+            access = cookies.get(ACCESS_COOKIE)
+            if self.provider and access:
+                try:
+                    self.provider.sign_out(access)
+                except SupabaseIdentityError:
+                    pass
+            return _redirect(
+                "/",
+                set_cookies=(_clear_cookie(ACCESS_COOKIE), _clear_cookie(REFRESH_COOKIE)),
+            )
 
-        if path.startswith("/auth/"):
-            return _error(404, "identity-route-not-found", "Rota de identidade inexistente.")
+        if path == "/sync/objects":
+            if method != "GET":
+                return self._method_not_allowed("GET")
+            return self._sync_list(request_headers, split.query)
+
+        if path == "/sync/mutate":
+            if method != "POST":
+                return self._method_not_allowed("POST")
+            return self._sync_mutate(request_headers, body)
+
+        if path.startswith("/auth/") or path.startswith("/sync/"):
+            return _error(404, "gateway-route-not-found", "Rota inexistente.")
         return _error(404, "not-found", "Recurso inexistente.")
 
     @staticmethod
@@ -221,8 +469,6 @@ gateway = PublicIdentityGateway()
 
 
 def application(environ, start_response):
-    """Minimal WSGI adapter; deployment remains external to this module."""
-
     method = str(environ.get("REQUEST_METHOD", "GET"))
     path = str(environ.get("PATH_INFO", "/"))
     query = str(environ.get("QUERY_STRING", ""))
@@ -231,16 +477,36 @@ def application(environ, start_response):
     headers: dict[str, str] = {}
     for key, value in environ.items():
         if key.startswith("HTTP_") and isinstance(value, str):
-            name = key[5:].replace("_", "-").lower()
-            headers[name] = value
+            headers[key[5:].replace("_", "-").lower()] = value
+    if isinstance(environ.get("CONTENT_TYPE"), str):
+        headers["content-type"] = str(environ["CONTENT_TYPE"])
+    if isinstance(environ.get("HTTP_HOST"), str):
+        headers["host"] = str(environ["HTTP_HOST"])
 
-    response = gateway.handle(method, target, headers)
+    body = b""
+    if method in ("POST", "PUT", "PATCH"):
+        try:
+            length = int(environ.get("CONTENT_LENGTH") or "0")
+        except ValueError:
+            length = 0
+        if length < 0 or length > MAX_REQUEST_BODY:
+            response = _error(413, "request-too-large", "A solicitação excede o limite permitido.")
+        else:
+            stream = environ.get("wsgi.input")
+            body = stream.read(length) if stream is not None and length else b""
+            response = gateway.handle(method, target, headers, body)
+    else:
+        response = gateway.handle(method, target, headers, body)
+
     reason = {
         200: "OK",
         303: "See Other",
+        400: "Bad Request",
+        401: "Unauthorized",
         403: "Forbidden",
         404: "Not Found",
         405: "Method Not Allowed",
+        413: "Payload Too Large",
         502: "Bad Gateway",
         503: "Service Unavailable",
     }.get(response.status, "Error")

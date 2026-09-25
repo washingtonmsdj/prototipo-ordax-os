@@ -9,6 +9,7 @@ import {
   createAppearanceSyncMutation,
   createSyncMutationQueue,
   validateAppearanceSyncMutation,
+  validateAppearanceSyncObject,
   SYNC_CORE_STATUS,
 } from "./runtime.mjs";
 
@@ -85,6 +86,7 @@ export function createPreferenceSyncRuntime(
   let destroyed = false;
   let queuePersistence = store?.scope ?? "session";
   let lastTheme = preferences.getSnapshot()[APPEARANCE_PREFERENCE_ID];
+  let suppressThemeQueue = false;
   const listeners = new Set();
 
   const currentSnapshot = () => validateSyncRuntimeSnapshot({
@@ -134,6 +136,7 @@ export function createPreferenceSyncRuntime(
     const theme = snapshot[APPEARANCE_PREFERENCE_ID];
     if (theme === lastTheme) return;
     lastTheme = theme;
+    if (suppressThemeQueue) return;
     queueTheme(theme);
   });
 
@@ -158,6 +161,24 @@ export function createPreferenceSyncRuntime(
       const removed = queue.acknowledge(idempotencyKey);
       if (!removed) return false;
       serverRevision = revision;
+      persist();
+      emit();
+      return true;
+    },
+    applyRemoteAppearance(value) {
+      const remote = validateAppearanceSyncObject(value);
+      if (remote.tombstone) return false;
+      if (queue.snapshot().length > 0) {
+        throw new Error("Cannot apply remote appearance while a local mutation is pending");
+      }
+      serverRevision = remote.serverRevision;
+      suppressThemeQueue = true;
+      try {
+        preferences.set(APPEARANCE_PREFERENCE_ID, remote.payload.theme);
+        lastTheme = remote.payload.theme;
+      } finally {
+        suppressThemeQueue = false;
+      }
       persist();
       emit();
       return true;
