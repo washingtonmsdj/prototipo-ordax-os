@@ -28,11 +28,11 @@ The pre-MVP foundation carries a **provisional two-private-Space default** for t
 
 Profile Packs may compose apps, templates, knowledge-source policy and Intelligence defaults, but they cannot grant privileges, bypass app signature verification or bypass entitlement checks.
 
-## Cross-device continuity — backend v1 + Web source integration implemented
+## Cross-device continuity — incremental backend v2 + Web/Native source integration
 
-The first account-scoped synchronization backend is now applied to the dedicated `ordax-control-plane` project. It provides owner-scoped RLS, stable object IDs, server revisions, idempotent mutation keys, explicit tombstones and optimistic conflict detection through `ordax_apply_sync_mutation_v1`. This is the real backend foundation for the same account to carry approved state between devices.
+The account-scoped synchronization backend is applied to the dedicated `ordax-control-plane` project. It provides owner-scoped RLS, stable object IDs, per-object server revisions, idempotent mutation keys, explicit tombstones and optimistic conflict detection. Backend v2 also records an immutable account change sequence: first reconciliation uses `ordax_sync_snapshot_v1` to obtain an atomic object snapshot plus baseline cursor, mutations use `ordax_apply_sync_mutation_v2`, and later reconciliations page through `ordax_pull_sync_changes_v1`. This avoids incorrectly treating a per-object revision as an account-wide cursor.
 
-The Web source now has an end-to-end OrdaX-owned transport boundary for `appearance`, portable accessibility preferences and portable workspace metadata. It uses the real account session without exposing provider tokens to Surface JavaScript. USB/Native now has the same OrdaX-owned source transport through a loopback host bridge to an HTTPS account gateway, with device-private session storage; Mobile still lacks its final integration. Native/USB physical proof and public deployment remain pending, so synchronization remains **Em breve** in public copy and is not yet advertised as a released MVP capability.
+Web and USB/Native now use the same OrdaX-owned transport semantics for `appearance`, portable accessibility preferences and portable workspace metadata. Each client persists a subject-bound checkpoint containing the opaque account cursor plus known object revisions; Native stores it in private device state and degrades to an in-memory session checkpoint if durable checkpoint persistence is unavailable. Provider tokens remain outside Surface JavaScript. Mobile still lacks its final integration. Native/USB multi-device physical proof and public same-origin browser activation remain pending, so synchronization remains **Em breve** in public copy and is not yet advertised as a released MVP capability.
 
 The architecture remains prepared for future synchronized state such as:
 
