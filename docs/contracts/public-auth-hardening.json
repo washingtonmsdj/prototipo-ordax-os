@@ -25,7 +25,7 @@
     "observed_date": "2026-09-24",
     "leaked_password_protection": "disabled-warn",
     "public_login_enabled": false,
-    "edge_gateway": "source-v8-edge-revision-9-recovery-pkce-gated-public-server-gated",
+    "edge_gateway": "source-v8-edge-revision-10-recovery-token-hash-gated-public-server-gated",
     "csrf_state_change_protection": "pass-deployed",
     "secure_http_only_cookie_policy": "pass-source-and-edge",
     "same_origin_session_owner": "adapter-source-ready-not-deployed",
@@ -45,11 +45,13 @@
     "password_recovery_request": "pass-source-and-edge-disabled",
     "password_recovery_redirect_config_verified": false,
     "password_recovery_account_enumeration_allowed": false,
-    "password_recovery_completion_flow": "not-implemented",
+    "password_recovery_completion_flow": "pass-source-and-edge-disabled",
     "account_recovery_flow_tested": false,
     "password_recovery_request_enabled": false,
-    "password_recovery_pkce_required": true,
-    "password_recovery_pkce_completion_implemented": false
+    "password_recovery_server_side_token_hash": "pass-source-and-edge-disabled",
+    "password_recovery_completion_enabled": false,
+    "password_recovery_email_template_source": "pass-source",
+    "password_recovery_email_template_applied": false
   },
   "rules": {
     "public_login_must_fail_closed_until_all_required_gates_pass": true,
