@@ -31,6 +31,19 @@ class NativeMemoryIntegrationTests(unittest.TestCase):
         self.assertIn("createIntelligenceRuntime({ inferencePort: localAi })", composition)
         self.assertNotIn("createIntelligenceRuntime({ inferencePort: localAi, memory", composition)
 
+    def test_native_composition_mounts_user_review_without_automatic_ai_memory(self):
+        composition = COMPOSITION.read_text(encoding="utf-8")
+
+        self.assertIn("createMemoryReviewSession", composition)
+        self.assertIn("createMemoryReviewViewModel", composition)
+        self.assertIn("memoryPort: memory", composition)
+        self.assertIn("identitySessionPort: identitySession", composition)
+        self.assertIn("memoryReview,", composition)
+        self.assertIn("memoryReview?.dispose()", composition)
+        self.assertIn("memoryReviewSession?.dispose()", composition)
+        self.assertNotIn("memoryPort: memory,\n    inferencePort", composition)
+        self.assertNotIn("memoryReview,\n      intelligence", composition)
+
     def test_intelligence_workflow_covers_host_composition_and_integration_regression(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
 
