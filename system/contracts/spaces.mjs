@@ -104,7 +104,7 @@ export function assertSpacesPort(port) {
   if (!port || typeof port !== "object" || port.schema !== SPACES_PORT_SCHEMA) {
     throw new TypeError("Compatible OrdaX Spaces port is required");
   }
-  for (const method of ["getSnapshot", "subscribe", "refresh"]) {
+  for (const method of ["getSnapshot", "subscribe", "refresh", "reset"]) {
     if (typeof port[method] !== "function") {
       throw new TypeError(`Spaces port must implement ${method}()`);
     }
