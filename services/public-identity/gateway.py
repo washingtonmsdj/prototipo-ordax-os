@@ -28,6 +28,8 @@ NO_STORE = "no-store, max-age=0"
 MAX_REQUEST_BODY = 64 * 1024
 ACCESS_COOKIE = "ordax_access"
 REFRESH_COOKIE = "ordax_refresh"
+PUBLIC_SITE_ACCOUNT_ENABLED = False
+PUBLIC_SITE_MARKER_HEADER = "x-ordax-public-site"
 SYNC_DATA_CLASSES = frozenset((
     "appearance",
     "preferences",
@@ -147,6 +149,42 @@ def _error(status: int, code: str, message: str) -> GatewayResponse:
         status,
         {"$schema": ERROR_SCHEMA, "error": code, "message": message},
     )
+
+
+def _public_site_request(headers: Mapping[str, str]) -> bool:
+    return headers.get(PUBLIC_SITE_MARKER_HEADER, "") == "1"
+
+
+def _public_site_disabled_response(method: str, path: str) -> GatewayResponse | None:
+    if PUBLIC_SITE_ACCOUNT_ENABLED:
+        return None
+    if path == "/auth/login" and method == "GET":
+        return _redirect("/login/")
+    if path == "/auth/register" and method == "GET":
+        return _redirect("/cadastro/")
+    if path == "/auth/logout" and method == "POST":
+        return _redirect(
+            "/",
+            set_cookies=(_clear_cookie(ACCESS_COOKIE), _clear_cookie(REFRESH_COOKIE)),
+        )
+    if path == "/auth/session" and method == "GET":
+        return _json_response(
+            200,
+            {
+                "$schema": SESSION_SCHEMA,
+                "authenticated": False,
+                "provider": "gated",
+                "status": "anonymous",
+            },
+            set_cookies=(_clear_cookie(ACCESS_COOKIE), _clear_cookie(REFRESH_COOKIE)),
+        )
+    if path.startswith("/auth/") or path.startswith("/sync/"):
+        return _error(
+            503,
+            "public-account-access-disabled",
+            "O acesso público à Conta OrdaX ainda não foi ativado.",
+        )
+    return None
 
 
 def _form(body: bytes, content_type: str) -> dict[str, str]:
@@ -471,6 +509,11 @@ class PublicIdentityGateway:
         request_headers = {key.lower(): value for key, value in (headers or {}).items()}
         split = urlsplit(target)
         path = split.path
+
+        if _public_site_request(request_headers):
+            gated = _public_site_disabled_response(method, path)
+            if gated is not None:
+                return gated
 
         if path == "/auth/session":
             if method != "GET":
