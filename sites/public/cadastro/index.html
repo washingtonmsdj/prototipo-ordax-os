@@ -27,7 +27,21 @@
         <strong>Cadastro ainda não configurado</strong>
         <p>O botão será habilitado somente quando existir um endpoint de identidade aprovado para o portal.</p>
       </div>
-      <a class="button button-primary identity-action" data-identity-action="register" href="#" hidden>Continuar para criar conta</a>
+      <form class="identity-form" data-identity-form="register" method="post" hidden novalidate>
+        <label class="identity-field">
+          <span>E-mail</span>
+          <input type="email" name="email" autocomplete="email" inputmode="email" maxlength="254" required disabled>
+        </label>
+        <label class="identity-field">
+          <span>Senha</span>
+          <input type="password" name="password" autocomplete="new-password" maxlength="256" required disabled>
+        </label>
+        <label class="identity-consent">
+          <input type="checkbox" name="accept_terms" value="yes" required disabled>
+          <span>Li e aceito os <a href="/termos/">Termos</a> e a <a href="/privacidade/">Política de Privacidade</a>.</span>
+        </label>
+        <button class="button button-primary identity-submit" type="submit" disabled>Criar conta</button>
+      </form>
       <p class="auth-switch">Já possui uma conta? <a href="/login/">Entrar</a></p><p class="auth-switch">Documentação de conta: <a href="/privacidade/">Privacidade</a> · <a href="/termos/">Termos</a></p>
     </section>
   </main>
