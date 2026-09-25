@@ -129,6 +129,49 @@ class SupabasePasswordProviderTests(unittest.TestCase):
                     provider.request_password_recovery("person@example.com", redirect)
         self.assertEqual(transport.calls, [])
 
+    def test_recovery_token_verification_returns_ephemeral_session(self):
+        provider, transport = self.provider([
+            (200, {
+                "access_token": "recovery-access",
+                "refresh_token": "recovery-refresh",
+                "expires_in": 900,
+                "token_type": "bearer",
+                "user": {"id": "user-1", "email": "person@example.com"},
+            })
+        ])
+        session = provider.verify_recovery_token("a" * 64)
+        self.assertEqual(session.access_token, "recovery-access")
+        method, url, headers, body = transport.calls[0]
+        self.assertEqual(method, "POST")
+        self.assertTrue(url.endswith("/auth/v1/verify"))
+        self.assertEqual(
+            json.loads(body),
+            {"token_hash": "a" * 64, "type": "recovery"},
+        )
+        self.assertNotIn("Authorization", headers)
+
+    def test_recovery_password_update_requires_ordax_policy_and_bearer_session(self):
+        provider, transport = self.provider([(200, {"id": "user-1"})])
+        provider.update_password("recovery-access", "new-password-12")
+        method, url, headers, body = transport.calls[0]
+        self.assertEqual(method, "PUT")
+        self.assertTrue(url.endswith("/auth/v1/user"))
+        self.assertEqual(headers["Authorization"], "Bearer recovery-access")
+        self.assertEqual(json.loads(body), {"password": "new-password-12"})
+
+        provider, transport = self.provider([])
+        with self.assertRaises(ValueError):
+            provider.update_password("recovery-access", "short")
+        self.assertEqual(transport.calls, [])
+
+    def test_recovery_token_hash_is_bounded_and_contains_no_whitespace(self):
+        provider, transport = self.provider([])
+        for token_hash in ("short", "a b" * 20, "a" * 2049):
+            with self.subTest(token_hash=token_hash[:20]):
+                with self.assertRaises(ValueError):
+                    provider.verify_recovery_token(token_hash)
+        self.assertEqual(transport.calls, [])
+
     def test_refresh_get_user_and_logout_use_bearer_token_only_when_needed(self):
         provider, transport = self.provider([
             (200, {
