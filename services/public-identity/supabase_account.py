@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 MAX_RESPONSE_BYTES = 16 * 1024 * 1024
+MAX_VISIBLE_SPACES = 64
 EXPORT_SCHEMA = "prototype-ordax.account-export/1"
 
 
@@ -132,3 +133,103 @@ class SupabaseAccountProvider:
         if not isinstance(value.get("account"), dict):
             raise SupabaseAccountError("provider-invalid-account-export", status=status)
         return value
+
+
+    def list_spaces(self, access_token: str) -> list[dict]:
+        if not isinstance(access_token, str) or not access_token:
+            raise ValueError("Access token is invalid")
+        headers = {
+            "Accept": "application/json",
+            "apikey": self.publishable_key,
+            "Authorization": f"Bearer {access_token}",
+        }
+        spaces_status, spaces_raw = self.transport.request(
+            "GET",
+            self.project_url
+            + "/rest/v1/ordax_spaces"
+            + "?select=space_id,owner_user_id,name,kind,state"
+            + "&order=created_at.asc"
+            + f"&limit={MAX_VISIBLE_SPACES + 1}",
+            headers,
+            None,
+        )
+        packs_status, packs_raw = self.transport.request(
+            "GET",
+            self.project_url
+            + "/rest/v1/ordax_space_profile_packs"
+            + "?select=space_id,pack_slug,pack_version"
+            + f"&limit={MAX_VISIBLE_SPACES + 1}",
+            headers,
+            None,
+        )
+        try:
+            spaces_value = json.loads(spaces_raw.decode("utf-8"))
+            packs_value = json.loads(packs_raw.decode("utf-8"))
+        except (UnicodeError, json.JSONDecodeError) as exc:
+            raise SupabaseAccountError("provider-invalid-spaces-response") from exc
+        if not (200 <= spaces_status < 300 and 200 <= packs_status < 300):
+            raise SupabaseAccountError(
+                "provider-spaces-read-failed",
+                status=spaces_status if not 200 <= spaces_status < 300 else packs_status,
+            )
+        if (
+            not isinstance(spaces_value, list)
+            or not isinstance(packs_value, list)
+            or len(spaces_value) > MAX_VISIBLE_SPACES
+            or len(packs_value) > MAX_VISIBLE_SPACES
+        ):
+            raise SupabaseAccountError("provider-invalid-spaces-response")
+
+        pack_by_space: dict[str, str] = {}
+        for row in packs_value:
+            if (
+                not isinstance(row, dict)
+                or not isinstance(row.get("space_id"), str)
+                or not isinstance(row.get("pack_slug"), str)
+                or not 1 <= len(row["pack_slug"]) <= 160
+                or "\x00" in row["pack_slug"]
+                or isinstance(row.get("pack_version"), bool)
+                or not isinstance(row.get("pack_version"), int)
+                or row["pack_version"] < 1
+                or row["space_id"] in pack_by_space
+            ):
+                raise SupabaseAccountError("provider-invalid-spaces-response")
+            pack_by_space[row["space_id"]] = row["pack_slug"]
+
+        spaces: list[dict] = []
+        seen: set[str] = set()
+        for row in spaces_value:
+            if not isinstance(row, dict):
+                raise SupabaseAccountError("provider-invalid-spaces-response")
+            space_id = row.get("space_id")
+            owner_id = row.get("owner_user_id")
+            name = row.get("name")
+            kind = row.get("kind")
+            state = row.get("state")
+            if (
+                not isinstance(space_id, str)
+                or not space_id
+                or "\x00" in space_id
+                or space_id in seen
+                or not isinstance(owner_id, str)
+                or not owner_id
+                or "\x00" in owner_id
+                or not isinstance(name, str)
+                or not 1 <= len(name) <= 120
+                or "\x00" in name
+                or kind not in {"personal", "work", "professional"}
+                or state not in {"active", "archived"}
+            ):
+                raise SupabaseAccountError("provider-invalid-spaces-response")
+            seen.add(space_id)
+            spaces.append(
+                {
+                    "id": space_id,
+                    "ownerId": owner_id,
+                    "name": name,
+                    "kind": kind,
+                    "state": state,
+                    "profilePack": pack_by_space.get(space_id),
+                }
+            )
+        return spaces
