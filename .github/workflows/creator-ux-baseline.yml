@@ -80,6 +80,7 @@ jobs:
           main = pathlib.Path('tools/creator/cmd/ordax-creator-app/main_windows.go').read_text(encoding='utf-8')
           experience = pathlib.Path('tools/creator/cmd/ordax-creator-app/experience_model.go').read_text(encoding='utf-8')
           visuals = pathlib.Path('tools/creator/cmd/ordax-creator-app/guided_visual_windows.go').read_text(encoding='utf-8')
+          boot_help = pathlib.Path('tools/creator/cmd/ordax-creator-app/boot_help.go').read_text(encoding='utf-8')
           physical = pathlib.Path('tools/creator/cmd/ordax-creator-app/physical_flow_windows.go').read_text(encoding='utf-8')
           progress = pathlib.Path('tools/creator/cmd/ordax-creator-app/physical_progress_windows.go').read_text(encoding='utf-8')
           update = pathlib.Path('tools/creator/cmd/ordax-creator-app/update_check_windows.go').read_text(encoding='utf-8')
@@ -92,7 +93,8 @@ jobs:
               'beginUpdateCheck(false)', 'markOwnerUpdateHealthy()',
               'msctls_progress32', 'len(state.Targets) == 1', 'cbSetCurSel',
               'case wmPaint:', 'paintGuidedVisual(hwnd)', '900, 390',
-              'invalidateGuidedVisual()',
+              'invalidateGuidedVisual()', 'idBootHelp', 'creatorBootHelpText()',
+              'Como iniciar pelo USB',
           ]
           required_experience = [
               'Etapa 1 de 4', 'Etapa 2 de 4', 'Etapa 3 de 4',
@@ -107,6 +109,9 @@ jobs:
               'creatorStepReview', 'creatorStepCreating', 'creatorStepComplete', 'creatorStepBlocked',
               'procGetSysColor', 'procDrawTextW', 'procEllipse', 'procRectangle',
               'invalidateGuidedVisual',
+          ]
+          required_boot_help = [
+              'menu de boot/UEFI', 'USB/UEFI', 'SSD ou HD interno', 'não instala',
           ]
           required_physical = [
               'Aguardando autorização do Windows',
@@ -173,6 +178,8 @@ jobs:
               assert text in experience, f'missing guided Creator experience anchor: {text}'
           for text in required_visuals:
               assert text in visuals, f'missing native Creator visual anchor: {text}'
+          for text in required_boot_help:
+              assert text in boot_help, f'missing interactive boot guidance anchor: {text}'
           for text in required_physical:
               assert text in physical, f'missing Creator physical UX/safety anchor: {text}'
           for text in required_progress:
@@ -191,6 +198,7 @@ jobs:
           assert 'owner_payload/ordax-bootstrap-seed.raw.gz' not in release_workflow, 'owner development GUI must not embed the raw seed'
           assert 'webview' not in visuals.lower(), 'native guided visuals must not add a WebView dependency'
           assert 'http://' not in visuals.lower() and 'https://' not in visuals.lower(), 'native guided visuals must not require network assets'
+          assert 'http://' not in boot_help.lower() and 'https://' not in boot_help.lower(), 'boot guidance must stay inside the Creator'
 
           owner_pos = backend.index('ownerPrototypePhysicalBackend()')
           dev_pos = backend.index('creatorupdate.Ensure')
@@ -199,6 +207,7 @@ jobs:
           print('CREATOR_UX_BASELINE=PASS')
           print('CREATOR_GUIDED_EXPERIENCE=PASS')
           print('CREATOR_NATIVE_GUIDED_VISUALS=PASS')
+          print('CREATOR_INTERACTIVE_BOOT_GUIDANCE=PASS')
           print('CREATOR_USER_REQUIRED_INPUT=usb_target')
           print('CREATOR_VISIBLE_UPDATE_CONTROL=YES')
           print('CREATOR_POST_UAC_STATUS_TRANSITION=YES')
