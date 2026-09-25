@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -21,6 +22,7 @@ PORTABLE_USB_SCHEMA = "prototype-ordax.portable-usb-v2/1"
 CREATOR_PORTABLE_SCHEMA = "prototype-ordax.creator-portable-media-plan/1"
 CANONICAL_V4_PROOF_SCHEMA = "prototype-ordax.portable-v4-canonical-release-proof/1"
 CANONICAL_V4_PROOF_PATH = Path("docs/evidence/canonical-v4-release-proof.json")
+PRE_USB_NOVA_ORDAX_AUDIT_PATH = Path("tools/creator/pre_usb_nova_ordax_audit.py")
 KEY_ID = "ordax-prototype-release-v1"
 REPOSITORY = "washingtonmsdj/prototipo-ordax-os"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -34,6 +36,26 @@ FINAL_AUTHORIZATION_BLOCKERS = {
 AUTHORIZATION_CONTEXT_PATTERNS = (
     ".github/workflows/physical-write-promotion.yml",
     "tools/creator/physical_promotion.py",
+    "tools/creator/pre_usb_nova_ordax_audit.py",
+    "docs/contracts/intelligence.json",
+    "docs/contracts/local-session.json",
+    "docs/contracts/first-run.json",
+    "docs/contracts/diagnostics.json",
+    "docs/contracts/recovery-status.json",
+    "docs/contracts/hardware-support-matrix.json",
+    "system/contracts/file-space.mjs",
+    "system/adapters/native/file-space.mjs",
+    "system/contracts/local-session.mjs",
+    "system/adapters/native/local-session.mjs",
+    "system/contracts/recovery-status.mjs",
+    "system/adapters/native/recovery-status.mjs",
+    "system/composition/native/diagnostics.mjs",
+    "system/composition/native/main.mjs",
+    "system/surface/runtime/native_host_server.py",
+    "system/surface/ui/first-run.mjs",
+    "system/surface/ui/local-session-lock.mjs",
+    "system/surface/ui/settings-overview-controls.mjs",
+    "system/surface/ui/system-overview-controls.mjs",
     "tools/creator/authorize_physical_write.py",
     "tools/creator/bind_canonical_v4_release_proof.py",
     "tools/creator/go.*",
@@ -46,6 +68,7 @@ AUTHORIZATION_CONTEXT_PATTERNS = (
 )
 
 REQUIRED_AUTHORIZATION_REQUIREMENTS = {
+    "pre_usb_nova_ordax_audit_passed",
     "canonical_public_trust_pinned",
     "canonical_v4_release_proof_bound",
     "minimal_bootstrap_all_artifacts_resolved",
@@ -162,6 +185,48 @@ def authorization_context_sha256(repo_root: Path) -> tuple[str, int]:
 def _add(blockers: list[str], condition: bool, label: str) -> None:
     if not condition:
         blockers.append(label)
+
+
+def _pre_usb_nova_ordax_audit(repo_root: Path) -> dict[str, Any]:
+    root = repo_root.resolve()
+    path = root / PRE_USB_NOVA_ORDAX_AUDIT_PATH
+    try:
+        metadata = path.lstat()
+    except OSError:
+        return {
+            "source_ready": False,
+            "status": "blocked",
+            "blockers": ["audit-source-unavailable"],
+        }
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+        return {
+            "source_ready": False,
+            "status": "blocked",
+            "blockers": ["audit-source-not-regular-file"],
+        }
+    try:
+        spec = importlib.util.spec_from_file_location("ordax_pre_usb_nova_ordax_audit", path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("audit module loader unavailable")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        evaluator = getattr(module, "evaluate", None)
+        if not callable(evaluator):
+            raise RuntimeError("audit evaluate() unavailable")
+        status = evaluator(root)
+    except Exception:
+        return {
+            "source_ready": False,
+            "status": "blocked",
+            "blockers": ["audit-execution-failed"],
+        }
+    if not isinstance(status, dict):
+        return {
+            "source_ready": False,
+            "status": "blocked",
+            "blockers": ["audit-status-invalid"],
+        }
+    return status
 
 
 def _canonical_v4_release_proof(
@@ -376,6 +441,14 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
     portable = load_json(portable_path)
     creator_portable = load_json(creator_portable_path)
     blockers: list[str] = []
+
+    pre_usb_audit = _pre_usb_nova_ordax_audit(root)
+    pre_usb_audit_passed = pre_usb_audit.get("source_ready") is True
+    _add(
+        blockers,
+        pre_usb_audit_passed,
+        "pre-usb-nova-ordax-audit-not-pass",
+    )
 
     _add(blockers, auth.get("$schema") == AUTH_SCHEMA, "authorization-schema-invalid")
     _add(blockers, auth.get("source_repository") == REPOSITORY, "authorization-repository-mismatch")
@@ -602,6 +675,9 @@ def evaluate(repo_root: Path) -> dict[str, Any]:
         "authorization_blockers": authorization_blockers,
         "owner_authorization_required": pre_authorization_ready and not ready,
         "authorized_candidate_materialization_allowed": ready,
+        "pre_usb_nova_ordax_audit_passed": pre_usb_audit_passed,
+        "pre_usb_nova_ordax_audit_status": pre_usb_audit.get("status"),
+        "pre_usb_nova_ordax_audit_blockers": pre_usb_audit.get("blockers", []),
         "physical_authorization_bindings_resolved": bindings_resolved,
         "canonical_v4_release_proof_valid": canonical_v4_proof_valid,
         "canonical_v4_release_proof_sha256": canonical_v4_proof_sha,
