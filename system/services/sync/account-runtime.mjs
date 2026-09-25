@@ -33,6 +33,7 @@ export const PORTABLE_WORKSPACE_OBJECT_ID = "workspace/portable";
 
 const PULL_PAGE_SIZE = 200;
 const MAX_PULL_PAGES_PER_REFRESH = 10;
+const MAX_CONFLICT_REBASE_ATTEMPTS = 1;
 const TRACKED_OBJECT_IDS = Object.freeze([
   APPEARANCE_SYNC_OBJECT_ID,
   PORTABLE_PREFERENCES_OBJECT_ID,
@@ -269,6 +270,116 @@ export function createAccountSyncRuntime({
     void flush();
   };
 
+  const rebasePortablePending = (objectId, nextServerRevision) => {
+    const revision = requireRevision(nextServerRevision);
+    revisions.set(objectId, revision);
+    const current = pending.get(objectId);
+    if (!current) {
+      persistCheckpoint();
+      return null;
+    }
+    const rebased = mutation({
+      objectId,
+      dataClass: current.dataClass,
+      baseServerRevision: revision,
+      payload: current.payload,
+      idempotencyKey: nextKey(`${current.dataClass}-rebase`),
+    });
+    pending.set(objectId, rebased);
+    persistCheckpoint();
+    return rebased;
+  };
+
+  const flushAppearance = async () => {
+    let current = preferenceSync.pendingMutations()[0] ?? null;
+    if (!current) return;
+
+    for (let attempt = 0; attempt <= MAX_CONFLICT_REBASE_ATTEMPTS; attempt += 1) {
+      const expected = revisions.get(APPEARANCE_SYNC_OBJECT_ID) ?? 0;
+      if (current.baseServerRevision !== expected) {
+        preferenceSync.rebasePending(expected);
+        current = preferenceSync.pendingMutations()[0] ?? null;
+        if (!current) return;
+      }
+
+      let ack;
+      try {
+        ack = await remote.applyMutation({ ...current, resolverVersion: 1 });
+      } catch {
+        retryRequested = true;
+        return;
+      }
+
+      const revision = requireRevision(ack.serverRevision);
+      revisions.set(APPEARANCE_SYNC_OBJECT_ID, revision);
+      persistCheckpoint();
+
+      if (ack.conflict) {
+        preferenceSync.rebasePending(revision);
+        current = preferenceSync.pendingMutations()[0] ?? null;
+        if (!current || attempt >= MAX_CONFLICT_REBASE_ATTEMPTS) {
+          retryRequested = true;
+          return;
+        }
+        continue;
+      }
+
+      const acknowledged = preferenceSync.acknowledge(current.idempotencyKey, revision);
+      if (!acknowledged && preferenceSync.pendingMutations().length > 0) {
+        // Local intent changed while this request was in flight. Rebase the
+        // newest compacted value on the revision that the server accepted.
+        preferenceSync.rebasePending(revision);
+        retryRequested = true;
+      }
+      return;
+    }
+  };
+
+  const flushPortableObject = async (objectId, initialMutation) => {
+    let current = initialMutation;
+
+    for (let attempt = 0; attempt <= MAX_CONFLICT_REBASE_ATTEMPTS; attempt += 1) {
+      const expected = revisions.get(objectId) ?? 0;
+      if (current.baseServerRevision !== expected) {
+        current = rebasePortablePending(objectId, expected);
+        if (!current) return;
+      }
+
+      let ack;
+      try {
+        ack = await remote.applyMutation(current);
+      } catch {
+        retryRequested = true;
+        return;
+      }
+
+      const revision = requireRevision(ack.serverRevision);
+      revisions.set(objectId, revision);
+      persistCheckpoint();
+
+      if (ack.conflict) {
+        current = rebasePortablePending(objectId, revision);
+        if (!current || attempt >= MAX_CONFLICT_REBASE_ATTEMPTS) {
+          retryRequested = true;
+          return;
+        }
+        continue;
+      }
+
+      const latest = pending.get(objectId);
+      if (latest?.idempotencyKey === current.idempotencyKey) {
+        pending.delete(objectId);
+      } else if (latest) {
+        // A newer local value replaced the in-flight mutation. Keep that value
+        // and rebase it on the accepted authoritative revision.
+        rebasePortablePending(objectId, revision);
+        retryRequested = true;
+      }
+      persistCheckpoint();
+      return;
+    }
+  };
+
   async function flush() {
     if (destroyed || syncing || identity.getSnapshot().state !== "signed-in" || !initialized) {
       return;
@@ -276,36 +387,9 @@ export function createAccountSyncRuntime({
     syncing = true;
     retryRequested = false;
     try {
-      for (const appearanceMutation of preferenceSync.pendingMutations()) {
-        const expected = revisions.get(APPEARANCE_SYNC_OBJECT_ID) ?? 0;
-        if (appearanceMutation.baseServerRevision !== expected) continue;
-        try {
-          const ack = await remote.applyMutation({ ...appearanceMutation, resolverVersion: 1 });
-          if (ack.conflict) continue;
-          if (ack.applied) {
-            revisions.set(APPEARANCE_SYNC_OBJECT_ID, requireRevision(ack.serverRevision));
-            preferenceSync.acknowledge(appearanceMutation.idempotencyKey, ack.serverRevision);
-            persistCheckpoint();
-          }
-        } catch {
-          retryRequested = true;
-        }
-      }
-
+      await flushAppearance();
       for (const [objectId, pendingMutation] of [...pending]) {
-        try {
-          const ack = await remote.applyMutation(pendingMutation);
-          if (ack.conflict) continue;
-          if (ack.applied) {
-            revisions.set(objectId, requireRevision(ack.serverRevision));
-            if (pending.get(objectId)?.idempotencyKey === pendingMutation.idempotencyKey) {
-              pending.delete(objectId);
-            }
-            persistCheckpoint();
-          }
-        } catch {
-          retryRequested = true;
-        }
+        await flushPortableObject(objectId, pendingMutation);
       }
     } finally {
       syncing = false;
@@ -343,10 +427,10 @@ export function createAccountSyncRuntime({
     const previousRevision = revisions.get(objectId) ?? 0;
     if (serverRevision < previousRevision) return false;
     revisions.set(objectId, serverRevision);
-    if (object.tombstone) return true;
-
     if (objectId === APPEARANCE_SYNC_OBJECT_ID) {
-      if (preferenceSync.pendingMutations().length === 0 && serverRevision > previousRevision) {
+      if (preferenceSync.pendingMutations().length > 0 && serverRevision > previousRevision) {
+        preferenceSync.rebasePending(serverRevision);
+      } else if (!object.tombstone && serverRevision > previousRevision) {
         preferenceSync.applyRemoteAppearance(
           createAppearanceSyncObject({
             theme: object.payload?.theme,
@@ -358,14 +442,18 @@ export function createAccountSyncRuntime({
     }
 
     if (objectId === PORTABLE_PREFERENCES_OBJECT_ID) {
-      if (!preferencesDirty && !pending.has(objectId) && serverRevision > previousRevision) {
+      if (pending.has(objectId) && serverRevision > previousRevision) {
+        rebasePortablePending(objectId, serverRevision);
+      } else if (!object.tombstone && !preferencesDirty && serverRevision > previousRevision) {
         applyRemotePreferences(object);
       }
       return true;
     }
 
     if (objectId === PORTABLE_WORKSPACE_OBJECT_ID) {
-      if (!workspaceDirty && !pending.has(objectId) && serverRevision > previousRevision) {
+      if (pending.has(objectId) && serverRevision > previousRevision) {
+        rebasePortablePending(objectId, serverRevision);
+      } else if (!object.tombstone && !workspaceDirty && serverRevision > previousRevision) {
         applyRemoteWorkspace(object);
       }
       return true;
