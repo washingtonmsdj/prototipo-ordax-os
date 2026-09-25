@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+"""Prove OrdaX current-session revocation without persisting credentials or tokens.
+
+Two independent sessions sign in to the same account. Session A signs out with
+local scope through the deployed OrdaX gateway. The proof then verifies that:
+- A is anonymous after logout;
+- A's captured refresh token can no longer restore a session;
+- B remains authenticated, proving logout is per-session rather than global.
+
+Credentials are accepted only through environment variables. Tokens stay in
+memory and are never printed.
+"""
+
+from __future__ import annotations
+
+import http.cookiejar
+import json
+import os
+import ssl
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import HTTPCookieProcessor, Request, build_opener
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DEFAULT_GATEWAY_FILE = os.path.join(ROOT, "system", "services", "account", "gateway-base-url")
+ACCESS_COOKIE = "ordax_access"
+REFRESH_COOKIE = "ordax_refresh"
+
+
+def fail(reason: str) -> "NoReturn":
+    raise SystemExit(f"ACCOUNT_SESSION_REVOCATION_PROOF=FAIL reason={reason}")
+
+
+class Client:
+    def __init__(self, base_url: str) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.jar = http.cookiejar.CookieJar()
+        self.opener = build_opener(HTTPCookieProcessor(self.jar))
+
+    def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        body: bytes | None = None,
+        content_type: str | None = None,
+        cookie_header: str | None = None,
+    ):
+        headers = {
+            "Accept": "application/json",
+            "User-Agent": "OrdaX-Session-Revocation-Proof/1",
+        }
+        if content_type:
+            headers["Content-Type"] = content_type
+        if cookie_header:
+            headers["Cookie"] = cookie_header
+        req = Request(self.base_url + path, data=body, headers=headers, method=method)
+        opener = build_opener() if cookie_header else self.opener
+        try:
+            with opener.open(req, timeout=20, context=ssl.create_default_context() if cookie_header else None) as response:
+                raw = response.read(1024 * 1024)
+                status = response.status
+        except TypeError:
+            # OpenerDirector.open() does not accept a context parameter.
+            try:
+                with opener.open(req, timeout=20) as response:
+                    raw = response.read(1024 * 1024)
+                    status = response.status
+            except HTTPError as exc:
+                raw = exc.read(1024 * 1024)
+                status = exc.code
+            except (URLError, OSError, TimeoutError) as exc:
+                fail(f"gateway-unreachable:{type(exc).__name__}")
+        except HTTPError as exc:
+            raw = exc.read(1024 * 1024)
+            status = exc.code
+        except (URLError, OSError, TimeoutError) as exc:
+            fail(f"gateway-unreachable:{type(exc).__name__}")
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (UnicodeError, json.JSONDecodeError):
+            fail(f"invalid-json:{status}")
+        return status, payload
+
+    def login(self, email: str, password: str) -> None:
+        body = urlencode({"email": email, "password": password}).encode("utf-8")
+        status, payload = self.request(
+            "POST",
+            "/auth/login",
+            body=body,
+            content_type="application/x-www-form-urlencoded",
+        )
+        if status != 200 or payload.get("authenticated") is not True:
+            fail(f"login:{status}")
+
+    def session(self):
+        status, payload = self.request("GET", "/auth/session")
+        if status != 200:
+            fail(f"session:{status}")
+        return payload
+
+    def cookie_value(self, name: str) -> str:
+        for item in self.jar:
+            if item.name == name:
+                return item.value
+        fail(f"cookie-missing:{name}")
+
+    def logout(self) -> None:
+        status, payload = self.request(
+            "POST",
+            "/auth/logout",
+            body=b"",
+            content_type="application/json",
+        )
+        if status != 200 or payload.get("signedOut") is not True:
+            fail(f"logout:{status}")
+
+    def session_with_refresh_token(self, refresh_token: str):
+        return self.request(
+            "GET",
+            "/auth/session",
+            cookie_header=f"{REFRESH_COOKIE}={refresh_token}",
+        )
+
+
+def gateway_url() -> str:
+    override = os.environ.get("ORDAX_ACCOUNT_GATEWAY_BASE_URL", "").strip()
+    if override:
+        return override
+    try:
+        with open(DEFAULT_GATEWAY_FILE, "r", encoding="utf-8") as handle:
+            return handle.read().strip()
+    except OSError:
+        fail("gateway-config-missing")
+
+
+def main() -> int:
+    email = os.environ.get("ORDAX_PROOF_ACCOUNT_EMAIL", "").strip()
+    password = os.environ.get("ORDAX_PROOF_ACCOUNT_PASSWORD", "")
+    if not email or not password:
+        print("ACCOUNT_SESSION_REVOCATION_PROOF=SKIP reason=credentials-not-provided")
+        return 2
+
+    base_url = gateway_url()
+    if not base_url.startswith("https://") or "?" in base_url or "#" in base_url:
+        fail("invalid-gateway-url")
+
+    client_a = Client(base_url)
+    client_b = Client(base_url)
+
+    client_a.login(email, password)
+    client_b.login(email, password)
+    if client_a.session().get("authenticated") is not True:
+        fail("session-a-not-authenticated")
+    if client_b.session().get("authenticated") is not True:
+        fail("session-b-not-authenticated")
+
+    refresh_a = client_a.cookie_value(REFRESH_COOKIE)
+    client_a.logout()
+
+    if client_a.session().get("authenticated") is not False:
+        fail("session-a-still-authenticated-after-logout")
+
+    status, stale = client_a.session_with_refresh_token(refresh_a)
+    if status != 200 or stale.get("authenticated") is not False:
+        fail("revoked-refresh-token-restored-session")
+
+    if client_b.session().get("authenticated") is not True:
+        fail("session-b-was-revoked-by-local-logout")
+
+    client_b.logout()
+    print("ACCOUNT_SESSION_REVOCATION_PROOF=PASS scope=local")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
