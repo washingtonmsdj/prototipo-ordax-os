@@ -28,11 +28,11 @@ The pre-MVP foundation carries a **provisional two-private-Space default** for t
 
 Profile Packs may compose apps, templates, knowledge-source policy and Intelligence defaults, but they cannot grant privileges, bypass app signature verification or bypass entitlement checks.
 
-## Cross-device continuity — backend v1 implemented, client rollout pending
+## Cross-device continuity — backend v1 + Web source integration implemented
 
 The first account-scoped synchronization backend is now applied to the dedicated `ordax-control-plane` project. It provides owner-scoped RLS, stable object IDs, server revisions, idempotent mutation keys, explicit tombstones and optimistic conflict detection through `ordax_apply_sync_mutation_v1`. This is the real backend foundation for the same account to carry approved state between devices.
 
-Cross-device synchronization is **not yet a public MVP capability** because USB/Web/Mobile clients have not completed end-to-end integration and device/session management. Until that rollout is proven, synchronization, backup and continuity remain **Em breve** in public copy.
+The Web source now has an end-to-end OrdaX-owned transport boundary for `appearance`, portable accessibility preferences and portable workspace metadata. It uses the real account session without exposing provider tokens to Surface JavaScript. USB/Native and Mobile still lack their final secure transport/device-session integration, so synchronization remains **Em breve** in public copy and is not yet advertised as a released MVP capability.
 
 The architecture remains prepared for future synchronized state such as:
 
