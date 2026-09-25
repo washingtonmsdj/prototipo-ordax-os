@@ -35,7 +35,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "real-auth-and-account-sync-gateway-source-v8-edge-revision-11-recovery-token-hash-gated-public-server-gated",
+            "real-auth-and-account-sync-gateway-source-v9-edge-revision-12-recovery-token-hash-gated-public-server-gated",
         )
         self.assertFalse(contract["baseline"]["provider_configured"])
         self.assertTrue(contract["baseline"]["http_only_session_cookies"])
@@ -51,8 +51,8 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertEqual(contract["baseline"]["registration_password_minimum_chars"], 12)
         self.assertTrue(contract["baseline"]["registration_password_policy_enforced_at_edge"])
         self.assertFalse(contract["baseline"]["existing_login_passwords_retroactively_rejected"])
-        self.assertEqual(contract["runtime"]["gateway_source_version"], 8)
-        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 11)
+        self.assertEqual(contract["runtime"]["gateway_source_version"], 9)
+        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 12)
         self.assertTrue(contract["baseline"]["public_site_server_activation_gate"])
         self.assertFalse(contract["baseline"]["public_site_account_enabled"])
         self.assertEqual(contract["baseline"]["public_site_marker_header"], "X-OrdaX-Public-Site")
