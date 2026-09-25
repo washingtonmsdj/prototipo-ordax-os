@@ -94,6 +94,37 @@ O `stdio` existente do runtime de desenvolvimento continua útil localmente; MCP
 remoto de produto precisa de gateway autenticado e não deve publicar diretamente
 uma porta local da estação.
 
+## 5.1 Control Plane compartilhado, autoridade separada
+
+O projeto Supabase dedicado `ordax-control-plane` pode hospedar tanto o canal de
+desenvolvimento do Device Agent quanto os serviços de produto, desde que essas
+autoridades permaneçam separadas.
+
+Isso significa:
+
+- o Device Agent incubado em `washingtonmsdj/mcp-blender` pode usar o canal de
+  desenvolvimento do mesmo Control Plane para Blender, Unity, Git, arquivos e
+  outras ações tipadas;
+- credenciais de desenvolvimento não autenticam usuários do produto;
+- credenciais de produto não autorizam jobs de engenharia;
+- o Product MCP e o OrdaX Web não recebem credenciais do operador/desenvolvimento;
+- tabelas, filas ou tokens históricos de engenharia não se tornam autoridade de
+  produto apenas por viverem no mesmo projeto Supabase;
+- o Control Plane continua opcional para boot, Local AI e funcionamento local do
+  primeiro Stable/MVP USB.
+
+A convergência é de infraestrutura e protocolo, não de privilégio:
+
+```text
+                    ordax-control-plane
+                    /                 \
+       development authority       product authority
+              |                         |
+       OrdaX Device Agent         Action Gateway
+              |                    /    |     \
+       Blender / Unity       Web / Mobile / MCP
+```
+
 ## 6. Controle Web
 
 OrdaX Web não terá backend de automação paralelo.
