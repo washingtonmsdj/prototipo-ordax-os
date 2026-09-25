@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-and-account-sync-gateway-v2-deployed-public-same-origin-activation-gated",
+  "status": "real-auth-and-account-sync-gateway-v4-deployed-same-origin-adapter-source-ready-activation-gated",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
@@ -9,7 +9,7 @@
     "provider_adapter": "supabase-password-and-sync-rest",
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
-    "deployed_edge_adapter_version": 2
+    "deployed_edge_adapter_version": 4
   },
   "routes": [
     {
@@ -89,13 +89,18 @@
     "sync_provider_rows_exposed_to_surface": false,
     "incremental_sync_cursor_implemented": true,
     "atomic_sync_snapshot_implemented": true,
-    "subject_bound_client_checkpoint": true
+    "subject_bound_client_checkpoint": true,
+    "cross_site_state_changes_allowed": false,
+    "csrf_state_change_protection": true
   },
   "deployment": {
     "same_origin_required_for_public_site": true,
     "tls_required_in_production": true,
     "reverse_proxy_or_platform_adapter_expected": true,
     "edge_gateway_deployed": true,
-    "public_browser_same_origin_activated": false
+    "public_browser_same_origin_activated": false,
+    "same_origin_adapter_source": "deploy/public-site/nginx.conf",
+    "same_origin_adapter_source_ready": true,
+    "same_origin_adapter_deployed": false
   }
 }
