@@ -8,6 +8,7 @@ import {
   validateIdentityActionsSnapshot,
 } from "../system/contracts/identity-actions.mjs";
 import { createWebIdentityActions } from "../system/adapters/web/identity-actions.mjs";
+import { createWebIdentitySession } from "../system/adapters/web/identity.mjs";
 
 test("identity action contract normalizes supported command families", () => {
   const snapshot = validateIdentityActionsSnapshot({ supportedActions: ["sign-in", "register", "sign-out"] });
@@ -38,9 +39,30 @@ test("identity action port is schema checked", () => {
   assert.equal(assertIdentityActionsPort(port), port);
 });
 
-test("Web identity actions remain unavailable until a real provider adapter exists", async () => {
-  const port = createWebIdentityActions();
-  assert.deepEqual(port.getSnapshot().supportedActions, []);
-  await assert.rejects(() => port.execute("sign-in"));
-  port.dispose();
+test("Web identity actions follow the real gateway session state", async () => {
+  const assigned = [];
+  const windowRef = {
+    location: { assign: (value) => assigned.push(value) },
+    fetch: async (path) => ({
+      ok: true,
+      status: path === "/auth/logout" ? 303 : 200,
+      json: async () => ({
+        $schema: "prototype-ordax.public-identity-session/1",
+        authenticated: false,
+        provider: "supabase",
+        status: "anonymous",
+      }),
+    }),
+  };
+  const session = createWebIdentitySession(windowRef);
+  await session.refresh();
+  const actions = createWebIdentityActions(windowRef, session);
+  assert.deepEqual(actions.getSnapshot().supportedActions, ["sign-in", "register"]);
+
+  await actions.execute("sign-in");
+  await actions.execute("register");
+  assert.deepEqual(assigned, ["/login/", "/cadastro/"]);
+
+  actions.dispose();
+  session.dispose();
 });
