@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-site/1",
-  "status": "foundation-same-origin-adapter-and-gated-forms-source-ready-not-deployed",
+  "status": "foundation-same-origin-adapter-gated-auth-and-recovery-forms-source-ready-not-deployed",
   "artifact_class": "public-site",
   "source_root": "sites/public",
   "build_recipe": "tools/public-site/build.py",
@@ -13,7 +13,9 @@
     "licenses": "/licencas/",
     "privacy": "/privacidade/",
     "terms": "/termos/",
-    "account": "/conta/"
+    "account": "/conta/",
+    "recovery": "/recuperar/",
+    "recovery_complete": "/recuperar/nova-senha/"
   },
   "runtime_dependencies": {
     "remote_javascript": false,
@@ -36,7 +38,10 @@
     "auth_hardening_contract": "docs/contracts/public-auth-hardening.json",
     "account_activation_requires_auth_hardening": true,
     "server_side_public_activation_gate_required": true,
-    "server_side_public_activation_currently_enabled": false
+    "server_side_public_activation_currently_enabled": false,
+    "gated_recovery_forms_prepared": true,
+    "recovery_completion_uses_native_browser_post": true,
+    "recovery_tokens_visible_to_client_javascript": false
   },
   "downloads": {
     "hard_coded_latest_allowed": false,
