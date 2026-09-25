@@ -1,0 +1,79 @@
+name: Account Session Revocation Proof
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prove-session-revocation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      ORDAX_PROOF_ACCOUNT_EMAIL: ${{ secrets.ORDAX_PROOF_ACCOUNT_EMAIL }}
+      ORDAX_PROOF_ACCOUNT_PASSWORD: ${{ secrets.ORDAX_PROOF_ACCOUNT_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Require dedicated proof account secrets without printing them
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ORDAX_PROOF_ACCOUNT_EMAIL:-}" || {
+            echo 'ORDAX_PROOF_ACCOUNT_EMAIL secret is required for this manual proof.' >&2
+            exit 2
+          }
+          test -n "${ORDAX_PROOF_ACCOUNT_PASSWORD:-}" || {
+            echo 'ORDAX_PROOF_ACCOUNT_PASSWORD secret is required for this manual proof.' >&2
+            exit 2
+          }
+          echo 'ACCOUNT_SESSION_REVOCATION_PROOF_CREDENTIALS_PRESENT=YES'
+          echo 'ACCOUNT_SESSION_REVOCATION_PROOF_CREDENTIALS_PRINTED=NO'
+
+      - name: Prove local session revocation semantics
+        env:
+          ORDAX_SESSION_REVOCATION_RECEIPT_PATH: ${{ runner.temp }}/account-session-revocation-proof.json
+        run: python tools/account-sync/prove_session_revocation.py
+
+      - name: Validate sanitized receipt shape
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - "${{ runner.temp }}/account-session-revocation-proof.json" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          data = json.loads(path.read_text(encoding="utf-8"))
+          assert data["$schema"] == "prototype-ordax.account-session-revocation-proof/1"
+          assert data["status"] == "pass"
+          assert data["scope"] == "local"
+          assert data["two_independent_sessions"] is True
+          assert data["session_a_anonymous_after_logout"] is True
+          assert data["captured_refresh_token_rejected"] is True
+          assert data["session_b_remained_authenticated"] is True
+          assert data["credentials_persisted"] is False
+          assert data["account_identifier_recorded"] is False
+          assert data["cookies_recorded"] is False
+          assert data["tokens_recorded"] is False
+          assert data["source_commit"] == data["source_commit"].lower()
+          assert len(data["source_commit"]) == 40
+          int(data["source_commit"], 16)
+          serialized = json.dumps(data, sort_keys=True).lower()
+          for forbidden in ("email", "password", "access_token", "refresh_token", "cookie"):
+              assert forbidden not in serialized
+          print("ACCOUNT_SESSION_REVOCATION_RECEIPT=PASS_SANITIZED")
+          PY
+
+      - name: Upload sanitized revocation proof only
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: account-session-revocation-proof-${{ github.sha }}
+          path: ${{ runner.temp }}/account-session-revocation-proof.json
+          if-no-files-found: error
+          retention-days: 14
