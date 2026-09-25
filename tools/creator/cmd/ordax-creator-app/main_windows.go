@@ -32,6 +32,7 @@ const (
 	wsOverlappedWindow = 0x00CF0000
 	wsVisible          = 0x10000000
 	wsChild            = 0x40000000
+	wsClipChildren     = 0x02000000
 	wsTabStop          = 0x00010000
 	wsDisabled         = 0x08000000
 	wsVScroll          = 0x00200000
@@ -497,7 +498,7 @@ func createMainWindow() {
 		0,
 		uintptr(unsafe.Pointer(className)),
 		uintptr(unsafe.Pointer(utf16Ptr(windowTitle))),
-		wsOverlappedWindow,
+		wsOverlappedWindow|wsClipChildren,
 		cwUseDefault, cwUseDefault,
 		900, 390,
 		0, 0, instance, 0,
