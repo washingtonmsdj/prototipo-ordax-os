@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.account-lifecycle/1",
-  "status": "account-export-implemented-account-close-pending",
+  "status": "account-export-implemented-account-close-source-ready-deployment-pending",
   "identity_owner": "ordax-account-gateway",
   "provider": "supabase",
   "principles": {
@@ -45,10 +45,24 @@
       "public_enabled": false
     },
     "account_close": {
-      "owner": "future-ordax-account-lifecycle-service",
+      "owner": "ordax-account-lifecycle",
       "implemented": false,
+      "source_implemented": true,
       "public_enabled": false,
+      "gateway_route": "/account/close",
+      "gateway_route_source_implemented": true,
+      "gateway_route_deployed": false,
+      "lifecycle_service": "ordax-account-lifecycle",
+      "lifecycle_service_source_implemented": true,
+      "lifecycle_service_deployed": true,
+      "lifecycle_service_deployment_revision_observed": 1,
+      "lifecycle_service_enabled": false,
+      "lifecycle_service_verify_jwt": true,
+      "requires_recent_reauthentication": true,
+      "recent_token_max_age_seconds": 300,
+      "requires_explicit_confirmation": true,
       "browser_direct_delete_allowed": false,
+      "service_role_isolated_to_lifecycle_service": true,
       "required_before_public_account_lifecycle_is_complete": true
     },
     "account_data_export": {
