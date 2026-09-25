@@ -93,4 +93,6 @@ test("shared control plane keeps product and development authority separate", ()
   assert.equal(control.product_action_gateway_may_reuse_development_operator_credentials, false);
   assert.equal(control.historical_development_tables_are_product_authority, false);
   assert.equal(control.bootstrap_dependency, false);
+  assert.equal(control.existing_device_token_identity_recovery, true);
+  assert.equal(control.github_runner_required_for_existing_device_recovery, false);
 });
