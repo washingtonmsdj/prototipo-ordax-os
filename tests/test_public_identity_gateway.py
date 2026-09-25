@@ -40,7 +40,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "real-auth-and-account-sync-gateway-source-v9-edge-revision-12-recovery-token-hash-gated-public-server-gated",
+            "real-auth-and-account-sync-gateway-source-v10-edge-revision-13-pwned-passwords-gated-public-server-gated",
         )
         self.assertFalse(contract["baseline"]["provider_configured"])
         self.assertTrue(contract["baseline"]["http_only_session_cookies"])
@@ -53,11 +53,25 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertFalse(contract["deployment"]["public_browser_same_origin_activated"])
         self.assertTrue(contract["baseline"]["browser_form_redirects_implemented"])
         self.assertTrue(contract["baseline"]["json_api_mode_preserved"])
+        self.assertTrue(contract["baseline"]["compromised_password_screening_implemented"])
+        self.assertEqual(
+            contract["baseline"]["compromised_password_screening_scope"],
+            ["registration", "recovery-password-change"],
+        )
+        self.assertFalse(contract["baseline"]["compromised_password_screening_login"])
+        self.assertEqual(
+            contract["baseline"]["compromised_password_screening_k_anonymity_prefix_chars"],
+            5,
+        )
+        self.assertTrue(contract["baseline"]["compromised_password_screening_padding"])
+        self.assertFalse(contract["baseline"]["compromised_password_screening_plaintext_sent"])
+        self.assertFalse(contract["baseline"]["compromised_password_screening_full_hash_sent"])
+        self.assertTrue(contract["baseline"]["compromised_password_screening_fail_closed"])
         self.assertEqual(contract["baseline"]["registration_password_minimum_chars"], 12)
         self.assertTrue(contract["baseline"]["registration_password_policy_enforced_at_edge"])
         self.assertFalse(contract["baseline"]["existing_login_passwords_retroactively_rejected"])
-        self.assertEqual(contract["runtime"]["gateway_source_version"], 9)
-        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 12)
+        self.assertEqual(contract["runtime"]["gateway_source_version"], 10)
+        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 13)
         self.assertTrue(contract["baseline"]["public_site_server_activation_gate"])
         self.assertFalse(contract["baseline"]["public_site_account_enabled"])
         self.assertEqual(contract["baseline"]["public_site_marker_header"], "X-OrdaX-Public-Site")
