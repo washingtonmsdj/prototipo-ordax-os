@@ -13,9 +13,11 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
     def test_account_exposes_only_real_current_sections(self):
         controls = ACCOUNT.read_text(encoding="utf-8")
         self.assertIn('id: "overview"', controls)
+        self.assertIn('id: "spaces"', controls)
         self.assertIn('id: "sync"', controls)
         self.assertIn("validAccountSection", controls)
         self.assertIn('activeSection === "overview"', controls)
+        self.assertIn('activeSection === "spaces"', controls)
         self.assertIn('activeSection === "sync"', controls)
         for unavailable in ("profile", "security", "sessions", "plan"):
             self.assertNotIn(f'id: "{unavailable}"', controls)
@@ -64,6 +66,28 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
             catalog,
         )
         self.assertIn("nada foi anunciado como enviado à nuvem", catalog)
+
+    def test_spaces_section_uses_real_read_only_catalog_and_clears_on_sign_out(self):
+        controls = ACCOUNT.read_text(encoding="utf-8")
+        catalog = ACCOUNT_CATALOG.read_text(encoding="utf-8")
+        native = NATIVE.read_text(encoding="utf-8")
+        web = WEB.read_text(encoding="utf-8")
+
+        self.assertIn("assertSpacesPort", controls)
+        self.assertIn("validateSpacesSnapshot", controls)
+        self.assertIn("data.accountSpacesRefresh", controls)
+        self.assertIn('sessionSnapshot.state !== "signed-in"', controls)
+        self.assertIn("spacesPort?.reset()", controls)
+        self.assertIn("account.spaces.card.detailPack", controls)
+        self.assertIn('"account.section.spaces": "Spaces"', catalog)
+        self.assertIn('"account.spaces.title": "Seus Spaces"', catalog)
+        self.assertIn("Nenhum Space local fictício é criado.", catalog)
+        self.assertIn("No fake local Space is created.", catalog)
+        for composition in (native, web):
+            self.assertIn("createWebSpacesCatalog", composition)
+            self.assertIn("const spaces = createWebSpacesCatalog(window);", composition)
+            self.assertIn("spaces,", composition)
+            self.assertIn("spaces.dispose()", composition)
 
     def test_account_no_longer_consumes_host_capability_inventory(self):
         controls = ACCOUNT.read_text(encoding="utf-8")
