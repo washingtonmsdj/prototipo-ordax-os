@@ -13,6 +13,7 @@ SNAPSHOT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "2
 TWO_CLIENT_PROOF = ROOT / "tools" / "account-sync" / "prove_two_clients.py"
 SESSION_REVOCATION_PROOF = ROOT / "tools" / "account-sync" / "prove_session_revocation.py"
 RECOVERY_EMAIL_TEMPLATE = ROOT / "infra" / "supabase" / "identity" / "email-templates" / "recovery.html"
+ACCOUNT_EXPORT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925031000_account_data_export_v1.sql"
 
 
 class AccountSyncAndIdentityV1Tests(unittest.TestCase):
@@ -101,12 +102,36 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertIn('"compromised-password"', text)
         self.assertIn('"password-screening-unavailable"', text)
         self.assertIn("PUBLIC_SITE_ACCOUNT_ENABLED = false", text)
+        self.assertIn('ordax_account_export_v1', text)
+        self.assertIn('path === "/account/export" && req.method === "GET"', text)
         self.assertIn("x-ordax-public-site", text)
         self.assertIn("publicSiteRequest", text)
         self.assertIn("public-account-access-disabled", text)
         self.assertIn('Accept', (ROOT / "system" / "surface" / "runtime" / "native_account_gateway.py").read_text(encoding="utf-8"))
         self.assertNotIn('service_role', text.lower())
         self.assertNotIn('SUPABASE_SERVICE_ROLE_KEY', text)
+
+    def test_account_export_rpc_is_user_scoped_security_invoker(self):
+        sql = ACCOUNT_EXPORT_MIGRATION.read_text(encoding="utf-8").lower()
+        self.assertIn("create or replace function public.ordax_account_export_v1()", sql)
+        self.assertIn("security invoker", sql)
+        self.assertIn("set search_path = ''", sql)
+        self.assertIn("auth.uid()", sql)
+        self.assertIn("revoke all on function public.ordax_account_export_v1()", sql)
+        self.assertIn("grant execute on function public.ordax_account_export_v1() to authenticated", sql)
+        self.assertNotIn("security definer", sql)
+        self.assertNotIn("service_role", sql)
+        self.assertNotIn("'metadata'", sql)
+
+        edge = EDGE_GATEWAY.read_text(encoding="utf-8")
+        self.assertIn('path === "/account/export" && req.method === "GET"', edge)
+        self.assertIn('supabase.rpc("ordax_account_export_v1")', edge)
+        self.assertIn('path.startsWith("/account/")', edge)
+
+        gateway = GATEWAY.read_text(encoding="utf-8")
+        self.assertIn("SupabaseAccountProvider", gateway)
+        self.assertIn('if path == "/account/export":', gateway)
+        self.assertIn("export_account(access)", gateway)
 
     def test_native_signed_gateway_config_targets_https_edge_gateway(self):
         value = NATIVE_GATEWAY_CONFIG.read_text(encoding="utf-8").strip()
