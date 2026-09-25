@@ -1,0 +1,71 @@
+{
+  "$schema": "prototype-ordax.account-lifecycle/1",
+  "status": "source-defined-destructive-operations-not-enabled",
+  "identity_owner": "ordax-account-gateway",
+  "provider": "supabase",
+  "principles": {
+    "account_optional_for_product_use": true,
+    "browser_direct_provider_admin_calls_allowed": false,
+    "service_role_key_in_browser_allowed": false,
+    "provider_tokens_in_surface_javascript_allowed": false,
+    "destructive_account_action_requires_recent_authenticated_session": true,
+    "destructive_account_action_requires_explicit_user_confirmation": true,
+    "destructive_account_action_requires_server_side_owner": true
+  },
+  "operations": {
+    "register": {
+      "owner": "ordax-account-gateway",
+      "implemented": true,
+      "public_enabled": false
+    },
+    "login": {
+      "owner": "ordax-account-gateway",
+      "implemented": true,
+      "public_enabled": false
+    },
+    "session_refresh": {
+      "owner": "ordax-account-gateway",
+      "implemented": true,
+      "public_enabled": false
+    },
+    "logout_current_session": {
+      "owner": "ordax-account-gateway",
+      "implemented": true,
+      "public_enabled": false,
+      "scope": "local"
+    },
+    "password_recovery_request": {
+      "owner": "ordax-account-gateway",
+      "implemented": true,
+      "public_enabled": false
+    },
+    "password_recovery_complete": {
+      "owner": "ordax-account-gateway",
+      "implemented": true,
+      "public_enabled": false
+    },
+    "account_close": {
+      "owner": "future-ordax-account-lifecycle-service",
+      "implemented": false,
+      "public_enabled": false,
+      "browser_direct_delete_allowed": false,
+      "required_before_public_account_lifecycle_is_complete": true
+    },
+    "account_data_export": {
+      "owner": "future-ordax-account-lifecycle-service",
+      "implemented": false,
+      "public_enabled": false,
+      "required_before_public_account_lifecycle_is_complete": true
+    }
+  },
+  "data_ownership": {
+    "account_scoped_product_rows": "owner-user-id-with-rls",
+    "sync_rows": "owner-user-id-with-rls",
+    "provider_auth_user": "supabase-auth",
+    "deletion_cascade_may_be_used_only_after_server_authorized_account_close": true
+  },
+  "activation": {
+    "public_login_may_open_before_account_close_implementation": false,
+    "public_login_may_open_before_data_export_implementation": false
+  }
+}
