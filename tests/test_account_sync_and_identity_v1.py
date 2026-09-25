@@ -13,6 +13,7 @@ SNAPSHOT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "2
 TWO_CLIENT_PROOF = ROOT / "tools" / "account-sync" / "prove_two_clients.py"
 TWO_CLIENT_WORKFLOW = ROOT / ".github" / "workflows" / "account-sync-two-client-proof.yml"
 SESSION_REVOCATION_PROOF = ROOT / "tools" / "account-sync" / "prove_session_revocation.py"
+SESSION_REVOCATION_WORKFLOW = ROOT / ".github" / "workflows" / "account-session-revocation-proof.yml"
 ACCOUNT_CLOSE_DISABLED_PROOF = ROOT / "tools" / "account-sync" / "prove_account_close_disabled.py"
 RECOVERY_EMAIL_TEMPLATE = ROOT / "infra" / "supabase" / "identity" / "email-templates" / "recovery.html"
 ACCOUNT_EXPORT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925031000_account_data_export_v1.sql"
@@ -200,12 +201,31 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         text = SESSION_REVOCATION_PROOF.read_text(encoding="utf-8")
         self.assertIn("ORDAX_PROOF_ACCOUNT_EMAIL", text)
         self.assertIn("ORDAX_PROOF_ACCOUNT_PASSWORD", text)
+        self.assertIn("ORDAX_SESSION_REVOCATION_RECEIPT_PATH", text)
         self.assertIn("ACCOUNT_SESSION_REVOCATION_PROOF=PASS", text)
+        self.assertIn("prototype-ordax.account-session-revocation-proof/1", text)
+        self.assertIn('"captured_refresh_token_rejected": True', text)
+        self.assertIn('"session_b_remained_authenticated": True', text)
+        self.assertIn('"credentials_persisted": False', text)
+        self.assertIn('"tokens_recorded": False', text)
         self.assertIn("revoked-refresh-token-restored-session", text)
         self.assertIn("session-b-was-revoked-by-local-logout", text)
         self.assertNotIn("print(refresh_a", text)
         self.assertNotIn("print(password", text)
         self.assertNotIn("service_role", text.lower())
+
+    def test_session_revocation_workflow_is_manual_secret_backed_and_receipt_only(self):
+        text = SESSION_REVOCATION_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", text)
+        self.assertNotIn("pull_request:", text)
+        self.assertNotIn("push:", text)
+        self.assertIn("secrets.ORDAX_PROOF_ACCOUNT_EMAIL", text)
+        self.assertIn("secrets.ORDAX_PROOF_ACCOUNT_PASSWORD", text)
+        self.assertIn("account-session-revocation-proof.json", text)
+        self.assertIn("ACCOUNT_SESSION_REVOCATION_RECEIPT=PASS_SANITIZED", text)
+        self.assertIn("retention-days: 14", text)
+        self.assertNotIn("echo \"$ORDAX_PROOF_ACCOUNT_EMAIL\"", text)
+        self.assertNotIn("echo \"$ORDAX_PROOF_ACCOUNT_PASSWORD\"", text)
 
     def test_recovery_email_template_uses_server_side_token_hash(self):
         text = RECOVERY_EMAIL_TEMPLATE.read_text(encoding="utf-8")
