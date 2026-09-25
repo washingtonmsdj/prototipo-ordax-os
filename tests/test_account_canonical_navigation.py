@@ -75,7 +75,7 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
 
         self.assertIn("assertSpacesPort", controls)
         self.assertIn("validateSpacesSnapshot", controls)
-        self.assertIn("data.accountSpacesRefresh", controls)
+        self.assertIn("dataset.accountSpacesRefresh", controls)
         self.assertIn('sessionSnapshot.state !== "signed-in"', controls)
         self.assertIn("spacesPort?.reset()", controls)
         self.assertIn("account.spaces.card.detailPack", controls)
