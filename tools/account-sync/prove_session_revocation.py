@@ -16,8 +16,9 @@ from __future__ import annotations
 import http.cookiejar
 import json
 import os
+from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -122,6 +123,46 @@ def gateway_url() -> str:
         fail("gateway-config-missing")
 
 
+def write_receipt(path: str, base_url: str) -> None:
+    if not path:
+        return
+    parsed = urlsplit(base_url)
+    source_commit = os.environ.get("GITHUB_SHA", "").strip()
+    if len(source_commit) != 40:
+        source_commit = None
+    else:
+        try:
+            int(source_commit, 16)
+        except ValueError:
+            source_commit = None
+
+    payload = {
+        "$schema": "prototype-ordax.account-session-revocation-proof/1",
+        "status": "pass",
+        "scope": "local",
+        "gateway_origin": f"{parsed.scheme}://{parsed.netloc}",
+        "source_commit": source_commit,
+        "workflow_run_id": os.environ.get("GITHUB_RUN_ID") or None,
+        "two_independent_sessions": True,
+        "session_a_anonymous_after_logout": True,
+        "captured_refresh_token_rejected": True,
+        "session_b_remained_authenticated": True,
+        "credentials_persisted": False,
+        "account_identifier_recorded": False,
+        "cookies_recorded": False,
+        "tokens_recorded": False,
+    }
+    output = Path(path).resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temp = output.with_name(f".{output.name}.tmp-{os.getpid()}")
+    temp.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    os.replace(temp, output)
+
+
 def main() -> int:
     email = os.environ.get("ORDAX_PROOF_ACCOUNT_EMAIL", "").strip()
     password = os.environ.get("ORDAX_PROOF_ACCOUNT_PASSWORD", "")
@@ -157,6 +198,10 @@ def main() -> int:
         fail("session-b-was-revoked-by-local-logout")
 
     client_b.logout()
+    write_receipt(
+        os.environ.get("ORDAX_SESSION_REVOCATION_RECEIPT_PATH", "").strip(),
+        base_url,
+    )
     print("ACCOUNT_SESSION_REVOCATION_PROOF=PASS scope=local")
     return 0
 
