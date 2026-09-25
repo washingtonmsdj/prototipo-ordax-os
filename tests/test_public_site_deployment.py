@@ -62,6 +62,10 @@ class PublicSiteDeploymentTests(unittest.TestCase):
         self.assertIn("authentication-required", text)
         self.assertIn("public-account-access-disabled", text)
         self.assertIn("public-account-gate-not-enforced", text)
+        self.assertIn('"/recuperar/"', text)
+        self.assertIn('"/recuperar/nova-senha/"', text)
+        self.assertIn('"/auth/recover"', text)
+        self.assertIn("public-recovery-gate-not-enforced", text)
         self.assertIn("origin-must-be-clean-https-origin", text)
         for forbidden in (
             "ORDAX_PROOF_ACCOUNT_PASSWORD",
