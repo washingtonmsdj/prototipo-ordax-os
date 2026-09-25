@@ -40,7 +40,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "real-auth-sync-export-gateway-source-v12-close-source-ready-deployed-source-v11-revision-14",
+            "real-auth-sync-export-gateway-source-v12-deployed-revision-15-close-disabled",
         )
         self.assertFalse(contract["baseline"]["provider_configured"])
         self.assertTrue(contract["baseline"]["http_only_session_cookies"])
@@ -71,8 +71,8 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertTrue(contract["baseline"]["registration_password_policy_enforced_at_edge"])
         self.assertFalse(contract["baseline"]["existing_login_passwords_retroactively_rejected"])
         self.assertEqual(contract["runtime"]["gateway_source_version"], 12)
-        self.assertEqual(contract["runtime"]["deployed_gateway_source_version"], 11)
-        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 14)
+        self.assertEqual(contract["runtime"]["deployed_gateway_source_version"], 12)
+        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 15)
         self.assertTrue(contract["runtime"]["lifecycle_service_deployed"])
         self.assertEqual(contract["runtime"]["lifecycle_service_deployment_revision_observed"], 1)
         self.assertFalse(contract["runtime"]["lifecycle_service_enabled"])
@@ -85,7 +85,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertFalse(contract["baseline"]["public_site_account_export_enabled"])
         self.assertTrue(contract["baseline"]["account_close_source_implemented"])
         self.assertFalse(contract["baseline"]["account_close_enabled"])
-        self.assertFalse(contract["baseline"]["account_close_gateway_route_deployed"])
+        self.assertTrue(contract["baseline"]["account_close_gateway_route_deployed"])
         self.assertTrue(contract["baseline"]["account_close_requires_recent_reauthentication"])
         self.assertTrue(contract["baseline"]["account_close_requires_explicit_confirmation"])
         self.assertFalse(contract["baseline"]["account_close_service_role_in_public_gateway"])
