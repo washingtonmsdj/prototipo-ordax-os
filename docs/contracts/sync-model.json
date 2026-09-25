@@ -36,33 +36,72 @@
     "resolver_must_be_versioned": true,
     "server_revision_preferred_over_client_wall_clock": true,
     "manual_resolution_may_be_used_when_domain_requires_it": true,
-    "new_data_class_requires_explicit_conflict_policy_before_production": true
+    "new_data_class_requires_explicit_conflict_policy_before_production": true,
+    "current_resolvers": {
+      "appearance": {
+        "resolver_version": 1,
+        "policy": "local-pending-intent-rebase-after-authoritative-server-revision",
+        "max_rebase_retries_per_flush": 1,
+        "client_wall_clock_used": false,
+        "universal_last_writer_wins": false
+      },
+      "preferences": {
+        "resolver_version": 1,
+        "policy": "local-pending-intent-rebase-after-authoritative-server-revision",
+        "max_rebase_retries_per_flush": 1,
+        "client_wall_clock_used": false,
+        "universal_last_writer_wins": false
+      },
+      "workspace-metadata": {
+        "resolver_version": 1,
+        "policy": "local-pending-intent-rebase-after-authoritative-server-revision",
+        "max_rebase_retries_per_flush": 1,
+        "client_wall_clock_used": false,
+        "universal_last_writer_wins": false
+      },
+      "app-state-metadata": {
+        "resolver_version": null,
+        "policy": "not-implemented"
+      },
+      "user-selected-cloud-content": {
+        "resolver_version": null,
+        "policy": "not-implemented"
+      }
+    }
   },
   "syncable_data_classes": [
     {
       "id": "appearance",
       "owner": "system/services/sync",
-      "resolver_family": "versioned-domain-resolver"
+      "resolver_family": "versioned-domain-resolver",
+      "resolver_version": 1,
+      "current_client_integration": true
     },
     {
       "id": "preferences",
       "owner": "system/services/sync",
-      "resolver_family": "versioned-domain-resolver"
+      "resolver_family": "versioned-domain-resolver",
+      "resolver_version": 1,
+      "current_client_integration": true
     },
     {
       "id": "workspace-metadata",
       "owner": "system/services/sync",
-      "resolver_family": "versioned-domain-resolver"
+      "resolver_family": "versioned-domain-resolver",
+      "resolver_version": 1,
+      "current_client_integration": true
     },
     {
       "id": "app-state-metadata",
       "owner": "system/services/sync",
-      "resolver_family": "versioned-app-domain-resolver"
+      "resolver_family": "versioned-app-domain-resolver",
+      "current_client_integration": false
     },
     {
       "id": "user-selected-cloud-content",
       "owner": "system/services/sync",
-      "resolver_family": "versioned-content-type-resolver"
+      "resolver_family": "versioned-content-type-resolver",
+      "current_client_integration": false
     }
   ],
   "never_sync_data_classes": [
@@ -180,6 +219,9 @@
     "cursor_is_client_wall_clock": false,
     "checkpoint_subject_bound": true,
     "checkpoint_revisions_persisted": true,
-    "native_checkpoint_storage": "device-private-0600-with-session-fallback"
+    "native_checkpoint_storage": "device-private-0600-with-session-fallback",
+    "idempotent_acceptance_clears_pending_mutation": true,
+    "conflict_rebase_bounded": true,
+    "max_conflict_rebase_retries_per_flush": 1
   }
 }
