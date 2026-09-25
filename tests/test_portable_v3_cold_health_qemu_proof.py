@@ -35,6 +35,10 @@ class PortableV3ColdHealthQemuProofTests(unittest.TestCase):
         self.assertIn('"qemu_graphical_hardware_requested"', text)
         self.assertIn('"-net", "none"', text)
         self.assertIn("cache=directsync", text)
+        self.assertIn(
+            "deadline = time.monotonic() + (300.0 if graphical_hardware else 150.0)",
+            text,
+        )
 
     def test_cold_health_runner_uses_real_supervisor_commit_and_second_boot(self):
         text = RUNNER.read_text(encoding="utf-8")
