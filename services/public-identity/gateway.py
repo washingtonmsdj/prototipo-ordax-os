@@ -15,6 +15,7 @@ from typing import Mapping
 from urllib.parse import parse_qs, urlsplit
 
 from pwned_passwords import PwnedPasswordChecker, PwnedPasswordsError
+from supabase_account import SupabaseAccountError, SupabaseAccountProvider
 from supabase_password import (
     MAX_REGISTRATION_PASSWORD_CHARS,
     MIN_REGISTRATION_PASSWORD_CHARS,
@@ -80,6 +81,16 @@ def _sync_provider_from_environment() -> SupabaseSyncProvider | None:
         return None
     try:
         return SupabaseSyncProvider(*config)
+    except (TypeError, ValueError):
+        return None
+
+
+def _account_provider_from_environment() -> SupabaseAccountProvider | None:
+    config = _provider_config()
+    if config is None:
+        return None
+    try:
+        return SupabaseAccountProvider(*config)
     except (TypeError, ValueError):
         return None
 
@@ -209,7 +220,7 @@ def _public_site_disabled_response(method: str, path: str) -> GatewayResponse | 
             },
             set_cookies=(_clear_cookie(ACCESS_COOKIE), _clear_cookie(REFRESH_COOKIE)),
         )
-    if path.startswith("/auth/") or path.startswith("/sync/"):
+    if path.startswith("/auth/") or path.startswith("/sync/") or path.startswith("/account/"):
         return _error(
             503,
             "public-account-access-disabled",
@@ -260,11 +271,15 @@ class PublicIdentityGateway:
         self,
         provider: SupabasePasswordProvider | None = None,
         sync_provider: SupabaseSyncProvider | None = None,
+        account_provider: SupabaseAccountProvider | None = None,
         password_checker: PwnedPasswordChecker | None = None,
     ) -> None:
         self.provider = provider if provider is not None else _provider_from_environment()
         self.sync_provider = (
             sync_provider if sync_provider is not None else _sync_provider_from_environment()
+        )
+        self.account_provider = (
+            account_provider if account_provider is not None else _account_provider_from_environment()
         )
         self.password_checker = password_checker or PwnedPasswordChecker()
 
@@ -605,6 +620,33 @@ class PublicIdentityGateway:
             ),
         )
 
+    def _account_export(
+        self,
+        request_headers: Mapping[str, str],
+    ) -> GatewayResponse:
+        if not self.provider or not self.account_provider:
+            return self._provider_unavailable()
+        access, set_cookies = self._authenticated_access(request_headers)
+        if not access:
+            return _json_response(
+                401,
+                {
+                    "$schema": ERROR_SCHEMA,
+                    "error": "authentication-required",
+                    "message": "Entre na Conta OrdaX para exportar seus dados.",
+                },
+                set_cookies=set_cookies,
+            )
+        try:
+            export = self.account_provider.export_account(access)
+        except (ValueError, SupabaseAccountError):
+            return _error(
+                502,
+                "account-export-failed",
+                "Não foi possível gerar a exportação da Conta OrdaX.",
+            )
+        return _json_response(200, export, set_cookies=set_cookies)
+
     def _sync_snapshot(
         self,
         request_headers: Mapping[str, str],
@@ -816,6 +858,11 @@ class PublicIdentityGateway:
                 set_cookies=(_clear_cookie(ACCESS_COOKIE), _clear_cookie(REFRESH_COOKIE)),
             )
 
+        if path == "/account/export":
+            if method != "GET":
+                return self._method_not_allowed("GET")
+            return self._account_export(request_headers)
+
         if path == "/sync/snapshot":
             if method != "GET":
                 return self._method_not_allowed("GET")
@@ -836,7 +883,7 @@ class PublicIdentityGateway:
                 return self._method_not_allowed("POST")
             return self._sync_mutate(request_headers, body)
 
-        if path.startswith("/auth/") or path.startswith("/sync/"):
+        if path.startswith("/auth/") or path.startswith("/sync/") or path.startswith("/account/"):
             return _error(404, "gateway-route-not-found", "Rota inexistente.")
         return _error(404, "not-found", "Recurso inexistente.")
 
