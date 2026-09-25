@@ -68,6 +68,8 @@ The scalable sync boundary is now machine-readable in `docs/contracts/sync-model
 
 Conflict algorithms are deliberately not frozen globally. Each data class or content type owns a deterministic, versioned resolver. This allows richer future models without rewriting every client and prevents a simplistic global last-writer-wins rule from becoming permanent architecture.
 
+For the three currently integrated portable classes — appearance, preferences and workspace metadata — resolver v1 uses a narrow rule: if a local user change is already pending and the server reports a newer authoritative object revision, the client preserves that local intent, issues a new idempotency key and rebases it onto the observed server revision. A single flush performs at most one rebase retry; a second conflict remains pending for a later synchronization cycle. This rule does **not** apply automatically to Notes, files or other user-selected cloud content. Those classes require their own resolver before cloud synchronization is enabled.
+
 ## Provider independence
 
 Sync/domain semantics belong to `system/services/sync`, not to a database vendor, cloud provider or platform adapter. A future backend may use any suitable durable store, queue or object storage combination as long as it satisfies the domain contract.
