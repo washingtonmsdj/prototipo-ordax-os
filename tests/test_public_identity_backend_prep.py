@@ -54,6 +54,11 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         self.assertTrue(
             hardening["required_before_public_login"]["leaked_password_protection_enabled"]
         )
+        observation = hardening["current_observation"]
+        self.assertEqual(observation["password_policy_product_minimum_chars"], 12)
+        self.assertFalse(observation["provider_password_policy_verified"])
+        self.assertTrue(observation["rate_limit_provider_defaults_reviewed"])
+        self.assertFalse(observation["rate_limit_real_client_ip_forwarding_verified"])
 
     def test_supabase_preflight_is_read_only(self):
         sql = PREFLIGHT.read_text(encoding="utf-8").lower()
