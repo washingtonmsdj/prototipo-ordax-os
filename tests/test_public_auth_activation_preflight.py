@@ -48,10 +48,12 @@ class PublicAuthActivationPreflightTests(unittest.TestCase):
         self.assertNotIn("account-data-export-implementation", blockers)
         self.assertNotIn("email-confirmation-policy", blockers)
         self.assertNotIn("redirect-allowlist", blockers)
+        self.assertNotIn("password-policy-review", blockers)
         self.assertTrue(all(value is False for value in controls.values()))
         for expected in (
             "email-confirmation-provider-verification",
             "redirect-allowlist-provider-verification",
+            "provider-password-policy-verification",
             "same-origin-adapter-deployment",
             "public-rate-limit-deployment",
             "recovery-email-template",
