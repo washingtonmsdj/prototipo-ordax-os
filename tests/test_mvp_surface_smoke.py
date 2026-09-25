@@ -448,6 +448,8 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
             list(proof.TOUR_ITEMS),
         )
         self.assertTrue(all(item["status"] == "pending" for item in template["items"]))
+        self.assertIn("account-memory", [item["id"] for item in template["items"]])
+        self.assertEqual(len(template["items"]), 12)
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -496,6 +498,9 @@ class MvpSurfaceSmokeTests(unittest.TestCase):
             self._source_tree(root)
             snapshot, checks = proof.source_snapshot(root)
         self.assertEqual(len(snapshot["files"]), len(proof.REQUIRED_SOURCE_FILES))
+        self.assertIn("apps/account/app.mjs", snapshot["files"])
+        self.assertIn("surface/ui/account-overview-controls.mjs", snapshot["files"])
+        self.assertIn("surface/ui/memory-review-controls.mjs", snapshot["files"])
         self.assertTrue(all(item["status"] == "pass" for item in checks))
         self.assertTrue(all(len(item["sha256"]) == 64 for item in snapshot["files"].values()))
 
