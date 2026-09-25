@@ -56,6 +56,7 @@ const (
 	idHint        = 1006
 	idUpdate      = 1007
 	idProgress    = 1008
+	idBootHelp    = 1009
 
 	cbAddString    = 0x0143
 	cbResetContent = 0x014B
@@ -436,6 +437,10 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 			handleUpdateButton()
 			return 0
 		}
+		if id == idBootHelp && notify == bnClicked {
+			messageBox(creatorBootHelpText(), "Como iniciar pelo USB", mbOK|mbIconInformation)
+			return 0
+		}
 		if id == idWrite && notify == bnClicked {
 			beginPhysicalWrite()
 			return 0
@@ -513,6 +518,7 @@ func createMainWindow() {
 	updateButton = createControl("BUTTON", "Atualizações", wsTabStop|bsPushButton, 280, 280, 118, 36, idUpdate)
 	refreshButton = createControl("BUTTON", "Recarregar USB", wsTabStop|bsPushButton, 406, 280, 118, 36, idRefresh)
 	writeButton = createControl("BUTTON", "Criar OrdaX", wsTabStop|bsDefPushButton|wsDisabled, 532, 280, 126, 36, idWrite)
+	createControl("BUTTON", "Como iniciar pelo USB", wsTabStop|bsPushButton, 704, 294, 148, 32, idBootHelp)
 	setProgressIdle()
 
 	procShowWindow.Call(mainWindow, swShow)
