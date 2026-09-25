@@ -4,6 +4,7 @@ import {
   SYNC_RUNTIME_SCHEMA,
   validateSyncRuntimeSnapshot,
 } from "../../contracts/sync-runtime.mjs";
+import { assertSyncCheckpointStore } from "../../contracts/sync-checkpoint-store.mjs";
 import { assertSyncTransportPort } from "../../contracts/sync-transport.mjs";
 import {
   assertWorkspaceMetadataSource,
@@ -29,6 +30,13 @@ import {
 export const PORTABLE_PREFERENCES_OBJECT_ID = "preferences/surface";
 export const PORTABLE_WORKSPACE_OBJECT_ID = "workspace/portable";
 
+const PULL_PAGE_SIZE = 200;
+const MAX_PULL_PAGES_PER_REFRESH = 10;
+const TRACKED_OBJECT_IDS = Object.freeze([
+  APPEARANCE_SYNC_OBJECT_ID,
+  PORTABLE_PREFERENCES_OBJECT_ID,
+  PORTABLE_WORKSPACE_OBJECT_ID,
+]);
 const PORTABLE_PREFERENCE_IDS = Object.freeze([
   ACCESSIBILITY_CONTRAST_PREFERENCE_ID,
   ACCESSIBILITY_MOTION_PREFERENCE_ID,
@@ -37,6 +45,13 @@ const PORTABLE_PREFERENCE_IDS = Object.freeze([
 
 function requireIdFactory(value) {
   if (typeof value !== "function") throw new TypeError("Account sync requires createIdempotencyKey()");
+  return value;
+}
+
+function requireRevision(value) {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new TypeError("Sync server revision must be a non-negative safe integer");
+  }
   return value;
 }
 
@@ -119,6 +134,7 @@ function fingerprint(value) {
 export function createAccountSyncRuntime({
   identitySession,
   transport,
+  checkpointStore,
   preferenceSync,
   preferences,
   workspaceMetadataSource,
@@ -127,18 +143,18 @@ export function createAccountSyncRuntime({
 }) {
   const identity = assertIdentitySessionPort(identitySession);
   const remote = assertSyncTransportPort(transport);
+  const checkpoints = assertSyncCheckpointStore(checkpointStore);
   const preferencePort = assertPreferenceRuntimePort(preferences);
   const workspaceSource = assertWorkspaceMetadataSource(workspaceMetadataSource);
   const workspaceState = assertWorkspaceStore(workspaceStore);
   const nextKey = requireIdFactory(createIdempotencyKey);
 
-  const revisions = new Map([
-    [APPEARANCE_SYNC_OBJECT_ID, 0],
-    [PORTABLE_PREFERENCES_OBJECT_ID, 0],
-    [PORTABLE_WORKSPACE_OBJECT_ID, 0],
-  ]);
+  const revisions = new Map(TRACKED_OBJECT_IDS.map((id) => [id, 0]));
   const pending = new Map();
   const listeners = new Set();
+  let activeSubjectId = null;
+  let checkpointCursor = 0;
+  let checkpointLoaded = false;
   let initialized = false;
   let destroyed = false;
   let suppressPreferences = false;
@@ -149,6 +165,47 @@ export function createAccountSyncRuntime({
   let retryRequested = false;
   let lastPreferenceFingerprint = fingerprint(portablePreferences(preferencePort.getSnapshot()));
   let lastWorkspaceFingerprint = fingerprint(workspaceSource.getSnapshot());
+
+  const resetRevisions = () => {
+    for (const id of TRACKED_OBJECT_IDS) revisions.set(id, 0);
+  };
+
+  const revisionSnapshot = () => Object.fromEntries(
+    TRACKED_OBJECT_IDS.map((id) => [id, revisions.get(id) ?? 0]),
+  );
+
+  const persistCheckpoint = () => {
+    if (!activeSubjectId) return false;
+    try {
+      return checkpoints.save({
+        subjectId: activeSubjectId,
+        cursor: checkpointCursor,
+        revisions: revisionSnapshot(),
+      });
+    } catch {
+      return false;
+    }
+  };
+
+  const recoverCheckpoint = (subjectId) => {
+    activeSubjectId = subjectId;
+    checkpointCursor = 0;
+    checkpointLoaded = false;
+    resetRevisions();
+    let value = null;
+    try {
+      value = checkpoints.load();
+    } catch {
+      value = null;
+    }
+    if (!value || value.subjectId !== subjectId) return false;
+    checkpointCursor = value.cursor;
+    for (const id of TRACKED_OBJECT_IDS) {
+      revisions.set(id, requireRevision(value.revisions[id] ?? 0));
+    }
+    checkpointLoaded = true;
+    return true;
+  };
 
   const currentSnapshot = () => {
     const identitySnapshot = identity.getSnapshot();
@@ -223,8 +280,9 @@ export function createAccountSyncRuntime({
           const ack = await remote.applyMutation({ ...appearanceMutation, resolverVersion: 1 });
           if (ack.conflict) continue;
           if (ack.applied) {
-            revisions.set(APPEARANCE_SYNC_OBJECT_ID, ack.serverRevision);
+            revisions.set(APPEARANCE_SYNC_OBJECT_ID, requireRevision(ack.serverRevision));
             preferenceSync.acknowledge(appearanceMutation.idempotencyKey, ack.serverRevision);
+            persistCheckpoint();
           }
         } catch {
           retryRequested = true;
@@ -236,10 +294,11 @@ export function createAccountSyncRuntime({
           const ack = await remote.applyMutation(pendingMutation);
           if (ack.conflict) continue;
           if (ack.applied) {
-            revisions.set(objectId, ack.serverRevision);
+            revisions.set(objectId, requireRevision(ack.serverRevision));
             if (pending.get(objectId)?.idempotencyKey === pendingMutation.idempotencyKey) {
               pending.delete(objectId);
             }
+            persistCheckpoint();
           }
         } catch {
           retryRequested = true;
@@ -248,9 +307,6 @@ export function createAccountSyncRuntime({
     } finally {
       syncing = false;
       emit();
-      if (retryRequested && !destroyed) {
-        // A later local change, identity refresh or online event can call flush again.
-      }
     }
   }
 
@@ -258,9 +314,7 @@ export function createAccountSyncRuntime({
     const payload = validatePortablePreferences(object.payload);
     suppressPreferences = true;
     try {
-      for (const id of PORTABLE_PREFERENCE_IDS) {
-        preferencePort.set(id, payload[id]);
-      }
+      for (const id of PORTABLE_PREFERENCE_IDS) preferencePort.set(id, payload[id]);
       lastPreferenceFingerprint = fingerprint(payload);
     } finally {
       suppressPreferences = false;
@@ -278,54 +332,131 @@ export function createAccountSyncRuntime({
     }
   };
 
-  async function initialize() {
-    if (destroyed || identity.getSnapshot().state !== "signed-in") {
+  const applyRemoteObject = (object) => {
+    if (!object || typeof object !== "object") throw new TypeError("Invalid remote sync object");
+    const objectId = object.objectId;
+    if (!TRACKED_OBJECT_IDS.includes(objectId)) return false;
+    const serverRevision = requireRevision(object.serverRevision);
+    const previousRevision = revisions.get(objectId) ?? 0;
+    if (serverRevision < previousRevision) return false;
+    revisions.set(objectId, serverRevision);
+    if (object.tombstone) return true;
+
+    if (objectId === APPEARANCE_SYNC_OBJECT_ID) {
+      if (preferenceSync.pendingMutations().length === 0 && serverRevision > previousRevision) {
+        preferenceSync.applyRemoteAppearance(
+          createAppearanceSyncObject({
+            theme: object.payload?.theme,
+            serverRevision,
+          }),
+        );
+      }
+      return true;
+    }
+
+    if (objectId === PORTABLE_PREFERENCES_OBJECT_ID) {
+      if (!preferencesDirty && !pending.has(objectId) && serverRevision > previousRevision) {
+        applyRemotePreferences(object);
+      }
+      return true;
+    }
+
+    if (objectId === PORTABLE_WORKSPACE_OBJECT_ID) {
+      if (!workspaceDirty && !pending.has(objectId) && serverRevision > previousRevision) {
+        applyRemoteWorkspace(object);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  const applyInitialSnapshot = (objects) => {
+    const byId = new Map(objects.map((object) => [object.objectId, object]));
+
+    const appearance = byId.get(APPEARANCE_SYNC_OBJECT_ID);
+    if (appearance) {
+      const revision = requireRevision(appearance.serverRevision);
+      revisions.set(APPEARANCE_SYNC_OBJECT_ID, revision);
+      if (!appearance.tombstone && preferenceSync.pendingMutations().length === 0) {
+        preferenceSync.applyRemoteAppearance(
+          createAppearanceSyncObject({
+            theme: appearance.payload?.theme,
+            serverRevision: revision,
+          }),
+        );
+      }
+    }
+
+    const prefs = byId.get(PORTABLE_PREFERENCES_OBJECT_ID);
+    if (prefs) {
+      revisions.set(PORTABLE_PREFERENCES_OBJECT_ID, requireRevision(prefs.serverRevision));
+      if (prefs.tombstone) {
+        queuePreferences();
+      } else if (preferencesDirty) {
+        queuePreferences();
+      } else {
+        applyRemotePreferences(prefs);
+      }
+    } else {
+      queuePreferences();
+    }
+
+    const workspace = byId.get(PORTABLE_WORKSPACE_OBJECT_ID);
+    if (workspace) {
+      revisions.set(PORTABLE_WORKSPACE_OBJECT_ID, requireRevision(workspace.serverRevision));
+      if (workspace.tombstone) {
+        queueWorkspace();
+      } else if (workspaceDirty) {
+        queueWorkspace();
+      } else {
+        applyRemoteWorkspace(workspace);
+      }
+    } else {
+      queueWorkspace();
+    }
+  };
+
+  async function pullRemoteChanges() {
+    for (let page = 0; page < MAX_PULL_PAGES_PER_REFRESH; page += 1) {
+      const result = await remote.pullChanges({
+        afterCursor: checkpointCursor,
+        limit: PULL_PAGE_SIZE,
+      });
+      for (const change of result.changes) applyRemoteObject(change);
+      checkpointCursor = result.nextCursor;
+      checkpointLoaded = true;
+      persistCheckpoint();
+      if (result.changes.length < PULL_PAGE_SIZE) return;
+    }
+    retryRequested = true;
+  }
+
+  async function synchronize() {
+    const identitySnapshot = identity.getSnapshot();
+    if (destroyed || identitySnapshot.state !== "signed-in") {
       initialized = false;
+      activeSubjectId = null;
+      checkpointCursor = 0;
+      checkpointLoaded = false;
+      resetRevisions();
       emit();
       return;
     }
+
+    const subjectId = identitySnapshot.subjectId;
+    if (activeSubjectId !== subjectId) recoverCheckpoint(subjectId);
+
     initialized = false;
     emit();
     try {
-      const objects = await remote.listObjects({ afterRevision: 0, limit: 200 });
-      const byId = new Map(objects.map((object) => [object.objectId, object]));
-
-      const appearance = byId.get(APPEARANCE_SYNC_OBJECT_ID);
-      if (appearance && !appearance.tombstone) {
-        revisions.set(APPEARANCE_SYNC_OBJECT_ID, appearance.serverRevision);
-        const localPending = preferenceSync.pendingMutations();
-        if (localPending.length === 0) {
-          preferenceSync.applyRemoteAppearance(
-            createAppearanceSyncObject({
-              theme: appearance.payload?.theme,
-              serverRevision: appearance.serverRevision,
-            }),
-          );
-        }
-      }
-
-      const prefs = byId.get(PORTABLE_PREFERENCES_OBJECT_ID);
-      if (prefs && !prefs.tombstone) {
-        revisions.set(PORTABLE_PREFERENCES_OBJECT_ID, prefs.serverRevision);
-        if (preferencesDirty) {
-          queuePreferences();
-        } else {
-          applyRemotePreferences(prefs);
-        }
+      if (checkpointLoaded) {
+        await pullRemoteChanges();
       } else {
-        queuePreferences();
-      }
-
-      const workspace = byId.get(PORTABLE_WORKSPACE_OBJECT_ID);
-      if (workspace && !workspace.tombstone) {
-        revisions.set(PORTABLE_WORKSPACE_OBJECT_ID, workspace.serverRevision);
-        if (workspaceDirty) {
-          queueWorkspace();
-        } else {
-          applyRemoteWorkspace(workspace);
-        }
-      } else {
-        queueWorkspace();
+        const snapshot = await remote.snapshot({ limit: 200 });
+        applyInitialSnapshot(snapshot.objects);
+        checkpointCursor = snapshot.cursor;
+        checkpointLoaded = true;
+        persistCheckpoint();
       }
 
       initialized = true;
@@ -368,9 +499,13 @@ export function createAccountSyncRuntime({
 
   const unsubscribeIdentity = identity.subscribe((snapshot) => {
     if (snapshot.state === "signed-in") {
-      void initialize();
+      void synchronize();
     } else {
       initialized = false;
+      activeSubjectId = null;
+      checkpointCursor = 0;
+      checkpointLoaded = false;
+      resetRevisions();
       emit();
     }
   });
@@ -387,7 +522,7 @@ export function createAccountSyncRuntime({
       return () => listeners.delete(listener);
     },
     async refresh() {
-      await initialize();
+      await synchronize();
       return currentSnapshot();
     },
     async flush() {

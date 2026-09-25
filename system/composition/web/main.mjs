@@ -7,6 +7,7 @@ import { createWebPreferenceStore } from "../../adapters/web/preferences.mjs";
 import { createWebSurfaceHost } from "../../adapters/web/runtime.mjs";
 import { createWebWorkspaceStore } from "../../adapters/web/workspace.mjs";
 import { createWebSyncStateStore } from "../../adapters/web/sync-state.mjs";
+import { createWebSyncCheckpointStore } from "../../adapters/web/sync-checkpoint.mjs";
 import { createWebSyncTransport } from "../../adapters/web/sync-transport.mjs";
 import { validateAccountRuntime } from "../../services/account/runtime.mjs";
 import { createAppActivationChannel } from "../../services/apps/activation.mjs";
@@ -54,6 +55,7 @@ const localWorkspaceStore = createWebWorkspaceStore(window);
 const workspaceMetadata = createWorkspaceMetadataBridge(localWorkspaceStore);
 const workspaceStore = workspaceMetadata.store;
 const syncStateStore = createWebSyncStateStore(window);
+const syncCheckpointStore = createWebSyncCheckpointStore(window);
 const syncTransport = createWebSyncTransport(window);
 const appActivation = createAppActivationChannel();
 const componentManager = createComponentManager({
@@ -95,6 +97,7 @@ let accountSyncOrdinal = 0;
 const accountSync = createAccountSyncRuntime({
     identitySession,
     transport: syncTransport,
+    checkpointStore: syncCheckpointStore,
     preferenceSync,
     preferences: surface.preferences,
     workspaceMetadataSource: workspaceMetadata.source,
