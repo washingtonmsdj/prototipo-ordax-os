@@ -8,6 +8,8 @@ SYNC_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260
 GATEWAY = ROOT / "services" / "public-identity" / "gateway.py"
 EDGE_GATEWAY = ROOT / "infra" / "supabase" / "functions" / "ordax-account-gateway" / "index.ts"
 NATIVE_GATEWAY_CONFIG = ROOT / "system" / "services" / "account" / "gateway-base-url"
+CURSOR_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925013355_account_sync_incremental_cursor_v1.sql"
+SNAPSHOT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925013524_account_sync_atomic_snapshot_v1.sql"
 
 
 class AccountSyncAndIdentityV1Tests(unittest.TestCase):
@@ -18,7 +20,12 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertTrue(contract["backend"]["idempotent_mutations"])
         self.assertTrue(contract["backend"]["optimistic_conflict_detection"])
         self.assertFalse(contract["mvp_availability"]["synchronization_available"])
-        self.assertFalse(contract["mvp_availability"]["client_integration_available"])
+        self.assertTrue(contract["mvp_availability"]["client_integration_available"])
+        self.assertTrue(contract["backend"]["incremental_cursor_implemented"])
+        self.assertEqual(
+            contract["backend"]["current_read_mode"],
+            "atomic-snapshot-plus-paged-incremental-cursor",
+        )
 
     def test_sync_store_is_owner_scoped_and_mutations_are_server_authoritative(self):
         sql = SYNC_MIGRATION.read_text(encoding="utf-8").lower()
@@ -36,13 +43,26 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertIn("public.ordax_list_sync_objects_v1", private_sql)
         self.assertNotIn("security definer", private_sql)
 
+    def test_incremental_cursor_and_atomic_snapshot_are_source_controlled(self):
+        cursor_sql = CURSOR_MIGRATION.read_text(encoding="utf-8").lower()
+        snapshot_sql = SNAPSHOT_MIGRATION.read_text(encoding="utf-8").lower()
+        self.assertIn("change_seq bigint generated always as identity", cursor_sql)
+        self.assertIn("ordax_apply_sync_mutation_v2", cursor_sql)
+        self.assertIn("ordax_pull_sync_changes_v1", cursor_sql)
+        self.assertIn("security invoker", cursor_sql)
+        self.assertIn("ordax_sync_snapshot_v1", snapshot_sql)
+        self.assertIn("security invoker", snapshot_sql)
+        self.assertNotIn("security definer", cursor_sql)
+        self.assertNotIn("security definer", snapshot_sql)
+
     def test_deployed_edge_gateway_source_uses_user_auth_and_rls_without_service_role(self):
         text = EDGE_GATEWAY.read_text(encoding="utf-8")
         self.assertIn('ordax-account-gateway', text)
         self.assertIn('signInWithPassword', text)
         self.assertIn('refreshSession', text)
-        self.assertIn('ordax_apply_sync_mutation_v1', text)
-        self.assertIn('ordax_list_sync_objects_v1', text)
+        self.assertIn('ordax_apply_sync_mutation_v2', text)
+        self.assertIn('ordax_sync_snapshot_v1', text)
+        self.assertIn('ordax_pull_sync_changes_v1', text)
         self.assertNotIn('service_role', text.lower())
         self.assertNotIn('SUPABASE_SERVICE_ROLE_KEY', text)
 
