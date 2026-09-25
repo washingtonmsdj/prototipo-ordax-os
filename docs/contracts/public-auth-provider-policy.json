@@ -15,6 +15,13 @@
   "provider_verification": {
     "confirm_email": false,
     "redirect_allowlist": false,
-    "production_origin": false
+    "production_origin": false,
+    "password_policy": false
+  },
+  "password_policy": {
+    "product_minimum_chars": 12,
+    "provider_minimum_must_be_at_least_product": true,
+    "additional_composition_requirement": "none-defined-by-ordax",
+    "compromised_password_screening_owner": "ordax-account-gateway"
   }
 }
