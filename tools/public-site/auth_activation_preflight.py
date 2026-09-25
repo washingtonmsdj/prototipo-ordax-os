@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""Fail-closed activation preflight for the public OrdaX account surface.
+
+Normal CI accepts a coherently disabled account surface and reports blockers.
+Any partial activation while blockers remain is an error. --require-ready is a
+release/operator check that succeeds only when every prerequisite has evidence
+and all public account controls are enabled together.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+
+LEGAL = Path("docs/contracts/public-legal-readiness.json")
+HARDENING = Path("docs/contracts/public-auth-hardening.json")
+DEPLOYMENT = Path("docs/contracts/public-site-deployment.json")
+IDENTITY = Path("docs/contracts/public-identity.json")
+RUNTIME = Path("sites/public/config/public-site.json")
+EDGE = Path("infra/supabase/functions/ordax-account-gateway/index.ts")
+REFERENCE_GATEWAY = Path("services/public-identity/gateway.py")
+
+EDGE_BOOL = re.compile(
+    r"^const\s+(PUBLIC_SITE_ACCOUNT_ENABLED|ACCOUNT_RECOVERY_REQUEST_ENABLED|"
+    r"ACCOUNT_RECOVERY_COMPLETION_ENABLED)\s*=\s*(true|false);\s*$",
+    re.MULTILINE,
+)
+PY_BOOL = re.compile(
+    r"^(PUBLIC_SITE_ACCOUNT_ENABLED|ACCOUNT_RECOVERY_REQUEST_ENABLED|"
+    r"ACCOUNT_RECOVERY_COMPLETION_ENABLED)\s*=\s*(True|False)\s*$",
+    re.MULTILINE,
+)
+
+
+def load_json(root: Path, relative: Path) -> dict:
+    value = json.loads((root / relative).read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError(f"{relative}: json object required")
+    return value
+
+
+def source_switches(root: Path) -> dict[str, bool]:
+    edge_text = (root / EDGE).read_text(encoding="utf-8")
+    py_text = (root / REFERENCE_GATEWAY).read_text(encoding="utf-8")
+    edge = {name: value == "true" for name, value in EDGE_BOOL.findall(edge_text)}
+    python = {name: value == "True" for name, value in PY_BOOL.findall(py_text)}
+    names = (
+        "PUBLIC_SITE_ACCOUNT_ENABLED",
+        "ACCOUNT_RECOVERY_REQUEST_ENABLED",
+        "ACCOUNT_RECOVERY_COMPLETION_ENABLED",
+    )
+    result: dict[str, bool] = {}
+    for name in names:
+        if name not in edge or name not in python:
+            raise ValueError(f"missing activation switch: {name}")
+        if edge[name] != python[name]:
+            raise ValueError(f"edge/reference activation switch mismatch: {name}")
+        result[name] = edge[name]
+    return result
+
+
+def readiness(root: Path) -> tuple[list[str], dict[str, bool]]:
+    legal = load_json(root, LEGAL)
+    hardening = load_json(root, HARDENING)
+    deployment = load_json(root, DEPLOYMENT)
+    identity = load_json(root, IDENTITY)
+    runtime = load_json(root, RUNTIME)
+    switches = source_switches(root)
+
+    blockers: list[str] = []
+    observation = hardening.get("current_observation", {})
+    adapter = deployment.get("adapter", {})
+    routing = deployment.get("routing", {})
+    backend = identity.get("backend", {})
+    runtime_identity = runtime.get("identity", {})
+    runtime_legal = runtime.get("legal", {})
+
+    def need(condition: bool, code: str) -> None:
+        if not condition:
+            blockers.append(code)
+
+    documents = legal.get("documents", {})
+    privacy = documents.get("privacy", {})
+    terms = documents.get("terms", {})
+    need(legal.get("status") == "ready", "legal-status")
+    need(legal.get("account_activation_ready") is True, "legal-account-activation")
+    for name, document in (("privacy", privacy), ("terms", terms)):
+        need(document.get("final") is True, f"{name}-final")
+        need(bool(document.get("version")), f"{name}-version")
+        need(bool(document.get("effective_date")), f"{name}-effective-date")
+
+    need(hardening.get("status") == "ready", "auth-hardening-status")
+    need(observation.get("leaked_password_protection") == "enabled", "leaked-password-protection")
+    need(observation.get("provider_password_policy_verified") is True, "provider-password-policy")
+    need(observation.get("email_confirmation_policy_reviewed") is True, "email-confirmation-policy")
+    need(observation.get("redirect_allowlist_reviewed") is True, "redirect-allowlist")
+    need(observation.get("same_origin_session_owner_deployed") is True, "same-origin-session-owner")
+    need(observation.get("secure_http_only_cookie_policy_verified") is True, "secure-cookie-policy")
+    need(observation.get("csrf_state_change_protection_verified") is True, "csrf-protection")
+    need(observation.get("auth_rate_limits_reviewed") is True, "auth-rate-limit-review")
+    need(observation.get("public_adapter_rate_limit_deployed") is True, "public-rate-limit-deployment")
+    need(observation.get("rate_limit_real_client_ip_forwarding_verified") is True, "real-client-ip-proof")
+    need(observation.get("password_recovery_redirect_config_verified") is True, "recovery-redirect")
+    need(observation.get("password_recovery_email_template_applied") is True, "recovery-email-template")
+    need(observation.get("account_recovery_flow_tested") is True, "recovery-e2e-proof")
+    need(observation.get("session_revocation_tested") is True, "session-revocation-proof")
+    need(observation.get("privacy_terms_ready") is True, "privacy-terms-hardening-proof")
+
+    need(adapter.get("public_auth_rate_limit_deployed") is True, "deployment-rate-limit")
+    need(deployment.get("status") == "deployed", "same-origin-adapter-deployment")
+    need(routing.get("same_origin_identity_required") is True, "same-origin-identity-contract")
+    need(routing.get("gateway_public_activation_gate_required") is True, "server-activation-gate-contract")
+
+    controls = {
+        "runtime_account_ready": runtime_legal.get("account_activation_ready") is True,
+        "runtime_login_route": runtime_identity.get("login_url") == "/auth/login",
+        "runtime_register_route": runtime_identity.get("register_url") == "/auth/register",
+        "runtime_recovery_route": runtime_identity.get("recovery_url") == "/auth/recover",
+        "runtime_recovery_complete_route": (
+            runtime_identity.get("recovery_complete_url") == "/auth/recover/complete"
+        ),
+        "identity_public_auth": backend.get("public_auth_enabled") is True,
+        "identity_public_site_account": backend.get("public_site_account_enabled") is True,
+        "deployment_public_gate": routing.get("gateway_public_activation_currently_enabled") is True,
+        "edge_public_site_account": switches["PUBLIC_SITE_ACCOUNT_ENABLED"],
+        "edge_recovery_request": switches["ACCOUNT_RECOVERY_REQUEST_ENABLED"],
+        "edge_recovery_completion": switches["ACCOUNT_RECOVERY_COMPLETION_ENABLED"],
+    }
+    return sorted(set(blockers)), controls
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("mode", nargs="?", choices=("check", "require-ready"), default="check")
+    parser.add_argument("--root", default=str(ROOT))
+    args = parser.parse_args(argv)
+
+    try:
+        blockers, controls = readiness(Path(args.root).resolve())
+    except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+        print(f"PUBLIC_AUTH_ACTIVATION_PREFLIGHT=FAIL reason={exc}", file=sys.stderr)
+        return 1
+
+    enabled = sorted(name for name, value in controls.items() if value)
+    disabled = sorted(name for name, value in controls.items() if not value)
+
+    if enabled and disabled:
+        print("PUBLIC_AUTH_ACTIVATION_PREFLIGHT=UNSAFE_PARTIAL_ACTIVATION", file=sys.stderr)
+        for name in enabled:
+            print(f"PUBLIC_AUTH_ENABLED_CONTROL={name}", file=sys.stderr)
+        for name in disabled:
+            print(f"PUBLIC_AUTH_DISABLED_CONTROL={name}", file=sys.stderr)
+        for blocker in blockers:
+            print(f"PUBLIC_AUTH_BLOCKER={blocker}", file=sys.stderr)
+        return 1
+
+    if enabled and blockers:
+        print("PUBLIC_AUTH_ACTIVATION_PREFLIGHT=UNSAFE_BLOCKED_ACTIVATION", file=sys.stderr)
+        for blocker in blockers:
+            print(f"PUBLIC_AUTH_BLOCKER={blocker}", file=sys.stderr)
+        return 1
+
+    if args.mode == "require-ready":
+        if blockers:
+            print("PUBLIC_AUTH_ACTIVATION_PREFLIGHT=BLOCKED", file=sys.stderr)
+            for blocker in blockers:
+                print(f"PUBLIC_AUTH_BLOCKER={blocker}", file=sys.stderr)
+            return 1
+        if disabled:
+            print("PUBLIC_AUTH_ACTIVATION_PREFLIGHT=READY_NOT_ACTIVATED", file=sys.stderr)
+            for name in disabled:
+                print(f"PUBLIC_AUTH_DISABLED_CONTROL={name}", file=sys.stderr)
+            return 2
+        print("PUBLIC_AUTH_ACTIVATION_PREFLIGHT=READY_ACTIVE")
+        return 0
+
+    if disabled:
+        print("PUBLIC_AUTH_ACTIVATION_PREFLIGHT=SAFE_DISABLED")
+        print(f"PUBLIC_AUTH_BLOCKER_COUNT={len(blockers)}")
+        for blocker in blockers:
+            print(f"PUBLIC_AUTH_BLOCKER={blocker}")
+        return 0
+
+    print("PUBLIC_AUTH_ACTIVATION_PREFLIGHT=READY_ACTIVE")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
