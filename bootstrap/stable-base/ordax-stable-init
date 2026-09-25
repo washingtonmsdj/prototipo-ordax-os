@@ -62,8 +62,65 @@ disable_local_ai() {
     echo "ORDAX_LOCAL_AI_BACKEND=DEGRADED"
 }
 
+probe_local_ai_hardware() {
+    LOCAL_AI_PROBE_REASON=
+
+    detected_machine=$(uname -m 2>/dev/null || true)
+    case "$detected_machine" in
+        x86_64|amd64)
+            detected_arch=x86_64
+            ;;
+        '')
+            LOCAL_AI_PROBE_REASON="hardware probe could not determine architecture"
+            return 1
+            ;;
+        *)
+            LOCAL_AI_PROBE_REASON="runtime-artifact-architecture-mismatch:$detected_machine"
+            return 1
+            ;;
+    esac
+
+    logical_cpus=unknown
+    if [ -r /proc/cpuinfo ]; then
+        cpu_count=0
+        while IFS= read -r cpu_line; do
+            case "$cpu_line" in
+                processor*:*) cpu_count=$((cpu_count + 1)) ;;
+            esac
+        done </proc/cpuinfo
+        if [ "$cpu_count" -gt 0 ]; then
+            logical_cpus=$cpu_count
+        fi
+    fi
+
+    mem_total_kib=unknown
+    if [ -r /proc/meminfo ]; then
+        while IFS=' ' read -r mem_key mem_value mem_unit mem_rest; do
+            [ "$mem_key" = "MemTotal:" ] || continue
+            case "$mem_value" in
+                ''|*[!0-9]*) ;;
+                *) mem_total_kib=$mem_value ;;
+            esac
+            break
+        done </proc/meminfo
+    fi
+
+    echo "ORDAX_LOCAL_AI_HARDWARE_PROBE=PASS"
+    echo "ORDAX_LOCAL_AI_HARDWARE_ARCH=$detected_arch"
+    echo "ORDAX_LOCAL_AI_HARDWARE_LOGICAL_CPUS=$logical_cpus"
+    echo "ORDAX_LOCAL_AI_HARDWARE_MEM_TOTAL_KIB=$mem_total_kib"
+    return 0
+}
+
 start_local_ai() {
     [ "${LOCAL_AI_READY:-0}" -eq 1 ] || return 0
+
+    if ! probe_local_ai_hardware; then
+        LOCAL_AI_READY=0
+        disable_local_ai "${LOCAL_AI_PROBE_REASON:-hardware probe failed}"
+        return 0
+    fi
+
     mkdir -p /run/ordax
     umask 077
     ORDAX_LOCAL_AI_RUNTIME_ROOT="$ORDAX_LOCAL_AI_RUNTIME_ROOT" \
