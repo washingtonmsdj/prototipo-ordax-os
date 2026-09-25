@@ -254,5 +254,8 @@ Deno.serve(async (req: Request) => {
     }, session.cookies);
   }
 
+  if ((path.startsWith("/auth/") || path.startsWith("/sync/")) && !["GET", "POST"].includes(req.method)) {
+    return error(405, "method-not-allowed", "Método não permitido.");
+  }
   return error(404, "gateway-route-not-found", "Rota inexistente.");
 });
