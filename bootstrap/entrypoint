@@ -48,7 +48,7 @@ product_mode() {
     esac
 }
 
-account_gateway_origin() {
+account_gateway_base_url() {
     [ -e "$ACCOUNT_GATEWAY_FILE" ] || return 1
     [ -f "$ACCOUNT_GATEWAY_FILE" ] && [ ! -L "$ACCOUNT_GATEWAY_FILE" ] || return 1
     value=$(/bin/busybox cat "$ACCOUNT_GATEWAY_FILE" 2>/dev/null || true)
@@ -56,11 +56,13 @@ account_gateway_origin() {
         https://*) ;;
         *) return 1 ;;
     esac
-    authority=${value#https://}
-    [ -n "$authority" ] || return 1
-    case "$authority" in
-        */*|*\?*|*\#*|*@*|*[!A-Za-z0-9._:-]*) return 1 ;;
+    remainder=${value#https://}
+    [ -n "$remainder" ] || return 1
+    case "$remainder" in
+        *\?*|*\#*|*@*|*[!A-Za-z0-9._:/-]*|*/) return 1 ;;
     esac
+    authority=${remainder%%/*}
+    [ -n "$authority" ] || return 1
     printf '%s' "$value"
 }
 
@@ -87,7 +89,7 @@ boot_current() {
     [ -x "$CURRENT_ENTRYPOINT" ] || return 1
     source_sha=$(current_release_sha) || recovery "current release identity is invalid"
     mode=$(product_mode) || recovery "product mode identity is missing or invalid"
-    gateway_origin=$(account_gateway_origin || true)
+    gateway_origin=$(account_gateway_base_url || true)
     if [ -n "$gateway_origin" ]; then
         ORDAX_ACCOUNT_GATEWAY_ORIGIN=$gateway_origin
         export ORDAX_ACCOUNT_GATEWAY_ORIGIN
