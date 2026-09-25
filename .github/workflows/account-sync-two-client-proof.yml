@@ -56,8 +56,7 @@ jobs:
           assert data["proof_object_tombstoned"] is True
           assert data["credentials_persisted"] is False
           assert data["account_identifier_recorded"] is False
-          assert data["cookies_recorded"] is False
-          assert data["tokens_recorded"] is False
+          assert data["sensitive_auth_material_recorded"] is False
           assert isinstance(data["create_cursor"], int)
           assert isinstance(data["delete_cursor"], int)
           assert data["delete_cursor"] > data["create_cursor"]
