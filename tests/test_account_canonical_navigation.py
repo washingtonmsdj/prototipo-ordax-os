@@ -82,7 +82,8 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
             "    appActivation,"
         )
         self.assertIn(expected, native)
-        self.assertIn("let accountSync = preferenceSync;", native)
+        self.assertIn("const accountSync = createAccountSyncRuntime({", native)
+        self.assertIn("checkpointStore: syncCheckpointStore", native)
         self.assertIn("createAccountSyncRuntime({", native)
         expected_web = (
             "root,\n"
@@ -94,7 +95,8 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
             "  appActivation,"
         )
         self.assertIn(expected_web, web)
-        self.assertIn("let accountSync = preferenceSync;", web)
+        self.assertIn("const accountSync = createAccountSyncRuntime({", web)
+        self.assertIn("checkpointStore: syncCheckpointStore", web)
         self.assertIn("createAccountSyncRuntime({", web)
         self.assertNotIn(
             "root,\n    host,\n    identitySession,",
