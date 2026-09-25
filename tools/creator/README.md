@@ -198,6 +198,14 @@ the public receipt under `docs/evidence/`, and advances the contract only to own
 It never selects/touches media, invokes the writer or authorizes a write. The old first-USB
 development consent is not reusable.
 
+Read-only aggregate Stable/MVP USB readiness:
+
+```text
+python tools/creator/stable_mvp_usb_readiness.py
+```
+
+This composes the Nova OrdaX source audit with the physical-promotion preflight and reports one explicit stage such as `canonical-v4-release-proof-pending`, `explicit-owner-authorization-pending` or `authorized-candidate-ready-for-separate-physical-flow`. It never reads private signing-key contents, selects media, records consent, invokes the writer or claims physical proof.
+
 Read-only authorization preflight:
 
 ```text
