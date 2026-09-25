@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 
+import {
+  assertProfilePackCatalogPort,
+  validateProfilePackCatalogProjection,
+} from "../system/contracts/profile-pack-catalog.mjs";
 import { createProfilePackCatalog } from "../system/services/profile-packs/catalog.mjs";
 
 const active = {
@@ -28,6 +32,7 @@ const active = {
       active,
     ],
   });
+  assert.equal(assertProfilePackCatalogPort(catalog), catalog);
   assert.equal(catalog.schema, "ordax.profile-pack-catalog/1");
   assert.deepEqual(catalog.list().map((entry) => entry.slug), ["creator", "developer"]);
   const developer = catalog.get("developer", 1);
@@ -41,6 +46,7 @@ const active = {
   assert.equal("backend_only_secret" in developer, false);
   assert.equal(catalog.get("developer", 99), null);
   assert.throws(() => developer.apps.push("system"), TypeError);
+  assert.deepEqual(validateProfilePackCatalogProjection(developer), developer);
 }
 
 for (const state of ["draft", "retired"]) {
@@ -63,5 +69,30 @@ assert.throws(
     /external provider policy is invalid/,
   );
 }
+
+assert.throws(
+  () => assertProfilePackCatalogPort({ schema: "ordax.profile-pack-catalog/1", list() { return []; } }),
+  /must implement get/,
+);
+assert.throws(
+  () => assertProfilePackCatalogPort({
+    schema: "ordax.profile-pack-catalog/1",
+    list() {
+      return [{
+        schema: "ordax.profile-pack-catalog-entry/1",
+        slug: "developer",
+        version: 1,
+        title: "Developer",
+        category: "development",
+        spaceKind: "professional",
+        apps: [],
+        templates: [],
+        intelligence: { preferredPurpose: "code", externalProviderRequired: "no" },
+      }];
+    },
+    get() { return null; },
+  }),
+  /external provider policy is invalid/,
+);
 
 console.log("PROFILE_PACK_CATALOG=PASS");
