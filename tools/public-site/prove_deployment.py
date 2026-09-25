@@ -73,6 +73,8 @@ def main(argv=None) -> int:
     if config_payload.get("$schema") != "prototype-ordax.public-site-runtime/1":
         fail("config-schema")
 
+    activation_ready = config_payload.get("legal", {}).get("account_activation_ready") is True
+
     session = request(origin, "/auth/session")
     if session.status != 200:
         fail(f"auth-session-status:{session.status}")
@@ -84,12 +86,16 @@ def main(argv=None) -> int:
         fail("auth-session-schema")
     if session_payload.get("authenticated") is not False:
         fail("unexpected-authenticated-session")
+    if not activation_ready and session_payload.get("provider") != "gated":
+        fail("public-account-gate-not-enforced")
 
     sync = request(origin, "/sync/snapshot?limit=1")
-    if sync.status != 401:
+    expected_sync_status = 401 if activation_ready else 503
+    if sync.status != expected_sync_status:
         fail(f"anonymous-sync-status:{sync.status}")
     sync_payload = read_json(sync)
-    if sync_payload.get("error") != "authentication-required":
+    expected_error = "authentication-required" if activation_ready else "public-account-access-disabled"
+    if sync_payload.get("error") != expected_error:
         fail("anonymous-sync-error")
 
     missing = request(origin, "/__ordax-deployment-proof-missing")
