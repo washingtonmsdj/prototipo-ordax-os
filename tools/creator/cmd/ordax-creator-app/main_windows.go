@@ -32,6 +32,7 @@ const (
 	wsOverlappedWindow = 0x00CF0000
 	wsVisible          = 0x10000000
 	wsChild            = 0x40000000
+	wsClipChildren     = 0x02000000
 	wsTabStop          = 0x00010000
 	wsDisabled         = 0x08000000
 	wsVScroll          = 0x00200000
@@ -56,6 +57,7 @@ const (
 	idHint        = 1006
 	idUpdate      = 1007
 	idProgress    = 1008
+	idBootHelp    = 1009
 
 	cbAddString    = 0x0143
 	cbResetContent = 0x014B
@@ -329,28 +331,46 @@ func selectedTargetIndex() int {
 	return int(index)
 }
 
+func selectionExperience(state appRefreshState) creatorExperienceView {
+	index := selectedTargetIndex()
+	selected := index >= 0 && index < len(state.Targets)
+	return creatorExperience(creatorExperienceInput{
+		TargetCount:    len(state.Targets),
+		TargetSelected: selected,
+		PhysicalReady:  state.PhysicalReady,
+		Error:          state.Error,
+	})
+}
+
+func renderSelectionExperience(state appRefreshState) {
+	view := selectionExperience(state)
+	status := view.Title
+	if view.Eyebrow != "" {
+		status = view.Eyebrow + " · " + status
+	}
+	setText(statusLabel, status)
+	setText(hintLabel, strings.TrimSpace(view.Body+" "+view.Detail))
+
+	busy := writeInProgress()
+	enable(writeButton, !busy && view.Step == creatorStepReview && view.CanContinue)
+	if view.Step == creatorStepReview && view.PrimaryAction != "" {
+		setText(writeButton, view.PrimaryAction)
+	} else {
+		setText(writeButton, "Criar OrdaX")
+	}
+	invalidateGuidedVisual()
+}
+
 func updateSelectionUI() {
 	stateMu.Lock()
 	state := refreshState
 	stateMu.Unlock()
 
-	busy := writeInProgress()
-	index := selectedTargetIndex()
-	selected := index >= 0 && index < len(state.Targets)
-	enable(writeButton, !busy && state.PhysicalReady && selected)
-
-	if busy || len(state.Targets) == 0 {
+	if writeInProgress() || len(state.Targets) == 0 {
 		return
 	}
-	if !selected {
-		setText(statusLabel, "Escolha o pendrive que receberá o OrdaX.")
-		setText(hintLabel, "Só o USB selecionado será apagado. Nenhuma ISO ou configuração é necessária.")
-		return
-	}
-	if state.PhysicalReady {
-		setText(statusLabel, "Pendrive selecionado. Pronto para criar o OrdaX.")
-		setText(hintLabel, "Clique em Criar OrdaX. O Creator prepara, grava e verifica automaticamente.")
-	}
+	resetWriteResult()
+	renderSelectionExperience(state)
 }
 
 func renderRefresh() {
@@ -375,28 +395,15 @@ func renderRefresh() {
 		setText(versionLabel, version)
 	}
 
-	switch {
-	case state.Error != "" && len(state.Targets) == 0:
-		setText(statusLabel, "Não foi possível preparar o Creator.")
-		setText(hintLabel, state.Error)
-	case len(state.Targets) == 0:
-		setText(statusLabel, "Conecte um pendrive USB.")
-		setText(hintLabel, "O Creator detecta pendrives automaticamente. Se acabou de conectar um, clique em Recarregar USB.")
-	case !state.PhysicalReady:
-		setText(statusLabel, fmt.Sprintf("%d pendrive(s) encontrado(s).", len(state.Targets)))
-		setText(hintLabel, "A criação não está habilitada neste canal do Creator.")
-	default:
-		setText(statusLabel, "Escolha o pendrive que receberá o OrdaX.")
-		setText(hintLabel, "Você não precisa escolher ISO, imagem, versão ou configuração técnica.")
-	}
-
 	if !writeInProgress() {
 		setProgressIdle()
 	}
 	busy := writeInProgress()
 	enable(refreshButton, !busy)
 	enable(deviceCombo, !busy && len(state.Targets) > 0)
-	updateSelectionUI()
+	if !busy {
+		renderSelectionExperience(state)
+	}
 	renderUpdateUI()
 }
 
@@ -404,16 +411,20 @@ func beginRefresh() {
 	if writeInProgress() {
 		return
 	}
+	resetWriteResult()
 	setText(statusLabel, "Procurando pendrives…")
-	setText(hintLabel, "Atualizando a lista de dispositivos USB disponíveis.")
+	setText(hintLabel, "Atualizando a lista de dispositivos USB disponíveis. Seus discos internos continuam fora da seleção do Creator.")
 	enable(refreshButton, false)
 	enable(writeButton, false)
 	enable(deviceCombo, false)
+	invalidateGuidedVisual()
 	refreshAsync()
 }
 
 func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 	switch message {
+	case wmPaint:
+		return paintGuidedVisual(hwnd)
 	case wmCommand:
 		id := int(loword(wParam))
 		notify := hiword(wParam)
@@ -429,18 +440,25 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 			handleUpdateButton()
 			return 0
 		}
+		if id == idBootHelp && notify == bnClicked {
+			messageBox(creatorBootHelpText(), "Como iniciar pelo USB", mbOK|mbIconInformation)
+			return 0
+		}
 		if id == idWrite && notify == bnClicked {
 			beginPhysicalWrite()
 			return 0
 		}
 	case wmAppRefreshDone:
 		renderRefresh()
+		invalidateGuidedVisual()
 		return 0
 	case wmAppWriteProgress:
 		renderWriteProgress()
+		invalidateGuidedVisual()
 		return 0
 	case wmAppWriteDone:
 		renderWriteDone()
+		invalidateGuidedVisual()
 		return 0
 	case wmAppUpdateDone:
 		renderUpdateDone()
@@ -482,9 +500,9 @@ func createMainWindow() {
 		0,
 		uintptr(unsafe.Pointer(className)),
 		uintptr(unsafe.Pointer(utf16Ptr(windowTitle))),
-		wsOverlappedWindow,
+		wsOverlappedWindow|wsClipChildren,
 		cwUseDefault, cwUseDefault,
-		700, 390,
+		900, 390,
 		0, 0, instance, 0,
 	)
 	if hwnd == 0 {
@@ -493,7 +511,7 @@ func createMainWindow() {
 	mainWindow = hwnd
 
 	createControl("STATIC", "Criar pendrive OrdaX", 0, 28, 24, 630, 28, 0)
-	createControl("STATIC", "Conecte o USB, escolha o pendrive e pronto. O restante é automático.", 0, 28, 56, 630, 22, 0)
+	createControl("STATIC", "Assistente guiado: conecte o USB, confirme o destino e acompanhe a criação até a verificação final.", 0, 28, 56, 630, 22, 0)
 	createControl("STATIC", "Pendrive", 0, 28, 96, 630, 20, 0)
 	deviceCombo = createControl("COMBOBOX", "", wsTabStop|wsVScroll|cbsDropDownList|wsDisabled, 28, 122, 630, 220, idDeviceCombo)
 	statusLabel = createControl("STATIC", "Procurando pendrives…", 0, 28, 172, 630, 22, idStatus)
@@ -503,6 +521,7 @@ func createMainWindow() {
 	updateButton = createControl("BUTTON", "Atualizações", wsTabStop|bsPushButton, 280, 280, 118, 36, idUpdate)
 	refreshButton = createControl("BUTTON", "Recarregar USB", wsTabStop|bsPushButton, 406, 280, 118, 36, idRefresh)
 	writeButton = createControl("BUTTON", "Criar OrdaX", wsTabStop|bsDefPushButton|wsDisabled, 532, 280, 126, 36, idWrite)
+	createControl("BUTTON", "Como iniciar pelo USB", wsTabStop|bsPushButton, 704, 294, 148, 32, idBootHelp)
 	setProgressIdle()
 
 	procShowWindow.Call(mainWindow, swShow)

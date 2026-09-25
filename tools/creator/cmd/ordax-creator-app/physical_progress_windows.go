@@ -59,6 +59,11 @@ func readPhysicalProgress(path string) (physicalProgressDocument, error) {
 	return document, nil
 }
 
+func guidedPhysicalProgressCopy(status, hint string) (string, string) {
+	view := creatorExperience(creatorExperienceInput{WriteActive: true})
+	return fmt.Sprintf("%s · %s", view.Eyebrow, status), fmt.Sprintf("%s %s", view.Title, hint)
+}
+
 func physicalProgressPresentation(document physicalProgressDocument) (status, hint string, percent int, ok bool) {
 	ratioPercent := func(start, span int) int {
 		if document.TotalBytes <= 0 {
@@ -123,6 +128,7 @@ func applyPhysicalProgressSnapshot(path string, lastKey *string) {
 	if !ok {
 		return
 	}
+	status, hint = guidedPhysicalProgressCopy(status, hint)
 	if lastKey != nil {
 		*lastKey = key
 	}

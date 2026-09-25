@@ -137,17 +137,19 @@ func completeWrite(err error) {
 	writeMu.Lock()
 	writeState.Active = false
 	if err != nil {
+		view := creatorExperience(creatorExperienceInput{Error: err.Error()})
 		writeState.Success = false
 		writeState.Error = err.Error()
-		writeState.Status = "Não foi possível criar o pendrive OrdaX."
-		writeState.Hint = "Nenhuma conclusão foi assumida. Confira o erro e recarregue os dispositivos antes de tentar novamente."
+		writeState.Status = view.Title
+		writeState.Hint = strings.TrimSpace(view.Body + " " + view.Detail)
 		writeState.Determinate = false
 		writeState.Percent = 0
 	} else {
+		view := creatorExperience(creatorExperienceInput{WriteComplete: true})
 		writeState.Success = true
 		writeState.Error = ""
-		writeState.Status = "Pendrive OrdaX criado e verificado."
-		writeState.Hint = "Gravação, verificação por leitura e ORDAX-DATA foram concluídos. O espaço de arquivos está pronto no Windows; remova o USB com segurança e teste o boot no notebook."
+		writeState.Status = "Pendrive OrdaX criado e verificado. " + view.Title
+		writeState.Hint = strings.TrimSpace(view.Body + " " + view.Detail)
 		writeState.Determinate = true
 		writeState.Percent = 100
 	}
@@ -180,18 +182,20 @@ func renderWriteDone() {
 	setText(statusLabel, state.Status)
 	setText(hintLabel, state.Hint)
 	if state.Success {
+		view := creatorExperience(creatorExperienceInput{WriteComplete: true})
 		setProgressComplete()
 		messageBox(
-			"O pendrive OrdaX foi criado, passou pela verificação de leitura e o espaço ORDAX-DATA foi preparado em exFAT.\n\nO volume de arquivos deve aparecer normalmente no Windows. Agora o USB está pronto para o teste de boot no notebook.",
-			"OrdaX Creator",
+			"O pendrive OrdaX foi criado, passou pela verificação de leitura e o espaço ORDAX-DATA foi preparado em exFAT.\n\n"+view.Body+"\n\n"+view.Detail,
+			"OrdaX Creator — Tudo pronto",
 			mbOK|mbIconInformation,
 		)
 	} else {
 		setProgressIdle()
 		if state.Error != "" {
+			view := creatorExperience(creatorExperienceInput{Error: state.Error})
 			messageBox(
-				"A criação do pendrive não foi concluída.\n\n"+state.Error,
-				"OrdaX Creator",
+				view.Body+"\n\n"+view.Detail,
+				"OrdaX Creator — Não foi possível continuar",
 				mbOK|mbIconError,
 			)
 		}
@@ -207,8 +211,9 @@ func renderWriteDone() {
 }
 
 func showWriteBusyMessage() {
+	view := creatorExperience(creatorExperienceInput{WriteActive: true})
 	messageBox(
-		"A criação do pendrive está em andamento.\n\nNão feche o Creator nem remova o USB até a operação terminar.",
+		view.Title+"\n\n"+view.Body+"\n\nNão feche o Creator nem remova o USB até a operação terminar.",
 		"OrdaX Creator",
 		mbOK|mbIconInformation,
 	)
@@ -246,13 +251,17 @@ func beginPhysicalWrite() {
 	if label == "" {
 		label = "Sem nome"
 	}
+	review := creatorExperience(creatorExperienceInput{TargetCount: 1, TargetSelected: true, PhysicalReady: true})
 	warning := fmt.Sprintf(
-		"Todos os dados deste pendrive serão apagados.\n\nDispositivo: %s\nNome: %s\nDisco: %d\nTamanho: %s\nSerial: %s\n\nDeseja criar o pendrive OrdaX?",
+		"%s\n\n%s\n\nTodos os dados deste pendrive serão apagados.\n\nDispositivo: %s\nNome: %s\nDisco: %d\nTamanho: %s\nSerial: %s\n\n%s\n\nDeseja criar o pendrive OrdaX?",
+		review.Title,
+		review.Body,
 		target.DriveLetter,
 		label,
 		target.DiskNumber,
 		formatBytes(target.PhysicalDiskBytes),
 		target.DeviceSerial,
+		review.Detail,
 	)
 	if messageBox(warning, "Confirmar criação do pendrive", mbYesNo|mbIconWarning|mbDefButton2) != idYes {
 		return
