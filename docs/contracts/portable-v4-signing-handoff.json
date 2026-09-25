@@ -110,5 +110,17 @@
     "physical_target_selection_performed": false,
     "physical_write_authorized": false,
     "physical_write_performed": false
+  },
+  "operator_artifact_receipt_schema": "prototype-ordax.canonical-v4-operator-artifact/1",
+  "operator_input_boundary": {
+    "receipt_required_for_each_manual_builder": true,
+    "same_source_commit_required": true,
+    "preflight_rehashes_artifact_bytes": true,
+    "preflight_rechecks_artifact_sizes": true,
+    "local_ai_source_lock_bound_by_receipt": true,
+    "publication_performed": false,
+    "signing_performed": false,
+    "physical_write_authorized": false,
+    "physical_write_performed": false
   }
 }
