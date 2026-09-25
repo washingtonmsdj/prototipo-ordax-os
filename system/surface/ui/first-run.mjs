@@ -4,6 +4,7 @@ import {
   isIdentityActionSupported,
 } from "../../contracts/identity-actions.mjs";
 import { assertIdentitySessionPort } from "../../contracts/identity-session.mjs";
+import { assertIdentityCredentialsPort } from "../../contracts/identity-credentials.mjs";
 import {
   assertLocalSessionPort,
   validateLocalSessionSnapshot,
@@ -65,6 +66,7 @@ export function mountFirstRunExperience(
     networkManagement = null,
     identitySession,
     identityActions,
+    identityCredentials = null,
     localSession = null,
   },
 ) {
@@ -76,6 +78,7 @@ export function mountFirstRunExperience(
   const networkPort = networkManagement === null ? null : assertNetworkManagementPort(networkManagement);
   const sessionPort = assertIdentitySessionPort(identitySession);
   const actionsPort = assertIdentityActionsPort(identityActions);
+  const credentialsPort = identityCredentials === null ? null : assertIdentityCredentialsPort(identityCredentials);
   const localSessionPort = localSession === null ? null : assertLocalSessionPort(localSession);
   const initial = validateFirstRunState(store.load());
 
@@ -128,6 +131,8 @@ export function mountFirstRunExperience(
   let actionsSnapshot = actionsPort.getSnapshot();
   let identityPending = null;
   let identityMessage = "";
+  let identityEmailDraft = "";
+  let identityPasswordDraft = "";
   let localSessionSnapshot = localSessionPort === null
     ? null
     : validateLocalSessionSnapshot(localSessionPort.getSnapshot());
@@ -151,6 +156,7 @@ export function mountFirstRunExperience(
     destroyed = true;
     networkOrdinal += 1;
     passwordDraft = "";
+    identityPasswordDraft = "";
     localSessionSecretDraft = "";
     localSessionConfirmDraft = "";
     unsubscribeLocalSession?.();
@@ -416,6 +422,33 @@ export function mountFirstRunExperience(
       body.append(status);
     }
 
+    if (sessionSnapshot.state === "signed-out" && credentialsPort) {
+      const form = el(documentObject, "div", "ordax-first-run-form");
+      const emailField = el(documentObject, "label", "ordax-first-run-field");
+      emailField.append(el(documentObject, "span", "", "E-mail"));
+      const email = documentObject.createElement("input");
+      email.type = "email";
+      email.autocomplete = "email";
+      email.maxLength = 320;
+      email.value = identityEmailDraft;
+      email.dataset.firstRunIdentityEmail = "";
+      email.disabled = identityPending !== null;
+      emailField.append(email);
+
+      const passwordField = el(documentObject, "label", "ordax-first-run-field");
+      passwordField.append(el(documentObject, "span", "", "Senha"));
+      const password = documentObject.createElement("input");
+      password.type = "password";
+      password.autocomplete = "current-password";
+      password.maxLength = 1024;
+      password.value = identityPasswordDraft;
+      password.dataset.firstRunIdentityPassword = "";
+      password.disabled = identityPending !== null;
+      passwordField.append(password);
+      form.append(emailField, passwordField);
+      body.append(form);
+    }
+
     const buttons = el(documentObject, "div", "ordax-first-run-account-actions");
     if (sessionSnapshot.state === "signed-in") {
       buttons.append(action(documentObject, "Usar esta conta", "account-identity", true));
@@ -632,13 +665,30 @@ export function mountFirstRunExperience(
     identityMessage = "";
     render();
     try {
-      await actionsPort.execute(kind);
+      let result = null;
+      if (credentialsPort && (kind === "sign-in" || kind === "register")) {
+        const credentials = {
+          email: identityEmailDraft,
+          password: identityPasswordDraft,
+        };
+        identityPasswordDraft = "";
+        result = kind === "sign-in"
+          ? await credentialsPort.signIn(credentials)
+          : await credentialsPort.register(credentials);
+        if (typeof sessionPort.refresh === "function") {
+          await sessionPort.refresh();
+        }
+      } else {
+        await actionsPort.execute(kind);
+      }
       if (destroyed) return;
       sessionSnapshot = sessionPort.getSnapshot();
       actionsSnapshot = actionsPort.getSnapshot();
       identityMessage = sessionSnapshot.state === "signed-in"
         ? "Conta autenticada. Você pode usá-la neste pendrive."
-        : "A autenticação foi iniciada. O uso local continua disponível.";
+        : result?.confirmationRequired
+          ? "Cadastro recebido. Confirme seu e-mail para entrar."
+          : "A autenticação foi iniciada. O uso local continua disponível.";
     } catch {
       if (!destroyed) identityMessage = "A ação de conta não pôde ser concluída. O uso local continua disponível.";
     } finally {
@@ -712,6 +762,10 @@ export function mountFirstRunExperience(
     if (!(input instanceof HTMLInputElement) || !overlay.contains(input)) return;
     if (input.matches("[data-first-run-wifi-password]")) {
       passwordDraft = input.value;
+    } else if (input.matches("[data-first-run-identity-email]")) {
+      identityEmailDraft = input.value;
+    } else if (input.matches("[data-first-run-identity-password]")) {
+      identityPasswordDraft = input.value;
     } else if (input.matches("[data-first-run-local-session-secret]")) {
       localSessionSecretDraft = input.value;
     } else if (input.matches("[data-first-run-local-session-confirm]")) {
@@ -734,6 +788,9 @@ export function mountFirstRunExperience(
     if (input.matches("[data-first-run-wifi-password]")) {
       event.preventDefault();
       overlay.querySelector('[data-first-run-action="network-connect"]')?.click();
+    } else if (input.matches("[data-first-run-identity-email], [data-first-run-identity-password]")) {
+      event.preventDefault();
+      overlay.querySelector('[data-first-run-action="account-sign-in"]')?.click();
     } else if (
       input.matches("[data-first-run-local-session-secret], [data-first-run-local-session-confirm]")
     ) {
