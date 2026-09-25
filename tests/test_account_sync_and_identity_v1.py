@@ -12,6 +12,7 @@ CURSOR_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "202
 SNAPSHOT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925013524_account_sync_atomic_snapshot_v1.sql"
 TWO_CLIENT_PROOF = ROOT / "tools" / "account-sync" / "prove_two_clients.py"
 SESSION_REVOCATION_PROOF = ROOT / "tools" / "account-sync" / "prove_session_revocation.py"
+RECOVERY_EMAIL_TEMPLATE = ROOT / "infra" / "supabase" / "identity" / "email-templates" / "recovery.html"
 
 
 class AccountSyncAndIdentityV1Tests(unittest.TestCase):
@@ -77,9 +78,16 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertIn("MIN_REGISTRATION_PASSWORD_CHARS = 12", text)
         self.assertIn("registration-password-policy", text)
         self.assertIn("ACCOUNT_RECOVERY_REQUEST_ENABLED = false", text)
+        self.assertIn("ACCOUNT_RECOVERY_COMPLETION_ENABLED = false", text)
         self.assertIn("ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL", text)
         self.assertIn("resetPasswordForEmail", text)
         self.assertIn('path === "/auth/recover" && req.method === "POST"', text)
+        self.assertIn('path === "/auth/recover/verify" && req.method === "GET"', text)
+        self.assertIn('path === "/auth/recover/complete" && req.method === "POST"', text)
+        self.assertIn("verifyOtp", text)
+        self.assertIn('type: "recovery"', text)
+        self.assertIn("RECOVERY_SESSION_MAX_AGE = 10 * 60", text)
+        self.assertIn("ordax_recovery", text)
         self.assertIn("account-recovery-disabled", text)
         self.assertIn("account-recovery-unavailable", text)
         self.assertIn("account-recovery-rate-limited", text)
@@ -118,6 +126,14 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertNotIn("print(refresh_a", text)
         self.assertNotIn("print(password", text)
         self.assertNotIn("service_role", text.lower())
+
+    def test_recovery_email_template_uses_server_side_token_hash(self):
+        text = RECOVERY_EMAIL_TEMPLATE.read_text(encoding="utf-8")
+        self.assertIn("{{ .RedirectTo }}?token_hash={{ .TokenHash }}", text)
+        self.assertIn("type=recovery", text)
+        self.assertNotIn("{{ .ConfirmationURL }}", text)
+        self.assertNotIn("access_token", text)
+        self.assertNotIn("refresh_token", text)
 
     def test_identity_gateway_keeps_provider_tokens_out_of_browser_javascript(self):
         text = GATEWAY.read_text(encoding="utf-8")
