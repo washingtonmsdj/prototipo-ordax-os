@@ -348,3 +348,53 @@ test("persisted checkpoint resumes with incremental changes instead of another f
   sync.destroy();
   preferenceSync.destroy();
 });
+
+
+test("missing durable checkpoint store degrades to safe session checkpoint", async () => {
+  const preferences = preferencesRuntime();
+  const preferenceSync = createPreferenceSyncRuntime(preferences, {
+    createIdempotencyKey: keyFactory("pref-session-fallback"),
+  });
+  const bridge = createWorkspaceMetadataBridge(workspaceStore());
+  let snapshotCalls = 0;
+
+  const transport = {
+    schema: SYNC_TRANSPORT_SCHEMA,
+    async snapshot() {
+      snapshotCalls += 1;
+      return { cursor: 0, objects: [] };
+    },
+    async pullChanges({ afterCursor }) {
+      return { afterCursor, nextCursor: afterCursor, changes: [] };
+    },
+    async applyMutation(value) {
+      return {
+        $schema: "prototype-ordax.sync-ack/1",
+        objectId: value.objectId,
+        dataClass: value.dataClass,
+        serverRevision: value.baseServerRevision + 1,
+        tombstone: false,
+        applied: true,
+        conflict: false,
+        changeCursor: 1,
+      };
+    },
+  };
+
+  const sync = createAccountSyncRuntime({
+    identitySession: signedInIdentity(),
+    transport,
+    preferenceSync,
+    preferences,
+    workspaceMetadataSource: bridge.source,
+    workspaceStore: bridge.store,
+    createIdempotencyKey: keyFactory("account-session-fallback"),
+  });
+
+  await sync.refresh();
+  assert.equal(snapshotCalls, 1);
+  assert.equal(sync.getSnapshot().accountContinuity, "active");
+
+  sync.destroy();
+  preferenceSync.destroy();
+});
