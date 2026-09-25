@@ -1,0 +1,101 @@
+name: Pre-USB Nova OrdaX Audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md'
+      - 'docs/contracts/intelligence.json'
+      - 'docs/contracts/local-session.json'
+      - 'docs/contracts/first-run.json'
+      - 'docs/contracts/diagnostics.json'
+      - 'docs/contracts/recovery-status.json'
+      - 'docs/contracts/hardware-support-matrix.json'
+      - 'docs/contracts/physical-write-authorization.json'
+      - 'system/contracts/file-space.mjs'
+      - 'system/adapters/native/file-space.mjs'
+      - 'system/contracts/local-session.mjs'
+      - 'system/adapters/native/local-session.mjs'
+      - 'system/contracts/recovery-status.mjs'
+      - 'system/adapters/native/recovery-status.mjs'
+      - 'system/composition/native/diagnostics.mjs'
+      - 'system/composition/native/main.mjs'
+      - 'system/surface/runtime/native_host_server.py'
+      - 'system/surface/ui/first-run.mjs'
+      - 'system/surface/ui/local-session-lock.mjs'
+      - 'system/surface/ui/settings-overview-controls.mjs'
+      - 'system/surface/ui/system-overview-controls.mjs'
+      - 'tools/creator/pre_usb_nova_ordax_audit.py'
+      - 'tools/creator/physical_promotion.py'
+      - 'tests/test_pre_usb_nova_ordax_audit.py'
+      - 'tests/test_physical_promotion_boundary.py'
+      - '.github/workflows/pre-usb-nova-ordax-audit.yml'
+  pull_request:
+    paths:
+      - 'PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md'
+      - 'docs/contracts/intelligence.json'
+      - 'docs/contracts/local-session.json'
+      - 'docs/contracts/first-run.json'
+      - 'docs/contracts/diagnostics.json'
+      - 'docs/contracts/recovery-status.json'
+      - 'docs/contracts/hardware-support-matrix.json'
+      - 'docs/contracts/physical-write-authorization.json'
+      - 'system/contracts/file-space.mjs'
+      - 'system/adapters/native/file-space.mjs'
+      - 'system/contracts/local-session.mjs'
+      - 'system/adapters/native/local-session.mjs'
+      - 'system/contracts/recovery-status.mjs'
+      - 'system/adapters/native/recovery-status.mjs'
+      - 'system/composition/native/diagnostics.mjs'
+      - 'system/composition/native/main.mjs'
+      - 'system/surface/runtime/native_host_server.py'
+      - 'system/surface/ui/first-run.mjs'
+      - 'system/surface/ui/local-session-lock.mjs'
+      - 'system/surface/ui/settings-overview-controls.mjs'
+      - 'system/surface/ui/system-overview-controls.mjs'
+      - 'tools/creator/pre_usb_nova_ordax_audit.py'
+      - 'tools/creator/physical_promotion.py'
+      - 'tests/test_pre_usb_nova_ordax_audit.py'
+      - 'tests/test_physical_promotion_boundary.py'
+      - '.github/workflows/pre-usb-nova-ordax-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pre-usb-nova-ordax-audit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          check-latest: false
+
+      - name: Validate source audit syntax
+        run: |
+          python -m py_compile \
+            tools/creator/pre_usb_nova_ordax_audit.py \
+            tools/creator/physical_promotion.py \
+            tests/test_pre_usb_nova_ordax_audit.py
+
+      - name: Execute Nova OrdaX source audit
+        run: python tools/creator/pre_usb_nova_ordax_audit.py --repo-root .
+
+      - name: Regress source audit and physical pre-authorization integration
+        run: |
+          python -m unittest \
+            tests.test_pre_usb_nova_ordax_audit \
+            tests.test_physical_promotion_boundary -v
