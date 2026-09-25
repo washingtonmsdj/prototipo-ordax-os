@@ -341,6 +341,20 @@ export function mountAccountOverviewControls(
         ),
       );
     }
+    if (sessionSnapshot.state === "signed-in") {
+      const exportLink = node(
+        documentObject,
+        "a",
+        "ordax-account-action",
+        t("account.action.exportData"),
+      );
+      exportLink.href = "/account/export";
+      exportLink.download = "ordax-account-export.json";
+      exportLink.dataset.accountExport = "";
+      exportLink.setAttribute("aria-label", t("account.action.exportDataAria"));
+      actions.append(exportLink);
+    }
+
     section.append(actions);
 
     if (actionMessage) {
