@@ -473,7 +473,7 @@ class PublicIdentityGateway:
                 "O link de recuperação é inválido ou expirou.",
             )
         return _redirect(
-            "/recuperar/?modo=nova-senha",
+            "/recuperar/nova-senha/",
             set_cookies=(
                 *_session_cookies(
                     session.access_token,
