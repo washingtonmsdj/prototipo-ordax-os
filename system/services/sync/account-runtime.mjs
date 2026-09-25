@@ -5,6 +5,7 @@ import {
   validateSyncRuntimeSnapshot,
 } from "../../contracts/sync-runtime.mjs";
 import { assertSyncCheckpointStore } from "../../contracts/sync-checkpoint-store.mjs";
+import { createSessionSyncCheckpointStore } from "./session-checkpoint-store.mjs";
 import { assertSyncTransportPort } from "../../contracts/sync-transport.mjs";
 import {
   assertWorkspaceMetadataSource,
@@ -134,7 +135,7 @@ function fingerprint(value) {
 export function createAccountSyncRuntime({
   identitySession,
   transport,
-  checkpointStore,
+  checkpointStore = null,
   preferenceSync,
   preferences,
   workspaceMetadataSource,
@@ -143,7 +144,9 @@ export function createAccountSyncRuntime({
 }) {
   const identity = assertIdentitySessionPort(identitySession);
   const remote = assertSyncTransportPort(transport);
-  const checkpoints = assertSyncCheckpointStore(checkpointStore);
+  const checkpoints = checkpointStore === null
+    ? createSessionSyncCheckpointStore()
+    : assertSyncCheckpointStore(checkpointStore);
   const preferencePort = assertPreferenceRuntimePort(preferences);
   const workspaceSource = assertWorkspaceMetadataSource(workspaceMetadataSource);
   const workspaceState = assertWorkspaceStore(workspaceStore);
