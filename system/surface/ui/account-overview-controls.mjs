@@ -19,6 +19,7 @@ import {
 } from "../../contracts/workspace-metadata-source.mjs";
 import { assertSurfaceRenderLifecycle } from "../../contracts/surface-render-lifecycle.mjs";
 import { assertSpacesPort, validateSpacesSnapshot } from "../../contracts/spaces.mjs";
+import { mountMemoryReviewControls } from "./memory-review-controls.mjs";
 
 const ACCOUNT_WINDOW_SELECTOR = '[data-window-id="account"]';
 const ACCOUNT_EXTENSION_SELECTOR = '[data-app-extension="account-overview"]';
@@ -26,6 +27,7 @@ const ACCOUNT_EXTENSION_SELECTOR = '[data-app-extension="account-overview"]';
 const ACCOUNT_SECTIONS = Object.freeze([
   Object.freeze({ id: "overview", messageId: "account.section.overview" }),
   Object.freeze({ id: "spaces", messageId: "account.section.spaces" }),
+  Object.freeze({ id: "memory", messageId: "account.section.memory" }),
   Object.freeze({ id: "sync", messageId: "account.section.sync" }),
 ]);
 
@@ -87,6 +89,7 @@ export function mountAccountOverviewControls(
   appActivation = null,
   identityCredentials = null,
   spaces = null,
+  memoryReview = null,
 ) {
   if (!(root instanceof Element)) {
     throw new TypeError("Account overview controls require a Surface root Element");
@@ -127,6 +130,7 @@ export function mountAccountOverviewControls(
     : "overview";
   let destroyed = false;
   let mountedSlot = null;
+  let memoryReviewControls = null;
 
   const findSlot = () =>
     root.querySelector(`${ACCOUNT_WINDOW_SELECTOR} ${ACCOUNT_EXTENSION_SELECTOR}`);
@@ -477,6 +481,50 @@ export function mountAccountOverviewControls(
     view.append(section);
   };
 
+  const renderMemory = (view) => {
+    const section = node(documentObject, "section", "ordax-account-section");
+    section.append(
+      node(documentObject, "span", "ordax-account-eyebrow", t("account.memory.eyebrow")),
+      node(documentObject, "h4", "ordax-account-section-title", t("account.memory.title")),
+      node(documentObject, "p", "ordax-account-subtitle", t("account.memory.subtitle")),
+    );
+
+    if (memoryReview === null) {
+      const grid = node(documentObject, "div", "ordax-account-grid");
+      appendStateCard(
+        documentObject,
+        grid,
+        t("account.memory.status"),
+        t("account.memory.unavailable"),
+        t("account.memory.unavailable.detail"),
+        "unavailable",
+      );
+      section.append(grid);
+      view.append(section);
+      return;
+    }
+
+    const host = node(documentObject, "div", "ordax-memory-review-host");
+    section.append(host);
+    view.append(section);
+    memoryReviewControls = mountMemoryReviewControls(host, memoryReview, {
+      title: t("account.memory.review.title"),
+      description: t("account.memory.review.description"),
+      searchPlaceholder: t("account.memory.review.searchPlaceholder"),
+      deviceOwner: t("account.memory.review.deviceOwner"),
+      accountOwner: t("account.memory.review.accountOwner"),
+      empty: t("account.memory.review.empty"),
+      save: t("account.memory.review.save"),
+      remove: t("account.memory.review.remove"),
+      previous: t("account.memory.review.previous"),
+      next: t("account.memory.review.next"),
+      saving: t("account.memory.review.saving"),
+      saved: t("account.memory.review.saved"),
+      saveError: t("account.memory.review.saveError"),
+      contentLabel: t("account.memory.review.contentLabel"),
+    });
+  };
+
   const renderContinuity = (view) => {
     const section = node(documentObject, "section", "ordax-account-section");
     section.append(
@@ -611,6 +659,8 @@ export function mountAccountOverviewControls(
   };
 
   const paint = (slot, interaction = null) => {
+    memoryReviewControls?.dispose();
+    memoryReviewControls = null;
     slot.replaceChildren();
     slot.dataset.ordaxAccountOverviewView = "";
     slot.dataset.accountActiveSection = activeSection;
@@ -621,6 +671,8 @@ export function mountAccountOverviewControls(
       renderIdentity(view);
     } else if (activeSection === "spaces") {
       renderSpaces(view);
+    } else if (activeSection === "memory") {
+      renderMemory(view);
     } else if (activeSection === "sync") {
       renderContinuity(view);
     }
@@ -788,6 +840,8 @@ export function mountAccountOverviewControls(
     destroy() {
       destroyed = true;
       actionOrdinal += 1;
+      memoryReviewControls?.dispose();
+      memoryReviewControls = null;
       unsubscribeSpaces?.();
       unsubscribeWorkspaceMetadata?.();
       unsubscribeSync?.();
