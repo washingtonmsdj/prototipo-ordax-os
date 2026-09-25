@@ -15,8 +15,10 @@ AUTH_HARDENING = ROOT / "docs" / "contracts" / "public-auth-hardening.json"
 class PublicIdentityBackendPrepTests(unittest.TestCase):
     def test_identity_contract_selects_dedicated_target_without_enabling_public_auth(self):
         contract = json.loads(IDENTITY_CONTRACT.read_text(encoding="utf-8"))
-        self.assertEqual(contract["status"], "provider-target-prepared")
+        self.assertEqual(contract["status"], "provider-adapter-implemented-activation-gated")
         self.assertFalse(contract["backend"]["provider_configured"])
+        self.assertTrue(contract["backend"]["password_auth_flow_implemented"])
+        self.assertTrue(contract["backend"]["session_refresh_implemented"])
         self.assertTrue(contract["backend"]["dedicated_or_isolated_target_required"])
         self.assertFalse(contract["backend"]["conflicting_auth_user_trigger_allowed"])
         candidate = contract["supabase_candidate"]
