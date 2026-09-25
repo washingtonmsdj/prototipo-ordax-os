@@ -3106,6 +3106,30 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             return None
         return payload if isinstance(payload, dict) else None
 
+    def _read_account_credentials(self) -> dict | None:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return None
+        if length <= 0 or length > MAX_ACCOUNT_CREDENTIAL_BODY:
+            return None
+        content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+        try:
+            raw = self.rfile.read(length).decode("utf-8")
+            if content_type == "application/json":
+                payload = json.loads(raw)
+                return payload if isinstance(payload, dict) else None
+            if content_type == "application/x-www-form-urlencoded":
+                parsed = parse_qs(raw, keep_blank_values=True, strict_parsing=False)
+                return {
+                    key: values[-1]
+                    for key, values in parsed.items()
+                    if values
+                }
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+            return None
+        return None
+
     def do_OPTIONS(self) -> None:  # noqa: N802
         if not self._request_is_trusted():
             return
@@ -3588,7 +3612,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                 return
             try:
                 if parsed_path in {ACCOUNT_LOGIN_PATH, ACCOUNT_REGISTER_PATH}:
-                    payload = self._read_json_body(MAX_ACCOUNT_CREDENTIAL_BODY)
+                    payload = self._read_account_credentials()
                     if payload is None or set(payload) != {"email", "password"}:
                         self._empty(400)
                         return
