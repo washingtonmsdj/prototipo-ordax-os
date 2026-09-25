@@ -1,0 +1,57 @@
+{
+  "$schema": "prototype-ordax.repository-connections/1",
+  "status": "pre-mvp-selected-repository-source-foundation",
+  "surface_port": "ordax.repository-connections/1",
+  "backend_table": "public.ordax_project_connections",
+  "current_provider_proof": "github",
+  "selection": {
+    "repository_must_be_explicit": true,
+    "whole_account_scope_allowed": false,
+    "space_scope_required": true,
+    "repository_id_required": true,
+    "repository_full_name_required": true
+  },
+  "surface_projection": {
+    "read_only": true,
+    "fields": [
+      "connectionId",
+      "spaceId",
+      "provider",
+      "repositoryId",
+      "repositoryFullName",
+      "defaultBranch",
+      "accessMode",
+      "state",
+      "selection",
+      "mutationAuthority",
+      "credentialExposure"
+    ],
+    "owner_user_id_exposed": false,
+    "external_account_id_exposed": false,
+    "installation_id_exposed": false,
+    "metadata_exposed": false,
+    "provider_tokens_exposed": false
+  },
+  "authority": {
+    "read_write_metadata_grants_mutation": false,
+    "mutation_authority": "none",
+    "future_mutation_owner": "OrdaX server-authoritative project/action gateway",
+    "future_mutation_requires_approval_and_audit": true
+  },
+  "state_policy": {
+    "surface_visible": ["active", "error"],
+    "revoked_surface_visible": false
+  },
+  "github": {
+    "direct_external_ai_connector_remains_first_class": true,
+    "ordax_github_app_public": false,
+    "selected_repository_scope_required": true,
+    "credential_owner": "backend-secret-owner-future"
+  },
+  "mvp": {
+    "public_connection_flow_enabled": false,
+    "oauth_enabled_by_this_contract": false,
+    "store_or_billing_dependency": false,
+    "physical_usb_gate_changed": false
+  }
+}
