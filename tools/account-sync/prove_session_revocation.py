@@ -145,12 +145,11 @@ def write_receipt(path: str, base_url: str) -> None:
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID") or None,
         "two_independent_sessions": True,
         "session_a_anonymous_after_logout": True,
-        "captured_refresh_token_rejected": True,
+        "revoked_session_restore_rejected": True,
         "session_b_remained_authenticated": True,
         "credentials_persisted": False,
         "account_identifier_recorded": False,
-        "cookies_recorded": False,
-        "tokens_recorded": False,
+        "sensitive_auth_material_recorded": False,
     }
     output = Path(path).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
