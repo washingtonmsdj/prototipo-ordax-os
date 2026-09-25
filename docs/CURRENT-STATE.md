@@ -181,7 +181,7 @@ A separate product-domain foundation is now defined before public accounts carry
 
 Persistent Intelligence memory is now specified as OrdaX-owned through `ordax.memory/1`, with device/account/space/project/session scopes, provenance, user review/edit/delete requirements and a derived/rebuildable semantic index. `ordax.model-router/1` prepares future OpenAI/xAI adapters while requiring explicit external egress; Local AI remains the offline baseline and no inference provider owns persistent memory.
 
-The dedicated Supabase project `ordax-control-plane` is the selected pre-MVP backend target for the product schema. The source-controlled migrations under `infra/supabase/product/` have been applied: `ordax_accounts`, Spaces/membership, server-authoritative entitlement grants, versioned Profile Packs, memory metadata + pgvector embeddings and project-connection metadata all use RLS. The older duplicate `ordax_profiles` migration was removed so Auth has one OrdaX product bootstrap owner. This does **not** enable public login: the public identity gateway remains fail-closed pending same-origin deployment, Auth hardening and legal readiness.
+The dedicated Supabase project `ordax-control-plane` is the selected pre-MVP backend target for the product schema. The source-controlled migrations under `infra/supabase/product/` have been applied: `ordax_accounts`, Spaces/membership, server-authoritative entitlement grants, versioned Profile Packs, memory metadata + pgvector embeddings and project-connection metadata all use RLS. The older duplicate `ordax_profiles` migration was removed so Auth has one OrdaX product bootstrap owner. The Supabase password provider and same-origin session gateway are now implemented in source: sign-in, sign-up, refresh, validated session state and logout use HttpOnly cookies and never expose provider tokens to public-site JavaScript. **Public login remains fail-closed** pending deployment configuration, leaked-password protection, remaining Auth hardening and legal readiness.
 
 A Product MCP boundary is also specified separately from the owner/development Control Plane. Future ChatGPT/Grok clients authenticate to OrdaX OAuth, then receive only account/Space/project-scoped tools. GitHub is a separate connection, preferably through a GitHub App restricted to selected repositories; upstream GitHub credentials are never returned to the external model. Public Product MCP deployment, mutating tools, connectors and automations remain post-MVP functionality.
 
@@ -189,6 +189,10 @@ This foundation does not change the current physical release gate:
 
 ```text
 ECOSYSTEM_FOUNDATION=PASS_SOURCE_BACKEND_SCHEMA_PREPARED
+PUBLIC_IDENTITY_PASSWORD_FLOW=PASS_SOURCE_ACTIVATION_GATED
+ACCOUNT_SYNC_BACKEND_V1=PASS_APPLIED_PRIVATE_RLS
+ACCOUNT_SYNC_CLIENT_INTEGRATION=PENDING
+ACCOUNT_SYNC_PUBLIC_AVAILABILITY=NO
 PUBLIC_IDENTITY=DISABLED_FAIL_CLOSED
 BILLING=NO
 PUBLIC_STORE=NO
