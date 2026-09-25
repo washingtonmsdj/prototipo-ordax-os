@@ -21,6 +21,11 @@ sys.modules[spec.name] = gateway_module
 spec.loader.exec_module(gateway_module)
 
 
+class SafePasswordChecker:
+    def is_compromised(self, password):
+        return False
+
+
 class PublicIdentityGatewayTests(unittest.TestCase):
     def setUp(self):
         self.gateway = gateway_module.PublicIdentityGateway(
@@ -84,6 +89,90 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         sync = self.gateway.handle("GET", "/sync/snapshot?limit=1", marker)
         self.assertEqual(sync.status, 503)
         self.assertEqual(self.payload(sync)["error"], "public-account-access-disabled")
+
+    def test_registration_rejects_compromised_password_before_provider(self):
+        class FakeProvider:
+            def __init__(self):
+                self.calls = []
+
+            def sign_up_with_password(self, email, password):
+                self.calls.append((email, password))
+                raise AssertionError("provider must not receive compromised password")
+
+        class CompromisedChecker:
+            def is_compromised(self, password):
+                return True
+
+        provider = FakeProvider()
+        gateway = gateway_module.PublicIdentityGateway(
+            provider=provider,
+            sync_provider=None,
+            password_checker=CompromisedChecker(),
+        )
+        response = gateway.handle(
+            "POST",
+            "/auth/register",
+            {"content-type": "application/x-www-form-urlencoded"},
+            b"email=pessoa%40example.com&password=compromised-password-12",
+        )
+        self.assertEqual(response.status, 400)
+        self.assertEqual(self.payload(response)["error"], "compromised-password")
+        self.assertEqual(provider.calls, [])
+
+    def test_registration_fails_closed_when_password_screening_is_unavailable(self):
+        class FakeProvider:
+            def sign_up_with_password(self, email, password):
+                raise AssertionError("provider must not be reached")
+
+        class UnavailableChecker:
+            def is_compromised(self, password):
+                raise gateway_module.PwnedPasswordsError("unavailable")
+
+        gateway = gateway_module.PublicIdentityGateway(
+            provider=FakeProvider(),
+            sync_provider=None,
+            password_checker=UnavailableChecker(),
+        )
+        response = gateway.handle(
+            "POST",
+            "/auth/register",
+            {"content-type": "application/x-www-form-urlencoded"},
+            b"email=pessoa%40example.com&password=new-password-12",
+        )
+        self.assertEqual(response.status, 503)
+        self.assertEqual(self.payload(response)["error"], "password-screening-unavailable")
+
+    def test_existing_password_login_does_not_call_compromised_password_screening(self):
+        class FakeProvider:
+            def sign_in_with_password(self, email, password):
+                session = type(
+                    "Session",
+                    (),
+                    {
+                        "access_token": "access",
+                        "refresh_token": "refresh",
+                        "expires_in": 3600,
+                    },
+                )()
+                return type("Result", (), {"session": session})()
+
+        class MustNotRunChecker:
+            def is_compromised(self, password):
+                raise AssertionError("login must not screen existing passwords")
+
+        gateway = gateway_module.PublicIdentityGateway(
+            provider=FakeProvider(),
+            sync_provider=None,
+            password_checker=MustNotRunChecker(),
+        )
+        response = gateway.handle(
+            "POST",
+            "/auth/login",
+            {"content-type": "application/x-www-form-urlencoded"},
+            b"email=pessoa%40example.com&password=old-pass",
+        )
+        self.assertEqual(response.status, 303)
+        self.assertEqual(dict(response.headers)["Location"], "/conta/")
 
     def test_session_is_anonymous_and_contains_no_tokens_without_runtime_config(self):
         response = self.gateway.handle("GET", "/auth/session")
@@ -279,7 +368,11 @@ class PublicIdentityGatewayTests(unittest.TestCase):
                 self.signed_out.append(access_token)
 
         provider = FakeProvider()
-        gateway = gateway_module.PublicIdentityGateway(provider=provider, sync_provider=None)
+        gateway = gateway_module.PublicIdentityGateway(
+            provider=provider,
+            sync_provider=None,
+            password_checker=SafePasswordChecker(),
+        )
         with patch.object(gateway_module, "ACCOUNT_RECOVERY_COMPLETION_ENABLED", True):
             verify = gateway.handle(
                 "GET",
