@@ -166,6 +166,7 @@ export function createAccountSyncRuntime({
   let preferencesDirty = false;
   let workspaceDirty = false;
   let syncing = false;
+  let synchronizationPromise = null;
   let retryRequested = false;
   let lastPreferenceFingerprint = fingerprint(portablePreferences(preferencePort.getSnapshot()));
   let lastWorkspaceFingerprint = fingerprint(workspaceSource.getSnapshot());
@@ -522,7 +523,7 @@ export function createAccountSyncRuntime({
     retryRequested = true;
   }
 
-  async function synchronize() {
+  async function runSynchronization() {
     const identitySnapshot = identity.getSnapshot();
     if (destroyed || identitySnapshot.state !== "signed-in") {
       initialized = false;
@@ -557,6 +558,14 @@ export function createAccountSyncRuntime({
       initialized = false;
       emit();
     }
+  }
+
+  function synchronize() {
+    if (synchronizationPromise !== null) return synchronizationPromise;
+    synchronizationPromise = runSynchronization().finally(() => {
+      synchronizationPromise = null;
+    });
+    return synchronizationPromise;
   }
 
   const unsubscribePreferences = preferencePort.subscribe((snapshot) => {
