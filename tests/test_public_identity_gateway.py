@@ -35,7 +35,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "real-auth-and-account-sync-gateway-source-v6-edge-revision-7-public-server-gated",
+            "real-auth-and-account-sync-gateway-source-v7-edge-revision-8-recovery-request-fail-closed-public-server-gated",
         )
         self.assertFalse(contract["baseline"]["provider_configured"])
         self.assertTrue(contract["baseline"]["http_only_session_cookies"])
@@ -51,14 +51,19 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertEqual(contract["baseline"]["registration_password_minimum_chars"], 12)
         self.assertTrue(contract["baseline"]["registration_password_policy_enforced_at_edge"])
         self.assertFalse(contract["baseline"]["existing_login_passwords_retroactively_rejected"])
-        self.assertEqual(contract["runtime"]["gateway_source_version"], 6)
-        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 7)
+        self.assertEqual(contract["runtime"]["gateway_source_version"], 7)
+        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 8)
         self.assertTrue(contract["baseline"]["public_site_server_activation_gate"])
         self.assertFalse(contract["baseline"]["public_site_account_enabled"])
         self.assertEqual(contract["baseline"]["public_site_marker_header"], "X-OrdaX-Public-Site")
         self.assertEqual(contract["baseline"]["public_site_disabled_error"], "public-account-access-disabled")
         self.assertTrue(contract["baseline"]["native_json_account_flow_remains_enabled"])
         self.assertTrue(contract["deployment"]["public_site_proxy_marker_required"])
+        self.assertTrue(contract["baseline"]["password_recovery_request_implemented"])
+        self.assertTrue(contract["baseline"]["password_recovery_redirect_required"])
+        self.assertFalse(contract["baseline"]["password_recovery_redirect_verified"])
+        self.assertFalse(contract["baseline"]["password_recovery_account_enumeration_allowed"])
+        self.assertFalse(contract["baseline"]["password_recovery_completion_flow_implemented"])
 
     def test_marked_public_site_requests_are_server_gated(self):
         marker = {"X-OrdaX-Public-Site": "1"}
