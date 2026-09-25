@@ -154,6 +154,10 @@ exactly 17 canonical artifact sources, never the previous 15-source shape.
 PRE_USB_NOVA_ORDAX_AUDIT=PASS
 INTELLIGENCE_REAL_SYSTEM_CONSUMER=PASS_SOURCE
 INTELLIGENCE_STABLE_V4_BACKEND_LIFECYCLE=PASS_SOURCE_SIGNED_STABLE_PROOF_PENDING
+INTELLIGENCE_MEMORY_NATIVE_RUNTIME=PASS_SOURCE_FAIL_SOFT
+INTELLIGENCE_MEMORY_AUTOMATIC_INJECTION=DISABLED
+INTELLIGENCE_MODEL_ROUTER_LOCAL_IDENTITY=PASS_SOURCE_ENGINE_PLUS_MODEL
+LOCAL_AI_HARDWARE_PROBE_BEFORE_START=PASS_SOURCE_NON_BOOT_CRITICAL
 LOCAL_SESSION_LOCK_POLICY=PASS_SOURCE
 LOCAL_SESSION_LOCK_IMPLEMENTATION=PASS_SOURCE
 LOCAL_SESSION_LOCK_PHYSICAL_PROOF=PENDING
@@ -179,7 +183,7 @@ PHYSICAL_WRITE_AUTHORITY=CANONICAL_V4_RELEASE_PROOF_THEN_FRESH_OWNER_AUTHORIZATI
 
 A separate product-domain foundation is now defined before public accounts carry real data. The account model distinguishes one OrdaX identity from **Spaces** and versioned **Profile Packs**; the initial Developer and Legal-BR packs are draft descriptors only and do not activate professional-domain behavior. Billing, prices and commercial tier names remain undefined. A provisional two-private-Space default exists only as an internal capacity foundation and is not a public commercial claim.
 
-Persistent Intelligence memory is now specified as OrdaX-owned through `ordax.memory/1`, with device/account/space/project/session scopes, provenance, user review/edit/delete requirements and a derived/rebuildable semantic index. `ordax.model-router/1` prepares future OpenAI/xAI adapters while requiring explicit external egress; Local AI remains the offline baseline and no inference provider owns persistent memory.
+Persistent Intelligence memory is now implemented as OrdaX-owned through `ordax.memory/1`, with explicit `device|account` ownership, device/account/space/project/session scopes, provenance, bounded search/review/edit/delete semantics and durable `flush()` confirmation. Native/USB owns a bounded private atomic memory state through a loopback-only endpoint and mounts the memory runtime fail-soft; Web fallback is explicitly ephemeral and cannot pretend durable device/account/Space/project state. `ordax.memory-context-auth/1` and the authorized-memory bridge require composition-layer authorization before any memory reaches Intelligence, and ordinary Intelligence requests still inject no memory automatically. `ordax.model-router/1` is now active in the Intelligence runtime, binds local routes to `engineId + modelId` and keeps future OpenAI/xAI routes fail-closed without explicit egress plus an enabled adapter. Local AI remains the offline baseline and no inference provider owns persistent memory.
 
 The dedicated Supabase project `ordax-control-plane` is the selected pre-MVP backend target for the product schema. The source-controlled migrations under `infra/supabase/product/` have been applied: `ordax_accounts`, Spaces/membership, server-authoritative entitlement grants, versioned Profile Packs, memory metadata + pgvector embeddings and project-connection metadata all use RLS. The older duplicate `ordax_profiles` migration was removed so Auth has one OrdaX product bootstrap owner. The Supabase password provider is implemented and the OrdaX account gateway is deployed to the dedicated control-plane backend. Sign-in, sign-up, refresh, validated session state and logout use HttpOnly cookies and never expose provider tokens to Surface JavaScript. Account sync now uses an atomic initial snapshot plus a subject-bound persisted incremental cursor for appearance, portable preferences and workspace metadata on Web and Native/USB. **Public browser login remains fail-closed** pending the same-origin production hosting boundary, leaked-password protection, remaining Auth hardening and legal readiness.
 
