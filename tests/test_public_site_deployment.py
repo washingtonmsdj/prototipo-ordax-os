@@ -38,6 +38,11 @@ class PublicSiteDeploymentTests(unittest.TestCase):
         self.assertIn("try_files $uri $uri/index.html =404;", self.nginx)
         self.assertNotIn("listen 0.0.0.0", self.nginx)
         self.assertNotIn("service_role", self.nginx.lower())
+        self.assertIn("proxy_set_header X-OrdaX-Public-Site 1;", self.nginx)
+        self.assertEqual(self.contract["adapter"]["account_request_marker_header"], "X-OrdaX-Public-Site")
+        self.assertEqual(self.contract["adapter"]["account_request_marker_value"], "1")
+        self.assertTrue(self.contract["routing"]["gateway_public_activation_gate_required"])
+        self.assertFalse(self.contract["routing"]["gateway_public_activation_currently_enabled"])
 
     def test_adapter_preserves_same_origin_security_and_no_store_account_routes(self):
         for name, value in self.contract["security_headers"].items():
@@ -55,6 +60,8 @@ class PublicSiteDeploymentTests(unittest.TestCase):
         self.assertIn('"/auth/session"', text)
         self.assertIn('"/sync/snapshot?limit=1"', text)
         self.assertIn("authentication-required", text)
+        self.assertIn("public-account-access-disabled", text)
+        self.assertIn("public-account-gate-not-enforced", text)
         self.assertIn("origin-must-be-clean-https-origin", text)
         for forbidden in (
             "ORDAX_PROOF_ACCOUNT_PASSWORD",
@@ -69,6 +76,8 @@ class PublicSiteDeploymentTests(unittest.TestCase):
         self.assertTrue(requirements["host_adapter_must_preserve_session_set_cookie"])
         self.assertTrue(requirements["final_legal_documents_required_before_identity_activation"])
         self.assertTrue(requirements["leaked_password_protection_required_before_identity_activation"])
+        self.assertTrue(requirements["host_adapter_must_mark_public_account_requests"])
+        self.assertTrue(requirements["gateway_server_side_public_activation_gate_required"])
 
 
 if __name__ == "__main__":
