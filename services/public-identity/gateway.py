@@ -16,6 +16,11 @@ from urllib.parse import parse_qs, urlsplit
 
 from pwned_passwords import PwnedPasswordChecker, PwnedPasswordsError
 from supabase_account import SupabaseAccountError, SupabaseAccountProvider
+from supabase_lifecycle import (
+    CLOSE_CONFIRMATION,
+    SupabaseLifecycleError,
+    SupabaseLifecycleProvider,
+)
 from supabase_password import (
     MAX_REGISTRATION_PASSWORD_CHARS,
     MIN_REGISTRATION_PASSWORD_CHARS,
@@ -38,6 +43,7 @@ REFRESH_COOKIE = "ordax_refresh"
 RECOVERY_COOKIE = "ordax_recovery"
 RECOVERY_SESSION_MAX_AGE = 10 * 60
 PUBLIC_SITE_ACCOUNT_ENABLED = False
+ACCOUNT_CLOSE_ENABLED = False
 ACCOUNT_RECOVERY_REQUEST_ENABLED = False
 ACCOUNT_RECOVERY_COMPLETION_ENABLED = False
 PUBLIC_SITE_MARKER_HEADER = "x-ordax-public-site"
@@ -91,6 +97,16 @@ def _account_provider_from_environment() -> SupabaseAccountProvider | None:
         return None
     try:
         return SupabaseAccountProvider(*config)
+    except (TypeError, ValueError):
+        return None
+
+
+def _lifecycle_provider_from_environment() -> SupabaseLifecycleProvider | None:
+    config = _provider_config()
+    if config is None:
+        return None
+    try:
+        return SupabaseLifecycleProvider(*config)
     except (TypeError, ValueError):
         return None
 
@@ -272,6 +288,7 @@ class PublicIdentityGateway:
         provider: SupabasePasswordProvider | None = None,
         sync_provider: SupabaseSyncProvider | None = None,
         account_provider: SupabaseAccountProvider | None = None,
+        lifecycle_provider: SupabaseLifecycleProvider | None = None,
         password_checker: PwnedPasswordChecker | None = None,
     ) -> None:
         self.provider = provider if provider is not None else _provider_from_environment()
@@ -280,6 +297,11 @@ class PublicIdentityGateway:
         )
         self.account_provider = (
             account_provider if account_provider is not None else _account_provider_from_environment()
+        )
+        self.lifecycle_provider = (
+            lifecycle_provider
+            if lifecycle_provider is not None
+            else _lifecycle_provider_from_environment()
         )
         self.password_checker = password_checker or PwnedPasswordChecker()
 
@@ -620,6 +642,92 @@ class PublicIdentityGateway:
             ),
         )
 
+    def _account_close(
+        self,
+        request_headers: Mapping[str, str],
+        body: bytes,
+    ) -> GatewayResponse:
+        if not ACCOUNT_CLOSE_ENABLED:
+            return _error(
+                503,
+                "account-close-disabled",
+                "O fechamento da Conta OrdaX ainda não está ativado.",
+            )
+        if not self.provider or not self.lifecycle_provider:
+            return self._provider_unavailable()
+        if not _same_origin_state_change(request_headers):
+            return _error(
+                403,
+                "cross-site-request-rejected",
+                "A solicitação cross-site foi rejeitada.",
+            )
+
+        access, set_cookies = self._authenticated_access(request_headers)
+        if not access:
+            return _json_response(
+                401,
+                {
+                    "$schema": ERROR_SCHEMA,
+                    "error": "authentication-required",
+                    "message": "Entre novamente na Conta OrdaX.",
+                },
+                set_cookies=set_cookies,
+            )
+
+        try:
+            form = _form(body, request_headers.get("content-type", ""))
+            password = form.get("password", "")
+            confirmation = form.get("confirmation", "")
+            if confirmation != CLOSE_CONFIRMATION:
+                raise ValueError("account-close-confirmation-required")
+            _, email = self.provider.get_user(access)
+            result = self.provider.sign_in_with_password(email, password)
+            if result.session is None:
+                raise SupabaseIdentityError("provider-session-missing")
+            self.lifecycle_provider.close_account(
+                result.session.access_token,
+                confirmation,
+            )
+        except ValueError:
+            return _error(
+                400,
+                "account-close-confirmation-required",
+                "Confirmação explícita e senha atual são obrigatórias.",
+            )
+        except SupabaseIdentityError:
+            return _error(
+                401,
+                "recent-authentication-required",
+                "Confirme sua senha atual para fechar a conta.",
+            )
+        except SupabaseLifecycleError as exc:
+            if exc.status == 401:
+                return _error(
+                    401,
+                    "recent-authentication-required",
+                    "Reautenticação recente obrigatória.",
+                )
+            if exc.status == 409:
+                return _error(
+                    409,
+                    "account-close-blocked",
+                    "Não foi possível concluir o fechamento da conta.",
+                )
+            return _error(
+                503,
+                "account-close-unavailable",
+                "O serviço de fechamento está indisponível.",
+            )
+
+        return _redirect(
+            "/",
+            set_cookies=(
+                _clear_cookie(ACCESS_COOKIE),
+                _clear_cookie(REFRESH_COOKIE),
+                _clear_cookie(RECOVERY_COOKIE),
+            ),
+        )
+
     def _account_export(
         self,
         request_headers: Mapping[str, str],
@@ -862,6 +970,11 @@ class PublicIdentityGateway:
             if method != "GET":
                 return self._method_not_allowed("GET")
             return self._account_export(request_headers)
+
+        if path == "/account/close":
+            if method != "POST":
+                return self._method_not_allowed("POST")
+            return self._account_close(request_headers, body)
 
         if path == "/sync/snapshot":
             if method != "GET":
