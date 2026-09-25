@@ -3,6 +3,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SESSION_SCHEMA = "prototype-ordax.public-identity-session/1";
 const SYNC_BATCH_SCHEMA = "prototype-ordax.sync-batch/1";
+const SYNC_SNAPSHOT_SCHEMA = "prototype-ordax.sync-snapshot/1";
+const SYNC_CHANGES_SCHEMA = "prototype-ordax.sync-changes/1";
 const SYNC_ACK_SCHEMA = "prototype-ordax.sync-ack/1";
 const ERROR_SCHEMA = "prototype-ordax.public-identity-error/1";
 const ACCESS_COOKIE = "ordax_access";
@@ -91,6 +93,19 @@ async function boundedBody(req: Request) {
   return new TextDecoder().decode(raw);
 }
 
+function syncObject(item: Record<string, unknown>) {
+  return {
+    objectId: item.stable_object_id,
+    dataClass: item.data_class,
+    objectSchemaVersion: item.object_schema_version,
+    resolverVersion: item.resolver_version,
+    serverRevision: item.server_revision,
+    tombstone: item.tombstone,
+    payload: item.payload,
+    updatedAt: item.updated_at ?? item.changed_at,
+  };
+}
+
 async function authenticated(req: Request) {
   const cookies = parseCookies(req);
   const access = cookies.get(ACCESS_COOKIE) ?? "";
@@ -149,7 +164,7 @@ Deno.serve(async (req: Request) => {
   const path = routePath(url);
 
   if (path === "/health" && req.method === "GET") {
-    return json(200, { status: "ok", service: "ordax-account-gateway", version: 1 });
+    return json(200, { status: "ok", service: "ordax-account-gateway", version: 2 });
   }
 
   if (path === "/auth/session" && req.method === "GET") {
@@ -184,6 +199,68 @@ Deno.serve(async (req: Request) => {
     return json(200, { signedOut: true }, clearCookies());
   }
 
+
+  if (path === "/sync/snapshot" && req.method === "GET") {
+    const session = await authenticated(req);
+    if (!session.user || !session.access) {
+      return json(401, { $schema: ERROR_SCHEMA, error: "authentication-required", message: "Entre na Conta OrdaX para sincronizar." }, session.cookies);
+    }
+    const limit = Number(url.searchParams.get("limit") ?? "200");
+    if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+      return error(400, "invalid-sync-query", "Consulta de sincronização inválida.");
+    }
+    const supabase = client(session.access);
+    const { data, error: rpcError } = await supabase.rpc("ordax_sync_snapshot_v1", {
+      p_limit: limit,
+    });
+    if (
+      rpcError ||
+      !data ||
+      typeof data !== "object" ||
+      !Number.isSafeInteger(Number(data.cursor)) ||
+      !Array.isArray(data.objects)
+    ) return error(502, "sync-snapshot-failed", "Não foi possível ler o snapshot sincronizado.");
+
+    return json(200, {
+      $schema: SYNC_SNAPSHOT_SCHEMA,
+      cursor: Number(data.cursor),
+      objects: data.objects.map((item: Record<string, unknown>) => syncObject(item)),
+    }, session.cookies);
+  }
+
+  if (path === "/sync/changes" && req.method === "GET") {
+    const session = await authenticated(req);
+    if (!session.user || !session.access) {
+      return json(401, { $schema: ERROR_SCHEMA, error: "authentication-required", message: "Entre na Conta OrdaX para sincronizar." }, session.cookies);
+    }
+    const afterCursor = Number(url.searchParams.get("afterCursor") ?? "0");
+    const limit = Number(url.searchParams.get("limit") ?? "200");
+    if (
+      !Number.isSafeInteger(afterCursor) || afterCursor < 0 ||
+      !Number.isInteger(limit) || limit < 1 || limit > 500
+    ) return error(400, "invalid-sync-query", "Consulta de sincronização inválida.");
+
+    const supabase = client(session.access);
+    const { data, error: rpcError } = await supabase.rpc("ordax_pull_sync_changes_v1", {
+      p_after_cursor: afterCursor,
+      p_limit: limit,
+    });
+    if (rpcError || !Array.isArray(data)) {
+      return error(502, "sync-pull-failed", "Não foi possível ler as mudanças sincronizadas.");
+    }
+    const changes = data.map((item: Record<string, unknown>) => ({
+      cursor: Number(item.change_cursor),
+      ...syncObject(item),
+    }));
+    const nextCursor = changes.length ? changes[changes.length - 1].cursor : afterCursor;
+    return json(200, {
+      $schema: SYNC_CHANGES_SCHEMA,
+      afterCursor,
+      nextCursor,
+      changes,
+    }, session.cookies);
+  }
+
   if (path === "/sync/objects" && req.method === "GET") {
     const session = await authenticated(req);
     if (!session.user || !session.access) {
@@ -200,16 +277,7 @@ Deno.serve(async (req: Request) => {
       p_limit: limit,
     });
     if (rpcError || !Array.isArray(data)) return error(502, "sync-read-failed", "Não foi possível ler o estado sincronizado.");
-    const objects = data.map((item: Record<string, unknown>) => ({
-      objectId: item.stable_object_id,
-      dataClass: item.data_class,
-      objectSchemaVersion: item.object_schema_version,
-      resolverVersion: item.resolver_version,
-      serverRevision: item.server_revision,
-      tombstone: item.tombstone,
-      payload: item.payload,
-      updatedAt: item.updated_at,
-    }));
+    const objects = data.map((item: Record<string, unknown>) => syncObject(item));
     return json(200, { $schema: SYNC_BATCH_SCHEMA, objects }, session.cookies);
   }
 
@@ -231,7 +299,7 @@ Deno.serve(async (req: Request) => {
     ) return error(400, "invalid-sync-mutation", "A alteração de sincronização é inválida.");
 
     const supabase = client(session.access);
-    const { data, error: rpcError } = await supabase.rpc("ordax_apply_sync_mutation_v1", {
+    const { data, error: rpcError } = await supabase.rpc("ordax_apply_sync_mutation_v2", {
       p_idempotency_key: mutation.idempotencyKey,
       p_data_class: mutation.dataClass,
       p_stable_object_id: mutation.objectId,
@@ -251,6 +319,7 @@ Deno.serve(async (req: Request) => {
       tombstone: item.tombstone,
       applied: item.applied,
       conflict: item.conflict,
+      changeCursor: item.change_cursor === null ? null : Number(item.change_cursor),
     }, session.cookies);
   }
 
