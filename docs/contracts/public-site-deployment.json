@@ -6,7 +6,9 @@
     "kind": "nginx-loopback-behind-https-terminator",
     "source": "deploy/public-site/nginx.conf",
     "public_listener_in_adapter_allowed": false,
-    "provider_specific_browser_api": false
+    "provider_specific_browser_api": false,
+    "account_request_marker_header": "X-OrdaX-Public-Site",
+    "account_request_marker_value": "1"
   },
   "routing": {
     "static_routes": [
@@ -26,7 +28,9 @@
     "deployed_account_gateway": "ordax-control-plane:ordax-account-gateway",
     "same_origin_identity_required": true,
     "same_origin_sync_required": true,
-    "unknown_static_route_behavior": 404
+    "unknown_static_route_behavior": 404,
+    "gateway_public_activation_gate_required": true,
+    "gateway_public_activation_currently_enabled": false
   },
   "security_headers": {
     "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'",
@@ -51,6 +55,8 @@
     "host_adapter_must_not_expose_provider_cors_as_product_contract": true,
     "public_identity_provider_must_be_configured_before_enabling_login_links": true,
     "final_legal_documents_required_before_identity_activation": true,
-    "leaked_password_protection_required_before_identity_activation": true
+    "leaked_password_protection_required_before_identity_activation": true,
+    "host_adapter_must_mark_public_account_requests": true,
+    "gateway_server_side_public_activation_gate_required": true
   }
 }
