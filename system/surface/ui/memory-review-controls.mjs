@@ -42,6 +42,11 @@ function ownerLabel(owner, copy) {
   return owner.ownerKind === "device" ? copy.deviceOwner : copy.accountOwner;
 }
 
+function findItemTextarea(container, id) {
+  return Array.from(container.querySelectorAll("textarea[data-memory-review-content]"))
+    .find((entry) => entry.dataset.memoryReviewContent === id) ?? null;
+}
+
 export function mountMemoryReviewControls(containerValue, viewModelValue, copyValue) {
   const container = requireElement(containerValue, "Memory review container");
   const viewModel = requireViewModel(viewModelValue);
@@ -104,7 +109,13 @@ export function mountMemoryReviewControls(containerValue, viewModelValue, copyVa
     for (const item of snapshot.items) {
       const article = node(documentObject, "article", "ordax-memory-review-item");
       article.dataset.memoryReviewItem = item.id;
-      const meta = node(documentObject, "small", "ordax-memory-review-meta", `${item.kind} · ${item.scope} · ${item.provenance}`);
+      article.dataset.sensitivity = item.sensitivity;
+      const meta = node(
+        documentObject,
+        "small",
+        "ordax-memory-review-meta",
+        `${item.kind} · ${item.scope} · ${item.sensitivity} · ${item.provenance}`,
+      );
       const label = node(documentObject, "label", "ordax-memory-review-content-label", copy.contentLabel);
       const textarea = documentObject.createElement("textarea");
       textarea.maxLength = 32768;
@@ -178,7 +189,7 @@ export function mountMemoryReviewControls(containerValue, viewModelValue, copyVa
     }
     if (target.dataset.memoryReviewSave) {
       const id = target.dataset.memoryReviewSave;
-      const textarea = container.querySelector(`[data-memory-review-content="${CSS.escape(id)}"]`);
+      const textarea = findItemTextarea(container, id);
       if (!(textarea instanceof HTMLTextAreaElement)) return;
       void runMutation(() => viewModel.update(id, { content: textarea.value }));
       return;
