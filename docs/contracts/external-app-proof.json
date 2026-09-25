@@ -1,0 +1,35 @@
+{
+  "$schema": "prototype-ordax.external-app-proof/1",
+  "status": "pre-mvp-source-proof-only",
+  "distribution_contract": "prototype-ordax.app-distribution/1",
+  "manifest_schema": "prototype-ordax.external-app-manifest/1",
+  "envelope_schema": "prototype-ordax.external-app-envelope/1",
+  "signature_algorithm": "ed25519",
+  "proof_app": {
+    "app_id": "external-hello",
+    "version": "0.1.0",
+    "publisher": "external-proof.example",
+    "supported_modes": ["web"],
+    "requested_capabilities": [],
+    "update_policy": "manual-test-only"
+  },
+  "verification": {
+    "manifest_fields_fail_closed": true,
+    "entrypoint_must_be_safe_relative_posix_path": true,
+    "content_sha256_required": true,
+    "signature_required": true,
+    "signature_key_must_match_test_trust": true,
+    "payload_tamper_rejected": true,
+    "capability_request_rejected_for_first_proof": true
+  },
+  "catalog": {
+    "registered_as_first_party": false,
+    "store_catalog_registration": false
+  },
+  "mvp": {
+    "third_party_installation_enabled": false,
+    "store_ui_enabled": false,
+    "proof_grants_install_authority": false,
+    "proof_grants_runtime_privilege": false
+  }
+}
