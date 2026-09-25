@@ -3,15 +3,22 @@ import {
   validateSurfaceSnapshot,
 } from "../../contracts/surface-host.mjs";
 
-export function createWebSurfaceHost(windowRef = globalThis.window) {
+export function createWebSurfaceHost(windowRef = globalThis.window, { accountIdentityAvailable = false, syncSafeStateAvailable = false } = {}) {
   if (!windowRef?.navigator) {
     throw new TypeError("Web Surface host requires a browser-like window");
   }
 
+  if (syncSafeStateAvailable && !accountIdentityAvailable) {
+    throw new TypeError("sync.safe-state requires account.identity");
+  }
   const listeners = new Set();
   const readSnapshot = () =>
     validateSurfaceSnapshot({
-      capabilityIds: ["network.https"],
+      capabilityIds: [
+        "network.https",
+        ...(accountIdentityAvailable ? ["account.identity"] : []),
+        ...(syncSafeStateAvailable ? ["sync.safe-state"] : []),
+      ],
       connectivity: windowRef.navigator.onLine ? "online" : "offline",
     });
 
