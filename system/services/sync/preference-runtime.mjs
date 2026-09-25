@@ -165,6 +165,18 @@ export function createPreferenceSyncRuntime(
       emit();
       return true;
     },
+    rebasePending(nextServerRevision) {
+      const revision = requireServerRevision(nextServerRevision);
+      const pending = queue.snapshot();
+      serverRevision = revision;
+      if (pending.length === 0) {
+        persist();
+        emit();
+        return false;
+      }
+      queueTheme(lastTheme);
+      return true;
+    },
     applyRemoteAppearance(value) {
       const remote = validateAppearanceSyncObject(value);
       if (remote.tombstone) return false;
