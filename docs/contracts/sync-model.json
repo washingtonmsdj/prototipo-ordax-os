@@ -126,7 +126,7 @@
     "status": "applied",
     "provider": "supabase-current-adapter",
     "provider_is_protocol_authority": false,
-    "migration": "20260925005000_account_sync_private_store_v1",
+    "migration": "20260925004832_account_sync_private_store_v1",
     "object_table": "private.ordax_sync_objects",
     "mutation_table": "private.ordax_sync_mutations",
     "mutation_rpc": "ordax_apply_sync_mutation_v1",
