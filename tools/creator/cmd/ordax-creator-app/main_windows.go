@@ -356,6 +356,7 @@ func renderSelectionExperience(state appRefreshState) {
 	} else {
 		setText(writeButton, "Criar OrdaX")
 	}
+	invalidateGuidedVisual()
 }
 
 func updateSelectionUI() {
@@ -412,11 +413,14 @@ func beginRefresh() {
 	enable(refreshButton, false)
 	enable(writeButton, false)
 	enable(deviceCombo, false)
+	invalidateGuidedVisual()
 	refreshAsync()
 }
 
 func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 	switch message {
+	case wmPaint:
+		return paintGuidedVisual(hwnd)
 	case wmCommand:
 		id := int(loword(wParam))
 		notify := hiword(wParam)
@@ -438,12 +442,15 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 		}
 	case wmAppRefreshDone:
 		renderRefresh()
+		invalidateGuidedVisual()
 		return 0
 	case wmAppWriteProgress:
 		renderWriteProgress()
+		invalidateGuidedVisual()
 		return 0
 	case wmAppWriteDone:
 		renderWriteDone()
+		invalidateGuidedVisual()
 		return 0
 	case wmAppUpdateDone:
 		renderUpdateDone()
@@ -487,7 +494,7 @@ func createMainWindow() {
 		uintptr(unsafe.Pointer(utf16Ptr(windowTitle))),
 		wsOverlappedWindow,
 		cwUseDefault, cwUseDefault,
-		700, 390,
+		900, 390,
 		0, 0, instance, 0,
 	)
 	if hwnd == 0 {
