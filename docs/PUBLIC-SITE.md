@@ -199,3 +199,24 @@ The proof checks the public landing/cache/security headers, runtime config,
 anonymous `/auth/session`, fail-closed anonymous `/sync/snapshot`, and real
 404 behavior. A passing local build is not accepted as production deployment
 evidence.
+
+
+### Public account activation preflight
+
+Public identity is intentionally fail-closed. CI runs:
+
+```bash
+python tools/public-site/auth_activation_preflight.py check
+```
+
+The normal check accepts a coherently disabled account surface and prints every
+remaining blocker. It rejects partial activation immediately. Before a real
+public rollout, operators must also run:
+
+```bash
+python tools/public-site/auth_activation_preflight.py require-ready
+```
+
+That stricter mode requires legal readiness, provider hardening evidence,
+same-origin deployment, real-IP rate limiting, recovery configuration and
+end-to-end proofs before the public account controls may be enabled together.
