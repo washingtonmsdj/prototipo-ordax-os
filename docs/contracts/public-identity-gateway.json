@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-and-account-sync-gateway-source-v6-edge-revision-7-public-server-gated",
+  "status": "real-auth-and-account-sync-gateway-source-v7-edge-revision-8-recovery-request-fail-closed-public-server-gated",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
@@ -9,8 +9,8 @@
     "provider_adapter": "supabase-password-and-sync-rest",
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
-    "gateway_source_version": 6,
-    "edge_deployment_revision_observed": 7
+    "gateway_source_version": 7,
+    "edge_deployment_revision_observed": 8
   },
   "routes": [
     {
@@ -42,6 +42,12 @@
       "path": "/auth/register",
       "unconfigured_status": 503,
       "purpose": "password-registration"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/recover",
+      "unconfigured_status": 503,
+      "purpose": "password-recovery-request-fail-closed"
     },
     {
       "method": "POST",
@@ -102,7 +108,12 @@
     "public_site_account_enabled": false,
     "public_site_marker_header": "X-OrdaX-Public-Site",
     "public_site_disabled_error": "public-account-access-disabled",
-    "native_json_account_flow_remains_enabled": true
+    "native_json_account_flow_remains_enabled": true,
+    "password_recovery_request_implemented": true,
+    "password_recovery_redirect_required": true,
+    "password_recovery_redirect_verified": false,
+    "password_recovery_account_enumeration_allowed": false,
+    "password_recovery_completion_flow_implemented": false
   },
   "deployment": {
     "same_origin_required_for_public_site": true,
