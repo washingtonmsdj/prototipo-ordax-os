@@ -30,6 +30,7 @@ on:
       - 'tests/test_public_site_runtime_smoke.py'
       - 'tests/test_public_site_deployment.py'
       - 'tests/test_public_legal_readiness.py'
+      - 'tests/test_public_auth_activation_preflight.py'
       - '.github/workflows/public-site-candidate.yml'
   pull_request:
     paths:
@@ -59,6 +60,7 @@ on:
       - 'tests/test_public_site_runtime_smoke.py'
       - 'tests/test_public_site_deployment.py'
       - 'tests/test_public_legal_readiness.py'
+      - 'tests/test_public_auth_activation_preflight.py'
       - '.github/workflows/public-site-candidate.yml'
   workflow_dispatch:
 
@@ -85,6 +87,7 @@ jobs:
         run: |
           set -euo pipefail
           python tools/public-site/build.py check
+          python tools/public-site/auth_activation_preflight.py check
           python -m unittest tests.test_public_site_contract -v
           python -m unittest tests.test_public_release_catalog -v
           python -m unittest tests.test_public_identity_backend_prep -v
@@ -92,6 +95,7 @@ jobs:
           python -m unittest tests.test_public_site_runtime_smoke -v
           python -m unittest tests.test_public_site_deployment -v
           python -m unittest tests.test_public_legal_readiness -v
+          python -m unittest tests.test_public_auth_activation_preflight -v
 
       - name: Build and verify deterministic public site
         run: |
