@@ -58,6 +58,19 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertTrue(contract["baseline"]["native_json_account_flow_remains_enabled"])
         self.assertTrue(contract["deployment"]["public_site_proxy_marker_required"])
 
+    def test_marked_public_site_requests_are_server_gated(self):
+        marker = {"X-OrdaX-Public-Site": "1"}
+
+        session = self.gateway.handle("GET", "/auth/session", marker)
+        self.assertEqual(session.status, 200)
+        session_payload = self.payload(session)
+        self.assertFalse(session_payload["authenticated"])
+        self.assertEqual(session_payload["provider"], "gated")
+
+        sync = self.gateway.handle("GET", "/sync/snapshot?limit=1", marker)
+        self.assertEqual(sync.status, 503)
+        self.assertEqual(self.payload(sync)["error"], "public-account-access-disabled")
+
     def test_session_is_anonymous_and_contains_no_tokens_without_runtime_config(self):
         response = self.gateway.handle("GET", "/auth/session")
         self.assertEqual(response.status, 200)
