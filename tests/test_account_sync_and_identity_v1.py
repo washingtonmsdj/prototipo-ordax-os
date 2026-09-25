@@ -25,7 +25,7 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertIn("unique (owner_user_id, idempotency_key)", sql)
         self.assertIn("server_revision", sql)
         self.assertIn("tombstone", sql)
-        private_sql = (ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925005000_account_sync_private_store_v1.sql").read_text(encoding="utf-8").lower()
+        private_sql = (ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925004832_account_sync_private_store_v1.sql").read_text(encoding="utf-8").lower()
         self.assertIn("alter table public.ordax_sync_objects set schema private", private_sql)
         self.assertIn("security invoker", private_sql)
         self.assertIn("set search_path = ''", private_sql)
