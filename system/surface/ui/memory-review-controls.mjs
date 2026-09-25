@@ -200,6 +200,9 @@ export function mountMemoryReviewControls(containerValue, viewModelValue, copyVa
     render();
     try {
       await operation();
+    } catch {
+      // The view model intentionally exposes only a generic persistence state.
+      // Do not leak adapter/host error details through an unhandled rejection.
     } finally {
       mutationPending = false;
       render();
