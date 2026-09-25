@@ -35,6 +35,22 @@ class AccountLifecycleEdgeTests(unittest.TestCase):
         delete = self.text.index("auth.admin.deleteUser(userId)")
         self.assertLess(confirmation, delete)
 
+    def test_public_gateway_close_source_is_disabled_and_has_no_admin_key(self):
+        public_gateway = (
+            ROOT
+            / "infra"
+            / "supabase"
+            / "functions"
+            / "ordax-account-gateway"
+            / "index.ts"
+        ).read_text(encoding="utf-8")
+        self.assertIn("const ACCOUNT_CLOSE_ENABLED = false;", public_gateway)
+        self.assertIn('path === "/account/close" && req.method === "POST"', public_gateway)
+        self.assertIn("/functions/v1/ordax-account-lifecycle/close", public_gateway)
+        self.assertIn("signInWithPassword", public_gateway)
+        self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", public_gateway)
+        self.assertNotIn("auth.admin.deleteUser", public_gateway)
+
     def test_health_reports_disabled_state(self):
         self.assertIn('service: "ordax-account-lifecycle"', self.text)
         self.assertIn("accountCloseEnabled: ACCOUNT_CLOSE_ENABLED", self.text)
