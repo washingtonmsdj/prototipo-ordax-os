@@ -10,7 +10,7 @@ O harness é deliberadamente somente leitura. Ele complementa — não substitui
 
 `system/surface/bin/ordax-mvp-smoke` executa dentro do runtime WebKit Native já ativo e:
 
-- confirma a presença e registra somente tamanho + SHA-256 das fontes compartilhadas de Arquivos, Notas, Internet, Ajustes, Sistema, composição Native e Surface;
+- confirma a presença e registra somente tamanho + SHA-256 das fontes compartilhadas de Arquivos, Notas, Internet, Ajustes, Sistema, Conta, composição Native, Surface e controles de Conta/Memória;
 - confirma que o documento Native da Surface responde pelo loopback esperado;
 - lê e valida os contratos observacionais de métricas, rede, energia, layout de teclado físico e raiz de Arquivos;
 - lê e valida por `GET` o estado vivo do atualizador e o histórico de atualização, sem confirmar health nem disparar qualquer ação;
@@ -90,9 +90,10 @@ Depois da coleta inicial, registrar PASS/FAIL separadamente para cada item:
 6. **Sistema:** Visão geral, Atualizações, Armazenamento, Diagnóstico e Sobre abrem sem dados fictícios; métricas/armazenamento e estado de atualização exibidos devem ser compatíveis com a coleta automática.
 7. **Rede e energia:** estados aparecem somente quando a capacidade correspondente existe. Não executar desligamento/reinício como parte deste smoke test; ações de energia possuem prova própria.
 8. **Teclado físico:** em Ajustes → Idioma e região, o layout configurado deve aparecer como aplicado, sem estado “Próximo início”. Digitar `ç Ç á é ã ? / @` em um campo local de teste deve corresponder ao layout selecionado; não registrar o texto digitado na evidência.
-9. **Isolamento de falha:** alternar entre os cinco apps principais não deve encerrar a Surface nem corromper o estado dos demais apps.
-10. **Continuidade:** fechar/reabrir janelas e trocar áreas não deve criar duplicação inesperada de estado nem perder o target interno já persistido pelo workspace.
-11. **Pós-tour:** nenhum erro fatal visível ou loop de reinício da Surface ocorreu durante o uso.
+9. **Conta e memória:** Conta deve abrir sem bloquear o uso quando não houver sessão. Em **Memória**, o USB/Native deve mostrar a revisão local do dispositivo, ainda que vazia, e permitir alternância de owner somente quando uma conta real estiver autenticada. **Spaces** só precisa ser validado quando houver sessão autenticada; nesse caso, deve mostrar apenas dados reais do gateway ou uma lista vazia, nunca conteúdo fictício. Não registrar nomes/conteúdo de memória ou Spaces na evidência.
+10. **Isolamento de falha:** alternar entre os cinco apps principais e Conta não deve encerrar a Surface nem corromper o estado dos demais apps.
+11. **Continuidade:** fechar/reabrir janelas e trocar áreas não deve criar duplicação inesperada de estado nem perder o target interno já persistido pelo workspace.
+12. **Pós-tour:** nenhum erro fatal visível ou loop de reinício da Surface ocorreu durante o uso.
 
 ## Coleta automática após o tour
 
@@ -132,7 +133,7 @@ Uma atualização automática que ocorra entre baseline e pós-tour também inva
 
 ## Finalização fail-closed da sessão
 
-Depois que `comparison.json` estiver em PASS e os 11 itens de `tour.json` tiverem sido revisados, finalize a sessão:
+Depois que `comparison.json` estiver em PASS e os 12 itens de `tour.json` tiverem sido revisados, finalize a sessão:
 
 ```sh
 /system/surface/bin/ordax-mvp-smoke finalize \
@@ -144,7 +145,7 @@ Depois que `comparison.json` estiver em PASS e os 11 itens de `tour.json` tivere
   --output /var/lib/ordax/mvp-smoke/final.json
 ```
 
-`finalize` não confia cegamente no arquivo de comparação: ele recalcula baseline x pós-tour e exige equivalência semântica com `comparison.json`. Também exige exatamente os 11 ids de tour, todos em `pass`. Um item pendente/falho, comparação editada/stale ou qualquer FAIL automático produz `FAIL>0`.
+`finalize` não confia cegamente no arquivo de comparação: ele recalcula baseline x pós-tour e exige equivalência semântica com `comparison.json`. Também exige exatamente os 12 ids de tour, todos em `pass`. Um item pendente/falho, comparação editada/stale ou qualquer FAIL automático produz `FAIL>0`.
 
 O relatório final não copia `boot_id`, hashes das fontes nem a identidade sanitizada do updater. Ele preserva o `evidence_context` validado — incluindo o SHA-256 do runtime verificado no Stable/MVP — e registra explicitamente `physical_write=false` e `reboot_required=false`.
 
@@ -156,7 +157,7 @@ Antes de atualizar qualquer snapshot canônico para PASS, devem existir juntos:
 - checklist manual com resultado explícito por item;
 - `after-tour.json` revisado com `FAIL=0`;
 - `comparison.json` revisado com `FAIL=0`;
-- `tour.json` com exatamente os 11 itens em `pass`;
+- `tour.json` com exatamente os 12 itens em `pass`;
 - `final.json` revisado com `FAIL=0`;
 - `evidence_context` idêntico entre baseline, pós-tour, comparação e final; para afirmação canônica deve ser `stable-mvp + verified-erofs-overlay + canonical-stable-mvp` com SHA-256 de runtime válido;
 - referência ao SHA exato da release Stable/MVP testada;
