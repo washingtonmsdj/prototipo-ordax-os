@@ -17,7 +17,7 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         contract = json.loads(IDENTITY_CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "provider-adapter-source-v12-deployed-revision-15-close-disabled",
+            "provider-adapter-source-v13-deployed-v12-revision-15-close-disabled",
         )
         self.assertFalse(contract["backend"]["provider_configured"])
         self.assertTrue(contract["backend"]["password_auth_flow_implemented"])
@@ -26,7 +26,7 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         self.assertTrue(contract["backend"]["session_refresh_implemented"])
         self.assertTrue(contract["backend"]["dedicated_or_isolated_target_required"])
         self.assertFalse(contract["backend"]["conflicting_auth_user_trigger_allowed"])
-        self.assertEqual(contract["backend"]["gateway_source_version"], 12)
+        self.assertEqual(contract["backend"]["gateway_source_version"], 13)
         self.assertEqual(contract["backend"]["deployed_gateway_source_version"], 12)
         self.assertEqual(contract["backend"]["edge_deployment_revision_observed"], 15)
         self.assertTrue(contract["backend"]["account_close_source_implemented"])
@@ -39,6 +39,10 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         self.assertTrue(contract["backend"]["account_data_export_implemented"])
         self.assertEqual(contract["backend"]["account_data_export_route"], "/account/export")
         self.assertFalse(contract["backend"]["account_data_export_public_enabled"])
+        self.assertTrue(contract["backend"]["account_spaces_read_source_implemented"])
+        self.assertEqual(contract["backend"]["account_spaces_route"], "/account/spaces")
+        self.assertFalse(contract["backend"]["account_spaces_edge_deployed"])
+        self.assertFalse(contract["backend"]["account_spaces_mutation_exposed"])
         self.assertTrue(contract["backend"]["public_site_server_activation_gate_deployed"])
         self.assertFalse(contract["backend"]["public_site_account_enabled"])
         self.assertEqual(contract["backend"]["public_site_marker_header"], "X-OrdaX-Public-Site")
