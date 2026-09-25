@@ -205,10 +205,21 @@ func paintGuidedVisual(hwnd uintptr) uintptr {
 	}
 	defer procEndPaint.Call(hwnd, uintptr(unsafe.Pointer(&ps)))
 
+	backgroundBrush, _, _ := procCreateSolidBrush.Call(sysColor(colorWindow))
+	procFillRect.Call(hdc, uintptr(unsafe.Pointer(&ps.Paint)), backgroundBrush)
+	procDeleteObject.Call(backgroundBrush)
+
 	panel := rect{Left: 684, Top: 18, Right: 866, Bottom: 342}
-	brush, _, _ := procCreateSolidBrush.Call(sysColor(colorWindow))
-	procFillRect.Call(hdc, uintptr(unsafe.Pointer(&panel)), brush)
-	procDeleteObject.Call(brush)
+	panelBrush, _, _ := procCreateSolidBrush.Call(sysColor(colorBtnFace))
+	procFillRect.Call(hdc, uintptr(unsafe.Pointer(&panel)), panelBrush)
+	procDeleteObject.Call(panelBrush)
+
+	separator, _, _ := procCreatePen.Call(0, 1, sysColor(colorGrayText))
+	oldSeparator, _, _ := procSelectObject.Call(hdc, separator)
+	procMoveToEx.Call(hdc, 676, 18, 0)
+	procLineTo.Call(hdc, 676, 342)
+	procSelectObject.Call(hdc, oldSeparator)
+	procDeleteObject.Call(separator)
 
 	view := currentGuidedExperience()
 	drawTextInRect(hdc, "Seu OrdaX USB", rect{Left: 698, Top: 28, Right: 854, Bottom: 54}, dtCenter|dtVCenter|dtSingleLine, sysColor(colorWindowText))
