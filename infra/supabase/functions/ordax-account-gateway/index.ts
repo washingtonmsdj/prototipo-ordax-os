@@ -86,6 +86,25 @@ function config() {
   return { url, key };
 }
 
+function recoveryRedirect() {
+  const value = (Deno.env.get("ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL") ?? "").trim();
+  if (!value) return null;
+  try {
+    const split = new URL(value);
+    if (
+      split.protocol !== "https:" ||
+      !split.host ||
+      split.username ||
+      split.password ||
+      split.search ||
+      split.hash
+    ) return null;
+    return split.toString();
+  } catch {
+    return null;
+  }
+}
+
 function client(accessToken?: string) {
   const { url, key } = config();
   return createClient(url, key, {
@@ -165,6 +184,66 @@ async function authenticated(req: Request) {
     }
   }
   return { access: "", user: null, cookies: clearCookies() };
+}
+
+async function recovery(req: Request) {
+  const redirectTo = recoveryRedirect();
+  if (!redirectTo) {
+    return error(503, "account-recovery-unavailable", "A recuperação da Conta OrdaX ainda não está configurada.");
+  }
+  let raw = "";
+  try { raw = await boundedBody(req); } catch {
+    return error(413, "request-too-large", "A solicitação excede o limite permitido.");
+  }
+  const type = req.headers.get("content-type") ?? "";
+  if (!type.toLowerCase().startsWith("application/x-www-form-urlencoded")) {
+    return wantsJson(req)
+      ? error(400, "invalid-recovery-form", "Revise o e-mail informado.")
+      : redirectResponse("/login/?erro=recuperacao-formulario");
+  }
+  const form = new URLSearchParams(raw);
+  const email = (form.get("email") ?? "").trim();
+  if (
+    email.length < 3 ||
+    email.length > 320 ||
+    !email.includes("@") ||
+    email.includes("\n") ||
+    email.includes("\r")
+  ) {
+    return wantsJson(req)
+      ? error(400, "invalid-recovery-form", "Revise o e-mail informado.")
+      : redirectResponse("/login/?erro=recuperacao-formulario");
+  }
+
+  try {
+    const supabase = client();
+    const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (recoveryError) {
+      const status = Number(recoveryError.status ?? 0);
+      if (status === 429) {
+        return wantsJson(req)
+          ? error(429, "account-recovery-rate-limited", "Tente novamente mais tarde.")
+          : redirectResponse("/login/?erro=recuperacao-limite");
+      }
+      if (!status || status >= 500) {
+        return wantsJson(req)
+          ? error(503, "account-recovery-unavailable", "A recuperação da Conta OrdaX está temporariamente indisponível.")
+          : redirectResponse("/login/?erro=recuperacao-indisponivel");
+      }
+      // Provider-level 4xx is intentionally normalized to avoid account enumeration.
+    }
+  } catch {
+    return wantsJson(req)
+      ? error(503, "account-recovery-unavailable", "A recuperação da Conta OrdaX está temporariamente indisponível.")
+      : redirectResponse("/login/?erro=recuperacao-indisponivel");
+  }
+
+  return wantsJson(req)
+    ? json(202, {
+        recoveryRequested: true,
+        message: "Se a conta puder ser recuperada, as instruções serão enviadas por e-mail.",
+      })
+    : redirectResponse("/login/?recuperacao=verifique-email");
 }
 
 async function credentials(req: Request, register: boolean) {
@@ -250,7 +329,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (path === "/health" && req.method === "GET") {
-    return json(200, { status: "ok", service: "ordax-account-gateway", version: 6 });
+    return json(200, { status: "ok", service: "ordax-account-gateway", version: 7 });
   }
 
   if (path === "/auth/session" && req.method === "GET") {
@@ -276,6 +355,7 @@ Deno.serve(async (req: Request) => {
   if (path === "/auth/register" && req.method === "GET") return redirectResponse("/cadastro/");
   if (path === "/auth/login" && req.method === "POST") return credentials(req, false);
   if (path === "/auth/register" && req.method === "POST") return credentials(req, true);
+  if (path === "/auth/recover" && req.method === "POST") return recovery(req);
 
   if (path === "/auth/logout" && req.method === "POST") {
     try {
