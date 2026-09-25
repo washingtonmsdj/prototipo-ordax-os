@@ -14,7 +14,13 @@ from http.cookies import SimpleCookie
 from typing import Mapping
 from urllib.parse import parse_qs, urlsplit
 
-from supabase_password import SupabaseIdentityError, SupabasePasswordProvider
+from pwned_passwords import PwnedPasswordChecker, PwnedPasswordsError
+from supabase_password import (
+    MAX_REGISTRATION_PASSWORD_CHARS,
+    MIN_REGISTRATION_PASSWORD_CHARS,
+    SupabaseIdentityError,
+    SupabasePasswordProvider,
+)
 from supabase_sync import SupabaseSyncError, SupabaseSyncProvider
 
 SESSION_SCHEMA = "prototype-ordax.public-identity-session/1"
@@ -254,11 +260,13 @@ class PublicIdentityGateway:
         self,
         provider: SupabasePasswordProvider | None = None,
         sync_provider: SupabaseSyncProvider | None = None,
+        password_checker: PwnedPasswordChecker | None = None,
     ) -> None:
         self.provider = provider if provider is not None else _provider_from_environment()
         self.sync_provider = (
             sync_provider if sync_provider is not None else _sync_provider_from_environment()
         )
+        self.password_checker = password_checker or PwnedPasswordChecker()
 
     @property
     def provider_configured(self) -> bool:
@@ -343,6 +351,34 @@ class PublicIdentityGateway:
             set_cookies=set_cookies,
         )
 
+    def _screen_new_password(self, password: str) -> GatewayResponse | None:
+        if (
+            not isinstance(password, str)
+            or len(password) < MIN_REGISTRATION_PASSWORD_CHARS
+            or len(password) > MAX_REGISTRATION_PASSWORD_CHARS
+            or "\x00" in password
+        ):
+            return _error(
+                400,
+                "password-policy",
+                "Use uma senha com pelo menos 12 caracteres.",
+            )
+        try:
+            compromised = self.password_checker.is_compromised(password)
+        except (ValueError, PwnedPasswordsError):
+            return _error(
+                503,
+                "password-screening-unavailable",
+                "A validação de segurança da senha está temporariamente indisponível.",
+            )
+        if compromised:
+            return _error(
+                400,
+                "compromised-password",
+                "Escolha outra senha; esta senha aparece em bases públicas de credenciais comprometidas.",
+            )
+        return None
+
     def _credentials_action(
         self,
         *,
@@ -358,6 +394,10 @@ class PublicIdentityGateway:
             form = _form(body, request_headers.get("content-type", ""))
             email = form.get("email", "")
             password = form.get("password", "")
+            if registration:
+                screening = self._screen_new_password(password)
+                if screening is not None:
+                    return screening
             result = (
                 self.provider.sign_up_with_password(email, password)
                 if registration
@@ -530,6 +570,9 @@ class PublicIdentityGateway:
             confirmation = form.get("password_confirmation", "")
             if password != confirmation:
                 raise ValueError("password-confirmation-mismatch")
+            screening = self._screen_new_password(password)
+            if screening is not None:
+                return screening
             self.provider.update_password(access, password)
         except ValueError:
             return _error(
