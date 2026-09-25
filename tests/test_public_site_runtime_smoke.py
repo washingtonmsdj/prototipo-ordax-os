@@ -81,7 +81,7 @@ class PublicSiteRuntimeSmokeTests(unittest.TestCase):
             payload = json.load(response)
             self.assertEqual(response.status, 200)
             self.assertFalse(payload["authenticated"])
-            self.assertEqual(payload["provider"], "unconfigured")
+            self.assertEqual(payload["provider"], "gated")
             self.assertEqual(response.headers["Cache-Control"], "no-store, max-age=0")
 
     def test_login_page_is_reachable_but_credentials_fail_closed_without_provider(self):
@@ -103,14 +103,14 @@ class PublicSiteRuntimeSmokeTests(unittest.TestCase):
             urlopen(request, timeout=3)
         self.assertEqual(caught.exception.code, 503)
         payload = json.loads(caught.exception.read().decode("utf-8"))
-        self.assertEqual(payload["error"], "identity-provider-unavailable")
+        self.assertEqual(payload["error"], "public-account-access-disabled")
 
     def test_sync_route_is_same_origin_and_fails_closed_without_provider(self):
         with self.assertRaises(HTTPError) as caught:
             self.fetch("/sync/snapshot?limit=1")
         self.assertEqual(caught.exception.code, 503)
         payload = json.loads(caught.exception.read().decode("utf-8"))
-        self.assertEqual(payload["error"], "identity-provider-unavailable")
+        self.assertEqual(payload["error"], "public-account-access-disabled")
         self.assertEqual(caught.exception.headers["Cache-Control"], "no-store, max-age=0")
 
     def test_unknown_path_and_traversal_do_not_escape_site_root(self):
