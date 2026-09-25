@@ -238,6 +238,10 @@ class NativeAccountGateway:
         with self._lock:
             return self._request("GET", "/account/export")
 
+    def spaces(self) -> GatewayReply:
+        with self._lock:
+            return self._request("GET", "/account/spaces")
+
     def list_sync_objects(self, query: str = "") -> GatewayReply:
         suffix = f"?{query}" if query else ""
         with self._lock:
