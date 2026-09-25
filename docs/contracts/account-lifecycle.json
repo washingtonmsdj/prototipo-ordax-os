@@ -64,8 +64,8 @@
       "browser_direct_delete_allowed": false,
       "service_role_isolated_to_lifecycle_service": true,
       "required_before_public_account_lifecycle_is_complete": true,
-      "gateway_route_deployment_revision_observed": 15,
-      "gateway_source_version": 12
+      "gateway_route_deployment_revision_observed": 16,
+      "gateway_source_version": 13
     },
     "account_data_export": {
       "owner": "ordax-account-gateway",
