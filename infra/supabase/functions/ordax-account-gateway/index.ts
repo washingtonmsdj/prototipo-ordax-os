@@ -10,6 +10,8 @@ const ERROR_SCHEMA = "prototype-ordax.public-identity-error/1";
 const ACCESS_COOKIE = "ordax_access";
 const REFRESH_COOKIE = "ordax_refresh";
 const MAX_BODY = 64 * 1024;
+const MIN_REGISTRATION_PASSWORD_CHARS = 12;
+const MAX_REGISTRATION_PASSWORD_CHARS = 256;
 const DATA_CLASSES = new Set([
   "appearance",
   "preferences",
@@ -177,6 +179,15 @@ async function credentials(req: Request, register: boolean) {
       ? error(400, "invalid-credentials-form", "Revise o e-mail e a senha informados.")
       : redirectResponse(register ? "/cadastro/?erro=formulario" : "/login/?erro=formulario");
   }
+  if (
+    register &&
+    (password.length < MIN_REGISTRATION_PASSWORD_CHARS ||
+      password.length > MAX_REGISTRATION_PASSWORD_CHARS)
+  ) {
+    return wantsJson(req)
+      ? error(400, "registration-password-policy", "Use uma senha com pelo menos 12 caracteres.")
+      : redirectResponse("/cadastro/?erro=senha");
+  }
 
   const supabase = client();
   const result = register
@@ -213,7 +224,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (path === "/health" && req.method === "GET") {
-    return json(200, { status: "ok", service: "ordax-account-gateway", version: 2 });
+    return json(200, { status: "ok", service: "ordax-account-gateway", version: 6 });
   }
 
   if (path === "/auth/session" && req.method === "GET") {
