@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-and-account-sync-gateway-source-v9-edge-revision-12-recovery-token-hash-gated-public-server-gated",
+  "status": "real-auth-and-account-sync-gateway-source-v10-edge-revision-13-pwned-passwords-gated-public-server-gated",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
@@ -9,8 +9,8 @@
     "provider_adapter": "supabase-password-and-sync-rest",
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
-    "gateway_source_version": 9,
-    "edge_deployment_revision_observed": 12
+    "gateway_source_version": 10,
+    "edge_deployment_revision_observed": 13
   },
   "routes": [
     {
@@ -133,7 +133,19 @@
     "password_recovery_short_lived_session_cookie": true,
     "password_recovery_session_max_age_seconds": 600,
     "password_recovery_email_template_source": "infra/supabase/identity/email-templates/recovery.html",
-    "password_recovery_email_template_applied": false
+    "password_recovery_email_template_applied": false,
+    "compromised_password_screening_implemented": true,
+    "compromised_password_screening_scope": [
+      "registration",
+      "recovery-password-change"
+    ],
+    "compromised_password_screening_login": false,
+    "compromised_password_screening_provider": "haveibeenpwned-pwned-passwords",
+    "compromised_password_screening_k_anonymity_prefix_chars": 5,
+    "compromised_password_screening_padding": true,
+    "compromised_password_screening_plaintext_sent": false,
+    "compromised_password_screening_full_hash_sent": false,
+    "compromised_password_screening_fail_closed": true
   },
   "deployment": {
     "same_origin_required_for_public_site": true,
