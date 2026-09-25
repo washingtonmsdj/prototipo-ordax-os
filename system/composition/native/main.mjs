@@ -22,6 +22,7 @@ import { createNativePowerStatus } from "../../adapters/native/power-status.mjs"
 import { createNativePreferenceStore } from "../../adapters/native/preferences.mjs";
 import { createNativeFirstRunStateStore } from "../../adapters/native/first-run-state.mjs";
 import { createNativeLocalSession } from "../../adapters/native/local-session.mjs";
+import { createNativeMemoryStore } from "../../adapters/native/memory.mjs";
 import { createNativeSurfaceHost } from "../../adapters/native/runtime.mjs";
 import { createNativeSystemMetrics } from "../../adapters/native/system-metrics.mjs";
 import { createNativeRecoveryStatus } from "../../adapters/native/recovery-status.mjs";
@@ -50,6 +51,7 @@ import { createUpdateNotificationBridge } from "../../services/notifications/upd
 import { createDiagnosticJournalRuntime } from "../../services/diagnostics/runtime.mjs";
 import { createLocalAiRuntime } from "../../services/local-ai/runtime.mjs";
 import { createIntelligenceRuntime } from "../../services/intelligence/runtime.mjs";
+import { createMemoryRuntime } from "../../services/memory/runtime.mjs";
 import { createUpdateDiagnosticRecorder } from "../../services/diagnostics/update-recorder.mjs";
 import { createPreferenceSyncRuntime } from "../../services/sync/preference-runtime.mjs";
 import { createAccountSyncRuntime } from "../../services/sync/account-runtime.mjs";
@@ -110,6 +112,10 @@ async function start() {
     optionalNativeProbe(
       "OrdaX native diagnostic journal persistence unavailable",
       () => createNativeDiagnosticJournalStore(window),
+    ),
+    optionalNativeProbe(
+      "OrdaX native Intelligence memory persistence unavailable",
+      () => createNativeMemoryStore(window),
     ),
     optionalNativeProbe(
       "OrdaX native update history unavailable",
@@ -182,6 +188,7 @@ async function start() {
   const [
     clientDiagnostics,
     diagnosticJournalStore,
+    memoryStore,
     updateHistory,
     syncStateStore,
     syncCheckpointStore,
@@ -210,6 +217,9 @@ async function start() {
     fetchImpl: localAiFetch,
   });
   const intelligence = createIntelligenceRuntime({ inferencePort: localAi });
+  const memory = memoryStore === null
+    ? null
+    : createMemoryRuntime({ store: memoryStore });
   const updateLocalAiHealth = (snapshot) => {
     componentManager.setCurrentHealth(
       "local-ai-service",
