@@ -11,6 +11,7 @@ NATIVE_GATEWAY_CONFIG = ROOT / "system" / "services" / "account" / "gateway-base
 CURSOR_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925013355_account_sync_incremental_cursor_v1.sql"
 SNAPSHOT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925013524_account_sync_atomic_snapshot_v1.sql"
 TWO_CLIENT_PROOF = ROOT / "tools" / "account-sync" / "prove_two_clients.py"
+SESSION_REVOCATION_PROOF = ROOT / "tools" / "account-sync" / "prove_session_revocation.py"
 
 
 class AccountSyncAndIdentityV1Tests(unittest.TestCase):
@@ -98,6 +99,17 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertIn("proof/two-client/", text)
         self.assertNotIn("print(password", text)
         self.assertNotIn("print(email", text)
+        self.assertNotIn("service_role", text.lower())
+
+    def test_session_revocation_proof_keeps_credentials_and_tokens_ephemeral(self):
+        text = SESSION_REVOCATION_PROOF.read_text(encoding="utf-8")
+        self.assertIn("ORDAX_PROOF_ACCOUNT_EMAIL", text)
+        self.assertIn("ORDAX_PROOF_ACCOUNT_PASSWORD", text)
+        self.assertIn("ACCOUNT_SESSION_REVOCATION_PROOF=PASS", text)
+        self.assertIn("revoked-refresh-token-restored-session", text)
+        self.assertIn("session-b-was-revoked-by-local-logout", text)
+        self.assertNotIn("print(refresh_a", text)
+        self.assertNotIn("print(password", text)
         self.assertNotIn("service_role", text.lower())
 
     def test_identity_gateway_keeps_provider_tokens_out_of_browser_javascript(self):
