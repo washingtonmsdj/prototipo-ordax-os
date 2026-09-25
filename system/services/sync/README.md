@@ -4,7 +4,7 @@
 
 The machine-readable authority is `docs/contracts/sync-model.json`.
 
-## Implemented local protocol core
+## Implemented protocol core and Web account transport
 
 `runtime.mjs` now implements the first provider-independent slice for the `appearance` data class:
 
@@ -15,7 +15,7 @@ The machine-readable authority is `docs/contracts/sync-model.json`.
 - versioned appearance mutations with caller-supplied idempotency keys;
 - an in-memory offline mutation queue that deduplicates retries and rejects reuse of one idempotency key for different mutations.
 
-This is **not** an account backend and does not make account continuity active. `SYNC_CORE_STATUS` deliberately reports identity and transport as `host-required`. A platform/remote adapter must still provide authenticated identity, authorization and encrypted transport before `account.identity` or `sync.safe-state` may be advertised as runtime capabilities.
+The local protocol remains provider-neutral. The dedicated account backend is now applied separately, and the Web source composition has an authenticated same-origin transport through `ordax.sync-transport/1`. The Web coordinator synchronizes `appearance`, portable accessibility preferences and portable workspace metadata only when a real account session exists. Native/USB does not yet advertise `sync.safe-state`; its secure device-to-cloud integration remains pending.
 
 The shared Surface now also has a local preference-sync bridge. It observes the live `ordax.preference-runtime/1` state, converts appearance changes into canonical idempotent appearance mutations and exposes only local queue/status through `ordax.sync-runtime/1`. Repeated offline theme changes compact to the newest pending value for the single stable `appearance/theme` object. This bridge does not publish anything by itself and does not advertise cloud/account continuity.
 
