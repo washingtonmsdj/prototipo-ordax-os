@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-and-account-sync-gateway-source-v8-edge-revision-10-recovery-token-hash-gated-public-server-gated",
+  "status": "real-auth-and-account-sync-gateway-source-v8-edge-revision-11-recovery-token-hash-gated-public-server-gated",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
@@ -10,7 +10,7 @@
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
     "gateway_source_version": 8,
-    "edge_deployment_revision_observed": 10
+    "edge_deployment_revision_observed": 11
   },
   "routes": [
     {
