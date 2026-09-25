@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-entry/1",
-  "status": "provider-adapter-implemented-activation-gated",
+  "status": "provider-adapter-deployed-same-origin-adapter-source-ready-activation-gated",
   "purpose": "public-site-account-entry-boundary",
   "routes": {
     "login_page": "/login/",
@@ -46,10 +46,15 @@
     "auth_hardening_contract": "docs/contracts/public-auth-hardening.json",
     "public_auth_enabled": false,
     "password_auth_flow_implemented": true,
-    "session_refresh_implemented": true
+    "session_refresh_implemented": true,
+    "edge_gateway_deployed": true,
+    "edge_gateway_version": 4,
+    "same_origin_adapter_source": "deploy/public-site/nginx.conf",
+    "same_origin_adapter_deployed": false,
+    "csrf_state_change_protection_deployed": true
   },
   "supabase_candidate": {
-    "status": "dedicated-target-schema-prepared",
+    "status": "dedicated-target-schema-and-edge-gateway-deployed",
     "project_name": "ordax-control-plane",
     "project_ref": "eobcxuyvhkvdmkbaihwh",
     "preflight": "infra/supabase/identity/preflight.sql",
