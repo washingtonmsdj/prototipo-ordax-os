@@ -26,6 +26,7 @@ const developer = JSON.parse(
   assert.equal(activation.billingRequired, false);
   assert.equal(activation.cloudRequired, false);
   assert.equal(activation.pack.slug, "developer");
+  assert.equal(activation.pack.state, "draft");
   assert.deepEqual(activation.pack.intelligence.memoryScopes, ["space", "project"]);
   assert.equal(activation.pack.intelligence.externalProviderRequired, false);
   assert.equal(activation.pack.security.autoGrantPrivileges, false);
@@ -79,6 +80,22 @@ const developer = JSON.parse(
       space: { id: "space-dev-proof", kind: "professional" },
     }),
     /cannot require external model egress/,
+  );
+}
+
+for (const state of ["active", "retired"]) {
+  const catalogPack = structuredClone(developer);
+  catalogPack.state = state;
+  const runtime = createProfilePackRuntime({ packs: [catalogPack] });
+  assert.equal(runtime.list()[0].state, state);
+  assert.throws(
+    () => runtime.activate({
+      slug: "developer",
+      version: 1,
+      mode: "internal-proof",
+      space: { id: `space-${state}`, kind: "professional" },
+    }),
+    /accepts only draft packs/,
   );
 }
 
