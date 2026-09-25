@@ -624,7 +624,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (path === "/health" && req.method === "GET") {
-    return json(200, { status: "ok", service: "ordax-account-gateway", version: 11 });
+    return json(200, { status: "ok", service: "ordax-account-gateway", version: 12 });
   }
 
   if (path === "/auth/session" && req.method === "GET") {
@@ -666,6 +666,10 @@ Deno.serve(async (req: Request) => {
       : redirectResponse("/", clearCookies());
   }
 
+
+  if (path === "/account/close" && req.method === "POST") {
+    return closeAccount(req);
+  }
 
   if (path === "/account/export" && req.method === "GET") {
     const session = await authenticated(req);
