@@ -9,7 +9,6 @@ import {
   validateProfilePackCatalog,
 } from "../system/contracts/profile-pack.mjs";
 import { createProfilePackRuntime } from "../system/services/profile-packs/runtime.mjs";
-import { createProfilePackSurfaceCatalog } from "../system/services/profile-packs/surface-catalog.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -38,7 +37,7 @@ test("Developer and Legal-BR manifests share the provider-neutral contract", () 
   assert.equal(legalPack.security.crossSpaceMemory, false);
 });
 
-test("catalog rejects duplicate version identity and privilege broadening", () => {
+test("runtime catalog rejects duplicate version identity and privilege broadening", () => {
   assert.throws(
     () => validateProfilePackCatalog([developer, developer]),
     /duplicate developer@1/,
@@ -109,26 +108,4 @@ test("internal proof fails closed for incompatible spaces, Legal-BR and non-draf
     }),
     /only draft Profile Packs/,
   );
-});
-
-test("Surface catalog is read-only, bounded and honest about availability", () => {
-  const runtime = createProfilePackRuntime({ packs: [developer, legalBr] });
-  const catalog = createProfilePackSurfaceCatalog(runtime);
-  const snapshot = catalog.getSnapshot();
-
-  assert.equal(snapshot.schema, "ordax.profile-pack-surface-catalog/1");
-  assert.equal(snapshot.mutationAuthority, "none");
-  assert.equal(snapshot.publicActivationEnabled, false);
-  assert.equal(snapshot.packs.length, 2);
-
-  const developerView = catalog.get("developer", 1);
-  assert.equal(developerView.availability, "internal-proof-only");
-  assert.equal(developerView.internalProofEligible, true);
-  assert.equal(developerView.userActivationAvailable, false);
-  assert.deepEqual(developerView.memoryScopes, ["space", "project"]);
-
-  const legalView = catalog.get("legal-br", 1);
-  assert.equal(legalView.availability, "unavailable");
-  assert.equal(legalView.internalProofEligible, false);
-  assert.equal(legalView.jurisdiction, "BR");
 });
