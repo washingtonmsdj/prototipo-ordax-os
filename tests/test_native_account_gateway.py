@@ -82,6 +82,8 @@ class NativeAccountGatewayTests(unittest.TestCase):
         self.assertNotIn("supabase", source)
         self.assertIn("/auth/session", source)
         self.assertIn("/sync/objects", source)
+        self.assertIn("/sync/snapshot", source)
+        self.assertIn("/sync/changes", source)
 
 
 if __name__ == "__main__":
