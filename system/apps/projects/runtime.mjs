@@ -55,14 +55,14 @@ export const componentRuntime = Object.freeze({
     projects = null,
     projectCloudLinks = null,
     appActivation = null,
-    deviceAgent = null,
+    deviceAgentCapabilities = null,
   } = {}) {
     const releaseStyles = await mountProjectsStyles(root);
     let controls = null;
     let deviceAgentControls = null;
 
     try {
-      const deviceAgentStatus = await probeProjectsDeviceAgent(deviceAgent);
+      const deviceAgentStatus = await probeProjectsDeviceAgent(deviceAgentCapabilities);
       controls = mountProjectsWorkspaceControls(root, {
         surfaceLifecycle,
         projects,
