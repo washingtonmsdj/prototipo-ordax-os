@@ -14,10 +14,12 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
         controls = ACCOUNT.read_text(encoding="utf-8")
         self.assertIn('id: "overview"', controls)
         self.assertIn('id: "spaces"', controls)
+        self.assertIn('id: "memory"', controls)
         self.assertIn('id: "sync"', controls)
         self.assertIn("validAccountSection", controls)
         self.assertIn('activeSection === "overview"', controls)
         self.assertIn('activeSection === "spaces"', controls)
+        self.assertIn('activeSection === "memory"', controls)
         self.assertIn('activeSection === "sync"', controls)
         for unavailable in ("profile", "security", "sessions", "plan"):
             self.assertNotIn(f'id: "{unavailable}"', controls)
@@ -88,6 +90,30 @@ class AccountCanonicalNavigationTests(unittest.TestCase):
             self.assertIn("const spaces = createWebSpacesCatalog(window);", composition)
             self.assertIn("spaces,", composition)
             self.assertIn("spaces.dispose()", composition)
+
+    def test_memory_section_is_local_first_and_native_only_when_durable(self):
+        controls = ACCOUNT.read_text(encoding="utf-8")
+        catalog = ACCOUNT_CATALOG.read_text(encoding="utf-8")
+        css = CSS.read_text(encoding="utf-8")
+        native = NATIVE.read_text(encoding="utf-8")
+        web = WEB.read_text(encoding="utf-8")
+
+        self.assertIn("mountMemoryReviewControls", controls)
+        self.assertIn("account.memory.review.description", controls)
+        self.assertIn("memoryReviewControls?.dispose()", controls)
+        self.assertIn('"account.section.memory": "Memória"', catalog)
+        self.assertIn('"account.section.memory": "Memory"', catalog)
+        self.assertIn("não envia memória automaticamente para a IA", catalog)
+        self.assertIn("does not automatically send memory to AI", catalog)
+        self.assertIn(".ordax-memory-review-host", css)
+        self.assertIn("createMemoryReviewSession", native)
+        self.assertIn("createMemoryReviewViewModel", native)
+        self.assertIn("identitySessionPort: identitySession", native)
+        self.assertIn("memoryReview,", native)
+        self.assertIn("memoryReview?.dispose()", native)
+        self.assertIn("memoryReviewSession?.dispose()", native)
+        self.assertNotIn("createMemoryReviewSession", web)
+        self.assertNotIn("createMemoryReviewViewModel", web)
 
     def test_account_no_longer_consumes_host_capability_inventory(self):
         controls = ACCOUNT.read_text(encoding="utf-8")
