@@ -40,7 +40,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "real-auth-sync-export-spaces-gateway-source-v13-deployed-v12-revision-15-close-disabled",
+            "real-auth-sync-export-spaces-gateway-source-v13-deployed-v13-revision-16-close-disabled",
         )
         self.assertFalse(contract["baseline"]["provider_configured"])
         self.assertTrue(contract["baseline"]["http_only_session_cookies"])
@@ -71,8 +71,8 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertTrue(contract["baseline"]["registration_password_policy_enforced_at_edge"])
         self.assertFalse(contract["baseline"]["existing_login_passwords_retroactively_rejected"])
         self.assertEqual(contract["runtime"]["gateway_source_version"], 13)
-        self.assertEqual(contract["runtime"]["deployed_gateway_source_version"], 12)
-        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 15)
+        self.assertEqual(contract["runtime"]["deployed_gateway_source_version"], 13)
+        self.assertEqual(contract["runtime"]["edge_deployment_revision_observed"], 16)
         self.assertTrue(contract["runtime"]["lifecycle_service_deployed"])
         self.assertEqual(contract["runtime"]["lifecycle_service_deployment_revision_observed"], 1)
         self.assertFalse(contract["runtime"]["lifecycle_service_enabled"])
@@ -88,7 +88,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertTrue(contract["baseline"]["account_spaces_uses_user_bearer_rls"])
         self.assertEqual(contract["baseline"]["account_spaces_max_visible_items"], 64)
         self.assertFalse(contract["baseline"]["account_spaces_mutation_exposed"])
-        self.assertFalse(contract["baseline"]["account_spaces_edge_deployed"])
+        self.assertTrue(contract["baseline"]["account_spaces_edge_deployed"])
         self.assertTrue(contract["baseline"]["account_close_source_implemented"])
         self.assertFalse(contract["baseline"]["account_close_enabled"])
         self.assertTrue(contract["baseline"]["account_close_gateway_route_deployed"])
