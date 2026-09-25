@@ -37,6 +37,7 @@ type GithubClaims = {
   runner_environment?: unknown;
   workflow_ref?: unknown;
   sha?: unknown;
+  run_id?: unknown;
 };
 
 function respond(status: number, body: Record<string, unknown>) {
