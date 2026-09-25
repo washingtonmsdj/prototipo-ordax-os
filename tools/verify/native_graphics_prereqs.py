@@ -30,6 +30,12 @@ BASELINE_LAPTOP_PATHS = (
     "CONFIG_HID_MULTITOUCH=y",
 )
 
+CI_VIRTUAL_GRAPHICS_PATHS = (
+    "CONFIG_VIRTIO=y",
+    "CONFIG_VIRTIO_PCI=y",
+    "CONFIG_DRM_VIRTIO_GPU=y",
+)
+
 
 def verify_fragment(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8")
@@ -45,6 +51,9 @@ def verify_fragment(path: Path) -> list[str]:
     for selector in BASELINE_LAPTOP_PATHS:
         if selector not in lines:
             violations.append(f"missing current laptop baseline selector: {selector}")
+    for selector in CI_VIRTUAL_GRAPHICS_PATHS:
+        if selector not in lines:
+            violations.append(f"missing CI virtual graphics selector: {selector}")
 
     return violations
 
@@ -60,8 +69,9 @@ def main() -> int:
 
     print("NATIVE_GRAPHICS_KERNEL_PREREQS=PASS")
     print("NATIVE_GRAPHICS_USERSPACE_HOST_PROVEN=NO")
-    print("NATIVE_GRAPHICS_KERNEL_GRAPHICS=DRM,SIMPLEDRM,FBDEV_EMULATION,I915")
+    print("NATIVE_GRAPHICS_KERNEL_GRAPHICS=DRM,SIMPLEDRM,FBDEV_EMULATION,I915,VIRTIO_GPU")
     print("NATIVE_GRAPHICS_KERNEL_INPUT=EVDEV,HID,USB_HID,I2C_HID,MULTITOUCH")
+    print("NATIVE_GRAPHICS_QEMU_GRAPHICAL_PATH=VIRTIO_PCI,VIRTIO_GPU")
     return 0
 
 
