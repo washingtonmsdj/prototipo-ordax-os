@@ -17,13 +17,19 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         contract = json.loads(IDENTITY_CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "provider-adapter-deployed-form-ready-same-origin-adapter-source-ready-activation-gated",
+            "provider-adapter-source-v6-edge-revision-7-public-server-gated-form-ready",
         )
         self.assertFalse(contract["backend"]["provider_configured"])
         self.assertTrue(contract["backend"]["password_auth_flow_implemented"])
         self.assertTrue(contract["backend"]["session_refresh_implemented"])
         self.assertTrue(contract["backend"]["dedicated_or_isolated_target_required"])
         self.assertFalse(contract["backend"]["conflicting_auth_user_trigger_allowed"])
+        self.assertEqual(contract["backend"]["edge_gateway_version"], 6)
+        self.assertEqual(contract["backend"]["edge_deployment_revision_observed"], 7)
+        self.assertTrue(contract["backend"]["public_site_server_activation_gate_deployed"])
+        self.assertFalse(contract["backend"]["public_site_account_enabled"])
+        self.assertEqual(contract["backend"]["public_site_marker_header"], "X-OrdaX-Public-Site")
+        self.assertTrue(contract["backend"]["native_direct_account_gateway_remains_available"])
         candidate = contract["supabase_candidate"]
         self.assertEqual(candidate["project_name"], "ordax-control-plane")
         self.assertTrue(candidate["product_schema_applied"])
