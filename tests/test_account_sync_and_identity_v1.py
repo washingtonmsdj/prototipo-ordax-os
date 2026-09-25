@@ -11,6 +11,7 @@ NATIVE_GATEWAY_CONFIG = ROOT / "system" / "services" / "account" / "gateway-base
 CURSOR_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925013355_account_sync_incremental_cursor_v1.sql"
 SNAPSHOT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925013524_account_sync_atomic_snapshot_v1.sql"
 TWO_CLIENT_PROOF = ROOT / "tools" / "account-sync" / "prove_two_clients.py"
+TWO_CLIENT_WORKFLOW = ROOT / ".github" / "workflows" / "account-sync-two-client-proof.yml"
 SESSION_REVOCATION_PROOF = ROOT / "tools" / "account-sync" / "prove_session_revocation.py"
 ACCOUNT_CLOSE_DISABLED_PROOF = ROOT / "tools" / "account-sync" / "prove_account_close_disabled.py"
 RECOVERY_EMAIL_TEMPLATE = ROOT / "infra" / "supabase" / "identity" / "email-templates" / "recovery.html"
@@ -170,11 +171,30 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         text = TWO_CLIENT_PROOF.read_text(encoding="utf-8")
         self.assertIn("ORDAX_PROOF_ACCOUNT_EMAIL", text)
         self.assertIn("ORDAX_PROOF_ACCOUNT_PASSWORD", text)
+        self.assertIn("ORDAX_PROOF_RECEIPT_PATH", text)
         self.assertIn("ACCOUNT_SYNC_TWO_CLIENT_PROOF=PASS", text)
+        self.assertIn("prototype-ordax.account-sync-two-client-proof/1", text)
+        self.assertIn('"credentials_persisted": False', text)
+        self.assertIn('"account_identifier_recorded": False', text)
+        self.assertIn('"cookies_recorded": False', text)
+        self.assertIn('"tokens_recorded": False', text)
         self.assertIn("proof/two-client/", text)
         self.assertNotIn("print(password", text)
         self.assertNotIn("print(email", text)
         self.assertNotIn("service_role", text.lower())
+
+    def test_two_client_proof_workflow_is_manual_secret_backed_and_receipt_only(self):
+        text = TWO_CLIENT_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", text)
+        self.assertNotIn("pull_request:", text)
+        self.assertNotIn("push:", text)
+        self.assertIn("secrets.ORDAX_PROOF_ACCOUNT_EMAIL", text)
+        self.assertIn("secrets.ORDAX_PROOF_ACCOUNT_PASSWORD", text)
+        self.assertIn("account-sync-two-client-proof.json", text)
+        self.assertIn("ACCOUNT_SYNC_TWO_CLIENT_RECEIPT=PASS_SANITIZED", text)
+        self.assertIn("retention-days: 14", text)
+        self.assertNotIn("echo \"$ORDAX_PROOF_ACCOUNT_EMAIL\"", text)
+        self.assertNotIn("echo \"$ORDAX_PROOF_ACCOUNT_PASSWORD\"", text)
 
     def test_session_revocation_proof_keeps_credentials_and_tokens_ephemeral(self):
         text = SESSION_REVOCATION_PROOF.read_text(encoding="utf-8")
