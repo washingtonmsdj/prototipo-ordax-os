@@ -105,7 +105,9 @@ class NativeCapabilityAdapterTests(unittest.TestCase):
         self.assertIn('if (accountIdentityAvailable) capabilityIds.push("account.identity")', text)
         self.assertIn('if (syncSafeStateAvailable) capabilityIds.push("sync.safe-state")', text)
         self.assertIn('throw new TypeError("sync.safe-state requires account.identity")', text)
-        self.assertIn("syncSafeStateAvailable: false", composition)
+        self.assertIn("const identityAvailable = identitySession.getSnapshot().state !== \"unavailable\";", composition)
+        self.assertIn("accountIdentityAvailable: identityAvailable", composition)
+        self.assertIn("syncSafeStateAvailable: identityAvailable", composition)
         self.assertNotIn('"system.release-activation"', text)
         self.assertNotIn('"system.recovery"', text)
 
