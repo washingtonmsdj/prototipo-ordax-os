@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { IDENTITY_SESSION_SCHEMA } from "../system/contracts/identity-session.mjs";
 import { PREFERENCE_RUNTIME_SCHEMA } from "../system/contracts/preference-runtime.mjs";
+import { SYNC_CHECKPOINT_STORE_SCHEMA } from "../system/contracts/sync-checkpoint-store.mjs";
 import { SYNC_TRANSPORT_SCHEMA } from "../system/contracts/sync-transport.mjs";
 import { WORKSPACE_STORE_SCHEMA, createDefaultWorkspaceRecord, validateWorkspaceRecord } from "../system/contracts/workspace-store.mjs";
 import { createPreferenceSnapshot, setPreferenceValue } from "../system/services/preferences/catalog.mjs";
@@ -63,6 +64,24 @@ function keyFactory(prefix) {
   return (kind = "state") => `${prefix}:${kind}:${++ordinal}:abcdefgh`;
 }
 
+function checkpointStore(initial = null) {
+  let value = initial;
+  return {
+    schema: SYNC_CHECKPOINT_STORE_SCHEMA,
+    scope: "device",
+    load() {
+      return value;
+    },
+    save(next) {
+      value = next;
+      return true;
+    },
+    peek() {
+      return value;
+    },
+  };
+}
+
 test("account sync applies remote appearance, portable preferences and workspace without echo", async () => {
   const preferences = preferencesRuntime();
   const preferenceSync = createPreferenceSyncRuntime(preferences, {
@@ -73,8 +92,10 @@ test("account sync applies remote appearance, portable preferences and workspace
 
   const transport = {
     schema: SYNC_TRANSPORT_SCHEMA,
-    async listObjects() {
-      return [
+    async snapshot() {
+      return {
+        cursor: 11,
+        objects: [
         {
           objectId: "appearance/theme",
           dataClass: "appearance",
@@ -112,7 +133,11 @@ test("account sync applies remote appearance, portable preferences and workspace
             ],
           },
         },
-      ];
+      ],
+      };
+    },
+    async pullChanges({ afterCursor }) {
+      return { afterCursor, nextCursor: afterCursor, changes: [] };
     },
     async applyMutation(value) {
       applied.push(value);
@@ -131,6 +156,7 @@ test("account sync applies remote appearance, portable preferences and workspace
   const sync = createAccountSyncRuntime({
     identitySession: signedInIdentity(),
     transport,
+    checkpointStore: checkpointStore(),
     preferenceSync,
     preferences,
     workspaceMetadataSource: bridge.source,
@@ -174,8 +200,10 @@ test("local portable preference changes made before first reconciliation win ove
 
   const transport = {
     schema: SYNC_TRANSPORT_SCHEMA,
-    async listObjects() {
-      return [
+    async snapshot() {
+      return {
+        cursor: 20,
+        objects: [
         {
           objectId: "preferences/surface",
           dataClass: "preferences",
@@ -189,7 +217,11 @@ test("local portable preference changes made before first reconciliation win ove
             "accessibility.text-scale": "standard",
           },
         },
-      ];
+      ],
+      };
+    },
+    async pullChanges({ afterCursor }) {
+      return { afterCursor, nextCursor: afterCursor, changes: [] };
     },
     async applyMutation(value) {
       applied.push(value);
@@ -208,6 +240,7 @@ test("local portable preference changes made before first reconciliation win ove
   const sync = createAccountSyncRuntime({
     identitySession: signedInIdentity(),
     transport,
+    checkpointStore: checkpointStore(),
     preferenceSync,
     preferences,
     workspaceMetadataSource: bridge.source,
@@ -225,6 +258,92 @@ test("local portable preference changes made before first reconciliation win ove
   assert.ok(portable, "local dirty preferences must be uploaded after reconciliation");
   assert.equal(portable.baseServerRevision, 9);
   assert.equal(portable.payload["accessibility.contrast"], "high");
+
+  sync.destroy();
+  preferenceSync.destroy();
+});
+
+
+test("persisted checkpoint resumes with incremental changes instead of another full snapshot", async () => {
+  const preferences = preferencesRuntime();
+  const preferenceSync = createPreferenceSyncRuntime(preferences, {
+    createIdempotencyKey: keyFactory("pref-incremental"),
+  });
+  const bridge = createWorkspaceMetadataBridge(workspaceStore());
+  const checkpoints = checkpointStore({
+    subjectId: "user-1",
+    cursor: 40,
+    revisions: {
+      "appearance/theme": 3,
+      "preferences/surface": 5,
+      "workspace/portable": 7,
+    },
+  });
+  let snapshotCalls = 0;
+  let pullCalls = 0;
+
+  const transport = {
+    schema: SYNC_TRANSPORT_SCHEMA,
+    async snapshot() {
+      snapshotCalls += 1;
+      throw new Error("full snapshot must not run with a valid checkpoint");
+    },
+    async pullChanges({ afterCursor }) {
+      pullCalls += 1;
+      assert.equal(afterCursor, 40);
+      return {
+        afterCursor: 40,
+        nextCursor: 41,
+        changes: [
+          {
+            cursor: 41,
+            objectId: "preferences/surface",
+            dataClass: "preferences",
+            objectSchemaVersion: 1,
+            resolverVersion: 1,
+            serverRevision: 6,
+            tombstone: false,
+            payload: {
+              "accessibility.contrast": "high",
+              "accessibility.motion": "full",
+              "accessibility.text-scale": "standard",
+            },
+          },
+        ],
+      };
+    },
+    async applyMutation(value) {
+      return {
+        $schema: "prototype-ordax.sync-ack/1",
+        objectId: value.objectId,
+        dataClass: value.dataClass,
+        serverRevision: value.baseServerRevision + 1,
+        tombstone: false,
+        applied: true,
+        conflict: false,
+        changeCursor: 42,
+      };
+    },
+  };
+
+  const sync = createAccountSyncRuntime({
+    identitySession: signedInIdentity(),
+    transport,
+    checkpointStore: checkpoints,
+    preferenceSync,
+    preferences,
+    workspaceMetadataSource: bridge.source,
+    workspaceStore: bridge.store,
+    createIdempotencyKey: keyFactory("account-incremental"),
+  });
+
+  await sync.refresh();
+
+  assert.equal(snapshotCalls, 0);
+  assert.equal(pullCalls, 1);
+  assert.equal(preferences.getSnapshot()["accessibility.contrast"], "high");
+  assert.equal(checkpoints.peek().cursor, 41);
+  assert.equal(checkpoints.peek().revisions["preferences/surface"], 6);
 
   sync.destroy();
   preferenceSync.destroy();
