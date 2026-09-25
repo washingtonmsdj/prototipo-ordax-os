@@ -13,6 +13,7 @@ const MAX_BODY = 64 * 1024;
 const MIN_REGISTRATION_PASSWORD_CHARS = 12;
 const MAX_REGISTRATION_PASSWORD_CHARS = 256;
 const PUBLIC_SITE_ACCOUNT_ENABLED = false;
+const ACCOUNT_RECOVERY_REQUEST_ENABLED = false;
 const DATA_CLASSES = new Set([
   "appearance",
   "preferences",
@@ -187,6 +188,9 @@ async function authenticated(req: Request) {
 }
 
 async function recovery(req: Request) {
+  if (!ACCOUNT_RECOVERY_REQUEST_ENABLED) {
+    return error(503, "account-recovery-disabled", "A recuperação da Conta OrdaX ainda não foi ativada.");
+  }
   const redirectTo = recoveryRedirect();
   if (!redirectTo) {
     return error(503, "account-recovery-unavailable", "A recuperação da Conta OrdaX ainda não está configurada.");
@@ -329,7 +333,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (path === "/health" && req.method === "GET") {
-    return json(200, { status: "ok", service: "ordax-account-gateway", version: 7 });
+    return json(200, { status: "ok", service: "ordax-account-gateway", version: 8 });
   }
 
   if (path === "/auth/session" && req.method === "GET") {
