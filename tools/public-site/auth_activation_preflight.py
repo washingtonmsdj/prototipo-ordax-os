@@ -25,15 +25,16 @@ LIFECYCLE = Path("docs/contracts/account-lifecycle.json")
 RUNTIME = Path("sites/public/config/public-site.json")
 EDGE = Path("infra/supabase/functions/ordax-account-gateway/index.ts")
 REFERENCE_GATEWAY = Path("services/public-identity/gateway.py")
+LIFECYCLE_EDGE = Path("infra/supabase/functions/ordax-account-lifecycle/index.ts")
 
 EDGE_BOOL = re.compile(
     r"^const\s+(PUBLIC_SITE_ACCOUNT_ENABLED|ACCOUNT_RECOVERY_REQUEST_ENABLED|"
-    r"ACCOUNT_RECOVERY_COMPLETION_ENABLED)\s*=\s*(true|false);\s*$",
+    r"ACCOUNT_RECOVERY_COMPLETION_ENABLED|ACCOUNT_CLOSE_ENABLED)\s*=\s*(true|false);\s*$",
     re.MULTILINE,
 )
 PY_BOOL = re.compile(
     r"^(PUBLIC_SITE_ACCOUNT_ENABLED|ACCOUNT_RECOVERY_REQUEST_ENABLED|"
-    r"ACCOUNT_RECOVERY_COMPLETION_ENABLED)\s*=\s*(True|False)\s*$",
+    r"ACCOUNT_RECOVERY_COMPLETION_ENABLED|ACCOUNT_CLOSE_ENABLED)\s*=\s*(True|False)\s*$",
     re.MULTILINE,
 )
 
@@ -48,12 +49,15 @@ def load_json(root: Path, relative: Path) -> dict:
 def source_switches(root: Path) -> dict[str, bool]:
     edge_text = (root / EDGE).read_text(encoding="utf-8")
     py_text = (root / REFERENCE_GATEWAY).read_text(encoding="utf-8")
+    lifecycle_text = (root / LIFECYCLE_EDGE).read_text(encoding="utf-8")
     edge = {name: value == "true" for name, value in EDGE_BOOL.findall(edge_text)}
     python = {name: value == "True" for name, value in PY_BOOL.findall(py_text)}
+    lifecycle = {name: value == "true" for name, value in EDGE_BOOL.findall(lifecycle_text)}
     names = (
         "PUBLIC_SITE_ACCOUNT_ENABLED",
         "ACCOUNT_RECOVERY_REQUEST_ENABLED",
         "ACCOUNT_RECOVERY_COMPLETION_ENABLED",
+        "ACCOUNT_CLOSE_ENABLED",
     )
     result: dict[str, bool] = {}
     for name in names:
@@ -61,6 +65,9 @@ def source_switches(root: Path) -> dict[str, bool]:
             raise ValueError(f"missing activation switch: {name}")
         if edge[name] != python[name]:
             raise ValueError(f"edge/reference activation switch mismatch: {name}")
+        if name == "ACCOUNT_CLOSE_ENABLED":
+            if lifecycle.get(name) != edge[name]:
+                raise ValueError(f"lifecycle/gateway activation switch mismatch: {name}")
         result[name] = edge[name]
     return result
 
@@ -155,6 +162,7 @@ def readiness(root: Path) -> tuple[list[str], dict[str, bool]]:
         "edge_public_site_account": switches["PUBLIC_SITE_ACCOUNT_ENABLED"],
         "edge_recovery_request": switches["ACCOUNT_RECOVERY_REQUEST_ENABLED"],
         "edge_recovery_completion": switches["ACCOUNT_RECOVERY_COMPLETION_ENABLED"],
+        "edge_account_close": switches["ACCOUNT_CLOSE_ENABLED"],
     }
     return sorted(set(blockers)), controls
 
