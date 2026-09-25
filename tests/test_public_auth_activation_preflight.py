@@ -43,6 +43,7 @@ class PublicAuthActivationPreflightTests(unittest.TestCase):
             hardening["current_observation"]["product_leaked_password_protection_verified"]
         )
         self.assertNotIn("leaked-password-protection", blockers)
+        self.assertNotIn("account-data-export-implementation", blockers)
         self.assertTrue(all(value is False for value in controls.values()))
         for expected in (
             "email-confirmation-policy",
@@ -53,7 +54,6 @@ class PublicAuthActivationPreflightTests(unittest.TestCase):
             "recovery-e2e-proof",
             "session-revocation-proof",
             "account-close-implementation",
-            "account-data-export-implementation",
         ):
             self.assertIn(expected, blockers)
         self.assertEqual(preflight.main(["check", "--root", str(ROOT)]), 0)
