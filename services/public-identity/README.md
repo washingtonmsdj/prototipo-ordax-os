@@ -31,6 +31,7 @@ GET  /auth/login
 POST /auth/login
 GET  /auth/register
 POST /auth/register
+POST /auth/recover
 POST /auth/logout
 GET  /auth/session
 GET  /sync/snapshot
@@ -42,6 +43,22 @@ GET  /sync/objects   # compatibility full-read route
 GET login/register routes lead only to the canonical same-origin pages. Credential POST, account sync and authenticated session behavior fail closed when runtime provider configuration is absent. `/auth/session` remains anonymous/unconfigured in that state. The deployed Edge Function is the current Native/USB backend adapter; browser publication still requires an OrdaX-owned same-origin routing boundary.
 
 The public site configuration therefore keeps login/register disabled until these routes are deployed behind the same origin. The runtime shape is pinned in `docs/contracts/public-identity-gateway.json`.
+
+## Password recovery boundary
+
+`POST /auth/recover` is source-implemented but deliberately disabled in the
+gateway until a complete server-owned PKCE recovery flow exists. Merely
+configuring a redirect URL must not activate recovery.
+
+The request path requires a clean HTTPS redirect and normalizes provider-level
+account lookup responses so the public API does not reveal whether an email is
+registered. The completion path is still pending: the recovery Auth Code and
+PKCE verifier must be exchanged server-side and any resulting provider tokens
+must stay in HttpOnly cookies rather than browser JavaScript.
+
+Until that completion path, redirect allowlist and real HTTPS origin are
+verified, `ACCOUNT_RECOVERY_REQUEST_ENABLED` remains false and the public
+server gate remains disabled.
 
 ## Session policy
 
@@ -98,7 +115,7 @@ The product domain remains provider-neutral, so the Supabase project can later b
 ## Deployed account gateway adapter
 
 The dedicated `ordax-control-plane` project now has the
-`ordax-account-gateway` Edge Function deployed as gateway protocol v2. Its source-controlled owner is
+`ordax-account-gateway` Edge Function deployed from gateway source v8. Its source-controlled owner is
 `infra/supabase/functions/ordax-account-gateway/index.ts`.
 
 The function deliberately has platform JWT pre-verification disabled because
@@ -115,7 +132,7 @@ cross-origin browser use is not the public contract.
 
 ## Incremental sync transport
 
-Gateway v2 separates per-object conflict revision from account-wide change
+The sync protocol separates per-object conflict revision from account-wide change
 progress. The first client reconciliation reads one atomic snapshot containing
 both the current objects and its baseline cursor. Later reconciliations use the
 immutable mutation log through an opaque monotonically increasing change
