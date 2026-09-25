@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-and-account-sync-gateway-source-v10-edge-revision-13-pwned-passwords-gated-public-server-gated",
+  "status": "real-auth-sync-and-account-export-gateway-source-v11-edge-revision-14-public-server-gated",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
@@ -9,8 +9,8 @@
     "provider_adapter": "supabase-password-and-sync-rest",
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
-    "gateway_source_version": 10,
-    "edge_deployment_revision_observed": 13
+    "gateway_source_version": 11,
+    "edge_deployment_revision_observed": 14
   },
   "routes": [
     {
@@ -66,6 +66,12 @@
       "path": "/auth/logout",
       "unconfigured_status": 303,
       "purpose": "revoke-session-and-clear-cookies"
+    },
+    {
+      "method": "GET",
+      "path": "/account/export",
+      "unconfigured_status": 503,
+      "purpose": "authenticated-rls-scoped-account-data-export"
     },
     {
       "method": "GET",
@@ -145,7 +151,14 @@
     "compromised_password_screening_padding": true,
     "compromised_password_screening_plaintext_sent": false,
     "compromised_password_screening_full_hash_sent": false,
-    "compromised_password_screening_fail_closed": true
+    "compromised_password_screening_fail_closed": true,
+    "account_export_implemented": true,
+    "account_export_rpc": "ordax_account_export_v1",
+    "account_export_requires_authenticated_user": true,
+    "account_export_uses_security_invoker": true,
+    "account_export_anon_execute_allowed": false,
+    "account_export_opaque_metadata_included": false,
+    "public_site_account_export_enabled": false
   },
   "deployment": {
     "same_origin_required_for_public_site": true,
