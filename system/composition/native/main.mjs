@@ -367,24 +367,25 @@ async function start() {
       return `pref:${uuid ? uuid.replaceAll("-", "") : `${Date.now().toString(36)}:${syncMutationOrdinal}`}`;
     },
   });
-  let accountSync = preferenceSync;
-  if (syncTransport) {
-    let accountSyncOrdinal = 0;
-    accountSync = createAccountSyncRuntime({
-      identitySession,
-      transport: syncTransport,
-      preferenceSync,
-      preferences: surface.preferences,
-      workspaceMetadataSource: workspaceMetadata.source,
-      workspaceStore,
-      createIdempotencyKey(kind = "state") {
-        accountSyncOrdinal += 1;
-        const uuid = window.crypto?.randomUUID?.();
-        return `sync:${kind}:${uuid ? uuid.replaceAll("-", "") : `${Date.now().toString(36)}:${accountSyncOrdinal}`}`;
-      },
-    });
-    window.addEventListener("online", () => void accountSync.flush(), { passive: true });
-  }
+  let accountSyncOrdinal = 0;
+  const accountSync = createAccountSyncRuntime({
+    identitySession,
+    transport: syncTransport,
+    preferenceSync,
+    preferences: surface.preferences,
+    workspaceMetadataSource: workspaceMetadata.source,
+    workspaceStore,
+    createIdempotencyKey(kind = "state") {
+      accountSyncOrdinal += 1;
+      const uuid = window.crypto?.randomUUID?.();
+      return `sync:${kind}:${uuid ? uuid.replaceAll("-", "") : `${Date.now().toString(36)}:${accountSyncOrdinal}`}`;
+    },
+  });
+  const resumeAccountConnectivity = async () => {
+    await identitySession.refresh();
+    await accountSync.refresh();
+  };
+  window.addEventListener("online", () => void resumeAccountConnectivity(), { passive: true });
   const accountOverviewControls = mountAccountOverviewControls(
     root,
     identitySession,
@@ -569,7 +570,7 @@ async function start() {
       projectReferences?.destroy();
       projectCloudLinks?.destroy();
       accountOverviewControls.destroy();
-      if (accountSync !== preferenceSync) accountSync.destroy();
+      accountSync.destroy();
       preferenceSync.destroy();
       browserSession.dispose();
       updateNotificationBridge.destroy();
