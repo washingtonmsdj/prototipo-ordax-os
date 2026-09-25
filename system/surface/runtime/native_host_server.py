@@ -59,6 +59,7 @@ ACCOUNT_SESSION_PATH = "/auth/session"
 ACCOUNT_LOGIN_PATH = "/auth/login"
 ACCOUNT_REGISTER_PATH = "/auth/register"
 ACCOUNT_LOGOUT_PATH = "/auth/logout"
+ACCOUNT_EXPORT_PATH = "/account/export"
 ACCOUNT_SYNC_OBJECTS_PATH = "/sync/objects"
 ACCOUNT_SYNC_SNAPSHOT_PATH = "/sync/snapshot"
 ACCOUNT_SYNC_CHANGES_PATH = "/sync/changes"
@@ -3305,7 +3306,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if not self._request_is_trusted():
             return
         parsed_path = urlsplit(self.path).path
-        if parsed_path in {ACCOUNT_SESSION_PATH, ACCOUNT_SYNC_OBJECTS_PATH, ACCOUNT_SYNC_SNAPSHOT_PATH, ACCOUNT_SYNC_CHANGES_PATH}:
+        if parsed_path in {ACCOUNT_SESSION_PATH, ACCOUNT_EXPORT_PATH, ACCOUNT_SYNC_OBJECTS_PATH, ACCOUNT_SYNC_SNAPSHOT_PATH, ACCOUNT_SYNC_CHANGES_PATH}:
             if self.client_address[0] != "127.0.0.1":
                 self._empty(403)
                 return
@@ -3323,6 +3324,8 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             try:
                 if parsed_path == ACCOUNT_SESSION_PATH:
                     reply = self.server.account_gateway.session()
+                elif parsed_path == ACCOUNT_EXPORT_PATH:
+                    reply = self.server.account_gateway.account_export()
                 elif parsed_path == ACCOUNT_SYNC_SNAPSHOT_PATH:
                     reply = self.server.account_gateway.sync_snapshot(urlsplit(self.path).query)
                 elif parsed_path == ACCOUNT_SYNC_CHANGES_PATH:
