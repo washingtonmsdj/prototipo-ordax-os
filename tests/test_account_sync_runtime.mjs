@@ -162,3 +162,70 @@ test("account sync applies remote appearance, portable preferences and workspace
   sync.destroy();
   preferenceSync.destroy();
 });
+
+
+test("local portable preference changes made before first reconciliation win over stale remote state", async () => {
+  const preferences = preferencesRuntime();
+  const preferenceSync = createPreferenceSyncRuntime(preferences, {
+    createIdempotencyKey: keyFactory("pref-offline"),
+  });
+  const bridge = createWorkspaceMetadataBridge(workspaceStore());
+  const applied = [];
+
+  const transport = {
+    schema: SYNC_TRANSPORT_SCHEMA,
+    async listObjects() {
+      return [
+        {
+          objectId: "preferences/surface",
+          dataClass: "preferences",
+          objectSchemaVersion: 1,
+          resolverVersion: 1,
+          serverRevision: 9,
+          tombstone: false,
+          payload: {
+            "accessibility.contrast": "standard",
+            "accessibility.motion": "full",
+            "accessibility.text-scale": "standard",
+          },
+        },
+      ];
+    },
+    async applyMutation(value) {
+      applied.push(value);
+      return {
+        $schema: "prototype-ordax.sync-ack/1",
+        objectId: value.objectId,
+        dataClass: value.dataClass,
+        serverRevision: value.baseServerRevision + 1,
+        tombstone: false,
+        applied: true,
+        conflict: false,
+      };
+    },
+  };
+
+  const sync = createAccountSyncRuntime({
+    identitySession: signedInIdentity(),
+    transport,
+    preferenceSync,
+    preferences,
+    workspaceMetadataSource: bridge.source,
+    workspaceStore: bridge.store,
+    createIdempotencyKey: keyFactory("account-offline"),
+  });
+
+  preferences.set("accessibility.contrast", "high");
+  assert.equal(sync.getSnapshot().pendingMutationCount > 0, true);
+
+  await sync.refresh();
+
+  assert.equal(preferences.getSnapshot()["accessibility.contrast"], "high");
+  const portable = applied.find((item) => item.objectId === "preferences/surface");
+  assert.ok(portable, "local dirty preferences must be uploaded after reconciliation");
+  assert.equal(portable.baseServerRevision, 9);
+  assert.equal(portable.payload["accessibility.contrast"], "high");
+
+  sync.destroy();
+  preferenceSync.destroy();
+});
