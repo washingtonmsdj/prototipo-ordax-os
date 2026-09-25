@@ -29,6 +29,7 @@ import { createNativeUpdateHistory } from "../../adapters/native/update-history.
 import { createNativeUpdateWatcher } from "../../adapters/native/update-runtime.mjs";
 import { createNativeWorkspaceStore } from "../../adapters/native/workspace.mjs";
 import { createNativeSyncStateStore } from "../../adapters/native/sync-state.mjs";
+import { createNativeSyncCheckpointStore } from "../../adapters/native/sync-checkpoint.mjs";
 import { createNativeSurfaceHeartbeat } from "../../adapters/native/surface-heartbeat.mjs";
 import { createWebIdentityActions } from "../../adapters/web/identity-actions.mjs";
 import { createSameOriginIdentityCredentials } from "../../adapters/web/identity-credentials.mjs";
@@ -119,6 +120,10 @@ async function start() {
       () => createNativeSyncStateStore(window),
     ),
     optionalNativeProbe(
+      "OrdaX native sync checkpoint persistence unavailable",
+      () => createNativeSyncCheckpointStore(window),
+    ),
+    optionalNativeProbe(
       "OrdaX native component state persistence unavailable",
       () => createNativeComponentStateStore(window),
     ),
@@ -179,6 +184,7 @@ async function start() {
     diagnosticJournalStore,
     updateHistory,
     syncStateStore,
+    syncCheckpointStore,
     componentStateStore,
     notesStore,
     powerActions,
@@ -371,6 +377,7 @@ async function start() {
   const accountSync = createAccountSyncRuntime({
     identitySession,
     transport: syncTransport,
+    checkpointStore: syncCheckpointStore,
     preferenceSync,
     preferences: surface.preferences,
     workspaceMetadataSource: workspaceMetadata.source,
