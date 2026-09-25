@@ -14,6 +14,7 @@ TWO_CLIENT_PROOF = ROOT / "tools" / "account-sync" / "prove_two_clients.py"
 SESSION_REVOCATION_PROOF = ROOT / "tools" / "account-sync" / "prove_session_revocation.py"
 RECOVERY_EMAIL_TEMPLATE = ROOT / "infra" / "supabase" / "identity" / "email-templates" / "recovery.html"
 ACCOUNT_EXPORT_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925031000_account_data_export_v1.sql"
+ACCOUNT_LIFECYCLE_EDGE = ROOT / "infra" / "supabase" / "functions" / "ordax-account-lifecycle" / "index.ts"
 
 
 class AccountSyncAndIdentityV1Tests(unittest.TestCase):
@@ -132,6 +133,30 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertIn("SupabaseAccountProvider", gateway)
         self.assertIn('if path == "/account/export":', gateway)
         self.assertIn("export_account(access)", gateway)
+
+    def test_account_close_source_is_isolated_disabled_and_requires_fresh_auth(self):
+        lifecycle = ACCOUNT_LIFECYCLE_EDGE.read_text(encoding="utf-8")
+        edge = EDGE_GATEWAY.read_text(encoding="utf-8")
+        gateway = GATEWAY.read_text(encoding="utf-8")
+
+        self.assertIn("const ACCOUNT_CLOSE_ENABLED = false;", lifecycle)
+        self.assertIn("MAX_FRESH_TOKEN_AGE_SECONDS = 5 * 60", lifecycle)
+        self.assertIn("auth.getUser(token)", lifecycle)
+        self.assertIn("SUPABASE_SERVICE_ROLE_KEY", lifecycle)
+        self.assertIn("auth.admin.deleteUser(userId)", lifecycle)
+
+        self.assertIn("const ACCOUNT_CLOSE_ENABLED = false;", edge)
+        self.assertIn('path === "/account/close" && req.method === "POST"', edge)
+        self.assertIn("/functions/v1/ordax-account-lifecycle/close", edge)
+        self.assertIn("signInWithPassword", edge)
+        self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", edge)
+        self.assertNotIn("auth.admin.deleteUser", edge)
+
+        self.assertIn("ACCOUNT_CLOSE_ENABLED = False", gateway)
+        self.assertIn('if path == "/account/close":', gateway)
+        self.assertIn("sign_in_with_password", gateway)
+        self.assertIn("lifecycle_provider.close_account", gateway)
+        self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", gateway)
 
     def test_native_signed_gateway_config_targets_https_edge_gateway(self):
         value = NATIVE_GATEWAY_CONFIG.read_text(encoding="utf-8").strip()
