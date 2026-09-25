@@ -1,7 +1,6 @@
 export const PROFILE_PACK_SCHEMA = "ordax.profile-pack/1";
 export const PROFILE_PACK_RUNTIME_SCHEMA = "ordax.profile-pack-runtime/1";
 export const PROFILE_PACK_ACTIVATION_SCHEMA = "ordax.profile-pack-activation/1";
-export const PROFILE_PACK_SURFACE_CATALOG_SCHEMA = "ordax.profile-pack-surface-catalog/1";
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,79}$/;
 const SPACE_KINDS = new Set(["personal", "work", "professional"]);
