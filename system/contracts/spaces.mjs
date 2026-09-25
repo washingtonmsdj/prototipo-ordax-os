@@ -1,9 +1,12 @@
 export const SPACES_PORT_SCHEMA = "ordax.spaces/1";
 export const PROFILE_PACKS_PORT_SCHEMA = "ordax.profile-packs/1";
+export const SPACES_SNAPSHOT_SCHEMA = "ordax.spaces-snapshot/1";
+export const MAX_VISIBLE_SPACES = 64;
 
 const SPACE_KINDS = new Set(["personal", "work", "professional"]);
 const MEMBER_ROLES = new Set(["owner", "admin", "member", "viewer"]);
 const SPACE_STATES = new Set(["active", "archived"]);
+const SNAPSHOT_STATES = new Set(["idle", "loading", "ready", "unavailable", "error"]);
 
 function boundedText(value, label, max = 160) {
   if (typeof value !== "string" || value.includes("\0")) {
@@ -69,4 +72,43 @@ export function validateProfilePack(value) {
     autoGrantPrivileges: false,
     allowUnsignedApps: false,
   });
+}
+
+
+export function validateSpacesSnapshot(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError("Spaces snapshot must be an object");
+  }
+  if (value.schema !== SPACES_SNAPSHOT_SCHEMA || !SNAPSHOT_STATES.has(value.state)) {
+    throw new TypeError("Spaces snapshot schema/state is invalid");
+  }
+  if (!Array.isArray(value.spaces) || value.spaces.length > MAX_VISIBLE_SPACES) {
+    throw new TypeError("Spaces snapshot must contain a bounded spaces array");
+  }
+  const spaces = Object.freeze(value.spaces.map(validateSpace));
+  const identities = new Set(spaces.map((space) => space.id));
+  if (identities.size !== spaces.length) {
+    throw new TypeError("Spaces snapshot contains duplicate ids");
+  }
+  if (value.state !== "ready" && spaces.length > 0) {
+    throw new TypeError("Non-ready Spaces snapshot must not expose stale spaces");
+  }
+  return Object.freeze({
+    schema: SPACES_SNAPSHOT_SCHEMA,
+    state: value.state,
+    spaces,
+  });
+}
+
+export function assertSpacesPort(port) {
+  if (!port || typeof port !== "object" || port.schema !== SPACES_PORT_SCHEMA) {
+    throw new TypeError("Compatible OrdaX Spaces port is required");
+  }
+  for (const method of ["getSnapshot", "subscribe", "refresh"]) {
+    if (typeof port[method] !== "function") {
+      throw new TypeError(`Spaces port must implement ${method}()`);
+    }
+  }
+  validateSpacesSnapshot(port.getSnapshot());
+  return port;
 }
