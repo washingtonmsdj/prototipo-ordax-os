@@ -1,21 +1,31 @@
 {
   "$schema": "prototype-ordax.public-site-deployment/1",
-  "status": "deployment-adapter-not-selected",
+  "status": "host-neutral-same-origin-adapter-source-ready-not-deployed",
   "site_artifact": "public-site",
+  "adapter": {
+    "kind": "nginx-loopback-behind-https-terminator",
+    "source": "deploy/public-site/nginx.conf",
+    "public_listener_in_adapter_allowed": false,
+    "provider_specific_browser_api": false
+  },
   "routing": {
     "static_routes": [
       "/",
       "/download/",
       "/login/",
       "/cadastro/",
+      "/conta/",
       "/releases/catalog.json",
       "/licencas/",
       "/privacidade/",
       "/termos/"
     ],
     "identity_prefix": "/auth/",
+    "sync_prefix": "/sync/",
     "identity_gateway_entrypoint": "services/public-identity/gateway.py:application",
+    "deployed_account_gateway": "ordax-control-plane:ordax-account-gateway",
     "same_origin_identity_required": true,
+    "same_origin_sync_required": true,
     "unknown_static_route_behavior": 404
   },
   "security_headers": {
@@ -30,13 +40,17 @@
     "config": "no-store",
     "release_catalog": "no-store",
     "assets": "public, max-age=300",
-    "identity": "no-store"
+    "identity": "no-store",
+    "sync": "no-store"
   },
   "production_requirements": {
     "https": true,
     "host_adapter_must_apply_security_headers": true,
     "host_adapter_must_preserve_auth_status_codes": true,
+    "host_adapter_must_preserve_session_set_cookie": true,
+    "host_adapter_must_not_expose_provider_cors_as_product_contract": true,
     "public_identity_provider_must_be_configured_before_enabling_login_links": true,
-    "final_legal_documents_required_before_identity_activation": true
+    "final_legal_documents_required_before_identity_activation": true,
+    "leaked_password_protection_required_before_identity_activation": true
   }
 }
