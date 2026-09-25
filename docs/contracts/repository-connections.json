@@ -8,6 +8,8 @@
     "repository_must_be_explicit": true,
     "whole_account_scope_allowed": false,
     "space_scope_required": true,
+    "project_scope_required": true,
+    "same_repository_may_be_selected_by_multiple_projects": true,
     "repository_id_required": true,
     "repository_full_name_required": true
   },
@@ -16,6 +18,7 @@
     "fields": [
       "connectionId",
       "spaceId",
+      "projectId",
       "provider",
       "repositoryId",
       "repositoryFullName",
@@ -26,6 +29,7 @@
       "mutationAuthority",
       "credentialExposure"
     ],
+    "unknown_fields_fail_closed": true,
     "owner_user_id_exposed": false,
     "external_account_id_exposed": false,
     "installation_id_exposed": false,
@@ -35,6 +39,7 @@
   "authority": {
     "read_write_metadata_grants_mutation": false,
     "mutation_authority": "none",
+    "surface_mutation_methods_exposed": false,
     "future_mutation_owner": "OrdaX server-authoritative project/action gateway",
     "future_mutation_requires_approval_and_audit": true
   },
@@ -44,6 +49,9 @@
   },
   "github": {
     "direct_external_ai_connector_remains_first_class": true,
+    "direct_external_ai_connector_requires_ordax_account": false,
+    "direct_external_ai_connector_grants_ordax_memory": false,
+    "direct_external_ai_connector_grants_local_files": false,
     "ordax_github_app_public": false,
     "selected_repository_scope_required": true,
     "credential_owner": "backend-secret-owner-future"
