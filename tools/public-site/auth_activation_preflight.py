@@ -116,7 +116,11 @@ def readiness(root: Path) -> tuple[list[str], dict[str, bool]]:
         need(bool(document.get("effective_date")), f"{name}-effective-date")
 
     need(hardening.get("status") == "ready", "auth-hardening-status")
-    need(observation.get("leaked_password_protection") == "enabled", "leaked-password-protection")
+    need(
+        observation.get("provider_leaked_password_protection_enabled") is True
+        or observation.get("product_leaked_password_protection_verified") is True,
+        "leaked-password-protection",
+    )
     need(observation.get("provider_password_policy_verified") is True, "provider-password-policy")
     need(observation.get("email_confirmation_policy_reviewed") is True, "email-confirmation-policy")
     need(observation.get("redirect_allowlist_reviewed") is True, "redirect-allowlist")
