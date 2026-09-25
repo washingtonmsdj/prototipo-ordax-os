@@ -1,0 +1,63 @@
+{
+  "$schema": "prototype-ordax.project-repository-connections/1",
+  "status": "pre-mvp-source-foundation-fail-closed",
+  "purpose": "prepare Account/Space to selected repository bindings without coupling Surface code to GitHub SDKs, provider credentials or installation authority",
+  "domain": {
+    "surface_contract": "ordax.project-repository-connections/1",
+    "scope": "space-and-project",
+    "initial_provider": "github",
+    "selected_repositories_plural": true,
+    "repository_id_transport": "positive-decimal-string",
+    "read_only_surface_projection": true,
+    "surface_mutation_methods_exposed": false
+  },
+  "backend_binding": {
+    "table": "public.ordax_project_connections",
+    "project_identity_table": "public.ordax_projects",
+    "space_identity_table": "public.ordax_spaces",
+    "project_space_foreign_key_required": true,
+    "provider_specific_installation_id_backend_only": true,
+    "provider_external_account_id_backend_only": true,
+    "provider_token_backend_secret_owner_only": true,
+    "provider_token_allowed_in_surface_projection": false,
+    "client_direct_mutation_allowed": false,
+    "mutation_authority": "ordax-product-gateway-server-authoritative",
+    "public_activation": false
+  },
+  "safe_projection_fields": [
+    "connectionId",
+    "spaceId",
+    "projectId",
+    "provider",
+    "repositoryId",
+    "repositoryFullName",
+    "defaultBranch",
+    "accessMode",
+    "state"
+  ],
+  "github_policy": {
+    "direct_external_model_connector_remains_first_class": true,
+    "direct_external_model_connector_requires_ordax_account": false,
+    "direct_external_model_connector_grants_ordax_memory": false,
+    "direct_external_model_connector_grants_local_files": false,
+    "ordax_managed_connection_direction": "github-app-selected-repositories-minimum-permissions",
+    "ordax_managed_provider_token_delivered_to_chat_client": false,
+    "ordax_managed_provider_token_delivered_to_surface": false,
+    "ordax_managed_provider_token_persisted_in_public_product_tables": false
+  },
+  "security": {
+    "generic_shell_authority": false,
+    "raw_disk_authority": false,
+    "release_signing_authority": false,
+    "implicit_admin_authority": false,
+    "cross_space_projection_allowed": false,
+    "unknown_fields_fail_closed": true,
+    "repository_selection_is_not_capability_grant": true
+  },
+  "deferred": {
+    "public_github_app": "P2",
+    "action_gateway": "P2",
+    "product_mcp_gateway": "P2",
+    "public_repository_mutation_ui": true
+  }
+}
