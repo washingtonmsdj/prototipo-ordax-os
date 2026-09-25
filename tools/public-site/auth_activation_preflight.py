@@ -126,6 +126,12 @@ def readiness(root: Path) -> tuple[list[str], dict[str, bool]]:
 
     need(hardening.get("status") == "ready", "auth-hardening-status")
     need(provider_policy.get("confirm_email_required") is True, "provider-policy-confirm-email")
+    password_policy = provider_policy.get("password_policy", {})
+    need(password_policy.get("product_minimum_chars") == 12, "provider-policy-password-floor")
+    need(
+        password_policy.get("provider_minimum_must_be_at_least_product") is True,
+        "provider-policy-password-not-weaker",
+    )
     redirect_policy = provider_policy.get("redirect_policy", {})
     need(redirect_policy.get("production_https_origin_required") is True, "provider-policy-https-origin")
     need(redirect_policy.get("same_origin_only") is True, "provider-policy-same-origin")
@@ -135,7 +141,11 @@ def readiness(root: Path) -> tuple[list[str], dict[str, bool]]:
         or observation.get("product_leaked_password_protection_verified") is True,
         "leaked-password-protection",
     )
-    need(observation.get("provider_password_policy_verified") is True, "provider-password-policy")
+    need(observation.get("password_policy_reviewed") is True, "password-policy-review")
+    need(
+        observation.get("provider_password_policy_verified") is True,
+        "provider-password-policy-verification",
+    )
     need(observation.get("email_confirmation_policy_reviewed") is True, "email-confirmation-policy")
     need(
         observation.get("email_confirmation_provider_verified") is True,
