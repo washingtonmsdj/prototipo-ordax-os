@@ -8,7 +8,14 @@
     "public_listener_in_adapter_allowed": false,
     "provider_specific_browser_api": false,
     "account_request_marker_header": "X-OrdaX-Public-Site",
-    "account_request_marker_value": "1"
+    "account_request_marker_value": "1",
+    "real_ip_source": "trusted-loopback-tls-terminator-x-forwarded-for",
+    "real_ip_trusted_sources": [
+      "127.0.0.1",
+      "::1"
+    ],
+    "public_auth_rate_limit_source_ready": true,
+    "public_auth_rate_limit_deployed": false
   },
   "routing": {
     "static_routes": [
@@ -64,6 +71,27 @@
     "host_adapter_must_mark_public_account_requests": true,
     "gateway_server_side_public_activation_gate_required": true,
     "recovery_completion_must_remain_server_owned": true,
-    "recovery_tokens_must_not_enter_browser_javascript": true
+    "recovery_tokens_must_not_enter_browser_javascript": true,
+    "tls_terminator_must_append_real_client_ip": true,
+    "adapter_must_trust_only_loopback_real_ip_source": true,
+    "public_auth_rate_limits_required": true
+  },
+  "security_rate_limits": {
+    "status_code": 429,
+    "login_and_register": {
+      "rate": "10r/m",
+      "burst": 5,
+      "key": "restored-real-client-ip"
+    },
+    "recovery_request": {
+      "rate": "3r/m",
+      "burst": 2,
+      "key": "restored-real-client-ip"
+    },
+    "recovery_completion": {
+      "rate": "10r/m",
+      "burst": 5,
+      "key": "restored-real-client-ip"
+    }
   }
 }
