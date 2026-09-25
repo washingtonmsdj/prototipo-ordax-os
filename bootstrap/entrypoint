@@ -10,6 +10,7 @@ RELEASE_AGENT=/ordax/bootstrap/release-acquisition/ordax-release-agent
 RELEASE_TRUST=/ordax/bootstrap/trust/release-ed25519.json
 RELEASE_CHANNEL=/ordax/bootstrap/config/release-envelope-url
 PRODUCT_MODE_FILE=/ordax/bootstrap/config/product-mode
+ACCOUNT_GATEWAY_FILE=/ordax/bootstrap/config/account-gateway-origin
 RECOVERY_ENTRYPOINT=/ordax/bootstrap/recovery/entrypoint
 
 log() {
@@ -47,6 +48,22 @@ product_mode() {
     esac
 }
 
+account_gateway_origin() {
+    [ -e "$ACCOUNT_GATEWAY_FILE" ] || return 1
+    [ -f "$ACCOUNT_GATEWAY_FILE" ] && [ ! -L "$ACCOUNT_GATEWAY_FILE" ] || return 1
+    value=$(/bin/busybox cat "$ACCOUNT_GATEWAY_FILE" 2>/dev/null || true)
+    case "$value" in
+        https://*) ;;
+        *) return 1 ;;
+    esac
+    authority=${value#https://}
+    [ -n "$authority" ] || return 1
+    case "$authority" in
+        */*|*\?*|*\#*|*@*|*[!A-Za-z0-9._:-]*) return 1 ;;
+    esac
+    printf '%s' "$value"
+}
+
 current_release_sha() {
     [ -L /ordax/current ] || return 1
     target=$(/bin/busybox readlink /ordax/current 2>/dev/null || true)
@@ -70,6 +87,13 @@ boot_current() {
     [ -x "$CURRENT_ENTRYPOINT" ] || return 1
     source_sha=$(current_release_sha) || recovery "current release identity is invalid"
     mode=$(product_mode) || recovery "product mode identity is missing or invalid"
+    gateway_origin=$(account_gateway_origin || true)
+    if [ -n "$gateway_origin" ]; then
+        ORDAX_ACCOUNT_GATEWAY_ORIGIN=$gateway_origin
+        export ORDAX_ACCOUNT_GATEWAY_ORIGIN
+    else
+        unset ORDAX_ACCOUNT_GATEWAY_ORIGIN
+    fi
     log "booting current verified release without requiring network"
     ORDAX_DISTRIBUTION_PROFILE=stable-mvp \
     ORDAX_PRODUCT_MODE="$mode" \
