@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.sync-model/1",
-  "status": "account-sync-backend-and-web-source-integration-implemented-public-rollout-gated",
+  "status": "account-sync-backend-web-native-source-integration-implemented-public-rollout-gated",
   "authority": {
     "domain_owner": "system/services/sync",
     "platform_integration_owner": "system/adapters",
@@ -122,8 +122,10 @@
     "backend_foundation_available": true,
     "client_integration_available": true,
     "web_source_integration": true,
-    "native_usb_source_integration": false,
-    "mobile_source_integration": false
+    "native_usb_source_integration": true,
+    "mobile_source_integration": false,
+    "native_usb_gateway_configuration_required": true,
+    "native_usb_physical_proof": false
   },
   "backend": {
     "status": "applied",
@@ -151,6 +153,18 @@
       "appearance",
       "preferences",
       "workspace-metadata"
-    ]
+    ],
+    "native_loopback_gateway_routes": [
+      "/auth/session",
+      "/auth/login",
+      "/auth/register",
+      "/auth/logout",
+      "/sync/objects",
+      "/sync/mutate"
+    ],
+    "native_remote_gateway_https_required": true,
+    "native_session_storage": "device-private-0600",
+    "native_session_is_sync_data": false,
+    "native_provider_specific_dependency": false
   }
 }
