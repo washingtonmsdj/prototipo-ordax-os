@@ -41,9 +41,11 @@ Papel de parede arbitrário, idioma completo, periféricos/áudio avançados e o
 
 ### Conta e sincronização
 
-A conta continua opcional para usar o OrdaX. A `main` já possui identidade real provider-neutral por gateway OrdaX, com o Supabase dedicado `ordax-control-plane` como backend atual, além de cadastro, login, refresh, logout, exportação autenticada e isolamento de sessão sem expor tokens do provedor à Surface. O navegador público continua **fail-closed** até os gates de hardening/legal/deployment autorizarem a ativação; isso não invalida o caminho real Native/USB.
+A conta continua opcional para usar o OrdaX. A `main` já possui identidade real provider-neutral por gateway OrdaX, com o Supabase dedicado `ordax-control-plane` como backend atual, além de cadastro, login, refresh, logout, exportação autenticada e isolamento de sessão sem expor tokens do provedor à Surface. O gateway source v13 está implantado como Edge Function revisão 16 e inclui leitura autenticada/RLS de Spaces; isso **não** ativa login público. O navegador público continua **fail-closed** até os gates de origem HTTPS/same-origin, Auth hardening e legal autorizarem a ativação; isso não invalida o caminho real Native/USB.
 
 O backend de continuidade por conta também já está aplicado e a mesma semântica `ordax.sync-transport/1` está integrada em source na Web e no Native/USB para `appearance`, preferências portáveis e metadata portátil do workspace. O Native preserva sessão e checkpoint em estado privado do dispositivo. A tela Conta → Sincronização agora distingue transporte disponível, continuidade autenticada ativa e host ausente a partir do snapshot real do runtime.
+
+`Conta → Spaces` já consome somente Spaces reais da sessão, via gateway OrdaX e RLS, sem criar Space fictício e sem expor mutação/billing. `Conta → Memória` já monta no Native/USB a revisão da memória OrdaX real: owners `device|account`, busca/paginação, edição e exclusão com confirmação de persistência. O Web não finge memória durável. Essa UI não concede acesso automático da IA à memória; a ponte Intelligence continua exigindo autorização explícita da composition layer.
 
 Isso ainda **não prova lançamento público de sync nem continuidade física entre dois dispositivos**: rollout público, prova multi-device em USB real, integração Mobile e novas classes como Notes/arquivos continuam pendentes e não devem ser anunciadas como entregues.
 
@@ -87,6 +89,8 @@ O que permanece aberto é de outra classe: trust canônico, autorização públi
 A infraestrutura de cerimônia, promoção do trust público, verificação e recuperação já está resolvida para o primeiro protótipo controlado. O anchor Ed25519 canônico de SHA-256 `d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250` está pinado, o recovery criptográfico passou e o full-bootstrap canonical-trust proof está fechado. A chave privada continua fora de Git, CI e USB.
 
 O bloqueio atual é mais específico: a release Stable/MVP v4 real precisa ser assinada/publicada no ambiente controlado, materializada/verificada pelo caminho oficial e gerar o aggregate receipt `canonical-v4-release-proof.json`. Esse receipt deve ser validado e vinculado ao trust, source commit, manifest, envelope e três artefatos antes de o novo consentimento físico ficar alcançável. O consentimento anterior de 15 artefatos é stale porque o writer atual possui 17 artefatos / 39 operações. Backup off-device continua obrigatório antes de distribuição pública ampla, mas não bloqueia o primeiro protótipo controlado; KMS/HSM gerenciado permanece evolução provider-neutral.
+
+Os três EROFS exatos já têm caminho de transferência de operador sem publicação: os workflows canônicos de System, Surface e Local AI exportam os bytes reais **somente por `workflow_dispatch`**, por 1 dia e com o SHA no nome. Os três artifacts devem vir do mesmo commit. Isso remove preparação manual dispersa, mas não assina, não publica em HTTPS canônico e não autoriza USB. O conector GitHub usado nesta sessão não oferece `workflow_dispatch`, portanto a execução desses três runs continua sendo ação explícita do operador.
 
 ### P0 — prova Stable/MVP integrada
 
