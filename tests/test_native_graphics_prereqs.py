@@ -20,6 +20,7 @@ class NativeGraphicsPrereqTests(unittest.TestCase):
             *MODULE.REQUIRED_GRAPHICS,
             *MODULE.REQUIRED_INPUT,
             *MODULE.BASELINE_LAPTOP_PATHS,
+            *MODULE.CI_VIRTUAL_GRAPHICS_PATHS,
         ]
         selectors.remove("CONFIG_DRM_SIMPLEDRM=y")
         with tempfile.TemporaryDirectory() as tmp:
@@ -33,6 +34,7 @@ class NativeGraphicsPrereqTests(unittest.TestCase):
             *MODULE.REQUIRED_GRAPHICS,
             *MODULE.REQUIRED_INPUT,
             *MODULE.BASELINE_LAPTOP_PATHS,
+            *MODULE.CI_VIRTUAL_GRAPHICS_PATHS,
         ]
         selectors.remove("CONFIG_INPUT_EVDEV=y")
         with tempfile.TemporaryDirectory() as tmp:
@@ -45,6 +47,31 @@ class NativeGraphicsPrereqTests(unittest.TestCase):
         self.assertIn("CONFIG_DRM_I915=y", MODULE.BASELINE_LAPTOP_PATHS)
         self.assertNotIn("CONFIG_DRM_I915=y", MODULE.REQUIRED_GRAPHICS)
         self.assertIn("CONFIG_I2C_HID=y", MODULE.BASELINE_LAPTOP_PATHS)
+
+    def test_virtual_graphics_path_is_explicit_and_separate_from_physical_baseline(self):
+        self.assertEqual(
+            MODULE.CI_VIRTUAL_GRAPHICS_PATHS,
+            (
+                "CONFIG_VIRTIO=y",
+                "CONFIG_VIRTIO_PCI=y",
+                "CONFIG_DRM_VIRTIO_GPU=y",
+            ),
+        )
+        self.assertNotIn("CONFIG_DRM_VIRTIO_GPU=y", MODULE.BASELINE_LAPTOP_PATHS)
+
+    def test_missing_virtual_gpu_path_fails(self):
+        selectors = [
+            *MODULE.REQUIRED_GRAPHICS,
+            *MODULE.REQUIRED_INPUT,
+            *MODULE.BASELINE_LAPTOP_PATHS,
+            *MODULE.CI_VIRTUAL_GRAPHICS_PATHS,
+        ]
+        selectors.remove("CONFIG_DRM_VIRTIO_GPU=y")
+        with tempfile.TemporaryDirectory() as tmp:
+            fragment = Path(tmp) / "fragment"
+            fragment.write_text("\n".join(selectors) + "\n", encoding="utf-8")
+            violations = MODULE.verify_fragment(fragment)
+        self.assertTrue(any("CONFIG_DRM_VIRTIO_GPU=y" in item for item in violations))
 
 
 if __name__ == "__main__":
