@@ -236,8 +236,9 @@ async function start() {
   });
   const workspaceMetadata = createWorkspaceMetadataBridge(localWorkspaceStore);
   const workspaceStore = workspaceMetadata.store;
-  const identitySession = createWebIdentitySession();
-  const identityActions = createWebIdentityActions();
+  const identitySession = createWebIdentitySession(window);
+  await identitySession.refresh();
+  const identityActions = createWebIdentityActions(window, identitySession);
   const appActivation = createAppActivationChannel();
   const updateWatcher = createNativeUpdateWatcher(window);
   const notifications = createNotificationsRuntime({
@@ -289,6 +290,8 @@ async function start() {
     browserWebContentAvailable,
     intelligenceSystemAvailable,
     localSessionAvailable,
+    accountIdentityAvailable: identitySession.getSnapshot().state !== "unavailable",
+    syncSafeStateAvailable: false,
   });
 
   validateAccountRuntime(
