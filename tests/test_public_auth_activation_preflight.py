@@ -17,6 +17,7 @@ REQUIRED = (
     preflight.HARDENING,
     preflight.DEPLOYMENT,
     preflight.IDENTITY,
+    preflight.LIFECYCLE,
     preflight.RUNTIME,
     preflight.EDGE,
     preflight.REFERENCE_GATEWAY,
@@ -47,6 +48,8 @@ class PublicAuthActivationPreflightTests(unittest.TestCase):
             "recovery-email-template",
             "recovery-e2e-proof",
             "session-revocation-proof",
+            "account-close-implementation",
+            "account-data-export-implementation",
         ):
             self.assertIn(expected, blockers)
         self.assertEqual(preflight.main(["check", "--root", str(ROOT)]), 0)
