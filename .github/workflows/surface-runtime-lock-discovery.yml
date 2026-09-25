@@ -150,7 +150,17 @@ jobs:
           cmp "$a" "$b"
           echo 'SURFACE_RUNTIME_EROFS_REPEAT_DIGEST=PASS'
 
+      - name: Upload operator Surface EROFS only on manual run
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: canonical-v4-operator-surface-${{ github.sha }}
+          path: ${{ runner.temp }}/surface-runtime/build-a/native-surface-runtime.erofs
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Remove unpromoted runtime image bytes
+        if: github.event_name != 'workflow_dispatch'
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP/surface-runtime"
