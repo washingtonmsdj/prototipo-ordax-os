@@ -6,6 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SYNC_CONTRACT = ROOT / "docs" / "contracts" / "sync-model.json"
 SYNC_MIGRATION = ROOT / "infra" / "supabase" / "product" / "migrations" / "20260925004439_account_sync_objects_v1.sql"
 GATEWAY = ROOT / "services" / "public-identity" / "gateway.py"
+EDGE_GATEWAY = ROOT / "infra" / "supabase" / "functions" / "ordax-account-gateway" / "index.ts"
+NATIVE_GATEWAY_CONFIG = ROOT / "system" / "services" / "account" / "gateway-base-url"
 
 
 class AccountSyncAndIdentityV1Tests(unittest.TestCase):
@@ -33,6 +35,23 @@ class AccountSyncAndIdentityV1Tests(unittest.TestCase):
         self.assertIn("grant execute on function public.ordax_apply_sync_mutation_v1", private_sql)
         self.assertIn("public.ordax_list_sync_objects_v1", private_sql)
         self.assertNotIn("security definer", private_sql)
+
+    def test_deployed_edge_gateway_source_uses_user_auth_and_rls_without_service_role(self):
+        text = EDGE_GATEWAY.read_text(encoding="utf-8")
+        self.assertIn('ordax-account-gateway', text)
+        self.assertIn('signInWithPassword', text)
+        self.assertIn('refreshSession', text)
+        self.assertIn('ordax_apply_sync_mutation_v1', text)
+        self.assertIn('ordax_list_sync_objects_v1', text)
+        self.assertNotIn('service_role', text.lower())
+        self.assertNotIn('SUPABASE_SERVICE_ROLE_KEY', text)
+
+    def test_native_signed_gateway_config_targets_https_edge_gateway(self):
+        value = NATIVE_GATEWAY_CONFIG.read_text(encoding="utf-8").strip()
+        self.assertTrue(value.startswith("https://"))
+        self.assertIn("/functions/v1/ordax-account-gateway", value)
+        self.assertNotIn("?", value)
+        self.assertNotIn("#", value)
 
     def test_identity_gateway_keeps_provider_tokens_out_of_browser_javascript(self):
         text = GATEWAY.read_text(encoding="utf-8")
