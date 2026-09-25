@@ -85,6 +85,55 @@ class SupabaseAccountProviderTests(unittest.TestCase):
         with self.assertRaises(account_module.SupabaseAccountError):
             provider.export_account("user-access-token")
 
+    def test_spaces_list_uses_user_bearer_rls_and_merges_profile_pack(self):
+        spaces = [{
+            "space_id": "space-1",
+            "owner_user_id": "user-1",
+            "name": "Developer",
+            "kind": "professional",
+            "state": "active",
+        }]
+        packs = [{
+            "space_id": "space-1",
+            "pack_slug": "developer",
+            "pack_version": 1,
+        }]
+        provider, transport = self.provider([(200, spaces), (200, packs)])
+
+        result = provider.list_spaces("user-access-token")
+
+        self.assertEqual(result, [{
+            "id": "space-1",
+            "ownerId": "user-1",
+            "name": "Developer",
+            "kind": "professional",
+            "state": "active",
+            "profilePack": "developer",
+        }])
+        self.assertEqual(len(transport.calls), 2)
+        for method, url, headers, body in transport.calls:
+            self.assertEqual(method, "GET")
+            self.assertEqual(headers["Authorization"], "Bearer user-access-token")
+            self.assertEqual(headers["apikey"], "sb_publishable_1234567890")
+            self.assertIsNone(body)
+            self.assertIn("/rest/v1/ordax_", url)
+
+    def test_spaces_list_fails_closed_on_duplicate_pack_mapping(self):
+        spaces = [{
+            "space_id": "space-1",
+            "owner_user_id": "user-1",
+            "name": "Work",
+            "kind": "work",
+            "state": "active",
+        }]
+        duplicate_packs = [
+            {"space_id": "space-1", "pack_slug": "developer", "pack_version": 1},
+            {"space_id": "space-1", "pack_slug": "creator", "pack_version": 1},
+        ]
+        provider, _ = self.provider([(200, spaces), (200, duplicate_packs)])
+        with self.assertRaises(account_module.SupabaseAccountError):
+            provider.list_spaces("user-access-token")
+
     def test_provider_error_does_not_echo_bearer_token(self):
         provider, _ = self.provider([(500, {"message": "failure"})])
         with self.assertRaises(account_module.SupabaseAccountError) as caught:
