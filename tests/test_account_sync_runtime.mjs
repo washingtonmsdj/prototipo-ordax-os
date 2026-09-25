@@ -623,3 +623,61 @@ test("repeated portable preference conflicts are bounded and leave rebased inten
   sync.destroy();
   preferenceSync.destroy();
 });
+
+
+test("invalid remote portable preferences fail closed instead of weakening the preference contract", async () => {
+  const preferences = preferencesRuntime();
+  const preferenceSync = createPreferenceSyncRuntime(preferences, {
+    createIdempotencyKey: keyFactory("pref-invalid-remote"),
+  });
+  const bridge = createWorkspaceMetadataBridge(workspaceStore());
+
+  const transport = {
+    schema: SYNC_TRANSPORT_SCHEMA,
+    async snapshot() {
+      return {
+        cursor: 70,
+        objects: [
+          {
+            objectId: "preferences/surface",
+            dataClass: "preferences",
+            objectSchemaVersion: 1,
+            resolverVersion: 1,
+            serverRevision: 1,
+            tombstone: false,
+            payload: {
+              "accessibility.contrast": "standard",
+              "accessibility.motion": "full",
+              "accessibility.text-scale": "standard",
+            },
+          },
+        ],
+      };
+    },
+    async pullChanges({ afterCursor }) {
+      return { afterCursor, nextCursor: afterCursor, changes: [] };
+    },
+    async applyMutation() {
+      throw new Error("invalid remote state must not be acknowledged or rewritten automatically");
+    },
+  };
+
+  const sync = createAccountSyncRuntime({
+    identitySession: signedInIdentity(),
+    transport,
+    checkpointStore: checkpointStore(),
+    preferenceSync,
+    preferences,
+    workspaceMetadataSource: bridge.source,
+    workspaceStore: bridge.store,
+    createIdempotencyKey: keyFactory("account-invalid-remote"),
+  });
+
+  await sync.refresh();
+
+  assert.equal(sync.getSnapshot().accountContinuity, "not-active");
+  assert.equal(preferences.getSnapshot()["accessibility.motion"], "standard");
+
+  sync.destroy();
+  preferenceSync.destroy();
+});
