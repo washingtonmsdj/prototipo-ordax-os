@@ -49,6 +49,7 @@ CLIENT_DIAGNOSTIC_PATH = "/__ordax/native/client-diagnostic"
 PREFERENCES_PATH = "/__ordax/native/preferences"
 KEYBOARD_LAYOUT_PATH = "/__ordax/native/keyboard-layout"
 FIRST_RUN_PATH = "/__ordax/native/first-run"
+DEVICE_PROFILE_PATH = "/__ordax/native/device-profile"
 LOCAL_SESSION_PATH = "/__ordax/native/local-session"
 NOTES_PATH = "/__ordax/native/notes"
 COMPONENT_STATE_PATH = "/__ordax/native/component-state"
@@ -82,6 +83,7 @@ HEALTH_STATE_FILE = "/run/ordax-update/healthy-sha"
 PREFERENCES_FILE = "/var/lib/ordax/preferences.json"
 KEYBOARD_LAYOUT_FILE = "/var/lib/ordax/keyboard-layout"
 FIRST_RUN_FILE = "/var/lib/ordax/first-run.json"
+DEVICE_PROFILE_FILE = "/var/lib/ordax/device-profile.json"
 LOCAL_SESSION_CREDENTIAL_FILE = "/var/lib/ordax/local-session-credential.json"
 NOTES_FILE = "/var/lib/ordax/notes.json"
 COMPONENT_STATE_FILE = "/var/lib/ordax/component-state.json"
@@ -111,6 +113,7 @@ MAX_CLIENT_DIAGNOSTIC_BODY = 512
 MAX_PREFERENCE_BODY = 8192
 MAX_KEYBOARD_LAYOUT_BODY = 128
 MAX_FIRST_RUN_BODY = 2048
+MAX_DEVICE_PROFILE_BODY = 1024
 MAX_LOCAL_SESSION_BODY = 1024
 LOCAL_SESSION_SECRET_MIN_CHARS = 6
 LOCAL_SESSION_SECRET_MAX_CHARS = 128
@@ -654,6 +657,90 @@ def write_first_run_state(state_value: dict) -> None:
         os.fsync(directory_fd)
     finally:
         os.close(directory_fd)
+
+
+def valid_device_display_name(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    normalized = " ".join(value.strip().split())
+    return (
+        1 <= len(normalized) <= 120
+        and all(ord(char) >= 32 and char != "\x7f" for char in normalized)
+    )
+
+
+def normalize_device_display_name(value: str) -> str:
+    if not valid_device_display_name(value):
+        raise ValueError("invalid device display name")
+    return " ".join(value.strip().split())
+
+
+def initial_device_profile() -> dict:
+    return {
+        "schema": "ordax.device-profile/1",
+        "devicePublicId": f"ordax-{secrets.token_hex(16)}",
+        "displayName": "Meu OrdaX",
+    }
+
+
+def valid_device_profile(value: object) -> bool:
+    return (
+        isinstance(value, dict)
+        and set(value) == {"schema", "devicePublicId", "displayName"}
+        and value.get("schema") == "ordax.device-profile/1"
+        and isinstance(value.get("devicePublicId"), str)
+        and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{7,159}", value["devicePublicId"]) is not None
+        and valid_device_display_name(value.get("displayName"))
+    )
+
+
+def write_device_profile(profile: dict) -> None:
+    if not valid_device_profile(profile):
+        raise ValueError("invalid device profile")
+    directory = os.path.dirname(DEVICE_PROFILE_FILE)
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    temporary = f"{DEVICE_PROFILE_FILE}.tmp.{os.getpid()}.{threading.get_ident()}"
+    try:
+        flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        descriptor = os.open(temporary, flags, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(profile, handle, separators=(",", ":"), sort_keys=True, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, DEVICE_PROFILE_FILE)
+        os.chmod(DEVICE_PROFILE_FILE, 0o600)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+    try:
+        directory_fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    except OSError:
+        return
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
+def read_device_profile() -> dict:
+    try:
+        st = os.stat(DEVICE_PROFILE_FILE, follow_symlinks=False)
+        if not stat.S_ISREG(st.st_mode) or st.st_mode & 0o077:
+            raise ValueError("device profile permissions are unsafe")
+        with open(DEVICE_PROFILE_FILE, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+        if not valid_device_profile(payload):
+            raise ValueError("device profile is invalid")
+        return payload
+    except FileNotFoundError:
+        profile = initial_device_profile()
+        write_device_profile(profile)
+        return profile
 
 
 def valid_local_session_secret(value: object) -> bool:
@@ -3182,7 +3269,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if parsed_path.startswith(COMPONENT_MODULE_PREFIX) and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
-        if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH, LOCAL_SESSION_PATH} and self.client_address[0] != "127.0.0.1":
+        if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH, DEVICE_PROFILE_PATH, LOCAL_SESSION_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
         if parsed_path == METRICS_PATH:
@@ -3551,6 +3638,13 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if parsed_path == FIRST_RUN_PATH:
             self._write_json(200, read_first_run_state())
             return
+        if parsed_path == DEVICE_PROFILE_PATH:
+            try:
+                self._write_json(200, read_device_profile())
+            except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+                print(f"ordax-native-host: could not read device profile: {exc}", file=sys.stderr, flush=True)
+                self._empty(500)
+            return
         if parsed_path == LOCAL_SESSION_PATH:
             with self.server.local_session_lock:
                 if not os.path.isfile(LOCAL_SESSION_CREDENTIAL_FILE):
@@ -3907,6 +4001,26 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                 self._empty(500)
                 return
             self._write_json(200, keyboard_layout_snapshot())
+            return
+
+        if parsed_path == DEVICE_PROFILE_PATH:
+            payload = self._read_json_body(MAX_DEVICE_PROFILE_BODY)
+            if payload is None or set(payload) != {"displayName"}:
+                self._empty(400)
+                return
+            try:
+                current = read_device_profile()
+                updated = {
+                    "schema": current["schema"],
+                    "devicePublicId": current["devicePublicId"],
+                    "displayName": normalize_device_display_name(payload["displayName"]),
+                }
+                write_device_profile(updated)
+            except (OSError, UnicodeError, json.JSONDecodeError, ValueError, TypeError) as exc:
+                print(f"ordax-native-host: could not persist device profile: {exc}", file=sys.stderr, flush=True)
+                self._empty(500)
+                return
+            self._write_json(200, updated)
             return
 
         if parsed_path == FIRST_RUN_PATH:
