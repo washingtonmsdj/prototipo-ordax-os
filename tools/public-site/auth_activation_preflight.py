@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 LEGAL = Path("docs/contracts/public-legal-readiness.json")
 HARDENING = Path("docs/contracts/public-auth-hardening.json")
+PROVIDER_POLICY = Path("docs/contracts/public-auth-provider-policy.json")
 DEPLOYMENT = Path("docs/contracts/public-site-deployment.json")
 IDENTITY = Path("docs/contracts/public-identity.json")
 LIFECYCLE = Path("docs/contracts/account-lifecycle.json")
@@ -75,6 +76,7 @@ def source_switches(root: Path) -> dict[str, bool]:
 def readiness(root: Path) -> tuple[list[str], dict[str, bool]]:
     legal = load_json(root, LEGAL)
     hardening = load_json(root, HARDENING)
+    provider_policy = load_json(root, PROVIDER_POLICY)
     deployment = load_json(root, DEPLOYMENT)
     identity = load_json(root, IDENTITY)
     lifecycle = load_json(root, LIFECYCLE)
@@ -123,6 +125,11 @@ def readiness(root: Path) -> tuple[list[str], dict[str, bool]]:
         need(bool(document.get("effective_date")), f"{name}-effective-date")
 
     need(hardening.get("status") == "ready", "auth-hardening-status")
+    need(provider_policy.get("confirm_email_required") is True, "provider-policy-confirm-email")
+    redirect_policy = provider_policy.get("redirect_policy", {})
+    need(redirect_policy.get("production_https_origin_required") is True, "provider-policy-https-origin")
+    need(redirect_policy.get("same_origin_only") is True, "provider-policy-same-origin")
+    need(redirect_policy.get("wildcards_allowed") is False, "provider-policy-no-wildcards")
     need(
         observation.get("provider_leaked_password_protection_enabled") is True
         or observation.get("product_leaked_password_protection_verified") is True,
