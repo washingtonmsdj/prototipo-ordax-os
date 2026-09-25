@@ -237,8 +237,8 @@ Mutações de recursos sujeitos a quota/entitlement são **server-authoritative*
 ### P0 — antes do MVP público
 
 1. contratos de Spaces/Profile Packs/entitlements — **PASS_SOURCE**;
-2. memória provider-neutral — **PASS_SOURCE CONTRACT + BACKEND SCHEMA**;
-3. model-router provider-neutral — **PASS_SOURCE**;
+2. memória provider-neutral — **PASS_SOURCE RUNTIME + PERSISTENCE BOUNDARIES + BACKEND SCHEMA**; ownership `device|account`, busca/review bounded, persistência Native fail-soft e fallback Web explicitamente efêmero;
+3. model-router provider-neutral — **PASS_SOURCE RUNTIME**; rota local exige `engineId + modelId`, egress externo continua fail-closed;
 4. schema dedicado no `ordax-control-plane` — **PASS_APPLIED**;
 5. alvo Supabase dedicado selecionado no gateway/contrato de identidade — **PASS_SOURCE**, login público ainda fail-closed;
 6. limites de segurança para MCP de produto — **PASS_SOURCE BOUNDARY**;
@@ -248,7 +248,7 @@ Mutações de recursos sujeitos a quota/entitlement são **server-authoritative*
 ### P1 — após a fundação, sem bloquear o primeiro USB físico
 
 9. UI mínima de Spaces;
-10. memória local real com revisão/apagar;
+10. memória local real com revisão/apagar — **PASS_SOURCE RUNTIME** para persistência, busca, edição e exclusão; **UI visual de revisão ainda pendente de montagem**;
 11. primeiro Profile Pack interno (Developer) ativado como prova — **PASS_SOURCE INTERNAL SESSION PROOF**; somente `draft`, Space compatível, sem billing/cloud/entitlement, sem privilégios implícitos; Legal-BR permanece bloqueado pelo próprio manifesto;
 12. integrar o conceito OrdaX Device Agent ao app Projetos sem torná-lo boot-critical — **PASS_SOURCE READ-ONLY CAPABILITY BOUNDARY**; Projetos aceita somente um reader de capabilities, sem `execute()`, com probe bounded/fail-soft; adapter/runtime real continua separado e não é dependência de boot;
 13. preservar GitHub como conexão first-class e preparar vínculo Conta/Space -> repositórios selecionados — **PASS_SOURCE READ-ONLY BOUNDARY**; vínculo explícito Space + Project + repositório, sem tokens/segredos na Surface e sem autoridade de mutação;
