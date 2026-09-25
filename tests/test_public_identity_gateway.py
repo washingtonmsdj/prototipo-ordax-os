@@ -33,7 +33,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "real-password-session-flow-implemented-public-activation-gated",
+            "real-auth-and-account-sync-gateway-v2-deployed-public-same-origin-activation-gated",
         )
         self.assertFalse(contract["baseline"]["provider_configured"])
         self.assertTrue(contract["baseline"]["http_only_session_cookies"])
@@ -87,8 +87,10 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertTrue(all("Max-Age=0" in value for value in cookies))
 
     def test_sync_routes_fail_closed_without_identity_provider(self):
-        read = self.gateway.handle("GET", "/sync/objects")
-        self.assertEqual(read.status, 503)
+        for path in ("/sync/snapshot", "/sync/changes", "/sync/objects"):
+            with self.subTest(path=path):
+                read = self.gateway.handle("GET", path)
+                self.assertEqual(read.status, 503)
         write = self.gateway.handle(
             "POST",
             "/sync/mutate",
@@ -102,6 +104,8 @@ class PublicIdentityGatewayTests(unittest.TestCase):
             ("POST", "/auth/session", "GET"),
             ("PUT", "/auth/login", "GET, POST"),
             ("GET", "/auth/logout", "POST"),
+            ("POST", "/sync/snapshot", "GET"),
+            ("POST", "/sync/changes", "GET"),
             ("POST", "/sync/objects", "GET"),
             ("GET", "/sync/mutate", "POST"),
         )
