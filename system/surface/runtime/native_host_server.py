@@ -39,6 +39,12 @@ from native_component_slots import (
     read_component_runtime_file,
     resolve_component_slot,
 )
+from native_memory_endpoint import (
+    MAX_MEMORY_REQUEST_BODY_BYTES,
+    MemoryEndpointRequestError,
+    read_memory_endpoint,
+    write_memory_endpoint,
+)
 
 SESSION_PATH = "/__ordax/native/session"
 POWER_PATH = "/__ordax/native/power"
@@ -52,6 +58,7 @@ FIRST_RUN_PATH = "/__ordax/native/first-run"
 DEVICE_PROFILE_PATH = "/__ordax/native/device-profile"
 LOCAL_SESSION_PATH = "/__ordax/native/local-session"
 NOTES_PATH = "/__ordax/native/notes"
+MEMORY_PATH = "/__ordax/native/intelligence-memory"
 COMPONENT_STATE_PATH = "/__ordax/native/component-state"
 SYNC_STATE_PATH = "/__ordax/native/sync-state"
 SYNC_CHECKPOINT_PATH = "/__ordax/native/sync-checkpoint"
@@ -3343,7 +3350,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                 return
             self._write_json(reply.status, payload)
             return
-        if parsed_path in {SESSION_PATH, FILES_PATH, TRASH_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, RECOVERY_STATUS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, COMPONENT_RUNTIME_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
+        if parsed_path in {SESSION_PATH, MEMORY_PATH, FILES_PATH, TRASH_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, RECOVERY_STATUS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, COMPONENT_RUNTIME_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
         if parsed_path.startswith(COMPONENT_MODULE_PREFIX) and self.client_address[0] != "127.0.0.1":
@@ -3731,6 +3738,19 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                     self.server.local_session_locked = False
                 snapshot = local_session_snapshot(self.server)
             self._write_json(200, snapshot)
+            return
+        if self.path == MEMORY_PATH:
+            try:
+                payload = read_memory_endpoint()
+            except (OSError, UnicodeError, ValueError) as exc:
+                print(
+                    f"ordax-native-host: could not read Intelligence memory: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._empty(500)
+                return
+            self._write_json(200, payload)
             return
         if self.path == NOTES_PATH:
             try:
@@ -4132,6 +4152,32 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                 self._empty(500)
                 return
             self._empty(204)
+            return
+
+        if self.path == MEMORY_PATH:
+            body = self._read_json_body(MAX_MEMORY_REQUEST_BODY_BYTES)
+            if body is None:
+                self._empty(400)
+                return
+            try:
+                result = write_memory_endpoint(
+                    json.dumps(body, separators=(",", ":")).encode("utf-8")
+                )
+            except MemoryEndpointRequestError as exc:
+                self._empty(exc.status_code)
+                return
+            except OSError as exc:
+                print(
+                    f"ordax-native-host: could not persist Intelligence memory: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._empty(507 if exc.errno == errno.ENOSPC else 500)
+                return
+            except (UnicodeError, ValueError):
+                self._empty(400)
+                return
+            self._write_json(200, result)
             return
 
         if self.path == NOTES_PATH:
