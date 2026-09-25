@@ -415,8 +415,19 @@ jobs:
           echo "PORTABLE_V4_ACTIVATION_ALLOWED=NO"
           echo "PHYSICAL_WRITE_AUTHORIZED=NO"
 
+      - name: Upload operator Local AI EROFS and source lock only on manual run
+        if: github.event_name == 'workflow_dispatch' && success()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: canonical-v4-operator-local-ai-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/local-ai-runtime/build-a/local-ai-runtime.erofs
+            system/services/local-ai/source-lock.json
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Remove unpromoted runtime bytes
-        if: always()
+        if: always() && github.event_name != 'workflow_dispatch'
         run: |
           set -euo pipefail
           work="$RUNNER_TEMP/local-ai-runtime"
