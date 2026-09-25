@@ -103,6 +103,32 @@ class SupabasePasswordProviderTests(unittest.TestCase):
         self.assertEqual(result.subject_id, "user-1")
         self.assertEqual(len(transport.calls), 1)
 
+    def test_password_recovery_uses_public_recover_endpoint_without_exposing_secrets(self):
+        provider, transport = self.provider([(200, {})])
+        provider.request_password_recovery(
+            " person@example.com ",
+            "https://accounts.ordax.example/recuperar/concluir",
+        )
+        method, url, headers, body = transport.calls[0]
+        self.assertEqual(method, "POST")
+        self.assertIn("/auth/v1/recover?redirect_to=", url)
+        self.assertIn("https%3A%2F%2Faccounts.ordax.example%2Frecuperar%2Fconcluir", url)
+        self.assertEqual(json.loads(body), {"email": "person@example.com"})
+        self.assertNotIn("Authorization", headers)
+
+    def test_password_recovery_requires_clean_https_redirect(self):
+        provider, transport = self.provider([])
+        for redirect in (
+            "http://accounts.ordax.example/recover",
+            "https://user@accounts.ordax.example/recover",
+            "https://accounts.ordax.example/recover?token=x",
+            "https://accounts.ordax.example/recover#fragment",
+        ):
+            with self.subTest(redirect=redirect):
+                with self.assertRaises(ValueError):
+                    provider.request_password_recovery("person@example.com", redirect)
+        self.assertEqual(transport.calls, [])
+
     def test_refresh_get_user_and_logout_use_bearer_token_only_when_needed(self):
         provider, transport = self.provider([
             (200, {
