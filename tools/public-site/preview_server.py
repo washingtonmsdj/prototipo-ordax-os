@@ -90,6 +90,7 @@ class PublicPortalPreviewHandler(BaseHTTPRequestHandler):
             key: value
             for key, value in self.headers.items()
         }
+        headers["X-OrdaX-Public-Site"] = "1"
         response = self.portal_server.identity_gateway.handle(method, self.path, headers)
         self.send_response(response.status)
         existing = {name.lower() for name, _ in response.headers}
