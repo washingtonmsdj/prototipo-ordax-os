@@ -17,6 +17,8 @@ from urllib.request import Request, urlopen
 
 MAX_RESPONSE_BYTES = 1024 * 1024
 MAX_PASSWORD_CHARS = 1024
+MIN_REGISTRATION_PASSWORD_CHARS = 12
+MAX_REGISTRATION_PASSWORD_CHARS = 256
 MAX_EMAIL_CHARS = 320
 
 
@@ -103,7 +105,12 @@ def _validated_publishable_key(value: str) -> str:
     return value
 
 
-def _credentials(email: str, password: str) -> tuple[str, str]:
+def _credentials(
+    email: str,
+    password: str,
+    *,
+    registration: bool = False,
+) -> tuple[str, str]:
     if not isinstance(email, str) or not isinstance(password, str):
         raise TypeError("Email and password must be strings")
     normalized = email.strip()
@@ -119,6 +126,11 @@ def _credentials(email: str, password: str) -> tuple[str, str]:
         raise ValueError("Password is invalid")
     if "\x00" in password:
         raise ValueError("Password is invalid")
+    if registration and (
+        len(password) < MIN_REGISTRATION_PASSWORD_CHARS
+        or len(password) > MAX_REGISTRATION_PASSWORD_CHARS
+    ):
+        raise ValueError("Registration password does not meet OrdaX policy")
     return normalized, password
 
 
@@ -233,7 +245,7 @@ class SupabasePasswordProvider:
         return AuthResult(subject, canonical_email, session, False)
 
     def sign_up_with_password(self, email: str, password: str) -> AuthResult:
-        email, password = _credentials(email, password)
+        email, password = _credentials(email, password, registration=True)
         value = self._request(
             "POST",
             "/auth/v1/signup",
