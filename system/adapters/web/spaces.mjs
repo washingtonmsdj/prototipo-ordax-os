@@ -60,6 +60,13 @@ export function createWebSpacesCatalog(windowRef = globalThis.window) {
       listener(current);
       return () => listeners.delete(listener);
     },
+    reset() {
+      if (disposed) return;
+      refreshOrdinal += 1;
+      activeController?.abort();
+      activeController = null;
+      publish(snapshot("unavailable"));
+    },
     async refresh() {
       if (disposed) throw new Error("Spaces catalog is disposed");
       const ordinal = ++refreshOrdinal;
