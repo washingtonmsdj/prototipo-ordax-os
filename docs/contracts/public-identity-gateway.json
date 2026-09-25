@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-gateway/1",
-  "status": "real-auth-and-account-sync-gateway-source-v8-edge-revision-9-recovery-pkce-gated-public-server-gated",
+  "status": "real-auth-and-account-sync-gateway-source-v8-edge-revision-10-recovery-token-hash-gated-public-server-gated",
   "runtime": {
     "entrypoint": "services/public-identity/gateway.py:application",
     "protocol": "WSGI",
@@ -10,7 +10,7 @@
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
     "gateway_source_version": 8,
-    "edge_deployment_revision_observed": 9
+    "edge_deployment_revision_observed": 10
   },
   "routes": [
     {
@@ -48,6 +48,18 @@
       "path": "/auth/recover",
       "unconfigured_status": 503,
       "purpose": "password-recovery-request-fail-closed"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/recover/verify",
+      "unconfigured_status": 503,
+      "purpose": "verify-recovery-token-hash-and-create-short-lived-server-session"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/recover/complete",
+      "unconfigured_status": 503,
+      "purpose": "replace-password-from-verified-recovery-session"
     },
     {
       "method": "POST",
@@ -113,10 +125,15 @@
     "password_recovery_redirect_required": true,
     "password_recovery_redirect_verified": false,
     "password_recovery_account_enumeration_allowed": false,
-    "password_recovery_completion_flow_implemented": false,
+    "password_recovery_completion_flow_implemented": true,
     "password_recovery_request_enabled": false,
-    "password_recovery_pkce_required": true,
-    "password_recovery_pkce_completion_implemented": false
+    "password_recovery_server_side_token_hash_required": true,
+    "password_recovery_server_side_token_hash_implemented": true,
+    "password_recovery_completion_enabled": false,
+    "password_recovery_short_lived_session_cookie": true,
+    "password_recovery_session_max_age_seconds": 600,
+    "password_recovery_email_template_source": "infra/supabase/identity/email-templates/recovery.html",
+    "password_recovery_email_template_applied": false
   },
   "deployment": {
     "same_origin_required_for_public_site": true,
