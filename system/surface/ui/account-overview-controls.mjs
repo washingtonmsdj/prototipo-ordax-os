@@ -8,6 +8,7 @@ import {
   assertIdentitySessionPort,
   validateIdentitySessionSnapshot,
 } from "../../contracts/identity-session.mjs";
+import { assertIdentityCredentialsPort } from "../../contracts/identity-credentials.mjs";
 import {
   assertSyncRuntimePort,
   validateSyncRuntimeSnapshot,
@@ -82,6 +83,7 @@ export function mountAccountOverviewControls(
   syncRuntime = null,
   workspaceMetadataSource = null,
   appActivation = null,
+  identityCredentials = null,
 ) {
   if (!(root instanceof Element)) {
     throw new TypeError("Account overview controls require a Surface root Element");
@@ -89,6 +91,9 @@ export function mountAccountOverviewControls(
 
   const sessionPort = assertIdentitySessionPort(identitySession);
   const actionsPort = assertIdentityActionsPort(identityActions);
+  const credentialsPort = identityCredentials === null
+    ? null
+    : assertIdentityCredentialsPort(identityCredentials);
   const syncPort = syncRuntime === null ? null : assertSyncRuntimePort(syncRuntime);
   const workspaceMetadataPort = workspaceMetadataSource === null
     ? null
@@ -107,6 +112,8 @@ export function mountAccountOverviewControls(
     : null;
   let pendingAction = null;
   let actionMessage = "";
+  let credentialEmailDraft = "";
+  let credentialPasswordDraft = "";
   let actionOrdinal = 0;
   let activeSection = validAccountSection(lifecycle.getAppTarget("account"))
     ? lifecycle.getAppTarget("account")
@@ -259,7 +266,57 @@ export function mountAccountOverviewControls(
 
     const action = desiredAction(sessionSnapshot, actionsSnapshot);
     const actions = node(documentObject, "div", "ordax-account-actions");
-    if (action) {
+
+    if (sessionSnapshot.state === "signed-out" && credentialsPort) {
+      const form = node(documentObject, "div", "ordax-account-credential-form");
+
+      const emailLabel = node(documentObject, "label", "ordax-account-field");
+      emailLabel.append(node(documentObject, "span", "", t("account.credentials.email")));
+      const emailInput = documentObject.createElement("input");
+      emailInput.type = "email";
+      emailInput.autocomplete = "email";
+      emailInput.maxLength = 320;
+      emailInput.value = credentialEmailDraft;
+      emailInput.dataset.accountCredentialEmail = "";
+      emailInput.disabled = pendingAction !== null;
+      emailLabel.append(emailInput);
+
+      const passwordLabel = node(documentObject, "label", "ordax-account-field");
+      passwordLabel.append(node(documentObject, "span", "", t("account.credentials.password")));
+      const passwordInput = documentObject.createElement("input");
+      passwordInput.type = "password";
+      passwordInput.autocomplete = "current-password";
+      passwordInput.maxLength = 1024;
+      passwordInput.value = credentialPasswordDraft;
+      passwordInput.dataset.accountCredentialPassword = "";
+      passwordInput.disabled = pendingAction !== null;
+      passwordLabel.append(passwordInput);
+
+      form.append(emailLabel, passwordLabel);
+      section.append(form);
+
+      const signIn = node(
+        documentObject,
+        "button",
+        "ordax-account-action ordax-account-action-primary",
+        pendingAction === "sign-in" ? t("account.action.signingIn") : t("account.action.signIn"),
+      );
+      signIn.type = "button";
+      signIn.dataset.accountIdentityAction = "sign-in";
+      signIn.disabled = pendingAction !== null || !isIdentityActionSupported(actionsSnapshot, "sign-in");
+      actions.append(signIn);
+
+      const register = node(
+        documentObject,
+        "button",
+        "ordax-account-action",
+        pendingAction === "register" ? t("account.action.registering") : t("account.action.register"),
+      );
+      register.type = "button";
+      register.dataset.accountIdentityAction = "register";
+      register.disabled = pendingAction !== null || !isIdentityActionSupported(actionsSnapshot, "register");
+      actions.append(register);
+    } else if (action) {
       const label = pendingAction === action
         ? action === "sign-in"
           ? t("account.action.signingIn")
@@ -440,7 +497,29 @@ export function mountAccountOverviewControls(
     actionMessage = "";
     replaceView();
     try {
-      await actionsPort.execute(action);
+      let credentialResult = null;
+      if (
+        credentialsPort
+        && sessionSnapshot.state === "signed-out"
+        && (action === "sign-in" || action === "register")
+      ) {
+        const credentials = {
+          email: credentialEmailDraft,
+          password: credentialPasswordDraft,
+        };
+        credentialPasswordDraft = "";
+        credentialResult = action === "sign-in"
+          ? await credentialsPort.signIn(credentials)
+          : await credentialsPort.register(credentials);
+        if (typeof sessionPort.refresh === "function") {
+          await sessionPort.refresh();
+        }
+        if (credentialResult?.confirmationRequired) {
+          actionMessage = t("account.credentials.confirmationRequired");
+        }
+      } else {
+        await actionsPort.execute(action);
+      }
       if (destroyed || ordinal !== actionOrdinal) return;
     } catch {
       if (destroyed || ordinal !== actionOrdinal) return;
@@ -450,6 +529,16 @@ export function mountAccountOverviewControls(
         pendingAction = null;
         replaceView();
       }
+    }
+  };
+
+  const onInput = (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !root.contains(input)) return;
+    if (input.matches("[data-account-credential-email]")) {
+      credentialEmailDraft = input.value;
+    } else if (input.matches("[data-account-credential-password]")) {
+      credentialPasswordDraft = input.value;
     }
   };
 
@@ -478,6 +567,7 @@ export function mountAccountOverviewControls(
   };
 
   root.addEventListener("click", onClick);
+  root.addEventListener("input", onInput);
   const unsubscribeRender = lifecycle.subscribeRender(() => {
     const persistedTarget = lifecycle.getAppTarget("account");
     const nextSection = validAccountSection(persistedTarget) ? persistedTarget : "overview";
@@ -525,6 +615,8 @@ export function mountAccountOverviewControls(
       unsubscribeSession?.();
       unsubscribeActivation?.();
       unsubscribeRender();
+      credentialPasswordDraft = "";
+      root.removeEventListener("input", onInput);
       root.removeEventListener("click", onClick);
       const slot = findSlot();
       if (slot?.dataset.ordaxAccountOverviewView !== undefined) {
