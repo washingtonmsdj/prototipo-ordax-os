@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.public-identity-entry/1",
-  "status": "provider-adapter-source-v7-edge-revision-8-recovery-request-fail-closed-public-server-gated",
+  "status": "provider-adapter-source-v8-edge-revision-9-recovery-pkce-gated-public-server-gated",
   "purpose": "public-site-account-entry-boundary",
   "routes": {
     "login_page": "/login/",
@@ -62,11 +62,14 @@
     "public_site_account_enabled": false,
     "public_site_marker_header": "X-OrdaX-Public-Site",
     "native_direct_account_gateway_remains_available": true,
-    "edge_deployment_revision_observed": 8,
-    "gateway_source_version": 7,
+    "edge_deployment_revision_observed": 9,
+    "gateway_source_version": 8,
     "password_recovery_request_implemented": true,
     "password_recovery_redirect_config_verified": false,
-    "password_recovery_completion_flow_implemented": false
+    "password_recovery_completion_flow_implemented": false,
+    "password_recovery_request_enabled": false,
+    "password_recovery_pkce_required": true,
+    "password_recovery_pkce_completion_implemented": false
   },
   "supabase_candidate": {
     "status": "dedicated-target-schema-and-edge-gateway-deployed",
