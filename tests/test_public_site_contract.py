@@ -24,6 +24,7 @@ class PublicSiteContractTests(unittest.TestCase):
 
     def test_public_site_is_distinct_from_product_web_mode(self):
         contract = json.loads(PUBLIC_CONTRACT.read_text(encoding="utf-8"))
+        self.assertEqual(contract["status"], "foundation-same-origin-adapter-and-gated-forms-source-ready-not-deployed")
         self.assertEqual(contract["artifact_class"], "public-site")
         self.assertTrue(contract["separate_from_product_web_mode"])
         self.assertEqual(contract["source_root"], "sites/public")
@@ -53,6 +54,9 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertFalse(scope["native_installation_available"])
         self.assertFalse(scope["internal_disk_write_available"])
         self.assertFalse(scope["dual_boot_available"])
+        self.assertTrue(contract["deployment"]["adapter_selected"])
+        self.assertEqual(contract["deployment"]["adapter_source"], "deploy/public-site/nginx.conf")
+        self.assertFalse(contract["deployment"]["adapter_deployed"])
         commerce = contract["commerce"]
         self.assertFalse(commerce["billing_implemented"])
         self.assertFalse(commerce["pricing_published"])
@@ -94,6 +98,24 @@ class PublicSiteContractTests(unittest.TestCase):
             self.assertNotIn('src="//', text, path)
             self.assertNotIn('href="//', text, path)
 
+    def test_gated_identity_forms_use_native_post_without_javascript_credential_access(self):
+        login = (SITE / "login" / "index.html").read_text(encoding="utf-8")
+        register = (SITE / "cadastro" / "index.html").read_text(encoding="utf-8")
+        script = (SITE / "assets" / "site.js").read_text(encoding="utf-8")
+
+        self.assertIn('data-identity-form="login"', login)
+        self.assertIn('autocomplete="current-password"', login)
+        self.assertIn('data-identity-form="register"', register)
+        self.assertIn('autocomplete="new-password"', register)
+        for page in (login, register):
+            self.assertIn('method="post"', page)
+            self.assertIn(" hidden>", page)
+            self.assertIn(" disabled>", page)
+        self.assertIn('target === expectedTarget', script)
+        self.assertIn('account_activation_ready === true', script)
+        self.assertNotIn("FormData", script)
+        self.assertNotIn("password", script.lower())
+
     def test_runtime_integration_uses_same_origin_paths(self):
         script = (SITE / "assets" / "site.js").read_text(encoding="utf-8")
         self.assertIn('value.startsWith("/")', script)
@@ -112,7 +134,12 @@ class PublicSiteContractTests(unittest.TestCase):
         compliance = json.loads(
             (ROOT / "docs" / "contracts" / "release-compliance.json").read_text(encoding="utf-8")
         )
-        self.assertFalse(identity["credentials"]["static_site_collects_passwords"])
+        self.assertTrue(identity["credentials"]["static_site_renders_gated_credential_form"])
+        self.assertFalse(identity["credentials"]["static_site_javascript_reads_credentials"])
+        self.assertEqual(
+            identity["credentials"]["credential_form_submission"],
+            "native-browser-post-to-same-origin-gateway",
+        )
         self.assertTrue(identity["account_model"]["one_identity_across_product_modes"])
         self.assertTrue(releases["rules"]["public_authorization_required_per_release"])
         self.assertTrue(releases["rules"]["artifact_sha256_required"])
