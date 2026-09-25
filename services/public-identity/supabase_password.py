@@ -12,7 +12,7 @@ from dataclasses import dataclass
 import json
 from typing import Mapping, Protocol
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 MAX_RESPONSE_BYTES = 1024 * 1024
@@ -105,15 +105,10 @@ def _validated_publishable_key(value: str) -> str:
     return value
 
 
-def _credentials(
-    email: str,
-    password: str,
-    *,
-    registration: bool = False,
-) -> tuple[str, str]:
-    if not isinstance(email, str) or not isinstance(password, str):
-        raise TypeError("Email and password must be strings")
-    normalized = email.strip()
+def _email(value: str) -> str:
+    if not isinstance(value, str):
+        raise TypeError("Email must be a string")
+    normalized = value.strip()
     if (
         len(normalized) < 3
         or len(normalized) > MAX_EMAIL_CHARS
@@ -122,6 +117,35 @@ def _credentials(
         or "\r" in normalized
     ):
         raise ValueError("Email is invalid")
+    return normalized
+
+
+def _recovery_redirect(value: str) -> str:
+    if not isinstance(value, str):
+        raise TypeError("Recovery redirect must be a string")
+    split = urlsplit(value.strip())
+    if (
+        split.scheme != "https"
+        or not split.netloc
+        or split.username is not None
+        or split.password is not None
+        or split.query
+        or split.fragment
+    ):
+        raise ValueError("Recovery redirect must be a clean HTTPS URL")
+    path = split.path or "/"
+    return f"https://{split.netloc}{path}"
+
+
+def _credentials(
+    email: str,
+    password: str,
+    *,
+    registration: bool = False,
+) -> tuple[str, str]:
+    if not isinstance(password, str):
+        raise TypeError("Password must be a string")
+    normalized = _email(email)
     if not password or len(password) > MAX_PASSWORD_CHARS:
         raise ValueError("Password is invalid")
     if "\x00" in password:
@@ -258,6 +282,16 @@ class SupabasePasswordProvider:
             canonical_email,
             session,
             email_confirmation_required=session is None,
+        )
+
+    def request_password_recovery(self, email: str, redirect_to: str) -> None:
+        normalized_email = _email(email)
+        redirect = _recovery_redirect(redirect_to)
+        query = urlencode({"redirect_to": redirect})
+        self._request(
+            "POST",
+            f"/auth/v1/recover?{query}",
+            {"email": normalized_email},
         )
 
     def refresh_session(self, refresh_token: str) -> SessionTokens:
