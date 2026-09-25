@@ -9,7 +9,6 @@
     "provider_adapter": "supabase-password-and-sync-rest",
     "provider_configuration": "runtime-environment",
     "deployed_edge_adapter": "infra/supabase/functions/ordax-account-gateway/index.ts",
-    "deployed_edge_adapter_version": 7,
     "gateway_source_version": 6,
     "edge_deployment_revision_observed": 7
   },
