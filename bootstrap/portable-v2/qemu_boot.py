@@ -462,11 +462,18 @@ def boot_qemu_expected(
     expected_slot: str,
     expected_commit: str,
     serial_name: str,
+    required_post_marker: str | None = None,
 ) -> tuple[str, dict[str, bool]]:
     if expected_slot not in {"candidate", "current", "known-good"}:
         raise ProofError("unexpected QEMU expected slot")
     if COMMIT_RE.fullmatch(expected_commit) is None:
         raise ProofError("unexpected QEMU expected source commit")
+    if required_post_marker is not None and (
+        not required_post_marker
+        or "\n" in required_post_marker
+        or "\r" in required_post_marker
+    ):
+        raise ProofError("unexpected QEMU required post marker")
 
     release_info = (
         inputs["candidate"]
@@ -542,6 +549,10 @@ def boot_qemu_expected(
                 and runtime_marker in text
                 and runtime_sha_marker in text
                 and ai_ok
+                and (
+                    required_post_marker is None
+                    or required_post_marker in text
+                )
             ):
                 process.terminate()
                 try:
@@ -570,6 +581,10 @@ def boot_qemu_expected(
                     "local_ai_runtime_handoff_marker": (ai_marker in text) if ai_required else True,
                     "local_ai_runtime_sha_exact": (ai_sha_marker in text) if ai_required else True,
                     "local_ai_backend_started": (ai_backend_marker in text) if ai_required else True,
+                    "required_post_marker_seen": (
+                        required_post_marker is None
+                        or required_post_marker in text
+                    ),
                 }
             if process.poll() is not None:
                 break
@@ -580,7 +595,8 @@ def boot_qemu_expected(
         raise ProofError(
             "QEMU did not reach portable-v2 handoff markers "
             f"(slot={expected_slot}, source={expected_commit}, schema={schema_version}, "
-            f"exit={process.poll()}, stderr_tail={tail!r}, serial_tail={serial_tail!r})"
+            f"post_marker={required_post_marker!r}, exit={process.poll()}, "
+            f"stderr_tail={tail!r}, serial_tail={serial_tail!r})"
         )
     finally:
         if process.poll() is None:
