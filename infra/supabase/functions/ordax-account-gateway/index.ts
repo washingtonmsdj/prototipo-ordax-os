@@ -2,6 +2,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SESSION_SCHEMA = "prototype-ordax.public-identity-session/1";
+const ACCOUNT_SPACES_SCHEMA = "prototype-ordax.account-spaces/1";
+const MAX_VISIBLE_SPACES = 64;
 const SYNC_BATCH_SCHEMA = "prototype-ordax.sync-batch/1";
 const SYNC_SNAPSHOT_SCHEMA = "prototype-ordax.sync-snapshot/1";
 const SYNC_CHANGES_SCHEMA = "prototype-ordax.sync-changes/1";
@@ -624,7 +626,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (path === "/health" && req.method === "GET") {
-    return json(200, { status: "ok", service: "ordax-account-gateway", version: 12 });
+    return json(200, { status: "ok", service: "ordax-account-gateway", version: 13 });
   }
 
   if (path === "/auth/session" && req.method === "GET") {
@@ -691,6 +693,82 @@ Deno.serve(async (req: Request) => {
       return error(502, "account-export-failed", "Não foi possível gerar a exportação da Conta OrdaX.");
     }
     return json(200, data, session.cookies);
+  }
+
+  if (path === "/account/spaces" && req.method === "GET") {
+    const session = await authenticated(req);
+    if (!session.user || !session.access) {
+      return json(401, {
+        $schema: ERROR_SCHEMA,
+        error: "authentication-required",
+        message: "Entre na Conta OrdaX para ver seus Spaces.",
+      }, session.cookies);
+    }
+
+    const supabase = client(session.access);
+    const [spacesResult, packsResult] = await Promise.all([
+      supabase
+        .from("ordax_spaces")
+        .select("space_id,owner_user_id,name,kind,state")
+        .order("created_at", { ascending: true })
+        .limit(MAX_VISIBLE_SPACES + 1),
+      supabase
+        .from("ordax_space_profile_packs")
+        .select("space_id,pack_slug,pack_version")
+        .limit(MAX_VISIBLE_SPACES + 1),
+    ]);
+
+    if (
+      spacesResult.error ||
+      packsResult.error ||
+      !Array.isArray(spacesResult.data) ||
+      !Array.isArray(packsResult.data) ||
+      spacesResult.data.length > MAX_VISIBLE_SPACES ||
+      packsResult.data.length > MAX_VISIBLE_SPACES
+    ) {
+      return error(502, "spaces-read-failed", "Não foi possível ler seus Spaces.");
+    }
+
+    const packBySpace = new Map<string, string>();
+    for (const raw of packsResult.data as Array<Record<string, unknown>>) {
+      if (
+        typeof raw.space_id !== "string" ||
+        typeof raw.pack_slug !== "string" ||
+        raw.pack_slug.length < 1 ||
+        raw.pack_slug.length > 160 ||
+        !Number.isSafeInteger(Number(raw.pack_version)) ||
+        Number(raw.pack_version) < 1 ||
+        packBySpace.has(raw.space_id)
+      ) {
+        return error(502, "spaces-read-failed", "Não foi possível validar seus Spaces.");
+      }
+      packBySpace.set(raw.space_id, raw.pack_slug);
+    }
+
+    const spaces = [];
+    for (const raw of spacesResult.data as Array<Record<string, unknown>>) {
+      if (
+        typeof raw.space_id !== "string" ||
+        typeof raw.owner_user_id !== "string" ||
+        typeof raw.name !== "string" ||
+        raw.name.length < 1 ||
+        raw.name.length > 120 ||
+        !["personal", "work", "professional"].includes(String(raw.kind)) ||
+        !["active", "archived"].includes(String(raw.state))
+      ) {
+        return error(502, "spaces-read-failed", "Não foi possível validar seus Spaces.");
+      }
+      spaces.push({
+        id: raw.space_id,
+        ownerId: raw.owner_user_id,
+        name: raw.name,
+        kind: raw.kind,
+        state: raw.state,
+        profilePack: packBySpace.get(raw.space_id) ?? null,
+      });
+    }
+
+    return json(200, { $schema: ACCOUNT_SPACES_SCHEMA, spaces }, session.cookies);
   }
 
   if (path === "/sync/snapshot" && req.method === "GET") {
