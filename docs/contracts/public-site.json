@@ -34,7 +34,9 @@
     "client_javascript_reads_credentials": false,
     "credential_submission": "native-browser-post-to-same-origin-gateway",
     "auth_hardening_contract": "docs/contracts/public-auth-hardening.json",
-    "account_activation_requires_auth_hardening": true
+    "account_activation_requires_auth_hardening": true,
+    "server_side_public_activation_gate_required": true,
+    "server_side_public_activation_currently_enabled": false
   },
   "downloads": {
     "hard_coded_latest_allowed": false,
@@ -61,7 +63,9 @@
     "same_origin_identity_required": true,
     "adapter_source": "deploy/public-site/nginx.conf",
     "adapter_deployed": false,
-    "same_origin_sync_required": true
+    "same_origin_sync_required": true,
+    "account_request_marker_header": "X-OrdaX-Public-Site",
+    "gateway_public_activation_gate_required": true
   },
   "product_distribution": {
     "public_profile": "stable-mvp",

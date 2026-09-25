@@ -57,6 +57,10 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertTrue(contract["deployment"]["adapter_selected"])
         self.assertEqual(contract["deployment"]["adapter_source"], "deploy/public-site/nginx.conf")
         self.assertFalse(contract["deployment"]["adapter_deployed"])
+        self.assertTrue(contract["identity"]["server_side_public_activation_gate_required"])
+        self.assertFalse(contract["identity"]["server_side_public_activation_currently_enabled"])
+        self.assertEqual(contract["deployment"]["account_request_marker_header"], "X-OrdaX-Public-Site")
+        self.assertTrue(contract["deployment"]["gateway_public_activation_gate_required"])
         commerce = contract["commerce"]
         self.assertFalse(commerce["billing_implemented"])
         self.assertFalse(commerce["pricing_published"])
