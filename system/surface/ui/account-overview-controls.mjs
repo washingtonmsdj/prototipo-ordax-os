@@ -492,25 +492,24 @@ export function mountAccountOverviewControls(
     ) {
       return;
     }
+    const credentialInput = (
+      credentialsPort
+      && sessionSnapshot.state === "signed-out"
+      && (action === "sign-in" || action === "register")
+    )
+      ? { email: credentialEmailDraft, password: credentialPasswordDraft }
+      : null;
+    credentialPasswordDraft = "";
     const ordinal = ++actionOrdinal;
     pendingAction = action;
     actionMessage = "";
     replaceView();
     try {
       let credentialResult = null;
-      if (
-        credentialsPort
-        && sessionSnapshot.state === "signed-out"
-        && (action === "sign-in" || action === "register")
-      ) {
-        const credentials = {
-          email: credentialEmailDraft,
-          password: credentialPasswordDraft,
-        };
-        credentialPasswordDraft = "";
+      if (credentialInput) {
         credentialResult = action === "sign-in"
-          ? await credentialsPort.signIn(credentials)
-          : await credentialsPort.register(credentials);
+          ? await credentialsPort.signIn(credentialInput)
+          : await credentialsPort.register(credentialInput);
         if (typeof sessionPort.refresh === "function") {
           await sessionPort.refresh();
         }
