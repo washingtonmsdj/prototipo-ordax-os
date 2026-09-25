@@ -23,9 +23,9 @@
   "current_observation": {
     "source": "supabase-security-advisor",
     "observed_date": "2026-09-24",
-    "leaked_password_protection": "disabled-warn",
+    "leaked_password_protection": "enabled-product-gateway",
     "public_login_enabled": false,
-    "edge_gateway": "source-v9-edge-revision-12-recovery-token-hash-gated-public-server-gated",
+    "edge_gateway": "source-v10-edge-revision-13-pwned-passwords-gated-public-server-gated",
     "csrf_state_change_protection": "pass-deployed",
     "secure_http_only_cookie_policy": "pass-source-and-edge",
     "same_origin_session_owner": "adapter-source-ready-not-deployed",
@@ -63,7 +63,20 @@
     "csrf_state_change_protection_verified": true,
     "auth_rate_limits_reviewed": true,
     "session_revocation_tested": false,
-    "privacy_terms_ready": false
+    "privacy_terms_ready": false,
+    "provider_plan": "free",
+    "provider_leaked_password_protection_enabled": false,
+    "provider_leaked_password_protection_advisor": "disabled-warn",
+    "provider_leaked_password_protection_available_on_current_plan": false,
+    "product_leaked_password_protection": "pass-source-and-edge-hibp-k-anonymity",
+    "product_leaked_password_protection_verified": true,
+    "product_leaked_password_protection_live_e2e_tested": false,
+    "product_leaked_password_screening_provider": "haveibeenpwned-pwned-passwords",
+    "product_leaked_password_screening_prefix_chars": 5,
+    "product_leaked_password_screening_padding": true,
+    "product_leaked_password_plaintext_sent": false,
+    "product_leaked_password_full_hash_sent": false,
+    "product_leaked_password_screening_fail_closed": true
   },
   "rules": {
     "public_login_must_fail_closed_until_all_required_gates_pass": true,
