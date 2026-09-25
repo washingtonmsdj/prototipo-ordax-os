@@ -137,6 +137,18 @@ def _recovery_redirect(value: str) -> str:
     return f"https://{split.netloc}{path}"
 
 
+def _new_password(value: str) -> str:
+    if not isinstance(value, str):
+        raise TypeError("Password must be a string")
+    if (
+        len(value) < MIN_REGISTRATION_PASSWORD_CHARS
+        or len(value) > MAX_REGISTRATION_PASSWORD_CHARS
+        or "\x00" in value
+    ):
+        raise ValueError("New password does not meet OrdaX policy")
+    return value
+
+
 def _credentials(
     email: str,
     password: str,
@@ -150,11 +162,8 @@ def _credentials(
         raise ValueError("Password is invalid")
     if "\x00" in password:
         raise ValueError("Password is invalid")
-    if registration and (
-        len(password) < MIN_REGISTRATION_PASSWORD_CHARS
-        or len(password) > MAX_REGISTRATION_PASSWORD_CHARS
-    ):
-        raise ValueError("Registration password does not meet OrdaX policy")
+    if registration:
+        _new_password(password)
     return normalized, password
 
 
@@ -292,6 +301,33 @@ class SupabasePasswordProvider:
             "POST",
             f"/auth/v1/recover?{query}",
             {"email": normalized_email},
+        )
+
+    def verify_recovery_token(self, token_hash: str) -> SessionTokens:
+        if (
+            not isinstance(token_hash, str)
+            or len(token_hash) < 16
+            or len(token_hash) > 2048
+            or any(ch.isspace() for ch in token_hash)
+        ):
+            raise ValueError("Recovery token hash is invalid")
+        value = self._request(
+            "POST",
+            "/auth/v1/verify",
+            {"token_hash": token_hash, "type": "recovery"},
+        )
+        session = _session(value)
+        if session is None:
+            raise SupabaseIdentityError("provider-session-missing")
+        return session
+
+    def update_password(self, access_token: str, new_password: str) -> None:
+        password = _new_password(new_password)
+        self._request(
+            "PUT",
+            "/auth/v1/user",
+            {"password": password},
+            access_token=access_token,
         )
 
     def refresh_session(self, refresh_token: str) -> SessionTokens:
