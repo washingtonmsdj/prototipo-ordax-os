@@ -33,7 +33,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "real-auth-and-account-sync-gateway-v4-deployed-same-origin-adapter-source-ready-activation-gated",
+            "real-auth-and-account-sync-gateway-v5-deployed-browser-form-and-api-dual-mode-activation-gated",
         )
         self.assertFalse(contract["baseline"]["provider_configured"])
         self.assertTrue(contract["baseline"]["http_only_session_cookies"])
@@ -44,6 +44,8 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertTrue(contract["deployment"]["same_origin_adapter_source_ready"])
         self.assertFalse(contract["deployment"]["same_origin_adapter_deployed"])
         self.assertFalse(contract["deployment"]["public_browser_same_origin_activated"])
+        self.assertTrue(contract["baseline"]["browser_form_redirects_implemented"])
+        self.assertTrue(contract["baseline"]["json_api_mode_preserved"])
 
     def test_session_is_anonymous_and_contains_no_tokens_without_runtime_config(self):
         response = self.gateway.handle("GET", "/auth/session")

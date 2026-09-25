@@ -34,7 +34,8 @@
         </label>
         <label class="identity-field">
           <span>Senha</span>
-          <input type="password" name="password" autocomplete="new-password" maxlength="256" required disabled>
+          <input type="password" name="password" autocomplete="new-password" minlength="12" maxlength="256" aria-describedby="cadastro-password-help" required disabled>
+          <small id="cadastro-password-help">Use pelo menos 12 caracteres.</small>
         </label>
         <button class="button button-primary identity-submit" type="submit" disabled>Criar conta</button>
       </form>
