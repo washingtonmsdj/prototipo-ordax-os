@@ -18,6 +18,9 @@
     "runtime_policy_owner": "Ordax Intelligence",
     "inference_backend_contract": "ordax.local-ai/1",
     "inference_backend_owner": "system/services/local-ai",
+    "memory_contract": "ordax.memory/1",
+    "memory_context_authority_contract": "ordax.memory-context-auth/1",
+    "authorized_memory_bridge": "ordax.intelligence-authorized-memory/1",
     "model_and_engine_replaceable": true,
     "cloud_provider_required": false,
     "production_native_composition": true,
@@ -42,7 +45,13 @@
     "provenance_required": true,
     "bounded_context_required": true,
     "prompt_content_is_not_authority": true,
-    "cross_scope_access_requires_explicit_future_policy": true
+    "cross_scope_access_requires_explicit_future_policy": true,
+    "ordinary_request_injects_memory": false,
+    "memory_context_requires_composition_authorization": true,
+    "memory_context_authorization_is_per_owner": true,
+    "consumer_selected_context_has_priority_over_memory": true,
+    "memory_query_is_local_and_bounded": true,
+    "authenticated_account_memory_requires_real_identity": true
   },
   "initial_capabilities": [
     "ask",
@@ -72,6 +81,8 @@
     "backend_absence_must_not_block_surface": true,
     "stable_v4_backend_lifecycle_required_pre_usb": true,
     "stable_v4_boot_handoff_source_complete": true,
-    "signed_stable_v4_materialization_pending": true
+    "signed_stable_v4_materialization_pending": true,
+    "authorized_memory_bridge_source_complete": true,
+    "automatic_memory_injection_enabled": false
   }
 }
