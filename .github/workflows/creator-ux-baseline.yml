@@ -36,6 +36,14 @@ jobs:
           check-latest: false
           cache: false
 
+      - name: Test guided Creator experience model
+        run: |
+          set -euo pipefail
+          pushd tools/creator >/dev/null
+          go test -count=1 ./cmd/ordax-creator-app
+          popd >/dev/null
+          echo 'CREATOR_GUIDED_EXPERIENCE_TESTS=PASS'
+
       - name: Compile split Windows owner boundaries
         run: |
           set -euo pipefail
