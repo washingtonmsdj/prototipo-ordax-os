@@ -17,7 +17,7 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         contract = json.loads(IDENTITY_CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(
             contract["status"],
-            "provider-adapter-source-v8-edge-revision-10-recovery-token-hash-gated-public-server-gated",
+            "provider-adapter-source-v8-edge-revision-11-recovery-token-hash-gated-public-server-gated",
         )
         self.assertFalse(contract["backend"]["provider_configured"])
         self.assertTrue(contract["backend"]["password_auth_flow_implemented"])
@@ -25,7 +25,7 @@ class PublicIdentityBackendPrepTests(unittest.TestCase):
         self.assertTrue(contract["backend"]["dedicated_or_isolated_target_required"])
         self.assertFalse(contract["backend"]["conflicting_auth_user_trigger_allowed"])
         self.assertEqual(contract["backend"]["gateway_source_version"], 8)
-        self.assertEqual(contract["backend"]["edge_deployment_revision_observed"], 10)
+        self.assertEqual(contract["backend"]["edge_deployment_revision_observed"], 11)
         self.assertTrue(contract["backend"]["public_site_server_activation_gate_deployed"])
         self.assertFalse(contract["backend"]["public_site_account_enabled"])
         self.assertEqual(contract["backend"]["public_site_marker_header"], "X-OrdaX-Public-Site")
