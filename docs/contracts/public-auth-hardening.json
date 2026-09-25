@@ -55,7 +55,15 @@
     "public_adapter_rate_limit_source_ready": true,
     "public_adapter_rate_limit_deployed": false,
     "public_adapter_real_ip_source": "trusted-loopback-tls-terminator-x-forwarded-for",
-    "public_adapter_real_ip_source_verified_in_source": true
+    "public_adapter_real_ip_source_verified_in_source": true,
+    "email_confirmation_policy_reviewed": false,
+    "redirect_allowlist_reviewed": false,
+    "same_origin_session_owner_deployed": false,
+    "secure_http_only_cookie_policy_verified": true,
+    "csrf_state_change_protection_verified": true,
+    "auth_rate_limits_reviewed": true,
+    "session_revocation_tested": false,
+    "privacy_terms_ready": false
   },
   "rules": {
     "public_login_must_fail_closed_until_all_required_gates_pass": true,
