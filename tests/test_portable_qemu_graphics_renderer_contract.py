@@ -7,24 +7,27 @@ PORTABLE_INIT = (ROOT / "bootstrap/initramfs/portable_init.sh").read_text(encodi
 
 
 class PortableQemuGraphicsRendererContractTests(unittest.TestCase):
-    def test_graphical_qemu_adds_explicit_proof_only_kernel_flag(self):
-        self.assertIn('QEMU_SOFTWARE_RENDERER_FLAG = "ordax.qemu_allow_software_renderer=1"', QEMU_BOOT)
+    def test_graphical_qemu_still_uses_real_virtio_drm_hardware(self):
         self.assertIn('if graphical_hardware:', QEMU_BOOT)
-        self.assertIn('kernel_append += " " + QEMU_SOFTWARE_RENDERER_FLAG', QEMU_BOOT)
-        self.assertIn('"-append", kernel_append,', QEMU_BOOT)
+        self.assertIn('"-vga", "virtio"', QEMU_BOOT)
+        self.assertIn('"-display", "none"', QEMU_BOOT)
+        self.assertNotIn("WLR_RENDERER_ALLOW_SOFTWARE", QEMU_BOOT)
 
-    def test_portable_init_exports_wlroots_allowance_only_for_exact_flag(self):
-        self.assertIn('QEMU_ALLOW_SOFTWARE_RENDERER=0', PORTABLE_INIT)
-        self.assertIn('*" ordax.qemu_allow_software_renderer=1 "*) QEMU_ALLOW_SOFTWARE_RENDERER=1 ;;', PORTABLE_INIT)
-        self.assertIn('if [ "$QEMU_ALLOW_SOFTWARE_RENDERER" -eq 1 ]; then', PORTABLE_INIT)
+    def test_portable_init_allows_software_renderer_only_for_virtio_display(self):
+        self.assertIn('VIRTIO_GRAPHICS=0', PORTABLE_INIT)
+        self.assertIn('/sys/bus/pci/devices/*', PORTABLE_INIT)
+        self.assertIn('"0x1af4"', PORTABLE_INIT)
+        self.assertIn('0x03*) VIRTIO_GRAPHICS=1', PORTABLE_INIT)
+        self.assertIn('if [ "$VIRTIO_GRAPHICS" -eq 1 ]; then', PORTABLE_INIT)
         self.assertIn('export WLR_RENDERER_ALLOW_SOFTWARE=1', PORTABLE_INIT)
-        self.assertIn('ORDAX_QEMU_SOFTWARE_RENDERER_ALLOWANCE=YES', PORTABLE_INIT)
+        self.assertIn('ORDAX_VIRTIO_GPU_SOFTWARE_RENDERER_ALLOWANCE=YES', PORTABLE_INIT)
 
-    def test_proof_flag_is_not_part_of_portable_loader_entries(self):
+    def test_physical_loader_entries_do_not_force_software_rendering(self):
         boot_tree = ROOT / "boot/portable-v2"
         for path in boot_tree.rglob("*.conf"):
             text = path.read_text(encoding="utf-8")
-            self.assertNotIn("ordax.qemu_allow_software_renderer", text, path.as_posix())
+            self.assertNotIn("WLR_RENDERER_ALLOW_SOFTWARE", text, path.as_posix())
+            self.assertNotIn("virtio", text.lower(), path.as_posix())
 
 
 if __name__ == "__main__":
