@@ -26,7 +26,7 @@ class PublicSiteContractTests(unittest.TestCase):
 
     def test_public_site_is_distinct_from_product_web_mode(self):
         contract = json.loads(PUBLIC_CONTRACT.read_text(encoding="utf-8"))
-        self.assertEqual(contract["status"], "foundation-same-origin-adapter-and-gated-forms-source-ready-not-deployed")
+        self.assertEqual(contract["status"], "foundation-same-origin-adapter-gated-auth-and-recovery-forms-source-ready-not-deployed")
         self.assertEqual(contract["artifact_class"], "public-site")
         self.assertTrue(contract["separate_from_product_web_mode"])
         self.assertEqual(contract["source_root"], "sites/public")
