@@ -18,6 +18,7 @@ const PWNED_PASSWORDS_ORIGIN = "https://api.pwnedpasswords.com";
 const PWNED_PASSWORDS_MAX_RESPONSE = 256 * 1024;
 const PWNED_PASSWORDS_USER_AGENT = "OrdaX-Account-Gateway/1";
 const PUBLIC_SITE_ACCOUNT_ENABLED = false;
+const ACCOUNT_CLOSE_ENABLED = false;
 const ACCOUNT_RECOVERY_REQUEST_ENABLED = false;
 const ACCOUNT_RECOVERY_COMPLETION_ENABLED = false;
 const DATA_CLASSES = new Set([
