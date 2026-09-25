@@ -54,11 +54,14 @@ LOCAL_SESSION_PATH = "/__ordax/native/local-session"
 NOTES_PATH = "/__ordax/native/notes"
 COMPONENT_STATE_PATH = "/__ordax/native/component-state"
 SYNC_STATE_PATH = "/__ordax/native/sync-state"
+SYNC_CHECKPOINT_PATH = "/__ordax/native/sync-checkpoint"
 ACCOUNT_SESSION_PATH = "/auth/session"
 ACCOUNT_LOGIN_PATH = "/auth/login"
 ACCOUNT_REGISTER_PATH = "/auth/register"
 ACCOUNT_LOGOUT_PATH = "/auth/logout"
 ACCOUNT_SYNC_OBJECTS_PATH = "/sync/objects"
+ACCOUNT_SYNC_SNAPSHOT_PATH = "/sync/snapshot"
+ACCOUNT_SYNC_CHANGES_PATH = "/sync/changes"
 ACCOUNT_SYNC_MUTATE_PATH = "/sync/mutate"
 DIAGNOSTIC_JOURNAL_PATH = "/__ordax/native/diagnostic-journal"
 FILES_PATH = "/__ordax/native/files"
@@ -88,6 +91,7 @@ LOCAL_SESSION_CREDENTIAL_FILE = "/var/lib/ordax/local-session-credential.json"
 NOTES_FILE = "/var/lib/ordax/notes.json"
 COMPONENT_STATE_FILE = "/var/lib/ordax/component-state.json"
 SYNC_STATE_FILE = "/var/lib/ordax/sync-state.json"
+SYNC_CHECKPOINT_FILE = "/var/lib/ordax/sync-checkpoint.json"
 ACCOUNT_SESSION_FILE = "/var/lib/ordax/account/session.json"
 DIAGNOSTIC_JOURNAL_FILE = "/var/lib/ordax/diagnostic-journal.json"
 UPDATE_HISTORY_FILE = "/var/lib/ordax/update-history.tsv"
@@ -128,6 +132,7 @@ MAX_COMPONENT_STATE_PAYLOAD = 256 * 1024
 MAX_COMPONENT_STATE_BODY = 6 * MAX_COMPONENT_STATE_PAYLOAD + 1024
 MAX_SYNC_STATE_PAYLOAD = 65536
 MAX_SYNC_STATE_BODY = 393216
+MAX_SYNC_CHECKPOINT_BODY = 8192
 MAX_ACCOUNT_CREDENTIAL_BODY = 4096
 MAX_ACCOUNT_SYNC_BODY = 65536
 MAX_DIAGNOSTIC_JOURNAL_PAYLOAD = 4 * 1024 * 1024
@@ -1049,6 +1054,75 @@ def write_sync_state_payload(payload: str | None) -> None:
                 handle.flush()
                 os.fsync(handle.fileno())
             os.replace(temporary, SYNC_STATE_FILE)
+        finally:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+    try:
+        directory_fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    except OSError:
+        return
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
+def valid_sync_checkpoint(value: object) -> bool:
+    if value is None:
+        return True
+    if not isinstance(value, dict) or set(value) != {"subjectId", "cursor", "revisions"}:
+        return False
+    subject_id = value.get("subjectId")
+    cursor = value.get("cursor")
+    revisions = value.get("revisions")
+    if not isinstance(subject_id, str) or not (1 <= len(subject_id) <= 200):
+        return False
+    if isinstance(cursor, bool) or not isinstance(cursor, int) or cursor < 0 or cursor > 9007199254740991:
+        return False
+    if not isinstance(revisions, dict) or len(revisions) > 64:
+        return False
+    for object_id, revision in revisions.items():
+        if not isinstance(object_id, str) or not (1 <= len(object_id) <= 240):
+            return False
+        if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0 or revision > 9007199254740991:
+            return False
+    return True
+
+
+def read_sync_checkpoint() -> dict | None:
+    try:
+        with open(SYNC_CHECKPOINT_FILE, "r", encoding="utf-8") as handle:
+            value = json.load(handle)
+    except FileNotFoundError:
+        return None
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+    return value if valid_sync_checkpoint(value) else None
+
+
+def write_sync_checkpoint(value: dict | None) -> None:
+    if not valid_sync_checkpoint(value):
+        raise ValueError("invalid sync checkpoint")
+    directory = os.path.dirname(SYNC_CHECKPOINT_FILE)
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    if value is None:
+        try:
+            os.unlink(SYNC_CHECKPOINT_FILE)
+        except FileNotFoundError:
+            return
+    else:
+        temporary = f"{SYNC_CHECKPOINT_FILE}.tmp.{os.getpid()}.{threading.get_ident()}"
+        try:
+            with open(temporary, "w", encoding="utf-8") as handle:
+                os.fchmod(handle.fileno(), 0o600)
+                json.dump(value, handle, separators=(",", ":"), sort_keys=True, allow_nan=False)
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, SYNC_CHECKPOINT_FILE)
+            os.chmod(SYNC_CHECKPOINT_FILE, 0o600)
         finally:
             try:
                 os.unlink(temporary)
@@ -3231,7 +3305,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if not self._request_is_trusted():
             return
         parsed_path = urlsplit(self.path).path
-        if parsed_path in {ACCOUNT_SESSION_PATH, ACCOUNT_SYNC_OBJECTS_PATH}:
+        if parsed_path in {ACCOUNT_SESSION_PATH, ACCOUNT_SYNC_OBJECTS_PATH, ACCOUNT_SYNC_SNAPSHOT_PATH, ACCOUNT_SYNC_CHANGES_PATH}:
             if self.client_address[0] != "127.0.0.1":
                 self._empty(403)
                 return
@@ -3247,11 +3321,14 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                     self._empty(503)
                 return
             try:
-                reply = (
-                    self.server.account_gateway.session()
-                    if parsed_path == ACCOUNT_SESSION_PATH
-                    else self.server.account_gateway.list_sync_objects(urlsplit(self.path).query)
-                )
+                if parsed_path == ACCOUNT_SESSION_PATH:
+                    reply = self.server.account_gateway.session()
+                elif parsed_path == ACCOUNT_SYNC_SNAPSHOT_PATH:
+                    reply = self.server.account_gateway.sync_snapshot(urlsplit(self.path).query)
+                elif parsed_path == ACCOUNT_SYNC_CHANGES_PATH:
+                    reply = self.server.account_gateway.pull_sync_changes(urlsplit(self.path).query)
+                else:
+                    reply = self.server.account_gateway.list_sync_objects(urlsplit(self.path).query)
                 if not reply.body:
                     self._empty(reply.status)
                     return
@@ -3269,7 +3346,7 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if parsed_path.startswith(COMPONENT_MODULE_PREFIX) and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
-        if parsed_path in {SYNC_STATE_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH, DEVICE_PROFILE_PATH, LOCAL_SESSION_PATH} and self.client_address[0] != "127.0.0.1":
+        if parsed_path in {SYNC_STATE_PATH, SYNC_CHECKPOINT_PATH, NOTES_PATH, COMPONENT_STATE_PATH, FIRST_RUN_PATH, DEVICE_PROFILE_PATH, LOCAL_SESSION_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
         if parsed_path == METRICS_PATH:
@@ -3676,6 +3753,9 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             return
         if self.path == SYNC_STATE_PATH:
             self._write_json(200, {"payload": read_sync_state_payload()})
+            return
+        if self.path == SYNC_CHECKPOINT_PATH:
+            self._write_json(200, {"checkpoint": read_sync_checkpoint()})
             return
         if self.path == DIAGNOSTIC_JOURNAL_PATH:
             try:
@@ -4107,6 +4187,21 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
                 write_sync_state_payload(payload)
             except (OSError, ValueError) as exc:
                 print(f"ordax-native-host: could not persist sync state: {exc}", file=sys.stderr, flush=True)
+                self._empty(500)
+                return
+            self._empty(204)
+            return
+
+        if self.path == SYNC_CHECKPOINT_PATH:
+            body = self._read_json_body(MAX_SYNC_CHECKPOINT_BODY)
+            checkpoint = body.get("checkpoint") if body is not None else object()
+            if not valid_sync_checkpoint(checkpoint):
+                self._empty(400)
+                return
+            try:
+                write_sync_checkpoint(checkpoint)
+            except (OSError, ValueError) as exc:
+                print(f"ordax-native-host: could not persist sync checkpoint: {exc}", file=sys.stderr, flush=True)
                 self._empty(500)
                 return
             self._empty(204)
