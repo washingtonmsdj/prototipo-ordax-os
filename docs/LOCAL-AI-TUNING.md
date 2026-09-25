@@ -27,16 +27,16 @@ All four are covered by the `Intelligence Foundation` source gate.
 
 ## 1. Hardware capability probe
 
-Run:
+For engineering qualification, run:
 
 ```bash
 python tools/local-ai-hardware-probe/probe.py
 ```
 
-The probe reads bounded `/proc/cpuinfo` and `/proc/meminfo` inputs without shelling
-out. It reports normalized architecture, logical CPU count, total/available memory,
-a bounded allow-list of common CPU features, and objective compatibility with the
-currently pinned `linux-x86_64` engine artifact.
+The engineering probe reads bounded `/proc/cpuinfo` and `/proc/meminfo` inputs
+without shelling out. It reports normalized architecture, logical CPU count,
+total/available memory, a bounded allow-list of common CPU features, and objective
+compatibility with the currently pinned `linux-x86_64` engine artifact.
 
 The probe deliberately does **not** invent RAM/CPU performance minimums and does
 not output tuning flags. Today the only start blocker it may derive is an
@@ -44,10 +44,26 @@ architecture mismatch with the pinned engine artifact. Any future memory or
 feature threshold must be justified by measured product behavior and added to an
 explicit contract.
 
-The MVP contract requires a hardware probe before backend start. The probe is
-source-complete, but wiring it into Stable Base startup remains a separate boot
-integration step. Until that wiring lands, do not claim
-`hardware_probe_before_start` as runtime-complete.
+### Production pre-start probe
+
+The MVP `hardware_probe_before_start` requirement is wired in
+`bootstrap/stable-base/ordax-stable-init`. Stable Base remains minimal and does
+not gain Python as a runtime dependency: the production pre-start probe is
+POSIX/BusyBox-compatible shell and runs immediately before `ordax-local-ai` is
+started.
+
+The production probe intentionally enforces only the blocker already justified by
+the contract: the pinned `linux-x86_64` runtime must execute on a compatible
+architecture. Logical CPU count and total memory are emitted only as local boot
+observability; they are not thresholds and cannot independently reject the
+backend. A probe failure or architecture mismatch degrades Local AI through the
+existing fail-soft path and still allows `/system/entrypoint` to continue.
+
+The richer Python probe remains the engineering/benchmark input because it can
+record bounded SIMD capability data without forcing that tooling into Stable
+Base. The two roles are therefore deliberate rather than duplicated runtime
+implementations: production decides only whether the pinned artifact can start;
+engineering captures evidence used to evaluate later tuning.
 
 ## 2. Steady-state benchmark
 
@@ -145,8 +161,8 @@ threading policy is faster or sufficiently portable.
 
 ## 6. What remains
 
-- wire the source-complete hardware probe into Stable Base before backend start,
-  fail-soft;
+- complete the current CI/QEMU proof of the newly wired production pre-start
+  hardware probe;
 - collect the first baseline on the actual target notebook/USB environment;
 - determine whether the portable generic engine meets the UX target;
 - if not, evaluate controlled alternatives without changing the stable
