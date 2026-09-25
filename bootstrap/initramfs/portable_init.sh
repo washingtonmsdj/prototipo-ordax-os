@@ -79,6 +79,23 @@ case " $(cat /proc/cmdline 2>/dev/null || true) " in
     *" ordax.mode=recovery "*) RECOVERY_MODE=1 ;;
 esac
 
+# Virtio VGA exposes real guest DRM/KMS hardware, but without host VirGL its
+# GLES renderer is Mesa software. wlroots deliberately rejects that renderer
+# unless WLR_RENDERER_ALLOW_SOFTWARE is explicitly set. Detect the virtual
+# display controller from PCI identity before any graphics driver/user-space
+# runtime starts, and carry only this bounded allowance across switch_root.
+# Physical GPUs do not match this capability gate.
+VIRTIO_GRAPHICS=0
+for pci_device in /sys/bus/pci/devices/*; do
+    [ -d "$pci_device" ] || continue
+    pci_vendor="$(cat "$pci_device/vendor" 2>/dev/null || true)"
+    pci_class="$(cat "$pci_device/class" 2>/dev/null || true)"
+    [ "$pci_vendor" = "0x1af4" ] || continue
+    case "$pci_class" in
+        0x03*) VIRTIO_GRAPHICS=1; break ;;
+    esac
+done
+
 DATA_DEVICE="$(findfs LABEL=ORDAX-DATA 2>/dev/null || true)"
 case "$DATA_DEVICE" in
     "") rescue "ORDAX-DATA partition not found" ;;
@@ -314,6 +331,10 @@ export ORDAX_PORTABLE_STATE_HELPER="$RUNTIME_STATE_HELPER"
 export ORDAX_PORTABLE_STATE_ROOT=/state
 export ORDAX_PORTABLE_ROOT=/ordax-data/.ordax
 
+if [ "$VIRTIO_GRAPHICS" -eq 1 ]; then
+    export WLR_RENDERER_ALLOW_SOFTWARE=1
+fi
+
 if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ] || [ "$SELECTED_MANIFEST_SCHEMA" = "4" ]; then
     export ORDAX_SURFACE_RUNTIME_MODE=verified-erofs-overlay
     export ORDAX_SURFACE_RUNTIME_ROOT=/run/ordax/runtime/native-surface/rootfs
@@ -330,6 +351,9 @@ echo "ORDAX_PORTABLE_V2_HANDOFF=VERIFIED"
 echo "ORDAX_PORTABLE_V2_SLOT=$SELECTED_SLOT"
 echo "ORDAX_PORTABLE_V2_SOURCE_SHA=$SELECTED_COMMIT"
 echo "ORDAX_PORTABLE_RELEASE_MANIFEST_SCHEMA=$SELECTED_MANIFEST_SCHEMA"
+if [ "$VIRTIO_GRAPHICS" -eq 1 ]; then
+    echo "ORDAX_VIRTIO_GPU_SOFTWARE_RENDERER_ALLOWANCE=YES"
+fi
 if [ "$SELECTED_MANIFEST_SCHEMA" = "3" ] || [ "$SELECTED_MANIFEST_SCHEMA" = "4" ]; then
     echo "ORDAX_SURFACE_RUNTIME_HANDOFF=VERIFIED"
     echo "ORDAX_SURFACE_RUNTIME_SHA256=$SELECTED_SURFACE_RUNTIME_SHA256"
