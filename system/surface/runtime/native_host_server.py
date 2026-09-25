@@ -28,6 +28,7 @@ if _RUNTIME_DIR not in sys.path:
     sys.path.insert(0, _RUNTIME_DIR)
 
 from native_request_boundary import expected_surface_authority, request_is_trusted
+from native_account_gateway import NativeAccountGateway, NativeAccountGatewayError
 from native_component_slots import (
     COMPONENT_MODULE_PREFIX,
     ComponentSlotRequestError,
@@ -52,6 +53,12 @@ LOCAL_SESSION_PATH = "/__ordax/native/local-session"
 NOTES_PATH = "/__ordax/native/notes"
 COMPONENT_STATE_PATH = "/__ordax/native/component-state"
 SYNC_STATE_PATH = "/__ordax/native/sync-state"
+ACCOUNT_SESSION_PATH = "/auth/session"
+ACCOUNT_LOGIN_PATH = "/auth/login"
+ACCOUNT_REGISTER_PATH = "/auth/register"
+ACCOUNT_LOGOUT_PATH = "/auth/logout"
+ACCOUNT_SYNC_OBJECTS_PATH = "/sync/objects"
+ACCOUNT_SYNC_MUTATE_PATH = "/sync/mutate"
 DIAGNOSTIC_JOURNAL_PATH = "/__ordax/native/diagnostic-journal"
 FILES_PATH = "/__ordax/native/files"
 TRASH_PATH = "/__ordax/native/trash"
@@ -79,6 +86,7 @@ LOCAL_SESSION_CREDENTIAL_FILE = "/var/lib/ordax/local-session-credential.json"
 NOTES_FILE = "/var/lib/ordax/notes.json"
 COMPONENT_STATE_FILE = "/var/lib/ordax/component-state.json"
 SYNC_STATE_FILE = "/var/lib/ordax/sync-state.json"
+ACCOUNT_SESSION_FILE = "/var/lib/ordax/account/session.json"
 DIAGNOSTIC_JOURNAL_FILE = "/var/lib/ordax/diagnostic-journal.json"
 UPDATE_HISTORY_FILE = "/var/lib/ordax/update-history.tsv"
 RELEASE_HISTORY_FILE = "/var/lib/ordax/release-history.tsv"
@@ -117,6 +125,8 @@ MAX_COMPONENT_STATE_PAYLOAD = 256 * 1024
 MAX_COMPONENT_STATE_BODY = 6 * MAX_COMPONENT_STATE_PAYLOAD + 1024
 MAX_SYNC_STATE_PAYLOAD = 65536
 MAX_SYNC_STATE_BODY = 393216
+MAX_ACCOUNT_CREDENTIAL_BODY = 4096
+MAX_ACCOUNT_SYNC_BODY = 65536
 MAX_DIAGNOSTIC_JOURNAL_PAYLOAD = 4 * 1024 * 1024
 MAX_DIAGNOSTIC_JOURNAL_BODY = 6 * MAX_DIAGNOSTIC_JOURNAL_PAYLOAD + 1024
 MAX_FILE_ACTION_BODY = 2048
@@ -2969,6 +2979,7 @@ class NativeHostServer(ThreadingHTTPServer):
         component_channel_bin: str = DEFAULT_COMPONENT_CHANNEL_BIN,
         component_trust_path: str = DEFAULT_COMPONENT_TRUST_PATH,
         component_slot_root: str = DEFAULT_COMPONENT_SLOT_ROOT,
+        account_gateway_origin: str = "",
     ):
         super().__init__(server_address, handler_class)
         self.power_token = secrets.token_urlsafe(32)
@@ -3017,6 +3028,15 @@ class NativeHostServer(ThreadingHTTPServer):
             distribution_profile=self.distribution_profile,
             product_mode=self.product_mode,
         )
+        self.account_gateway = None
+        if account_gateway_origin:
+            try:
+                self.account_gateway = NativeAccountGateway(
+                    account_gateway_origin,
+                    ACCOUNT_SESSION_FILE,
+                )
+            except (TypeError, ValueError):
+                self.account_gateway = None
 
 
 class NativeHostHandler(SimpleHTTPRequestHandler):
@@ -3100,6 +3120,38 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
         if not self._request_is_trusted():
             return
         parsed_path = urlsplit(self.path).path
+        if parsed_path in {ACCOUNT_SESSION_PATH, ACCOUNT_SYNC_OBJECTS_PATH}:
+            if self.client_address[0] != "127.0.0.1":
+                self._empty(403)
+                return
+            if self.server.account_gateway is None:
+                if parsed_path == ACCOUNT_SESSION_PATH:
+                    self._write_json(200, {
+                        "$schema": "prototype-ordax.public-identity-session/1",
+                        "authenticated": False,
+                        "provider": "unconfigured",
+                        "status": "anonymous",
+                    })
+                else:
+                    self._empty(503)
+                return
+            try:
+                reply = (
+                    self.server.account_gateway.session()
+                    if parsed_path == ACCOUNT_SESSION_PATH
+                    else self.server.account_gateway.list_sync_objects(urlsplit(self.path).query)
+                )
+                if not reply.body:
+                    self._empty(reply.status)
+                    return
+                payload = json.loads(reply.body.decode("utf-8"))
+                if not isinstance(payload, dict):
+                    raise ValueError("gateway JSON object required")
+            except (NativeAccountGatewayError, UnicodeError, json.JSONDecodeError, ValueError):
+                self._empty(503)
+                return
+            self._write_json(reply.status, payload)
+            return
         if parsed_path in {SESSION_PATH, FILES_PATH, TRASH_PATH, FILE_CONTENT_PATH, FILE_EXPORT_PATH, IMAGE_PREVIEW_PATH, METRICS_PATH, RECOVERY_STATUS_PATH, POWER_STATUS_PATH, NETWORK_STATUS_PATH, NETWORK_MANAGEMENT_PATH, KEYBOARD_LAYOUT_PATH, NATIVE_INSTALL_TARGETS_PATH, COMPONENT_RUNTIME_PATH, UPDATE_HISTORY_PATH, DIAGNOSTIC_JOURNAL_PATH} and self.client_address[0] != "127.0.0.1":
             self._empty(403)
             return
@@ -3530,6 +3582,64 @@ class NativeHostHandler(SimpleHTTPRequestHandler):
             return
 
         parsed_path = urlsplit(self.path).path
+        if parsed_path in {ACCOUNT_LOGIN_PATH, ACCOUNT_REGISTER_PATH, ACCOUNT_LOGOUT_PATH, ACCOUNT_SYNC_MUTATE_PATH}:
+            if self.server.account_gateway is None:
+                self._empty(503)
+                return
+            try:
+                if parsed_path in {ACCOUNT_LOGIN_PATH, ACCOUNT_REGISTER_PATH}:
+                    payload = self._read_json_body(MAX_ACCOUNT_CREDENTIAL_BODY)
+                    if payload is None or set(payload) != {"email", "password"}:
+                        self._empty(400)
+                        return
+                    email = payload.get("email")
+                    password = payload.get("password")
+                    if not isinstance(email, str) or not isinstance(password, str):
+                        self._empty(400)
+                        return
+                    reply = (
+                        self.server.account_gateway.login(email, password)
+                        if parsed_path == ACCOUNT_LOGIN_PATH
+                        else self.server.account_gateway.register(email, password)
+                    )
+                    if reply.status not in {200, 202, 303}:
+                        self._empty(reply.status)
+                        return
+                    session_reply = self.server.account_gateway.session()
+                    session_payload = json.loads(session_reply.body.decode("utf-8"))
+                    if not isinstance(session_payload, dict):
+                        raise ValueError("invalid session payload")
+                    if parsed_path == ACCOUNT_REGISTER_PATH and not session_payload.get("authenticated"):
+                        session_payload["confirmationRequired"] = True
+                        self._write_json(202, session_payload)
+                    else:
+                        self._write_json(200, session_payload)
+                    return
+                if parsed_path == ACCOUNT_LOGOUT_PATH:
+                    reply = self.server.account_gateway.logout()
+                    if reply.status not in {200, 204, 303}:
+                        self._empty(reply.status)
+                        return
+                    self._empty(204)
+                    return
+                body = self._read_json_body(MAX_ACCOUNT_SYNC_BODY)
+                if body is None:
+                    self._empty(400)
+                    return
+                raw = json.dumps(body, separators=(",", ":")).encode("utf-8")
+                reply = self.server.account_gateway.mutate_sync(raw)
+                if not reply.body:
+                    self._empty(reply.status)
+                    return
+                response_payload = json.loads(reply.body.decode("utf-8"))
+                if not isinstance(response_payload, dict):
+                    raise ValueError("invalid sync payload")
+                self._write_json(reply.status, response_payload)
+                return
+            except (NativeAccountGatewayError, UnicodeError, json.JSONDecodeError, ValueError):
+                self._empty(503)
+                return
+
         if parsed_path == LOCAL_SESSION_PATH:
             payload = self._read_json_body(MAX_LOCAL_SESSION_BODY)
             if payload is None:
@@ -4037,6 +4147,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--component-channel-bin", default=DEFAULT_COMPONENT_CHANNEL_BIN)
     parser.add_argument("--component-trust", default=DEFAULT_COMPONENT_TRUST_PATH)
     parser.add_argument("--component-slot-root", default=DEFAULT_COMPONENT_SLOT_ROOT)
+    parser.add_argument("--account-gateway-origin", default="")
     return parser.parse_args()
 
 
@@ -4076,6 +4187,7 @@ def main() -> int:
         component_channel_bin=args.component_channel_bin,
         component_trust_path=args.component_trust,
         component_slot_root=args.component_slot_root,
+        account_gateway_origin=args.account_gateway_origin,
     )
     telemetry_started = start_telemetry_heartbeat(args.telemetry_config)
     print(
