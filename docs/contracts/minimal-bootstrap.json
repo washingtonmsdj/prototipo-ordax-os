@@ -121,10 +121,10 @@
         {
           "source_path": "bootstrap/entrypoint",
           "target_path": "/ordax/bootstrap/entrypoint",
-          "sha256": "b8f1410cddc3e4102b4e45e49318ed8d0258d63d93eec064201bb1692ce5645a",
+          "sha256": "4e68bd911be62767b0c6a854c1daf2793f83e69a7da1e1c01d492b853ef68a59",
           "mode": "0755",
           "logical_owner": "bootstrap-orchestrator",
-          "reason": "Prefer known-good offline current release, bind explicit USB/native-disk product mode, otherwise acquire the first signed release through bounded network/bootstrap owners"
+          "reason": "Prefer known-good offline current release, bind explicit USB/native-disk product mode and optional validated HTTPS account-gateway base URL, otherwise acquire the first signed release through bounded network/bootstrap owners"
         }
       ]
     },
