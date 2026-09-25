@@ -244,7 +244,7 @@ async function start() {
   const identityActions = createWebIdentityActions(window, identitySession);
   const identityAvailable = identitySession.getSnapshot().state !== "unavailable";
   const identityCredentials = identityAvailable ? createSameOriginIdentityCredentials(window) : null;
-  const syncTransport = identityAvailable ? createWebSyncTransport(window) : null;
+  const syncTransport = createWebSyncTransport(window);
   const appActivation = createAppActivationChannel();
   const updateWatcher = createNativeUpdateWatcher(window);
   const notifications = createNotificationsRuntime({
