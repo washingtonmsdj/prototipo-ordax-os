@@ -21,6 +21,7 @@ REQUIRED = (
     preflight.RUNTIME,
     preflight.EDGE,
     preflight.REFERENCE_GATEWAY,
+    preflight.LIFECYCLE_EDGE,
 )
 
 
@@ -79,6 +80,22 @@ class PublicAuthActivationPreflightTests(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertEqual(preflight.main(["check", "--root", str(root)]), 1)
+        finally:
+            temporary.cleanup()
+
+    def test_lifecycle_and_gateway_close_switches_must_match(self):
+        temporary, root = self.fixture_root()
+        try:
+            lifecycle = root / preflight.LIFECYCLE_EDGE
+            lifecycle.write_text(
+                lifecycle.read_text(encoding="utf-8").replace(
+                    "const ACCOUNT_CLOSE_ENABLED = false;",
+                    "const ACCOUNT_CLOSE_ENABLED = true;",
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "lifecycle/gateway activation switch mismatch"):
+                preflight.readiness(root)
         finally:
             temporary.cleanup()
 
