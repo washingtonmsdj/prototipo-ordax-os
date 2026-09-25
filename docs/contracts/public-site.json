@@ -15,7 +15,8 @@
     "terms": "/termos/",
     "account": "/conta/",
     "recovery": "/recuperar/",
-    "recovery_complete": "/recuperar/nova-senha/"
+    "recovery_complete": "/recuperar/nova-senha/",
+    "recovery_new_password": "/recuperar/nova-senha/"
   },
   "runtime_dependencies": {
     "remote_javascript": false,
@@ -41,7 +42,12 @@
     "server_side_public_activation_currently_enabled": false,
     "gated_recovery_forms_prepared": true,
     "recovery_completion_uses_native_browser_post": true,
-    "recovery_tokens_visible_to_client_javascript": false
+    "recovery_tokens_visible_to_client_javascript": false,
+    "recovery_request_route": "/auth/recover",
+    "recovery_complete_route": "/auth/recover/complete",
+    "recovery_verify_route": "/auth/recover/verify",
+    "recovery_server_side_token_hash": true,
+    "recovery_forms_enabled": false
   },
   "downloads": {
     "hard_coded_latest_allowed": false,
