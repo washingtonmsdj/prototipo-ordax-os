@@ -1,0 +1,162 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { createMemoryRuntime } from "../system/services/memory/runtime.mjs";
+import { createMemoryReviewRuntime } from "../system/services/memory/review.mjs";
+
+function item(overrides = {}) {
+  return {
+    id: "mem-1",
+    ownerId: "user-1",
+    scope: "project",
+    kind: "fact",
+    sensitivity: "private",
+    content: "conteúdo inicial",
+    provenance: "source",
+    sourceTimestamp: "2026-09-24T12:00:00Z",
+    spaceId: "space-a",
+    projectId: "project-a",
+    ...overrides,
+  };
+}
+
+test("memory review lists, edits and removes only inside its owner boundary", () => {
+  const memory = createMemoryRuntime();
+  memory.remember(item());
+  memory.remember(item({ id: "other-space", spaceId: "space-b", projectId: "project-a" }));
+  memory.remember(item({ id: "other-owner", ownerId: "user-2" }));
+
+  const review = createMemoryReviewRuntime(memory, {
+    ownerId: "user-1",
+    spaceId: "space-a",
+    projectId: "project-a",
+    now: () => new Date("2026-09-24T18:30:00Z"),
+  });
+
+  assert.deepEqual(review.list().map((entry) => entry.id), ["mem-1"]);
+  const updated = review.update("mem-1", {
+    content: "conteúdo revisado",
+    provenance: "user-review",
+    sensitivity: "restricted",
+  });
+  assert.equal(updated.content, "conteúdo revisado");
+  assert.equal(updated.provenance, "user-review");
+  assert.equal(updated.sensitivity, "restricted");
+  assert.equal(updated.sourceTimestamp, "2026-09-24T18:30:00.000Z");
+
+  assert.equal(review.remove("mem-1"), true);
+  assert.equal(review.remove("mem-1"), false);
+  assert.deepEqual(review.list(), []);
+
+  assert.equal(
+    memory.search({
+      ownerId: "user-2",
+      scopes: ["project"],
+      spaceId: "space-a",
+      projectId: "project-a",
+      includeRestricted: true,
+    }).length,
+    1,
+  );
+});
+
+test("device memory review works without account identity and cannot see account items", () => {
+  const memory = createMemoryRuntime();
+  memory.remember(item({
+    id: "device-item",
+    ownerKind: "device",
+    ownerId: null,
+    scope: "device",
+    spaceId: null,
+    projectId: null,
+    content: "local-only",
+  }));
+  memory.remember(item({
+    id: "account-item",
+    scope: "account",
+    spaceId: null,
+    projectId: null,
+    content: "account-only",
+  }));
+
+  const review = createMemoryReviewRuntime(memory, {
+    ownerKind: "device",
+    ownerId: null,
+    now: () => new Date("2026-09-24T18:45:00Z"),
+  });
+  assert.deepEqual(review.list().map((entry) => entry.id), ["device-item"]);
+
+  const updated = review.update("device-item", { content: "local revisado" });
+  assert.equal(updated.ownerKind, "device");
+  assert.equal(updated.ownerId, null);
+  assert.equal(updated.content, "local revisado");
+  assert.equal(review.update("account-item", { content: "não deve mudar" }), null);
+  assert.equal(review.remove("account-item"), false);
+  assert.equal(
+    memory.search({ ownerId: "user-1", scopes: ["account"] })[0].content,
+    "account-only",
+  );
+});
+
+test("memory review cannot mutate identity, owner, kind or structural scope", () => {
+  const memory = createMemoryRuntime();
+  memory.remember(item());
+  const review = createMemoryReviewRuntime(memory, {
+    ownerId: "user-1",
+    spaceId: "space-a",
+    projectId: "project-a",
+  });
+
+  for (const patch of [
+    { id: "other" },
+    { ownerKind: "device" },
+    { ownerId: "user-2" },
+    { scope: "account" },
+    { spaceId: "space-b" },
+    { projectId: "project-b" },
+    { kind: "instruction" },
+  ]) {
+    assert.throws(() => review.update("mem-1", patch), /cannot change/);
+  }
+});
+
+test("memory review locates old items through bounded pagination", () => {
+  const memory = createMemoryRuntime();
+  for (let index = 0; index < 40; index += 1) {
+    memory.remember(item({
+      id: `mem-${String(index).padStart(2, "0")}`,
+      content: `conteúdo ${index}`,
+      sourceTimestamp: `2026-09-24T12:${String(index).padStart(2, "0")}:00Z`,
+    }));
+  }
+  const review = createMemoryReviewRuntime(memory, {
+    ownerId: "user-1",
+    spaceId: "space-a",
+    projectId: "project-a",
+    now: () => new Date("2026-09-24T19:00:00Z"),
+  });
+
+  assert.equal(review.list({ limit: 4 }).length, 4);
+  assert.equal(review.list({ limit: 4, offset: 32 })[0].id, "mem-07");
+
+  const updated = review.update("mem-00", { content: "memória antiga revisada" });
+  assert.ok(updated);
+  assert.equal(updated.id, "mem-00");
+  assert.equal(updated.content, "memória antiga revisada");
+  assert.equal(updated.sourceTimestamp, "2026-09-24T19:00:00.000Z");
+});
+
+test("review update still enforces memory secret rejection", () => {
+  const memory = createMemoryRuntime();
+  memory.remember(item());
+  const review = createMemoryReviewRuntime(memory, {
+    ownerId: "user-1",
+    spaceId: "space-a",
+    projectId: "project-a",
+  });
+
+  assert.throws(
+    () => review.update("mem-1", { content: "ghp_abcdefghijklmnopqrstuvwxyz123456" }),
+    /Secrets are not valid/,
+  );
+});
