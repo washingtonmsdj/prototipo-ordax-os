@@ -45,6 +45,8 @@ REQUIRED_FILES = (
     "download/index.html",
     "login/index.html",
     "cadastro/index.html",
+    "recuperar/index.html",
+    "recuperar/nova-senha/index.html",
     "conta/index.html",
     "licencas/index.html",
     "privacidade/index.html",
@@ -128,7 +130,7 @@ def validate_source(root: Path = SOURCE) -> list[Path]:
     legal = config.get("legal")
     if not isinstance(identity, dict) or not isinstance(downloads, dict) or not isinstance(legal, dict):
         raise PublicSiteError("public site runtime config sections are missing")
-    for key in ("login_url", "register_url"):
+    for key in ("login_url", "register_url", "recovery_url", "recovery_complete_url"):
         if not same_origin_path(identity.get(key)):
             raise PublicSiteError(f"identity.{key} must be null or a same-origin path")
     if not same_origin_path(downloads.get("catalog_url")):
@@ -151,15 +153,25 @@ def validate_source(root: Path = SOURCE) -> list[Path]:
         raise PublicSiteError("runtime legal readiness must match canonical legal-readiness contract")
 
     if not contract_ready:
-        if identity.get("login_url") is not None or identity.get("register_url") is not None:
+        if any(
+            identity.get(key) is not None
+            for key in ("login_url", "register_url", "recovery_url", "recovery_complete_url")
+        ):
             raise PublicSiteError("identity URLs must remain null until public legal readiness is complete")
     else:
         if legal_contract.get("status") != "ready":
             raise PublicSiteError("ready legal contract must have status=ready")
         if hardening_contract.get("status") != "ready":
             raise PublicSiteError("public auth hardening must be ready before account activation")
-        if identity.get("login_url") != "/auth/login" or identity.get("register_url") != "/auth/register":
-            raise PublicSiteError("ready account activation requires canonical same-origin auth routes")
+        expected_identity_routes = {
+            "login_url": "/auth/login",
+            "register_url": "/auth/register",
+            "recovery_url": "/auth/recover",
+            "recovery_complete_url": "/auth/recover/complete",
+        }
+        for key, expected in expected_identity_routes.items():
+            if identity.get(key) != expected:
+                raise PublicSiteError("ready account activation requires canonical same-origin auth routes")
         documents = legal_contract.get("documents")
         if not isinstance(documents, dict):
             raise PublicSiteError("ready legal contract documents are missing")
@@ -215,7 +227,7 @@ def build_bundle(out_dir: Path, source_commit: str, root: Path = SOURCE) -> dict
             "build_recipe": "tools/public-site/build.py",
             "remote_runtime_dependencies": False,
             "framework_runtime_dependency": False,
-            "routes": ["/", "/download/", "/login/", "/cadastro/", "/conta/", "/licencas/", "/privacidade/", "/termos/"],
+            "routes": ["/", "/download/", "/login/", "/cadastro/", "/recuperar/", "/recuperar/nova-senha/", "/conta/", "/licencas/", "/privacidade/", "/termos/"],
             "public_release_catalog": {
                 "path": "/" + PUBLIC_CATALOG_RELATIVE.as_posix(),
                 "status": catalog["status"],
