@@ -77,10 +77,31 @@ class NativeAccountGatewayTests(unittest.TestCase):
             client = gateway.NativeAccountGateway("https://accounts.example", str(link))
             self.assertEqual(client._cookies, {})
 
+    def test_account_export_is_read_only_and_uses_existing_session_boundary(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = str(Path(temporary) / "session.json")
+            client = gateway.NativeAccountGateway("https://accounts.example", path)
+            calls = []
+
+            def fake_request(method, route, **kwargs):
+                calls.append((method, route, kwargs))
+                return gateway.GatewayReply(
+                    status=200,
+                    headers={},
+                    body=b'{"$schema":"prototype-ordax.account-export/1"}',
+                )
+
+            client._request = fake_request
+            reply = client.account_export()
+
+            self.assertEqual(reply.status, 200)
+            self.assertEqual(calls, [("GET", "/account/export", {})])
+
     def test_native_adapter_has_no_provider_specific_supabase_dependency(self):
         source = MODULE.read_text(encoding="utf-8").lower()
         self.assertNotIn("supabase", source)
         self.assertIn("/auth/session", source)
+        self.assertIn("/account/export", source)
         self.assertIn("/sync/objects", source)
         self.assertIn("/sync/snapshot", source)
         self.assertIn("/sync/changes", source)
