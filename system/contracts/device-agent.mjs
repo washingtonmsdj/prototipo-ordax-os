@@ -1,5 +1,6 @@
 export const DEVICE_AGENT_PORT_SCHEMA = "ordax.device-agent/1";
 export const DEVICE_AGENT_CAPABILITIES_SCHEMA = "ordax.device-agent-capabilities/1";
+export const DEVICE_AGENT_CAPABILITY_READER_SCHEMA = "ordax.device-agent-capability-reader/1";
 
 const SOURCE_TYPES = new Set(["local", "github", "hybrid"]);
 const CLIENTS = new Set(["ordax-local", "ordax-web", "mcp"]);
@@ -150,6 +151,19 @@ export function assertDeviceAgentPort(port) {
   }
   if (typeof port.execute !== "function" || typeof port.capabilities !== "function") {
     throw new TypeError("Device Agent port must implement execute() and capabilities()");
+  }
+  return port;
+}
+
+export function assertDeviceAgentCapabilityReaderPort(port) {
+  if (!port || typeof port !== "object" || port.schema !== DEVICE_AGENT_CAPABILITY_READER_SCHEMA) {
+    throw new TypeError("Compatible Device Agent capability reader is required");
+  }
+  if (typeof port.capabilities !== "function") {
+    throw new TypeError("Device Agent capability reader must implement capabilities()");
+  }
+  if ("execute" in port) {
+    throw new TypeError("Device Agent capability reader must not expose execute()");
   }
   return port;
 }
