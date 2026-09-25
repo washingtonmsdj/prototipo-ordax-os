@@ -222,6 +222,15 @@ jobs:
           test -s "$metadata/SHA256SUMS"
           echo 'SYSTEM_EROFS_ARTIFACT_PUBLISHED_AS_RELEASE=NO'
 
+      - name: Upload operator system EROFS only on manual run
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: canonical-v4-operator-system-${{ github.sha }}
+          path: ${{ runner.temp }}/portable-release/a/system.erofs
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Upload proof metadata only
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
