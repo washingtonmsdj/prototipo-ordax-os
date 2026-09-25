@@ -290,7 +290,7 @@ async function verifyRecoveryLink(req: Request, url: URL) {
       RECOVERY_SESSION_MAX_AGE,
     );
     return redirectResponse(
-      "/recuperar/?modo=nova-senha",
+      "/recuperar/nova-senha/",
       [
         ...sessionCookies(
           data.session.access_token,
