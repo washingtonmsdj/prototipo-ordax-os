@@ -535,7 +535,7 @@ Deno.serve(async (req: Request) => {
         status: "anonymous",
       }, clearCookies());
     }
-    if (path.startsWith("/auth/") || path.startsWith("/sync/")) {
+    if (path.startsWith("/auth/") || path.startsWith("/sync/") || path.startsWith("/account/")) {
       return error(503, "public-account-access-disabled", "O acesso público à Conta OrdaX ainda não foi ativado.");
     }
   }
