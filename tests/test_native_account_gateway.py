@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import stat
+import sys
 import tempfile
 import unittest
 
@@ -12,6 +13,7 @@ MODULE = ROOT / "system" / "surface" / "runtime" / "native_account_gateway.py"
 spec = importlib.util.spec_from_file_location("ordax_native_account_gateway_test", MODULE)
 gateway = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
+sys.modules[spec.name] = gateway
 spec.loader.exec_module(gateway)
 
 
