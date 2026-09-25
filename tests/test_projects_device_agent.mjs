@@ -6,6 +6,7 @@ import {
   DEVICE_AGENT_PORT_SCHEMA,
   validateDeviceAgentCapabilitiesSnapshot,
 } from "../system/contracts/device-agent.mjs";
+import { createDeviceAgentCapabilityReader } from "../system/services/device-agent/capability-reader.mjs";
 import {
   probeProjectsDeviceAgent,
 } from "../system/apps/projects/device-agent-status.mjs";
@@ -15,20 +16,22 @@ import {
 
 function fakeAgent(capabilitiesImpl) {
   let executeCalls = 0;
+  const port = Object.freeze({
+    schema: DEVICE_AGENT_PORT_SCHEMA,
+    capabilities: capabilitiesImpl,
+    execute() {
+      executeCalls += 1;
+      throw new Error("Projects status must never execute Device Agent actions");
+    },
+  });
   return {
-    port: Object.freeze({
-      schema: DEVICE_AGENT_PORT_SCHEMA,
-      capabilities: capabilitiesImpl,
-      execute() {
-        executeCalls += 1;
-        throw new Error("Projects status must never execute Device Agent actions");
-      },
-    }),
+    port,
+    reader: createDeviceAgentCapabilityReader(port),
     executeCalls: () => executeCalls,
   };
 }
 
-test("Projects reads typed Device Agent capabilities without gaining mutation authority", async () => {
+test("Projects reads typed Device Agent capabilities through a capability-only reader", async () => {
   const agent = fakeAgent(async ({ client }) => {
     assert.equal(client, "ordax-local");
     return {
@@ -41,7 +44,8 @@ test("Projects reads typed Device Agent capabilities without gaining mutation au
     };
   });
 
-  const status = await probeProjectsDeviceAgent(agent.port);
+  assert.equal("execute" in agent.reader, false);
+  const status = await probeProjectsDeviceAgent(agent.reader);
   assert.deepEqual(status, {
     schema: "ordax.projects-device-agent-status/1",
     state: "ready",
@@ -54,15 +58,27 @@ test("Projects reads typed Device Agent capabilities without gaining mutation au
   assert.equal(agent.executeCalls(), 0);
 });
 
-test("missing Device Agent remains invisible to Projects", async () => {
+test("missing Device Agent capability reader remains invisible to Projects", async () => {
   assert.equal(await probeProjectsDeviceAgent(null), null);
+});
+
+test("full mutable Device Agent port is not accepted as the Projects capability boundary", async () => {
+  const agent = fakeAgent(async () => ({
+    schema: DEVICE_AGENT_CAPABILITIES_SCHEMA,
+    state: "ready",
+    capabilities: [],
+  }));
+  const status = await probeProjectsDeviceAgent(agent.port);
+  assert.equal(status.state, "degraded");
+  assert.equal(status.mutationAuthority, "none");
+  assert.equal(agent.executeCalls(), 0);
 });
 
 test("capability failure degrades only the optional Projects integration", async () => {
   const agent = fakeAgent(async () => {
     throw new Error("agent offline");
   });
-  const status = await probeProjectsDeviceAgent(agent.port, { timeoutMs: 20 });
+  const status = await probeProjectsDeviceAgent(agent.reader, { timeoutMs: 20 });
   assert.equal(status.state, "degraded");
   assert.equal(status.capabilityCount, 0);
   assert.equal(status.mutationAuthority, "none");
@@ -73,7 +89,7 @@ test("capability failure degrades only the optional Projects integration", async
 test("hung capability discovery is bounded and degrades instead of blocking Projects", async () => {
   const agent = fakeAgent(() => new Promise(() => {}));
   const started = Date.now();
-  const status = await probeProjectsDeviceAgent(agent.port, { timeoutMs: 10 });
+  const status = await probeProjectsDeviceAgent(agent.reader, { timeoutMs: 10 });
   const elapsed = Date.now() - started;
   assert.equal(status.state, "degraded");
   assert.ok(elapsed < 1000, `bounded probe took ${elapsed}ms`);
@@ -86,7 +102,7 @@ test("forbidden or malformed capability discovery fails closed into degraded pre
     state: "ready",
     capabilities: [{ id: "shell.generic", modes: ["read"] }],
   }));
-  assert.equal((await probeProjectsDeviceAgent(forbidden.port)).state, "degraded");
+  assert.equal((await probeProjectsDeviceAgent(forbidden.reader)).state, "degraded");
 
   assert.throws(
     () => validateDeviceAgentCapabilitiesSnapshot({
