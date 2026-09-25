@@ -81,7 +81,9 @@
     "redirect_allowlist_provider_verified": false,
     "provider_policy_contract": "docs/contracts/public-auth-provider-policy.json",
     "account_close": "source-ready-lifecycle-rev1-disabled-main-gateway-route-not-deployed",
-    "account_export": "pass-source-db-edge-native-public-disabled"
+    "account_export": "pass-source-db-edge-native-public-disabled",
+    "password_policy_reviewed": true,
+    "password_policy_provider_floor_chars": 12
   },
   "rules": {
     "public_login_must_fail_closed_until_all_required_gates_pass": true,
