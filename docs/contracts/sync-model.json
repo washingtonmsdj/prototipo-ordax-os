@@ -126,13 +126,16 @@
     "status": "applied",
     "provider": "supabase-current-adapter",
     "provider_is_protocol_authority": false,
-    "migration": "20260925004439_account_sync_objects_v1",
-    "object_table": "ordax_sync_objects",
-    "mutation_table": "ordax_sync_mutations",
+    "migration": "20260925005000_account_sync_private_store_v1",
+    "object_table": "private.ordax_sync_objects",
+    "mutation_table": "private.ordax_sync_mutations",
     "mutation_rpc": "ordax_apply_sync_mutation_v1",
     "rls_owner_scoped": true,
     "idempotent_mutations": true,
     "optimistic_conflict_detection": true,
-    "tombstones": true
+    "tombstones": true,
+    "list_rpc": "ordax_list_sync_objects_v1",
+    "public_tables_exposed": false,
+    "security_invoker_api": true
   }
 }
