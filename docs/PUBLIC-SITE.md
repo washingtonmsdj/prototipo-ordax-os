@@ -65,9 +65,9 @@ public site
  -> OrdaX identity/session owner
 ```
 
-Until an identity backend is configured, login and registration forms remain absent and the page reports that account access is not yet available. Do not ship a fake form or local-only account database.
+The real identity backend and gateway now exist, but public account activation remains gated. Login and registration forms are present only as disabled source UI: they stay hidden with disabled controls until the runtime config, legal-readiness contract and auth-hardening contract all authorize activation. When enabled, the browser performs a native POST to the same-origin OrdaX gateway; site JavaScript does not read credential values.
 
-The future identity service may use an external infrastructure provider behind an OrdaX-owned service/adapter, but the browser contract must not couple product UI directly to one provider.
+The identity service may use an external infrastructure provider behind an OrdaX-owned service/adapter, but the browser contract does not couple product UI directly to that provider. Do not ship a fake form or local-only account database.
 
 The machine-readable entry boundary is `docs/contracts/public-identity.json`. It requires one account model across product modes, forbids browser/service secrets and keeps login/cadastro unavailable until a real same-origin identity route is configured.
 
