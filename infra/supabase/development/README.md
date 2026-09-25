@@ -36,3 +36,22 @@ SYSTEM authority through this adapter capability.
 
 The extension is not a bootstrap dependency and does not change Stable/MVP USB
 promotion gates.
+
+## Runnerless Windows recovery
+
+`ordax-development-device-identify` is the narrow recovery endpoint for an
+already-enrolled engineering machine whose local Device Agent still has its
+device token but no longer has a current v2 device id/settings file.
+
+The endpoint:
+
+- accepts only the existing `X-Ordax-Device-Token`;
+- stores/logs no raw token;
+- resolves exactly one active credential;
+- requires the referenced device to remain in `developer` mode;
+- returns only the canonical `device_id` and protocol identity;
+- grants no new scope and creates no credential.
+
+This lets the Windows external bootstrap recover `development-v2` and register
+approved local project slugs without requiring a GitHub self-hosted runner.
+GitHub OIDC remains the preferred path for issuing a brand-new credential.
