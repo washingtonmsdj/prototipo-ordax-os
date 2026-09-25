@@ -6,7 +6,8 @@ import threading
 import unittest
 from pathlib import Path
 from urllib.error import HTTPError
-from urllib.request import urlopen
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_SITE_TOOLS = ROOT / "tools" / "public-site"
@@ -83,9 +84,23 @@ class PublicSiteRuntimeSmokeTests(unittest.TestCase):
             self.assertEqual(payload["provider"], "unconfigured")
             self.assertEqual(response.headers["Cache-Control"], "no-store, max-age=0")
 
-    def test_login_route_remains_fail_closed(self):
+    def test_login_page_is_reachable_but_credentials_fail_closed_without_provider(self):
+        with self.fetch("/auth/login") as response:
+            self.assertEqual(response.status, 200)
+            self.assertTrue(response.geturl().endswith("/login/"))
+
+        body = urlencode({
+            "email": "pessoa@example.com",
+            "password": "not-a-real-test-password",
+        }).encode("utf-8")
+        request = Request(
+            self.base + "/auth/login",
+            data=body,
+            method="POST",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
         with self.assertRaises(HTTPError) as caught:
-            self.fetch("/auth/login")
+            urlopen(request, timeout=3)
         self.assertEqual(caught.exception.code, 503)
         payload = json.loads(caught.exception.read().decode("utf-8"))
         self.assertEqual(payload["error"], "identity-provider-unavailable")
