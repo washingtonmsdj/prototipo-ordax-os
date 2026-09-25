@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import stat
 import threading
 from dataclasses import dataclass
 from http.cookies import SimpleCookie
