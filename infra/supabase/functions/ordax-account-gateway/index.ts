@@ -75,6 +75,21 @@ function client(accessToken?: string) {
   });
 }
 
+function crossSiteStateChange(req: Request) {
+  if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return false;
+  const fetchSite = (req.headers.get("sec-fetch-site") ?? "").toLowerCase();
+  if (fetchSite === "cross-site") return true;
+
+  const forwardedHost = (req.headers.get("x-forwarded-host") ?? "").trim().toLowerCase();
+  const origin = (req.headers.get("origin") ?? "").trim();
+  if (!forwardedHost || !origin) return false;
+  try {
+    return new URL(origin).host.toLowerCase() !== forwardedHost;
+  } catch {
+    return true;
+  }
+}
+
 function routePath(url: URL) {
   const marker = "/ordax-account-gateway";
   const index = url.pathname.indexOf(marker);
@@ -162,6 +177,10 @@ async function credentials(req: Request, register: boolean) {
 Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
   const path = routePath(url);
+
+  if (crossSiteStateChange(req)) {
+    return error(403, "cross-site-request-rejected", "Solicitação de outra origem rejeitada.");
+  }
 
   if (path === "/health" && req.method === "GET") {
     return json(200, { status: "ok", service: "ordax-account-gateway", version: 2 });
