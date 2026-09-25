@@ -29,6 +29,7 @@ MAX_REQUEST_BODY = 64 * 1024
 ACCESS_COOKIE = "ordax_access"
 REFRESH_COOKIE = "ordax_refresh"
 PUBLIC_SITE_ACCOUNT_ENABLED = False
+ACCOUNT_RECOVERY_REQUEST_ENABLED = False
 PUBLIC_SITE_MARKER_HEADER = "x-ordax-public-site"
 SYNC_DATA_CLASSES = frozenset((
     "appearance",
@@ -381,6 +382,12 @@ class PublicIdentityGateway:
         request_headers: Mapping[str, str],
         body: bytes,
     ) -> GatewayResponse:
+        if not ACCOUNT_RECOVERY_REQUEST_ENABLED:
+            return _error(
+                503,
+                "account-recovery-disabled",
+                "A recuperação da Conta OrdaX ainda não foi ativada.",
+            )
         if not self.provider:
             return self._provider_unavailable()
         redirect_to = _recovery_redirect_from_environment()
