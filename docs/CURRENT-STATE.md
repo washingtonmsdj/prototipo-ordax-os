@@ -820,3 +820,7 @@ the current product and production component-slot activation is still blocked.
 The next authority boundary is a separate Native executor consuming exact
 revision+identity policy decisions only after canonical component trust and the
 promotion/rollback proof gates are satisfied.
+
+PUBLIC_ACCOUNT_LIFECYCLE_CONTRACT=PASS_SOURCE_OWNER_DEFINED
+PUBLIC_ACCOUNT_CLOSE_FLOW=NOT_IMPLEMENTED_BLOCKS_PUBLIC_ACTIVATION
+PUBLIC_ACCOUNT_DATA_EXPORT_FLOW=NOT_IMPLEMENTED_BLOCKS_PUBLIC_ACTIVATION
