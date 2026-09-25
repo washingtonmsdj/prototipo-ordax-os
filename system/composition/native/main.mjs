@@ -53,6 +53,8 @@ import { createDiagnosticJournalRuntime } from "../../services/diagnostics/runti
 import { createLocalAiRuntime } from "../../services/local-ai/runtime.mjs";
 import { createIntelligenceRuntime } from "../../services/intelligence/runtime.mjs";
 import { createMemoryRuntime } from "../../services/memory/runtime.mjs";
+import { createMemoryReviewSession } from "../../services/memory/review-session.mjs";
+import { createMemoryReviewViewModel } from "../../services/memory/review-view-model.mjs";
 import { createUpdateDiagnosticRecorder } from "../../services/diagnostics/update-recorder.mjs";
 import { createPreferenceSyncRuntime } from "../../services/sync/preference-runtime.mjs";
 import { createAccountSyncRuntime } from "../../services/sync/account-runtime.mjs";
@@ -258,6 +260,15 @@ async function start() {
   const workspaceStore = workspaceMetadata.store;
   const identitySession = createWebIdentitySession(window);
   await identitySession.refresh();
+  const memoryReviewSession = memory === null
+    ? null
+    : createMemoryReviewSession({
+        memoryPort: memory,
+        identitySessionPort: identitySession,
+      });
+  const memoryReview = memoryReviewSession === null
+    ? null
+    : createMemoryReviewViewModel(memoryReviewSession);
   const identityActions = createWebIdentityActions(window, identitySession);
   const identityAvailable = identitySession.getSnapshot().state !== "unavailable";
   const identityCredentials = identityAvailable ? createSameOriginIdentityCredentials(window) : null;
@@ -415,6 +426,7 @@ async function start() {
     appActivation,
     identityCredentials,
     spaces,
+    memoryReview,
   );
   const homeContinuation = mountHomeContinuation(root, { projects, recentFiles, surfaceLifecycle: surface });
   const homePending = mountHomePending(root, { notifications, syncRuntime: accountSync, surfaceLifecycle: surface });
@@ -591,6 +603,8 @@ async function start() {
       projectReferences?.destroy();
       projectCloudLinks?.destroy();
       accountOverviewControls.destroy();
+      memoryReview?.dispose();
+      memoryReviewSession?.dispose();
       spaces.dispose();
       accountSync.destroy();
       preferenceSync.destroy();
