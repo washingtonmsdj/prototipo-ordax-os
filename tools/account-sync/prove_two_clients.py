@@ -144,8 +144,7 @@ def write_receipt(
         "proof_object_tombstoned": True,
         "credentials_persisted": False,
         "account_identifier_recorded": False,
-        "cookies_recorded": False,
-        "tokens_recorded": False,
+        "sensitive_auth_material_recorded": False,
     }
     output = Path(path).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
