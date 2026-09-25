@@ -124,7 +124,7 @@ class PublicIdentityGatewayTests(unittest.TestCase):
         self.assertTrue(all("HttpOnly" in value for value in cookies))
         self.assertTrue(all("Max-Age=0" in value for value in cookies))
 
-    def test_recovery_request_is_fail_closed_without_redirect_configuration(self):
+    def test_recovery_request_is_disabled_even_if_redirect_were_configured(self):
         class FakeProvider:
             def __init__(self):
                 self.calls = []
@@ -138,7 +138,40 @@ class PublicIdentityGatewayTests(unittest.TestCase):
             sync_provider=None,
         )
         headers = {"content-type": "application/x-www-form-urlencoded"}
-        with patch.dict(os.environ, {"ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL": ""}, clear=False):
+        with patch.object(gateway_module, "ACCOUNT_RECOVERY_REQUEST_ENABLED", True), patch.dict(
+            os.environ,
+            {"ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL": "https://accounts.ordax.example/recuperar/concluir"},
+            clear=False,
+        ):
+            response = gateway.handle(
+                "POST",
+                "/auth/recover",
+                headers,
+                b"email=pessoa%40example.com",
+            )
+        self.assertEqual(response.status, 503)
+        self.assertEqual(self.payload(response)["error"], "account-recovery-disabled")
+        self.assertEqual(provider.calls, [])
+
+    def test_enabled_recovery_still_fails_closed_without_redirect_configuration(self):
+        class FakeProvider:
+            def __init__(self):
+                self.calls = []
+
+            def request_password_recovery(self, email, redirect_to):
+                self.calls.append((email, redirect_to))
+
+        provider = FakeProvider()
+        gateway = gateway_module.PublicIdentityGateway(
+            provider=provider,
+            sync_provider=None,
+        )
+        headers = {"content-type": "application/x-www-form-urlencoded"}
+        with patch.object(gateway_module, "ACCOUNT_RECOVERY_REQUEST_ENABLED", True), patch.dict(
+            os.environ,
+            {"ORDAX_ACCOUNT_RECOVERY_REDIRECT_URL": ""},
+            clear=False,
+        ):
             response = gateway.handle(
                 "POST",
                 "/auth/recover",
