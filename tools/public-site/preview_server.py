@@ -17,12 +17,16 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
-GATEWAY_PATH = ROOT / "services" / "public-identity" / "gateway.py"
+GATEWAY_ROOT = ROOT / "services" / "public-identity"
+GATEWAY_PATH = GATEWAY_ROOT / "gateway.py"
 DEPLOYMENT_CONTRACT = ROOT / "docs" / "contracts" / "public-site-deployment.json"
 ALLOWED_BINDS = {"127.0.0.1", "::1", "localhost"}
 
 
 def _load_gateway_module():
+    gateway_root = str(GATEWAY_ROOT)
+    if gateway_root not in sys.path:
+        sys.path.insert(0, gateway_root)
     spec = importlib.util.spec_from_file_location("ordax_public_identity_gateway_preview", GATEWAY_PATH)
     if spec is None or spec.loader is None:
         raise RuntimeError("failed to load public identity gateway")
