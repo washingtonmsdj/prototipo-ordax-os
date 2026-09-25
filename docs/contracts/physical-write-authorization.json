@@ -15,6 +15,7 @@
     "canonical_v4_release_proof_sha256": null
   },
   "requirements": {
+    "pre_usb_nova_ordax_audit_passed": true,
     "canonical_public_trust_pinned": true,
     "minimal_bootstrap_all_artifacts_resolved": true,
     "minimal_bootstrap_remains_non_destructive": true,
