@@ -11,6 +11,7 @@ BROWSER_SMOKE = ROOT / "tools" / "surface-web" / "browser-smoke.mjs"
 PROJECTS_CSS = ROOT / "system" / "apps" / "projects" / "projects.css"
 NOTES_CSS = ROOT / "system" / "apps" / "notes" / "notes.css"
 INTERNET_CSS = ROOT / "system" / "apps" / "internet" / "internet.css"
+SETTINGS_CSS = SURFACE / "settings.css"
 INTER_FONT = SURFACE / "fonts" / "inter-latin-wght-normal.woff2"
 INTER_SOURCE = ROOT / "third_party" / "fonts" / "Inter-Latin-Variable-SOURCE.md"
 INTER_LICENSE = ROOT / "third_party" / "licenses" / "Inter-OFL-1.1.txt"
@@ -120,6 +121,21 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
             "var(--ordax-danger)",
         ):
             self.assertIn(declaration, css)
+
+    def test_settings_previews_match_canonical_light_and_dark_palettes(self):
+        css = SETTINGS_CSS.read_text(encoding="utf-8")
+        self.assertNotIn("#ed4b25", css)
+        for color in (
+            "#f7f9fc",
+            "#527eb8",
+            "#172b47",
+            "#8797aa",
+            "#090f1b",
+            "#a9c9f7",
+            "#e2ebf7",
+            "#8e9db4",
+        ):
+            self.assertIn(color, css)
 
     def test_browser_smoke_exercises_shared_identity_layers(self):
         smoke = BROWSER_SMOKE.read_text(encoding="utf-8")
