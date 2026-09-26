@@ -126,10 +126,11 @@ A public release must also pass the release-compliance gate in `docs/RELEASE-COM
 
 The landing includes an explicitly labeled, disposable marketing playground in
 `assets/playground.js` and `assets/playground.css`. It is not OrdaX Web and does
-not import or fork the product Surface. The default notebook and phone view is
-an independent demonstration of the current Surface Home language (Área 01,
-clock, application launcher and Seu espaço), while Notes, Files and Settings
-remain explorable from that Home.
+not import or fork the product Surface. The default notebook and phone view is a conceptual Aurora project workspace.
+Visitors can explore its overview, three fixed context documents and a clearly
+labeled, predefined Intelligence response, then add its suggestion to the
+fictional project plan. This is not inference, an actual project-management
+capability claim or a second product runtime. Surface Home remains explorable.
 
 The playground's labels, app order and Home spaces come from the generated
 `assets/playground-fixture.json`. Run
@@ -146,8 +147,14 @@ not production cloud sync.
 
 There are no requests, account credentials, user-file access, persistence,
 analytics or external dependencies in this demonstration. Reload/reset discards
-edits. Device navigation remains independent. On small screens devices stack;
-the visitor can also select notebook-only presentation. Login, registration and
+edits. Device navigation remains independent. The notebook uses a fixed 1120 × 700
+virtual desktop, scaled by its container with ResizeObserver; the phone uses its
+own 340 × 690 layout. Page breakpoints never turn the notebook into a phone.
+A native modal provides a larger notebook, with horizontal scrolling on narrow
+screens, Escape dismissal and focus restoration. Device entrance motion respects
+prefers-reduced-motion. Recipe buttons open Home, Projects, Intelligence or Context in
+both devices while retaining the explicitly simulated continuity notice.
+Login, registration and
 download continue through the existing fail-closed routes and owners.
 
 Handoff: this is source implementation only, not deployment evidence. The
@@ -158,9 +165,9 @@ product runtime or treat its fixtures as real user data.
 
 The portal shares OrdaX brand language, not the desktop shell implementation:
 
-- mineral/off-white canvas;
-- graphite/black foreground;
-- OrdaX orange accent;
+- midnight graphite landing canvas with pearl text;
+- titanium device frames, keyboard deck and trackpad;
+- ice-blue landing accents; existing supporting pages keep their own palette;
 - editorial display type with restrained sans-serif controls;
 - architectural rules and negative space;
 - responsive layout.
@@ -170,6 +177,12 @@ It must not copy the Surface desktop markup or make the marketing site look like
 Public copy should explain user-facing product behavior: Creator, **USB execution**, apps, official updates, rollback/recovery and account availability. The MVP must not advertise internal-disk installation as available. Native installation may be described only as a future/post-MVP direction. Web, Mobile, synchronization, backup and cross-device continuity may appear only as **Em breve** while unavailable. Do not use the landing page to explain Owner/Development Git operations.
 
 No public page may invent prices, billing, commercial tier names or device-count limits before those policies exist. The provisional two-private-Space architecture default is an internal capacity foundation, not a public commercial offer and must not be advertised as a finalized free-plan quota.
+
+The approved titanium landing concept uses a local generated project artwork at
+`sites/public/assets/aurora-titanium.png`. Device frames and screens remain live
+HTML/CSS, with desktop project overview and adjacent illustrative Intelligence
+panel; the phone has a separate compact composition. No real inference is
+performed by the public demo.
 
 ## Build
 
