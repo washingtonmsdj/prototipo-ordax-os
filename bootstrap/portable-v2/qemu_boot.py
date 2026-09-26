@@ -113,7 +113,7 @@ def load_json(path: Path, label: str) -> dict[str, Any]:
 def require_programs() -> None:
     names = (
         "sgdisk", "losetup", "mkfs.vfat", "mkfs.exfat", "mount.exfat-fuse",
-        "mount", "umount", "qemu-system-x86_64",
+        "mount", "umount", "qemu-system-x86_64", "e2fsck",
     )
     missing = [name for name in names if shutil.which(name) is None]
     if missing:
@@ -268,7 +268,6 @@ def validate_portable_release(
         "ai_runtime": ai_runtime,
         "ai_runtime_sha256": ai_runtime_sha,
     }
-
 def validate_inputs(args: argparse.Namespace) -> dict[str, Any]:
     if COMMIT_RE.fullmatch(args.source_commit) is None:
         raise ProofError("source commit must be lowercase 40-hex")
@@ -525,7 +524,7 @@ def boot_qemu_expected(
             stderr=error_stream,
         )
     try:
-        deadline = time.monotonic() + 150.0
+        deadline = time.monotonic() + (300.0 if graphical_hardware else 150.0)
         while time.monotonic() < deadline:
             text = serial.read_text(encoding="utf-8", errors="replace") if serial.exists() else ""
             source_marker = "ORDAX_PORTABLE_V2_SOURCE_SHA=" + expected_commit
@@ -645,6 +644,26 @@ def boot_qemu(
     }
 
 
+def prepare_state_inspection_copy(state_image: Path, state_copy: Path) -> None:
+    """Replay only the committed journal on a disposable copy, never guest media.
+
+    QEMU stops without a clean guest unmount after observing the durable marker.
+    fsync commits ext4 transactions to the journal; noload alone can therefore
+    expose stale or checksum-inconsistent metadata until that journal is replayed.
+    General filesystem repair is deliberately forbidden here.
+    """
+    shutil.copyfile(state_image, state_copy)
+    regular(state_copy, "persistent-state inspection copy")
+    result = run(
+        ["e2fsck", "-p", "-E", "journal_only", str(state_copy)], check=False
+    )
+    if result.returncode not in (0, 1):
+        raise ProofError(
+            f"inspection-copy journal replay failed ({result.returncode}): "
+            f"{result.stderr.decode('utf-8', 'replace')}"
+        )
+
+
 def inspect_one_shot_state(
     disk: Path,
     work: Path,
@@ -673,7 +692,7 @@ def inspect_one_shot_state(
             minimum=16 * 1024 * 1024,
         )
         state_copy = work / "inspected-persistent-state.img"
-        shutil.copyfile(state_image, state_copy)
+        prepare_state_inspection_copy(state_image, state_copy)
         unmount(data_mount)
         data_mounted = False
         run(["mount", "-t", "ext4", "-o", "loop,ro,noload", str(state_copy), str(state_mount)])

@@ -1,6 +1,10 @@
 import json
+import importlib.util
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = ROOT / "bootstrap" / "portable-v2" / "qemu_cold_health_commit.py"
@@ -8,6 +12,45 @@ BASE_RUNNER = ROOT / "bootstrap" / "portable-v2" / "qemu_boot.py"
 SUPERVISOR = ROOT / "system" / "supervisor"
 WORKFLOW = ROOT / ".github" / "workflows" / "portable-v2-qemu-boot-proof.yml"
 SPEC = ROOT / "docs" / "contracts" / "portable-v3-cold-health-qemu-proof-spec.json"
+
+
+class StateInspectionJournalTests(unittest.TestCase):
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location("qemu_inspection_test", BASE_RUNNER)
+        self.qemu = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.qemu)
+
+    def test_replay_changes_only_copy_and_accepts_success_statuses(self):
+        for status in (0, 1):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory) / "guest-state.img"
+                copy = Path(directory) / "inspection.img"
+                source.write_bytes(b"committed journal, pending checkpoint")
+
+                def replay(argv, *, check):
+                    self.assertFalse(check)
+                    self.assertEqual(argv, ["e2fsck", "-p", "-E", "journal_only", str(copy)])
+                    self.assertEqual(copy.read_bytes(), source.read_bytes())
+                    copy.write_bytes(b"replayed committed state")
+                    return subprocess.CompletedProcess(argv, status, b"", b"")
+
+                with patch.object(self.qemu, "run", side_effect=replay):
+                    self.qemu.prepare_state_inspection_copy(source, copy)
+                self.assertEqual(source.read_bytes(), b"committed journal, pending checkpoint")
+                self.assertEqual(copy.read_bytes(), b"replayed committed state")
+
+    def test_replay_errors_fail_closed_without_general_repair(self):
+        for status in (2, 4, 8, 16, 32, 128):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory) / "guest-state.img"
+                copy = Path(directory) / "inspection.img"
+                source.write_bytes(b"state")
+                result = subprocess.CompletedProcess([], status, b"", b"journal error")
+                with patch.object(self.qemu, "run", return_value=result) as command:
+                    with self.assertRaisesRegex(self.qemu.ProofError, "journal replay failed"):
+                        self.qemu.prepare_state_inspection_copy(source, copy)
+                command.assert_called_once()
+                self.assertEqual(source.read_bytes(), b"state")
 
 
 class PortableV3ColdHealthQemuProofTests(unittest.TestCase):
@@ -35,6 +78,10 @@ class PortableV3ColdHealthQemuProofTests(unittest.TestCase):
         self.assertIn('"qemu_graphical_hardware_requested"', text)
         self.assertIn('"-net", "none"', text)
         self.assertIn("cache=directsync", text)
+        self.assertIn(
+            "deadline = time.monotonic() + (300.0 if graphical_hardware else 150.0)",
+            text,
+        )
 
     def test_cold_health_runner_uses_real_supervisor_commit_and_second_boot(self):
         text = RUNNER.read_text(encoding="utf-8")
@@ -60,7 +107,7 @@ class PortableV3ColdHealthQemuProofTests(unittest.TestCase):
         text = RUNNER.read_text(encoding="utf-8")
         self.assertIn('"mount.exfat-fuse", "-o", "ro"', text)
         self.assertIn('"loop,ro,noload"', text)
-        self.assertIn("shutil.copyfile(state_image, state_copy)", text)
+        self.assertIn("qemu.prepare_state_inspection_copy(state_image, state_copy)", text)
         self.assertIn("current == candidate_commit", text)
         self.assertIn("known_good == previous_commit", text)
         self.assertIn("rejected != candidate_commit", text)
