@@ -1,0 +1,174 @@
+name: Canonical Stable v4 Materialization
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_commit:
+        description: Exact source commit bound by the signed v4 release.
+        required: true
+        type: string
+      envelope_url:
+        description: Stable public HTTPS URL of the published signed envelope.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-v4-materialization:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Validate exact release inputs
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+          ENVELOPE_URL: ${{ inputs.envelope_url }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          from urllib.parse import urlsplit
+
+          commit = os.environ["EXPECTED_COMMIT"]
+          if re.fullmatch(r"[0-9a-f]{40}", commit) is None:
+              raise SystemExit("expected_commit must be exact lowercase 40-hex")
+
+          raw_url = os.environ["ENVELOPE_URL"]
+          url = urlsplit(raw_url)
+          if (
+              any(char.isspace() for char in raw_url)
+              or url.scheme != "https"
+              or not url.hostname
+              or url.username is not None
+              or url.password is not None
+              or url.query
+              or url.fragment
+          ):
+              raise SystemExit("envelope_url must be stable public HTTPS without credentials, query or fragment")
+          PY
+
+      - name: Check out the exact signed release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.expected_commit }}
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.27.1'
+          check-latest: false
+          cache: false
+
+      - name: Build the source-owned release agent
+        working-directory: bootstrap/release-acquisition
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
+          CGO_ENABLED=0 go build -trimpath -buildvcs=false \
+            -o "$RUNNER_TEMP/ordax-release-agent" .
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+
+      - name: Materialize and verify the canonical signed release
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+          ENVELOPE_URL: ${{ inputs.envelope_url }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/ordax-canonical-v4-materialized-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          receipt="$RUNNER_TEMP/canonical-materialization-verification.json"
+          trust="$GITHUB_WORKSPACE/bootstrap/trust/release-ed25519.json"
+          test ! -e "$root"
+          test ! -e "$receipt"
+          mkdir -m 700 "$root"
+
+          "$RUNNER_TEMP/ordax-release-agent" materialize-portable-v4 \
+            --envelope-url "$ENVELOPE_URL" \
+            --trust "$trust" \
+            --expected-commit "$EXPECTED_COMMIT" \
+            --root "$root"
+
+          "$RUNNER_TEMP/ordax-release-agent" verify-portable-v4-exact \
+            --trust "$trust" \
+            --expected-commit "$EXPECTED_COMMIT" \
+            --root "$root"
+
+          for forbidden in current known-good candidate activation-transaction.json; do
+            test ! -e "$root/$forbidden"
+          done
+
+          python3 - "$root" "$trust" "$receipt" "$EXPECTED_COMMIT" "$ENVELOPE_URL" <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import sys
+
+          root = pathlib.Path(sys.argv[1])
+          trust_path = pathlib.Path(sys.argv[2])
+          receipt_path = pathlib.Path(sys.argv[3])
+          commit = sys.argv[4]
+          envelope_url = sys.argv[5]
+          release = root / "releases" / commit
+          surface_sha = (release / "surface-runtime.sha256").read_text(encoding="ascii").strip()
+          ai_sha = (release / "local-ai-runtime.sha256").read_text(encoding="ascii").strip()
+
+          def sha256(path):
+              digest = hashlib.sha256()
+              with path.open("rb") as stream:
+                  for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                      digest.update(chunk)
+              return digest.hexdigest()
+
+          receipt = {
+              "schema": "prototype-ordax.portable-v4-canonical-materialization-verification/1",
+              "source_commit": commit,
+              "canonical_envelope_url": envelope_url,
+              "canonical_trust_sha256": sha256(trust_path),
+              "release_manifest_sha256": sha256(release / "release-manifest.json"),
+              "release_envelope_sha256": sha256(release / "release-envelope.json"),
+              "artifacts": {
+                  "system.erofs": sha256(release / "system.erofs"),
+                  "native-surface-runtime.erofs": sha256(
+                      root / "runtimes" / "sha256" / surface_sha / "native-surface-runtime.erofs"
+                  ),
+                  "local-ai-runtime.erofs": sha256(
+                      root / "ai-runtimes" / "sha256" / ai_sha / "local-ai-runtime.erofs"
+                  ),
+              },
+              "release_agent_materialize_portable_v4": True,
+              "release_agent_verify_portable_v4_exact": True,
+              "current_pointer_created": False,
+              "known_good_pointer_created": False,
+              "candidate_created": False,
+              "activation_transaction_created": False,
+              "release_activated": False,
+              "physical_target_selected": False,
+              "physical_write_authorized_by_this_step": False,
+              "physical_write_performed": False,
+          }
+          pathlib.Path(receipt_path).write_text(
+              json.dumps(receipt, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+
+          cat "$receipt"
+          {
+            echo '## Canonical v4 materialization verified'
+            echo
+            echo "- Source commit: \`$EXPECTED_COMMIT\`"
+            echo "- Envelope: $ENVELOPE_URL"
+            echo '- Exact offline verification: PASS'
+            echo '- Release activation: NO'
+            echo '- Physical target/write: NONE'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve canonical materialization receipt
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: canonical-materialization-verification
+          path: ${{ runner.temp }}/canonical-materialization-verification.json
+          if-no-files-found: error
+          retention-days: 7
