@@ -1,0 +1,54 @@
+name: Synchronize Authorized Physical Proof State
+
+on:
+  push:
+    branches:
+      - mvp/authorize-first-stable-usb-proof
+    paths:
+      - 'tools/ops/sync_physical_authorization_state.py'
+      - '.github/workflows/auth-state-transition-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  synchronize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout authorization branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: mvp/authorize-first-stable-usb-proof
+          persist-credentials: true
+
+      - name: Synchronize authorization snapshots
+        run: python tools/ops/sync_physical_authorization_state.py
+
+      - name: Validate synchronized authorization state
+        run: |
+          python -m unittest \
+            tests.test_physical_promotion_boundary \
+            tests.test_stable_mvp_usb_readiness \
+            tests.test_current_state_first_run_input -v
+          python tools/creator/physical_promotion.py --require-ready
+          python tools/creator/stable_mvp_usb_readiness.py --require-authorized-candidate
+
+      - name: Commit synchronized snapshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'ordax-authorization-state-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add \
+            tests/test_physical_promotion_boundary.py \
+            tests/test_stable_mvp_usb_readiness.py \
+            tests/test_current_state_first_run_input.py \
+            docs/CURRENT-STATE.md \
+            docs/MVP-PRE-PHYSICAL-HANDOFF.md \
+            PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md \
+            MVP.md \
+            AGENTS.md
+          git diff --cached --check
+          git commit -m 'docs: advance physical proof gate after owner authorization'
+          git push origin HEAD:mvp/authorize-first-stable-usb-proof
