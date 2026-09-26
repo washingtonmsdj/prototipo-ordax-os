@@ -25,6 +25,9 @@ class CanonicalProofReceiptTests(unittest.TestCase):
         shutil.copyfile(ROOT / "docs/contracts/physical-write-authorization.json", auth)
         authorization = json.loads(auth.read_text(encoding="utf-8"))
         authorization["status"] = "blocked-canonical-v4-release-proof-pending"
+        authorization["physical_write_allowed"] = False
+        authorization["explicit_owner_authorization"] = False
+        authorization["authorization_context_sha256"] = None
         authorization["bindings"]["canonical_v4_release_proof_sha256"] = None
         for name in ("source_commit", "canonical_envelope_url", "release_manifest_sha256", "release_envelope_sha256"):
             authorization["release_binding"][name] = None
