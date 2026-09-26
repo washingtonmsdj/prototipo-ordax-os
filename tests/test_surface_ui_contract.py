@@ -732,7 +732,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn("Ctrl + K", shell)
         self.assertIn("ordax-brand-symbol", shell)
         self.assertIn("ordax-identity-art", shell)
-        self.assertIn("--ordax-accent: #ed4b25", tokens)
+        self.assertIn("--ordax-accent: #a9c9f7", tokens)
         self.assertIn("--ordax-font-display", tokens)
         self.assertIn(".ordax-identity-art", css)
         self.assertIn(".ordax-rail", css)

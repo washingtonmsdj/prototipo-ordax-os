@@ -23,10 +23,6 @@ html[data-ordax-text-scale="extra-large"] {
  * OrdaX visual tokens are the single source of visual policy for the Surface
  * and first-party apps. Components consume semantic tokens; product CSS must
  * not create a second palette per app.
- *
- * Compatibility note for the pre-redesign contract test only:
- * previous source token was --ordax-accent: #ed4b25. The active token below
- * is the approved glacial blue; this historical marker has no CSS effect.
  */
 :root,
 [data-ordax-theme="dark"] {

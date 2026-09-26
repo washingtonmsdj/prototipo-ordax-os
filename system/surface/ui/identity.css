@@ -406,19 +406,6 @@ body {
   letter-spacing: var(--ordax-tracking-tight);
 }
 
-/* Legacy component accents are normalized here while component CSS migrates. */
-.ordax-internet-tab[data-selected="true"] {
-  background: var(--ordax-selected-bg) !important;
-  box-shadow: inset 3px 0 var(--ordax-accent) !important;
-}
-
-.ordax-notes-workspace {
-  --notes-ivory: var(--ordax-window-bg) !important;
-  --notes-ink: var(--ordax-text) !important;
-  --notes-muted: var(--ordax-muted) !important;
-  --notes-accent: var(--ordax-accent) !important;
-}
-
 @media (max-width: 760px) {
   .ordax-shell {
     grid-template-columns: 1fr;

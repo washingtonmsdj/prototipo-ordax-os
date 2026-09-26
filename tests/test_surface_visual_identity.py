@@ -16,6 +16,7 @@ INTER_LICENSE = ROOT / "third_party" / "licenses" / "Inter-OFL-1.1.txt"
 class SurfaceVisualIdentityTests(unittest.TestCase):
     def test_graphite_glacial_tokens_are_canonical(self):
         tokens = (SURFACE / "tokens.css").read_text(encoding="utf-8")
+        self.assertNotIn("#ed4b25", tokens)
         for declaration in (
             "--ordax-bg: #080f19",
             "--ordax-app-bg: #090f1b",
