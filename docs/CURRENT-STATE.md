@@ -792,6 +792,14 @@ BROADER_HARDWARE_COVERAGE=PENDING_FINAL
 
 ## Current priorities
 
+The disposable QEMU activation inspectors replay only the committed ext4 journal
+on a copied persistent-state image before mounting that copy read-only. QEMU is
+stopped after a durable serial marker without a clean guest unmount, so inspecting
+with `noload` before journal replay can expose uncheckpointed metadata. General
+filesystem repair is forbidden; the original guest disk remains untouched by
+inspection and is reused for the independent second boot. This correction does
+not itself establish a passing cold-health or physical proof.
+
 1. prioritize the Stable/MVP **USB system path**: preserve the green source/QEMU/UEFI path, complete canonical signed Stable v4 materialization with the proven local-AI runtime, then close the later real-hardware gates for first canonical USB boot, cold health, known-good promotion and rollback without coupling ordinary app changes to a full system reboot;
 2. keep the **local inference payload** pinned and reproducible: the exact llama.cpp/model artifacts, real-byte v4 materialization and disposable QEMU/UEFI v4 path are already CI-proven; the remaining non-physical release gate is canonical Stable signing/materialization, without making AI boot-critical;
 3. keep PT-BR/en-US launch coverage regression-closed and continue Spanish, German and French migration without exposing those hidden compatibility locales as complete before their Surface coverage reaches the same standard;

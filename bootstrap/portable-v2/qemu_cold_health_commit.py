@@ -132,7 +132,7 @@ def inspect_committed_state(
             minimum=16 * 1024 * 1024,
         )
         state_copy = work / "cold-health-persistent-state.img"
-        shutil.copyfile(state_image, state_copy)
+        qemu.prepare_state_inspection_copy(state_image, state_copy)
         qemu.unmount(data_mount)
         data_mounted = False
 

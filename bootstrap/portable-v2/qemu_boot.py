@@ -113,7 +113,7 @@ def load_json(path: Path, label: str) -> dict[str, Any]:
 def require_programs() -> None:
     names = (
         "sgdisk", "losetup", "mkfs.vfat", "mkfs.exfat", "mount.exfat-fuse",
-        "mount", "umount", "qemu-system-x86_64",
+        "mount", "umount", "qemu-system-x86_64", "e2fsck",
     )
     missing = [name for name in names if shutil.which(name) is None]
     if missing:
@@ -644,6 +644,26 @@ def boot_qemu(
     }
 
 
+def prepare_state_inspection_copy(state_image: Path, state_copy: Path) -> None:
+    """Replay only the committed journal on a disposable copy, never guest media.
+
+    QEMU stops without a clean guest unmount after observing the durable marker.
+    fsync commits ext4 transactions to the journal; noload alone can therefore
+    expose stale or checksum-inconsistent metadata until that journal is replayed.
+    General filesystem repair is deliberately forbidden here.
+    """
+    shutil.copyfile(state_image, state_copy)
+    regular(state_copy, "persistent-state inspection copy")
+    result = run(
+        ["e2fsck", "-p", "-E", "journal_only", str(state_copy)], check=False
+    )
+    if result.returncode not in (0, 1):
+        raise ProofError(
+            f"inspection-copy journal replay failed ({result.returncode}): "
+            f"{result.stderr.decode('utf-8', 'replace')}"
+        )
+
+
 def inspect_one_shot_state(
     disk: Path,
     work: Path,
@@ -672,7 +692,7 @@ def inspect_one_shot_state(
             minimum=16 * 1024 * 1024,
         )
         state_copy = work / "inspected-persistent-state.img"
-        shutil.copyfile(state_image, state_copy)
+        prepare_state_inspection_copy(state_image, state_copy)
         unmount(data_mount)
         data_mounted = False
         run(["mount", "-t", "ext4", "-o", "loop,ro,noload", str(state_copy), str(state_mount)])
