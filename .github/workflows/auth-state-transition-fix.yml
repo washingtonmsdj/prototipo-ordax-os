@@ -22,26 +22,32 @@ jobs:
           ref: mvp/authorize-first-stable-usb-proof
           persist-credentials: true
 
-      - name: Synchronize authorization regression snapshots
+      - name: Synchronize canonical authorization documents
         run: python tools/ops/sync_physical_authorization_state.py
 
-      - name: Validate authorization transition
+      - name: Validate canonical authorization boundary
         run: |
           python -m unittest \
             tests.test_physical_promotion_boundary \
-            tests.test_stable_mvp_usb_readiness -v
+            tests.test_stable_mvp_usb_readiness \
+            tests.test_current_state_first_run_input -v
           python tools/creator/physical_promotion.py --require-ready
           python tools/creator/stable_mvp_usb_readiness.py --require-authorized-candidate
 
-      - name: Commit regression snapshots
+      - name: Commit canonical snapshots
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'ordax-authorization-state-bot'
           git config user.email 'actions@users.noreply.github.com'
           git add \
-            tests/test_physical_promotion_boundary.py \
-            tests/test_stable_mvp_usb_readiness.py
+            tests/test_current_state_first_run_input.py \
+            docs/CURRENT-STATE.md \
+            docs/MVP-PRE-PHYSICAL-HANDOFF.md \
+            docs/PROMOTION-GATES.md \
+            PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md \
+            MVP.md \
+            AGENTS.md
           git diff --cached --check
-          git commit -m 'test: advance physical authorization state'
+          git commit -m 'docs: record bound owner authorization state'
           git push origin HEAD:mvp/authorize-first-stable-usb-proof
