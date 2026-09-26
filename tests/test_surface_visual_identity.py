@@ -7,6 +7,7 @@ WEB_INDEX = ROOT / "system" / "composition" / "web" / "index.html"
 NATIVE_INDEX = ROOT / "system" / "composition" / "native" / "index.html"
 APPEARANCE = ROOT / "system" / "services" / "preferences" / "appearance.mjs"
 DESKTOP_IDENTITY = ROOT / "docs" / "DESKTOP-IDENTITY.md"
+BROWSER_SMOKE = ROOT / "tools" / "surface-web" / "browser-smoke.mjs"
 INTER_FONT = SURFACE / "fonts" / "inter-latin-wght-normal.woff2"
 INTER_SOURCE = ROOT / "third_party" / "fonts" / "Inter-Latin-Variable-SOURCE.md"
 INTER_LICENSE = ROOT / "third_party" / "licenses" / "Inter-OFL-1.1.txt"
@@ -73,6 +74,11 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
             self.assertIn('../../surface/ui/identity.css', html)
             self.assertIn('../../surface/ui/app-identity.css', html)
             self.assertIn('name="theme-color" content="#080f19"', html)
+
+    def test_browser_smoke_exercises_shared_identity_layers(self):
+        smoke = BROWSER_SMOKE.read_text(encoding="utf-8")
+        self.assertIn("'system/surface/ui/identity.css'", smoke)
+        self.assertIn("'system/surface/ui/app-identity.css'", smoke)
 
     def test_inter_font_is_local_offline_and_source_bound(self):
         tokens = (SURFACE / "tokens.css").read_text(encoding="utf-8")
