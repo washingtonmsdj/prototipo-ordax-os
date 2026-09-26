@@ -21,6 +21,11 @@ jobs:
           test "$(wc -c < inter-latin-wght-normal.woff2)" -eq 48256
           actual="$(git hash-object inter-latin-wght-normal.woff2)"
           test "$actual" = 'd15208de03cd1ad7c5199f0a0ce915fe841e4722'
-          echo 'ORDAX_INTER_BASE64_BEGIN'
-          base64 -w 76 inter-latin-wght-normal.woff2
-          echo 'ORDAX_INTER_BASE64_END'
+
+      - name: Upload verified Inter font
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ordax-inter-font
+          path: inter-latin-wght-normal.woff2
+          if-no-files-found: error
+          retention-days: 1
