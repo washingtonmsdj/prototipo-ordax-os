@@ -75,9 +75,35 @@ python tools/creator/stable_mvp_usb_readiness.py --require-authorized-candidate
 
 That option may succeed only after the authorization contract is ready. Success still means **authorized candidate ready for a separate physical flow**, never “physical proof complete”.
 
+## First-MVP operator readiness split
+
+For the actual operator handoff, use the aggregate read-only command:
+
+```text
+python tools/ops/first_mvp_operator_readiness.py
+```
+
+It deliberately keeps three concerns independent:
+
+- `first_usb`: whether the source-authorized physical writer path is ready for the offline `creator-physical` signing/publication handoff before any USB target is selected;
+- `official_creator`: whether the end-user Windows Creator has its separate Authenticode publisher identity/certificate policy configured and is ready for public distribution;
+- `native_installation`: whether post-MVP internal-disk foundations may exist in source while remaining hidden, disabled and fail-closed in the MVP.
+
+An unconfigured Authenticode identity for the public Creator must remain a publication blocker for the public Creator, but it must **not** be misreported as a blocker for the already-authorized first physical USB proof. The first USB path still requires the purpose-bound physical writer to be signed with the canonical Ed25519 release key and deliberately published under the `creator-physical` publisher channel before a physical target is selected.
+
+Use the fail-closed operator prerequisite form when preparing that handoff:
+
+```text
+python tools/ops/first_mvp_operator_readiness.py --require-first-usb-handoff
+```
+
+This command never reads private-key contents, creates a signature, publishes a release, selects media, invokes the writer, records target confirmation, writes the USB or writes an internal disk.
+
 ## Public Creator boundary
 
 The internal/tagged physical writer may remain implemented while the normal public Creator keeps destructive apply disabled. Do not expose public physical apply merely because owner authorization exists. Public exposure is a later product-promotion decision and must preserve target filtering, system-disk exclusion, live revalidation, target-specific confirmation, UAC and exact readback.
+
+The official Creator publication boundary is stricter than the first owner-operated USB proof: `docs/contracts/creator-code-signing.json` must be explicitly configured with the reviewed Authenticode publisher identity, pinned leaf certificate SHA-256 and custody provider before public distribution is allowed. Keeping that capability hidden or fail-closed in the MVP is intentional product gating, not unfinished storage architecture.
 
 ## Stable publication boundary
 
