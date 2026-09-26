@@ -122,6 +122,10 @@ artwork only as atmosphere. The native POST form, same-origin identity owner and
 fail-closed availability remain controlled by the existing runtime configuration;
 the presentation must never expose a credential field while that owner is gated.
 
+The registration presentation follows the same fail-closed rule with
+`assets/cadastro.css`; its password guidance remains visible only as part of the
+native form contract and does not create a browser-only account.
+
 ## Security invariants
 
 - no private keys, service-role keys, passwords or bearer tokens in `sites/public/`;
