@@ -77,17 +77,23 @@ class InternetAccessibilityContractTests(unittest.TestCase):
     def test_focus_indicators_and_secondary_text_meet_contrast_direction(self):
         styles = self.text(STYLES)
         self.assertIn('.ordax-internet-view button:focus-visible', styles)
-        self.assertIn('outline: 3px solid #9d2f18', styles)
+        self.assertIn('outline: 3px solid var(--ordax-focus)', styles)
         self.assertIn('outline-offset: 2px', styles)
-        self.assertIn('color: #5f5b54', styles)
+        self.assertIn('color: var(--ordax-muted)', styles)
         self.assertIn('.ordax-internet-project-option[aria-pressed="true"]', styles)
         self.assertIn('.ordax-internet-tab-activate', styles)
 
-        for surface in ("#efede6", "#f8f7f3"):
-            with self.subTest(surface=surface, token="secondary-text"):
-                self.assertGreaterEqual(contrast_ratio("#5f5b54", surface), 4.5)
-            with self.subTest(surface=surface, token="focus-indicator"):
-                self.assertGreaterEqual(contrast_ratio("#9d2f18", surface), 3.0)
+        theme_samples = (
+            ("dark-app", "#8e9db4", "#a9c9f7", "#090f1b"),
+            ("dark-panel", "#8e9db4", "#a9c9f7", "#111e30"),
+            ("light-app", "#62748c", "#315f9f", "#f7f9fc"),
+            ("light-panel", "#62748c", "#315f9f", "#ffffff"),
+        )
+        for name, secondary, focus, surface in theme_samples:
+            with self.subTest(theme=name, token="secondary-text"):
+                self.assertGreaterEqual(contrast_ratio(secondary, surface), 4.5)
+            with self.subTest(theme=name, token="focus-indicator"):
+                self.assertGreaterEqual(contrast_ratio(focus, surface), 3.0)
 
     def test_responsive_layout_does_not_expose_controls_for_hidden_surfaces(self):
         styles = self.text(STYLES)
