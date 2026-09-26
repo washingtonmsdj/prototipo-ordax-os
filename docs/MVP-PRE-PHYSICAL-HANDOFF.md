@@ -12,7 +12,7 @@ The current repository state is intentionally split into separate proofs:
 PRE_USB_PRODUCT_SOURCE=PASS
 CANONICAL_V4_RELEASE_CANDIDATE_PROOF=PASS
 CANONICAL_V4_RELEASE_PROOF_BINDING=PASS
-PHYSICAL_WRITE_AUTHORIZATION=PENDING_EXPLICIT_OWNER_CONSENT
+PHYSICAL_WRITE_AUTHORIZATION=PASS_EXPLICIT_OWNER_CONSENT_BOUND_CONTEXT
 PHYSICAL_TARGET_SELECTED=NO
 PHYSICAL_WRITE_PERFORMED=NO
 CANONICAL_STABLE_GRAPHICAL_SESSION=PENDING_PHYSICAL_PROOF
@@ -38,18 +38,17 @@ The authoritative separation is the one in `docs/PROMOTION-GATES.md`: Gate 9 kee
 
 ## Ordered remaining gates
 
-At the current `explicit-owner-authorization-pending` stage, the remaining gates are:
+At the current `authorized-candidate-ready-for-separate-physical-flow` stage, owner authorization is complete. The remaining gates are:
 
-1. record fresh explicit owner authorization for the exact bound v4 release and authorization context;
-2. select the physical USB and revalidate its live identity immediately before destructive work;
-3. require target-specific destructive confirmation and Windows UAC;
-4. execute the physical write and verify all 17 canonical artifacts by exact SHA-256 and size/readback;
-5. boot the canonical Stable/MVP USB on the target notebook and complete the OOBE -> Surface -> first-party-app smoke tour;
-6. prove real cold-health, commit `current/known-good`, reboot offline and confirm the known-good boot;
-7. exercise a broken candidate and prove physical rollback/recovery without losing the known-good release;
-8. only after the required physical evidence, promote the approved release into the Stable public channel/catalog.
+1. select the physical USB and revalidate its live identity immediately before destructive work;
+2. require target-specific destructive confirmation and Windows UAC;
+3. execute the physical write and verify all 17 canonical artifacts by exact SHA-256 and size/readback;
+4. boot the canonical Stable/MVP USB on the target notebook and complete the OOBE -> Surface -> first-party-app smoke tour;
+5. prove real cold-health, commit `current/known-good`, reboot offline and confirm the known-good boot;
+6. exercise a broken candidate and prove physical rollback/recovery without losing the known-good release;
+7. only after the required physical evidence, promote the approved release into the Stable public channel/catalog.
 
-Authorization closes only step 1. It does not select media, confirm a target, invoke the writer, establish physical proof, or publish a Stable release.
+Authorization is now recorded. It does not select media, confirm a target, invoke the writer, establish physical proof, or publish a Stable release.
 
 ## Read-only status command
 

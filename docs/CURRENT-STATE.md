@@ -127,7 +127,7 @@ CANONICAL_SYSTEM_RUNTIME_COMPLETE=NO
 ```
 
 
-The canonical prototype trust ceremony and public handoff are complete. The eligible toolkit bound to `2172eb6a18430910afd036199ec492ad63dc185d` passed read-only preflight; canonical Ed25519 key material was generated locally, independent public derivation matched, the proof signature passed, recovery was verified from a distinct restored copy, and the recovered signing envelope passed public verification. The exact public anchor is pinned in Git and the minimal-bootstrap trust binding remains resolved. An earlier owner authorization existed for the first Stable/MVP USB proof, release sequence 1, but it was bound to the previous 15-artifact physical-writer context and is invalid. On 2026-09-26 the owner-controlled v4 candidate was signed and published as a prerelease, then materialized and verified from its exact versioned HTTPS URL in CI run `36234573905`; aggregate proof SHA-256 `2dd17580ddbf5a0fd0433a912e97e6bded04fd0a44ea0849e9da15e13df01e4b` is bound in the repository. This prerelease did not become GitHub's stable `latest` release. The authorization contract is now `blocked-explicit-physical-authorization-pending`, with every source/release binding resolved and `physical_write_allowed=false`; read-only preflight reaches fresh owner consent, but no new consent has been recorded. No USB is selected or erasable; live target revalidation, Windows UAC and target-specific destructive confirmation remain separate later gates. The local PEM remains a controlled prototype signing backend rather than the intended long-term production custody model; independent off-device custody and managed non-exportable KMS/HSM remain broad-distribution hardening requirements, with signed trust rotation required before broad public distribution.
+The canonical prototype trust ceremony and public handoff are complete. The eligible toolkit bound to `2172eb6a18430910afd036199ec492ad63dc185d` passed read-only preflight; canonical Ed25519 key material was generated locally, independent public derivation matched, the proof signature passed, recovery was verified from a distinct restored copy, and the recovered signing envelope passed public verification. The exact public anchor is pinned in Git and the minimal-bootstrap trust binding remains resolved. An earlier owner authorization existed for the first Stable/MVP USB proof, release sequence 1, but it was bound to the previous 15-artifact physical-writer context and is invalid. On 2026-09-26 the owner-controlled v4 candidate was signed and published as a prerelease, then materialized and verified from its exact versioned HTTPS URL in CI run `36234573905`; aggregate proof SHA-256 `2dd17580ddbf5a0fd0433a912e97e6bded04fd0a44ea0849e9da15e13df01e4b` is bound in the repository. This prerelease did not become GitHub's stable `latest` release. The authorization contract is now `authorized`, bound to authorization context SHA-256 `b5803154eed8a85962b5c2dddbfff29f2ff408c92b63247ca62d1c5ca71eda10` across 73 governed source files, with every source/release binding resolved and `physical_write_allowed=true` for the separately gated physical proof flow. Fresh owner consent has been recorded, but no target-specific consent has been recorded and no USB has been selected or written; live target revalidation, Windows UAC and target-specific destructive confirmation remain separate later gates. The local PEM remains a controlled prototype signing backend rather than the intended long-term production custody model; independent off-device custody and managed non-exportable KMS/HSM remain broad-distribution hardening requirements, with signed trust rotation required before broad public distribution.
 
 The first formal human product version is **OrdaX Prototype v0.1.0**. Product version, Entrega, Git SHA and component/app versions are separate identities: v0.1.0 identifies the prototype product milestone, Entrega identifies the notebook-facing delivery sequence, the SHA remains the exact technical build identity, and each component may evolve its own SemVer. First-party apps on the `0.x` line are **Beta**; `1.0.0` remains reserved for the first stable release of each app. Internet is currently `0.3.0 Beta`, Notes is `0.4.0 Beta` and Projetos is `0.1.0 Beta`; all three use `git-app` in Owner/Development. Arquivos, Ajustes, Conta and Sistema are `0.1.0 Beta` and remain `bundled`. A component having its own version does not mean it already has a production-independent update channel: `git-app` is a development delivery mode, while production-independent activation remains gated behind the signed `component-slot` path with pending health, promotion and rollback. Product v1.0 remains reserved for the stable product rather than being inferred from prototype maturity, component versions or delivery count.
 
@@ -152,8 +152,10 @@ The v4 Creator payload change deliberately revokes the stale 15-artifact authori
 context instead of widening it. The read-only owner-consent preflight now passes because
 the operator-controlled canonical v4 signing/materialization sequence produced
 `canonical-v4-release-proof.json` and the public receipt was validated and bound to the
-authorization contract. No destructive authority has been granted: fresh owner consent is
-still absent for the exact 17-artifact v4 release. The physical Creator
+authorization contract. Explicit owner authorization has now been recorded for the exact 17-artifact v4 release
+and current authorization context. That authorization permits materialization of the bound
+candidate only; no USB target has been selected, no target-specific destructive confirmation
+has been recorded and no physical write/proof has occurred. The physical Creator
 now keeps writer/tooling provenance separate from release identity: the writer embeds its own
 Git SHA as provenance plus the canonical v4 release source commit from
 `physical-write-authorization.json -> release_binding.source_commit`. Target-specific
@@ -194,11 +196,11 @@ CANONICAL_V4_OPERATOR_RECEIPT_TAMPER_REJECTION=PASS_CI_WRONG_COMMIT_AND_BYTE_TAM
 CANONICAL_V4_OPERATOR_RECEIPT_WORKFLOW_RUN_ID=36166653548
 CANONICAL_V4_RELEASE_PROOF=PASS_SIGNED_MATERIALIZED_VERSIONED_PRERELEASE
 STABLE_MVP_USB_READINESS_GATE=PASS_SOURCE_AGGREGATES_PRE_USB_AND_PHYSICAL_PROMOTION
-STABLE_MVP_USB_READINESS_CURRENT_STAGE=FRESH_OWNER_AUTHORIZATION_AND_PHYSICAL_USB_PENDING
+STABLE_MVP_USB_READINESS_CURRENT_STAGE=AUTHORIZED_CANDIDATE_READY_FOR_SEPARATE_PHYSICAL_FLOW
 CANONICAL_V4_RELEASE_PROOF_BINDING=PASS
-PHYSICAL_OWNER_AUTHORIZATION_REACHABLE=YES_FRESH_CONSENT_REQUIRED
-FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION
-PHYSICAL_WRITE_AUTHORITY=NO_EXPLICIT_OWNER_AUTHORIZATION
+PHYSICAL_OWNER_AUTHORIZATION_RECORDED=YES_BOUND_CONTEXT
+FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_PHYSICAL_TARGET_SELECTED
+PHYSICAL_WRITE_AUTHORITY=AUTHORIZED_CANDIDATE_ONLY_TARGET_CONFIRMATION_REQUIRED
 ```
 
 ### Pre-MVP ecosystem foundation
@@ -273,7 +275,7 @@ PUBLIC_IDENTITY=DISABLED_FAIL_CLOSED
 BILLING=NO
 PUBLIC_STORE=NO
 PRODUCT_MCP_DEPLOYED=NO
-FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION
+FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_PHYSICAL_TARGET_SELECTED
 ```
 
 ### System diagnostics and recovery presentation
@@ -679,8 +681,8 @@ CANONICAL_V4_RELEASE_STATUS=PUBLIC_PRERELEASE_NOT_LATEST
 CANONICAL_V4_RELEASE_PROOF=PASS_SIGNED_MATERIALIZED_EXACT
 CANONICAL_V4_RELEASE_PROOF_SHA256=2dd17580ddbf5a0fd0433a912e97e6bded04fd0a44ea0849e9da15e13df01e4b
 CANONICAL_V4_RELEASE_PROOF_BINDING=PASS
-PHYSICAL_OWNER_AUTHORIZATION_REACHABLE=YES_FRESH_CONSENT_REQUIRED
-PHYSICAL_WRITE_ALLOWED=NO_EXPLICIT_OWNER_AUTHORIZATION
+PHYSICAL_OWNER_AUTHORIZATION_RECORDED=YES_BOUND_CONTEXT
+PHYSICAL_WRITE_ALLOWED=YES_BOUND_OWNER_AUTHORIZATION
 PHYSICAL_WRITE_SCOPE=first-real-stable-mvp-usb-proof
 PHYSICAL_WRITE_RELEASE_SEQUENCE=1
 PHYSICAL_TARGET_SELECTED=NO
