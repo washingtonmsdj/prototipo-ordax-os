@@ -1,0 +1,62 @@
+name: Fix authorized documentation state
+
+on:
+  push:
+    branches:
+      - docs/authorized-physical-flow-state
+
+permissions:
+  contents: write
+
+jobs:
+  patch-stale-authorized-state:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch stale authorization-state assertions and prose
+        shell: python
+        run: |
+          from pathlib import Path
+
+          test_path = Path("tests/test_canonical_document_freshness.py")
+          test = test_path.read_text(encoding="utf-8")
+          old_hold = "FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION"
+          new_hold = "FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_PHYSICAL_TARGET_SELECTED"
+          hold_count = test.count(old_hold)
+          if hold_count != 2:
+              raise SystemExit(f"expected 2 stale hold assertions, found {hold_count}")
+          test = test.replace(old_hold, new_hold)
+
+          old_agents = 'self.assertIn("fresh owner authorization for the current 17-artifact / 39-operation writer context", agents)'
+          new_agents = 'self.assertNotIn("fresh owner authorization for the current 17-artifact / 39-operation writer context", agents)'
+          if test.count(old_agents) != 1:
+              raise SystemExit("expected exactly one stale AGENTS authorization assertion")
+          test = test.replace(old_agents, new_agents)
+          test_path.write_text(test, encoding="utf-8")
+
+          promotion_path = Path("docs/PROMOTION-GATES.md")
+          promotion = promotion_path.read_text(encoding="utf-8")
+          old_prose = "This advanced the contract to `blocked-explicit-physical-authorization-pending`; fresh owner consent, target validation and physical execution remain separate later gates."
+          new_prose = "This advanced the contract through explicit owner authorization; the current bound contract is `authorized`. Target validation, target-specific destructive confirmation, Windows UAC and physical execution remain separate later gates."
+          if promotion.count(old_prose) != 1:
+              raise SystemExit("expected exactly one stale physical-authorization paragraph")
+          promotion = promotion.replace(old_prose, new_prose)
+          promotion_path.write_text(promotion, encoding="utf-8")
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/test_canonical_document_freshness.py docs/PROMOTION-GATES.md
+          if git diff --cached --quiet; then
+            echo "No changes required."
+            exit 0
+          fi
+          git commit -m "test: align canonical docs with authorized physical stage"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
