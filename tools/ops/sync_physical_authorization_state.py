@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+"""One-shot repository snapshot transition after explicit owner authorization."""
+
+from pathlib import Path
+import re
+import textwrap
+
+AUTH_CONTEXT = "b5803154eed8a85962b5c2dddbfff29f2ff408c92b63247ca62d1c5ca71eda10"
+
+
+def regex_replace(path: str, pattern: str, replacement: str) -> None:
+    target = Path(path)
+    text = target.read_text(encoding="utf-8")
+    updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+    if count != 1:
+        raise SystemExit(f"{path}: expected one regex replacement, got {count}")
+    target.write_text(updated, encoding="utf-8")
+
+
+def replace_required(path: str, old: str, new: str, *, count: int | None = None) -> None:
+    target = Path(path)
+    text = target.read_text(encoding="utf-8")
+    found = text.count(old)
+    if count is not None and found != count:
+        raise SystemExit(f"{path}: expected {count} occurrences of {old!r}, got {found}")
+    if found == 0:
+        raise SystemExit(f"{path}: missing {old!r}")
+    target.write_text(text.replace(old, new), encoding="utf-8")
+
+
+stable_method = textwrap.dedent(
+    '''\
+    def test_current_repository_is_source_ready_and_owner_authorized_for_separate_physical_flow(self):
+        status = readiness.evaluate(ROOT)
+
+        self.assertTrue(status["source_ready"], status["blockers"])
+        self.assertTrue(status["pre_usb_product_source_complete"])
+        self.assertEqual(
+            status["stage"],
+            "authorized-candidate-ready-for-separate-physical-flow",
+        )
+        self.assertTrue(status["canonical_v4_release_proof_valid"])
+        self.assertTrue(status["canonical_v4_release_binding_resolved"])
+        self.assertTrue(status["pre_authorization_ready"])
+        self.assertFalse(status["owner_authorization_required"])
+        self.assertTrue(status["owner_authorization_recorded"])
+        self.assertTrue(status["authorized_candidate_materialization_allowed"])
+        self.assertEqual(status["proof_boundaries"]["pre_usb_product_source"], "pass")
+        self.assertEqual(status["proof_boundaries"]["canonical_v4_release_candidate"], "pass")
+        self.assertEqual(status["proof_boundaries"]["physical_write_authorization"], "pass")
+        self.assertEqual(
+            status["proof_boundaries"]["canonical_stable_graphical_session"],
+            "requires-physical-proof",
+        )
+        self.assertEqual(
+            status["proof_boundaries"]["canonical_system_runtime"],
+            "requires-physical-proof",
+        )
+        self.assertEqual(
+            status["proof_boundaries"]["stable_publication"],
+            "requires-separate-post-physical-promotion",
+        )
+        self.assertEqual(status["handoff_document"], "docs/MVP-PRE-PHYSICAL-HANDOFF.md")
+        self.assertTrue((ROOT / status["handoff_document"]).is_file())
+        self.assertEqual(
+            status["remaining_gates"][0],
+            "physical-target-selection-and-live-revalidation",
+        )
+        self.assertFalse(status["physical_target_selected"])
+        self.assertFalse(status["target_specific_destructive_confirmation_recorded"])
+        self.assertFalse(status["writer_invoked"])
+        self.assertFalse(status["physical_write_performed"])
+        self.assertFalse(status["physical_proof_completed"])
+
+''')
+stable_method = textwrap.indent(stable_method, "    ")
+regex_replace(
+    "tests/test_stable_mvp_usb_readiness.py",
+    r"    def test_current_repository_is_source_ready_but_owner_consent_pending\(self\):.*?(?=    def test_ready_stage_still_does_not_claim_physical_proof)",
+    stable_method,
+)
+
+promotion_method = textwrap.dedent(
+    f'''\
+    def test_repository_v4_media_scope_records_owner_authorization_without_selecting_a_device(self):
+        auth = json.loads(
+            (ROOT / "docs/contracts/physical-write-authorization.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(auth["status"], "authorized")
+        self.assertTrue(auth["physical_write_allowed"])
+        self.assertTrue(auth["explicit_owner_authorization"])
+        self.assertEqual(auth["authorization_context_sha256"], "{AUTH_CONTEXT}")
+        self.assertEqual(auth["scope"], "first-real-stable-mvp-usb-proof")
+        self.assertEqual(auth["release_sequence"], 1)
+        self.assertTrue(
+            auth["requirements"]["writer_requires_exact_17_artifact_readback"]
+        )
+        self.assertNotIn(
+            "writer_requires_exact_15_artifact_readback",
+            auth["requirements"],
+        )
+        status = promotion.evaluate(ROOT)
+        self.assertTrue(status["ready"], status["blockers"])
+        self.assertTrue(status["pre_authorization_ready"])
+        self.assertTrue(status["canonical_v4_release_proof_valid"])
+        self.assertTrue(status["canonical_v4_release_binding_resolved"])
+        self.assertTrue(status["physical_authorization_bindings_resolved"])
+        self.assertTrue(status["authorization_context_matches_current_source"])
+        self.assertEqual(status["pre_authorization_blockers"], [])
+        self.assertEqual(status["authorization_blockers"], [])
+        self.assertFalse(status["owner_authorization_required"])
+        self.assertTrue(status["authorized_candidate_materialization_allowed"])
+        self.assertEqual(status["next_stage"], "authorized-candidate-materialization")
+        for forbidden in ("physical_path", "device_path", "disk_number", "volume_id"):
+            self.assertNotIn(forbidden, auth)
+
+''')
+promotion_method = textwrap.indent(promotion_method, "    ")
+regex_replace(
+    "tests/test_physical_promotion_boundary.py",
+    r"    def test_repository_v4_media_scope_requires_fresh_owner_authorization_after_proof\(self\):.*?(?=    def _set_pending_owner_authorization)",
+    promotion_method,
+)
+
+current_state_method = textwrap.dedent(
+    f'''\
+    def test_physical_authorization_is_bound_but_physical_proof_remains_fail_closed(self):
+        self.assertEqual(self.authorization["status"], "authorized")
+        self.assertTrue(self.authorization["physical_write_allowed"])
+        self.assertTrue(self.authorization["explicit_owner_authorization"])
+        self.assertEqual(
+            self.authorization["scope"],
+            "first-real-stable-mvp-usb-proof",
+        )
+        self.assertEqual(self.authorization["release_sequence"], 1)
+        self.assertEqual(
+            self.authorization["authorization_context_sha256"],
+            "{AUTH_CONTEXT}",
+        )
+        self.assertTrue(
+            self.authorization["requirements"][
+                "writer_requires_exact_17_artifact_readback"
+            ]
+        )
+        self.assertEqual(
+            self.authorization["release_binding"]["source_commit"],
+            "b924ff8d74d1761232381ae3f9604bba17497cfd",
+        )
+        self.assertIn("CANONICAL_V4_RELEASE_PROOF_BINDING=PASS", self.current)
+        self.assertIn("PHYSICAL_AUTHORIZATION_ELIGIBLE=YES", self.current)
+        self.assertIn(
+            "CANONICAL_V4_RELEASE_PROOF=PASS_SIGNED_MATERIALIZED_EXACT",
+            self.current,
+        )
+        self.assertIn("PHYSICAL_OWNER_AUTHORIZATION_RECORDED=YES_BOUND_CONTEXT", self.current)
+        self.assertIn("PHYSICAL_WRITE_ALLOWED=YES_BOUND_OWNER_AUTHORIZATION", self.current)
+        self.assertIn("PHYSICAL_TARGET_SELECTED=NO", self.current)
+        self.assertIn("PHYSICAL_TARGET_DESTRUCTIVE_CONFIRMATION=PENDING", self.current)
+        self.assertIn(
+            "CANONICAL_SIGNED_RELEASE_BOOT_PROVEN=NO_PHYSICAL_STABLE_MVP_PENDING",
+            self.current,
+        )
+        self.assertIn("MVP_SURFACE_SMOKE_HARNESS=PASS_SOURCE", self.current)
+        self.assertIn("MVP_SURFACE_SMOKE_PHYSICAL=PENDING", self.current)
+        self.assertIn("CANONICAL_STABLE_GRAPHICAL_MODE=PENDING", self.current)
+        self.assertIn("PUBLIC_PHYSICAL_APPLY=NO", self.current)
+        self.assertIn("all 12 manual tour items", self.current)
+        self.assertIn("verified Stable runtime", self.current)
+''')
+current_state_method = textwrap.indent(current_state_method, "    ")
+regex_replace(
+    "tests/test_current_state_first_run_input.py",
+    r"    def test_physical_authorization_is_fail_closed_after_v4_proof_binding\(self\):.*?(?=\n\nif __name__ == \"__main__\":)",
+    current_state_method,
+)
+
+replace_required(
+    "docs/CURRENT-STATE.md",
+    "The authorization contract is now `blocked-explicit-physical-authorization-pending`, with every source/release binding resolved and `physical_write_allowed=false`; read-only preflight reaches fresh owner consent, but no new consent has been recorded. No USB is selected or erasable;",
+    f"The authorization contract is now `authorized`, bound to authorization context SHA-256 `{AUTH_CONTEXT}` across 73 governed source files, with every source/release binding resolved and `physical_write_allowed=true` for the separately gated physical proof flow. Fresh owner consent has been recorded, but no target-specific consent has been recorded and no USB has been selected or written;",
+    count=1,
+)
+regex_replace(
+    "docs/CURRENT-STATE.md",
+    r"No destructive authority has been granted: fresh owner consent is\s+still absent for the exact 17-artifact v4 release\. The physical Creator",
+    "Explicit owner authorization has now been recorded for the exact 17-artifact v4 release\nand current authorization context. That authorization permits materialization of the bound\ncandidate only; no USB target has been selected, no target-specific destructive confirmation\nhas been recorded and no physical write/proof has occurred. The physical Creator",
+)
+replace_required("docs/CURRENT-STATE.md", "STABLE_MVP_USB_READINESS_CURRENT_STAGE=FRESH_OWNER_AUTHORIZATION_AND_PHYSICAL_USB_PENDING", "STABLE_MVP_USB_READINESS_CURRENT_STAGE=AUTHORIZED_CANDIDATE_READY_FOR_SEPARATE_PHYSICAL_FLOW", count=1)
+replace_required("docs/CURRENT-STATE.md", "PHYSICAL_OWNER_AUTHORIZATION_REACHABLE=YES_FRESH_CONSENT_REQUIRED", "PHYSICAL_OWNER_AUTHORIZATION_RECORDED=YES_BOUND_CONTEXT", count=2)
+replace_required("docs/CURRENT-STATE.md", "FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION", "FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_PHYSICAL_TARGET_SELECTED", count=1)
+replace_required("docs/CURRENT-STATE.md", "PHYSICAL_WRITE_AUTHORITY=NO_EXPLICIT_OWNER_AUTHORIZATION", "PHYSICAL_WRITE_AUTHORITY=AUTHORIZED_CANDIDATE_ONLY_TARGET_CONFIRMATION_REQUIRED", count=1)
+replace_required("docs/CURRENT-STATE.md", "PHYSICAL_WRITE_ALLOWED=NO_EXPLICIT_OWNER_AUTHORIZATION", "PHYSICAL_WRITE_ALLOWED=YES_BOUND_OWNER_AUTHORIZATION", count=1)
+
+replace_required("docs/MVP-PRE-PHYSICAL-HANDOFF.md", "PHYSICAL_WRITE_AUTHORIZATION=PENDING_EXPLICIT_OWNER_CONSENT", "PHYSICAL_WRITE_AUTHORIZATION=PASS_EXPLICIT_OWNER_CONSENT_BOUND_CONTEXT", count=1)
+replace_required("docs/MVP-PRE-PHYSICAL-HANDOFF.md", "At the current `explicit-owner-authorization-pending` stage, the remaining gates are:", "At the current `authorized-candidate-ready-for-separate-physical-flow` stage, owner authorization is complete. The remaining gates are:", count=1)
+old_list = """1. record fresh explicit owner authorization for the exact bound v4 release and authorization context;
+2. select the physical USB and revalidate its live identity immediately before destructive work;
+3. require target-specific destructive confirmation and Windows UAC;
+4. execute the physical write and verify all 17 canonical artifacts by exact SHA-256 and size/readback;
+5. boot the canonical Stable/MVP USB on the target notebook and complete the OOBE -> Surface -> first-party-app smoke tour;
+6. prove real cold-health, commit `current/known-good`, reboot offline and confirm the known-good boot;
+7. exercise a broken candidate and prove physical rollback/recovery without losing the known-good release;
+8. only after the required physical evidence, promote the approved release into the Stable public channel/catalog."""
+new_list = """1. select the physical USB and revalidate its live identity immediately before destructive work;
+2. require target-specific destructive confirmation and Windows UAC;
+3. execute the physical write and verify all 17 canonical artifacts by exact SHA-256 and size/readback;
+4. boot the canonical Stable/MVP USB on the target notebook and complete the OOBE -> Surface -> first-party-app smoke tour;
+5. prove real cold-health, commit `current/known-good`, reboot offline and confirm the known-good boot;
+6. exercise a broken candidate and prove physical rollback/recovery without losing the known-good release;
+7. only after the required physical evidence, promote the approved release into the Stable public channel/catalog."""
+replace_required("docs/MVP-PRE-PHYSICAL-HANDOFF.md", old_list, new_list, count=1)
+replace_required("docs/MVP-PRE-PHYSICAL-HANDOFF.md", "Authorization closes only step 1. It does not select media, confirm a target, invoke the writer, establish physical proof, or publish a Stable release.", "Authorization is now recorded. It does not select media, confirm a target, invoke the writer, establish physical proof, or publish a Stable release.", count=1)
+
+replace_required("PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md", "Até haver USB e consentimento explícito novo para o contexto atual:", "Com o consentimento explícito novo já registrado para o contexto atual, até haver USB e confirmação destrutiva específica do alvo:", count=1)
+replace_required("PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md", "FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION", "FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_PHYSICAL_TARGET_SELECTED", count=1)
+replace_required("PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md", "PHYSICAL_WRITE_AUTHORITY=NO_EXPLICIT_OWNER_AUTHORIZATION", "PHYSICAL_WRITE_AUTHORITY=AUTHORIZED_CANDIDATE_ONLY_TARGET_CONFIRMATION_REQUIRED", count=1)
+replace_required("MVP.md", "FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION", "FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_PHYSICAL_TARGET_SELECTED", count=1)
+
+agents = Path("AGENTS.md")
+agents_text = agents.read_text(encoding="utf-8")
+old_agent_line = "fresh owner authorization for the current 17-artifact / 39-operation writer context\n"
+if old_agent_line in agents_text:
+    agents.write_text(agents_text.replace(old_agent_line, "", 1), encoding="utf-8")
