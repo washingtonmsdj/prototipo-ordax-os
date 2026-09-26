@@ -18,16 +18,17 @@ import (
 )
 
 var (
-	buildSourceCommit            = "UNRESOLVED"
-	buildReleaseSourceCommit     = "UNRESOLVED"
-	buildCanonicalTrustSHA256    = "UNRESOLVED"
-	buildManifestSHA256          = "UNRESOLVED"
-	buildSeedImageSHA256               = "UNRESOLVED"
-	buildSeedImageSize                 = "0"
-	buildPortableUSBContractSHA256     = "UNRESOLVED"
-	buildCreatorPortableContractSHA256 = "UNRESOLVED"
-	buildPhysicalWriteAuthorized       = "NO"
-	applyDiagnosticLog                 string
+	buildSourceCommit                    = "UNRESOLVED"
+	buildReleaseSourceCommit             = "UNRESOLVED"
+	buildCanonicalTrustSHA256            = "UNRESOLVED"
+	buildManifestSHA256                  = "UNRESOLVED"
+	buildSeedImageSHA256                 = "UNRESOLVED"
+	buildSeedImageSize                   = "0"
+	buildPortableUSBContractSHA256       = "UNRESOLVED"
+	buildCreatorPortableContractSHA256   = "UNRESOLVED"
+	buildPortablePayloadBindingsSHA256   = "UNRESOLVED"
+	buildPhysicalWriteAuthorized         = "NO"
+	applyDiagnosticLog                   string
 )
 
 type stringListFlag []string
@@ -42,16 +43,17 @@ func (values *stringListFlag) Set(value string) error {
 }
 
 type buildBinding struct {
-	SourceCommit            string `json:"source_commit"`
-	ReleaseSourceCommit     string `json:"release_source_commit"`
-	CanonicalTrustSHA256    string `json:"canonical_trust_sha256"`
-	ManifestSHA256          string `json:"manifest_sha256"`
-	SeedImageSHA256                 string `json:"seed_image_sha256"`
-	SeedImageSize                   int64  `json:"seed_image_size"`
-	PortableUSBContractSHA256       string `json:"portable_usb_contract_sha256"`
-	CreatorPortableContractSHA256   string `json:"creator_portable_contract_sha256"`
-	PhysicalWriteAuthorized         bool   `json:"physical_write_authorized"`
-	Ready                           bool   `json:"ready"`
+	SourceCommit                      string `json:"source_commit"`
+	ReleaseSourceCommit               string `json:"release_source_commit"`
+	CanonicalTrustSHA256              string `json:"canonical_trust_sha256"`
+	ManifestSHA256                    string `json:"manifest_sha256"`
+	SeedImageSHA256                   string `json:"seed_image_sha256"`
+	SeedImageSize                     int64  `json:"seed_image_size"`
+	PortableUSBContractSHA256         string `json:"portable_usb_contract_sha256"`
+	CreatorPortableContractSHA256     string `json:"creator_portable_contract_sha256"`
+	PortablePayloadBindingsSHA256     string `json:"portable_payload_bindings_sha256"`
+	PhysicalWriteAuthorized           bool   `json:"physical_write_authorized"`
+	Ready                             bool   `json:"ready"`
 }
 
 func validLowerHex(value string, bytes int) bool {
@@ -72,16 +74,17 @@ func binding() buildBinding {
 		validLowerHex(buildSeedImageSHA256, sha256.Size) &&
 		size > 0 && authorized
 	return buildBinding{
-		SourceCommit: buildSourceCommit,
-		ReleaseSourceCommit: buildReleaseSourceCommit,
-		CanonicalTrustSHA256: buildCanonicalTrustSHA256,
-		ManifestSHA256: buildManifestSHA256,
-		SeedImageSHA256: buildSeedImageSHA256,
-		SeedImageSize: size,
-		PortableUSBContractSHA256: buildPortableUSBContractSHA256,
-		CreatorPortableContractSHA256: buildCreatorPortableContractSHA256,
-		PhysicalWriteAuthorized: authorized,
-		Ready: ready,
+		SourceCommit:                    buildSourceCommit,
+		ReleaseSourceCommit:             buildReleaseSourceCommit,
+		CanonicalTrustSHA256:            buildCanonicalTrustSHA256,
+		ManifestSHA256:                  buildManifestSHA256,
+		SeedImageSHA256:                 buildSeedImageSHA256,
+		SeedImageSize:                   size,
+		PortableUSBContractSHA256:       buildPortableUSBContractSHA256,
+		CreatorPortableContractSHA256:   buildCreatorPortableContractSHA256,
+		PortablePayloadBindingsSHA256:   buildPortablePayloadBindingsSHA256,
+		PhysicalWriteAuthorized:         authorized,
+		Ready:                           ready,
 	}
 }
 
@@ -149,7 +152,7 @@ func runStatus() error {
 		PortableWriterLinked    bool         `json:"portable_writer_linked"`
 		PortableWriterReady     bool         `json:"portable_writer_ready"`
 		Build                   buildBinding `json:"build"`
-	}{Schema: "prototype-ordax.creator-physical-test-status/3", Mode: "physical-test-only", RawBackendLinked: true, PublicCreatorUnaffected: true, PortableWriterLinked: true, PortableWriterReady: portableBindingReady(b), Build: b})
+	}{Schema: "prototype-ordax.creator-physical-test-status/4", Mode: "physical-test-only", RawBackendLinked: true, PublicCreatorUnaffected: true, PortableWriterLinked: true, PortableWriterReady: portableBindingReady(b), Build: b})
 }
 
 func runTargets() error {
@@ -170,13 +173,14 @@ func portableBindingReady(b buildBinding) bool {
 		validLowerHex(b.CanonicalTrustSHA256, sha256.Size) &&
 		validLowerHex(b.PortableUSBContractSHA256, sha256.Size) &&
 		validLowerHex(b.CreatorPortableContractSHA256, sha256.Size) &&
+		validLowerHex(b.PortablePayloadBindingsSHA256, sha256.Size) &&
 		b.PhysicalWriteAuthorized
 }
 
 func requirePortableReady() buildBinding {
 	b := binding()
 	if !portableBindingReady(b) {
-		fmt.Fprintln(os.Stderr, "ordax-creator-physical-test: Portable writer is linked but not authorized; canonical trust and physical promotion must be bound first")
+		fmt.Fprintln(os.Stderr, "ordax-creator-physical-test: Portable writer is linked but not authorized; canonical trust, exact payload bindings and physical promotion must be bound first")
 		os.Exit(1)
 	}
 	return b
@@ -208,6 +212,17 @@ func loadPortableApplicationPlan(path string) (creatorcore.PortableApplicationPl
 	return plan, nil
 }
 
+func requireAuthorizedPortablePayload(plan creatorcore.PortableApplicationPlan, b buildBinding) error {
+	digest, err := creatorcore.PortableApplicationBindingsSHA256(plan)
+	if err != nil {
+		return fmt.Errorf("derive Portable payload binding: %w", err)
+	}
+	if digest != b.PortablePayloadBindingsSHA256 {
+		return fmt.Errorf("Portable application plan artifact set does not match owner-authorized payload bindings")
+	}
+	return nil
+}
+
 func portableSourcesFromFlags(plan creatorcore.PortableApplicationPlan, specs []string) ([]windowsadapter.PortablePhysicalArtifactSource, error) {
 	expected := map[string]creatorcore.PortableApplicationOperation{}
 	for _, op := range plan.Operations {
@@ -232,9 +247,9 @@ func portableSourcesFromFlags(plan creatorcore.PortableApplicationPlan, specs []
 		seen[id] = true
 		sources = append(sources, windowsadapter.PortablePhysicalArtifactSource{
 			ArtifactID: id,
-			Path: path,
-			SHA256: op.SHA256,
-			SizeBytes: op.SizeBytes,
+			Path:       path,
+			SHA256:     op.SHA256,
+			SizeBytes:   op.SizeBytes,
 		})
 	}
 	return sources, nil
@@ -262,6 +277,9 @@ func runPreparePortable(args []string) error {
 	if plan.SourceCommit != b.ReleaseSourceCommit {
 		return fmt.Errorf("Portable application plan source_commit does not match authorized canonical release")
 	}
+	if err := requireAuthorizedPortablePayload(plan, b); err != nil {
+		return err
+	}
 	if plan.TargetBytes != target.PhysicalDiskBytes {
 		return fmt.Errorf("Portable application plan capacity does not match confirmed USB target")
 	}
@@ -271,19 +289,21 @@ func runPreparePortable(args []string) error {
 	}
 	token := windowsadapter.PortableDestructiveAuthorizationToken(target, planSHA)
 	return encode(struct {
-		Schema string `json:"$schema"`
-		Target windowsadapter.Target `json:"target"`
-		ApplicationPlanSHA256 string `json:"application_plan_sha256"`
-		DestructiveAuthorization string `json:"destructive_authorization"`
-		WholeDiskRawImageRequired bool `json:"whole_disk_raw_image_required"`
-		Next string `json:"next"`
+		Schema                         string                `json:"$schema"`
+		Target                         windowsadapter.Target `json:"target"`
+		ApplicationPlanSHA256          string                `json:"application_plan_sha256"`
+		PortablePayloadBindingsSHA256  string                `json:"portable_payload_bindings_sha256"`
+		DestructiveAuthorization       string                `json:"destructive_authorization"`
+		WholeDiskRawImageRequired      bool                  `json:"whole_disk_raw_image_required"`
+		Next                           string                `json:"next"`
 	}{
-		Schema:"prototype-ordax.creator-portable-physical-preparation/1",
-		Target:target,
-		ApplicationPlanSHA256:planSHA,
-		DestructiveAuthorization:token,
-		WholeDiskRawImageRequired:false,
-		Next:"request UAC elevation and invoke apply-portable with the exact same plan, 17 sources, confirmation token and authorization token",
+		Schema:                        "prototype-ordax.creator-portable-physical-preparation/2",
+		Target:                        target,
+		ApplicationPlanSHA256:         planSHA,
+		PortablePayloadBindingsSHA256: b.PortablePayloadBindingsSHA256,
+		DestructiveAuthorization:      token,
+		WholeDiskRawImageRequired:     false,
+		Next:                          "request UAC elevation and invoke apply-portable with the exact same plan, owner-authorized 17 sources, confirmation token and authorization token",
 	})
 }
 
@@ -295,7 +315,7 @@ func runApplyPortable(args []string) error {
 	authorize := fs.String("authorize", "", "destructive authorization emitted by prepare-portable")
 	progressLog := fs.String("progress-log", "", "optional JSON progress path")
 	var sourceSpecs stringListFlag
-	fs.Var(&sourceSpecs, "source", "canonical artifact source in artifact-id=path form; repeat exactly 17 times")
+	fs.Var(&sourceSpecs, "source", "owner-authorized canonical artifact source in artifact-id=path form; repeat exactly 17 times")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -309,6 +329,9 @@ func runApplyPortable(args []string) error {
 	if plan.SourceCommit != b.ReleaseSourceCommit {
 		return fmt.Errorf("Portable application plan source_commit does not match authorized canonical release")
 	}
+	if err := requireAuthorizedPortablePayload(plan, b); err != nil {
+		return err
+	}
 	sources, err := portableSourcesFromFlags(plan, sourceSpecs)
 	if err != nil {
 		return err
@@ -318,20 +341,20 @@ func runApplyPortable(args []string) error {
 		return err
 	}
 	progressReporter := newApplyProgressReporter(*progressLog)
-	progressReporter(windowsadapter.PhysicalApplyProgress{Phase:"starting-portable"})
+	progressReporter(windowsadapter.PhysicalApplyProgress{Phase: "starting-portable"})
 	result, err := windowsadapter.ApplyPortablePhysicalWithProgress(windowsadapter.PortablePhysicalApplyRequest{
-		Target:target,
-		ConfirmationToken:*confirm,
-		ApplicationPlan:plan,
-		Sources:sources,
-		CanonicalTrustResolved:validLowerHex(b.CanonicalTrustSHA256, sha256.Size),
-		PhysicalPromotionAuthorized:b.PhysicalWriteAuthorized,
-		DestructiveAuthorization:*authorize,
+		Target:                      target,
+		ConfirmationToken:           *confirm,
+		ApplicationPlan:             plan,
+		Sources:                     sources,
+		CanonicalTrustResolved:      validLowerHex(b.CanonicalTrustSHA256, sha256.Size),
+		PhysicalPromotionAuthorized: b.PhysicalWriteAuthorized,
+		DestructiveAuthorization:    *authorize,
 	}, progressReporter)
 	if err != nil {
 		return err
 	}
-	progressReporter(windowsadapter.PhysicalApplyProgress{Phase:"complete-portable", CompletedBytes:1, TotalBytes:1})
+	progressReporter(windowsadapter.PhysicalApplyProgress{Phase: "complete-portable", CompletedBytes: 1, TotalBytes: 1})
 	return encode(result)
 }
 
