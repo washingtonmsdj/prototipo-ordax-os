@@ -7,7 +7,7 @@ WEB_INDEX = ROOT / "system" / "composition" / "web" / "index.html"
 NATIVE_INDEX = ROOT / "system" / "composition" / "native" / "index.html"
 APPEARANCE = ROOT / "system" / "services" / "preferences" / "appearance.mjs"
 DESKTOP_IDENTITY = ROOT / "docs" / "DESKTOP-IDENTITY.md"
-INTER_LICENSE = SURFACE / "fonts" / "INTER-OFL.txt"
+INTER_LICENSE = ROOT / "third_party" / "licenses" / "Inter-OFL-1.1.txt"
 
 
 class SurfaceVisualIdentityTests(unittest.TestCase):
@@ -72,7 +72,7 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
             self.assertIn('../../surface/ui/app-identity.css', html)
             self.assertIn('name="theme-color" content="#080f19"', html)
 
-    def test_inter_license_is_shipped_with_surface_assets(self):
+    def test_inter_license_is_tracked_with_third_party_licenses(self):
         license_text = INTER_LICENSE.read_text(encoding="utf-8")
         self.assertIn("The Inter Project Authors", license_text)
         self.assertIn("SIL OPEN FONT LICENSE Version 1.1", license_text)
