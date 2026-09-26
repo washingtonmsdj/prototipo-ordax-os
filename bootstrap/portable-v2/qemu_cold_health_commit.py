@@ -27,6 +27,8 @@ from typing import Any
 
 BASE = Path(__file__).with_name("qemu_boot.py")
 SCHEMA = "prototype-ordax.portable-v3-cold-health-qemu-proof-result/1"
+FAILURE_SCHEMA = "prototype-ordax.portable-v3-cold-health-qemu-proof-failure/1"
+SERIAL_TAIL_LINES = 160
 
 
 def _load_base():
@@ -39,6 +41,66 @@ def _load_base():
 
 
 qemu = _load_base()
+
+
+def _serial_tail(path: Path) -> str:
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError as exc:
+        return f"<unable to read serial log: {exc}>"
+    return "\n".join(lines[-SERIAL_TAIL_LINES:])
+
+
+def preserve_failure_diagnostics(
+    work: Path,
+    out: Path,
+    *,
+    phase: str,
+    exc: Exception,
+    source_commit: str,
+    previous_commit: str,
+) -> None:
+    """Persist bounded failure evidence before the disposable work tree is removed."""
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    serial_logs: dict[str, str] = {}
+    copy_errors: dict[str, str] = {}
+
+    for path in sorted(work.glob("serial-*.log")):
+        serial_logs[path.name] = _serial_tail(path)
+        try:
+            shutil.copyfile(path, out.parent / path.name)
+        except OSError as copy_exc:
+            copy_errors[path.name] = str(copy_exc)
+
+    receipt = {
+        "$schema": FAILURE_SCHEMA,
+        "status": "fail",
+        "phase": phase,
+        "source_commit": source_commit,
+        "previous_commit": previous_commit,
+        "error_type": type(exc).__name__,
+        "error": str(exc),
+        "serial_tail_lines": SERIAL_TAIL_LINES,
+        "serial_logs": serial_logs,
+        "copy_errors": copy_errors,
+    }
+    try:
+        out.write_text(
+            json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    except OSError as write_exc:
+        print(
+            f"portable-v3-cold-health-qemu-proof: unable to write failure receipt: {write_exc}",
+            file=sys.stderr,
+        )
+
+    print(
+        "portable-v3-cold-health-qemu-proof: FAILURE_RECEIPT="
+        + json.dumps(receipt, sort_keys=True),
+        file=sys.stderr,
+    )
 
 
 def inspect_committed_state(
@@ -141,123 +203,142 @@ def prove(args: argparse.Namespace) -> dict[str, Any]:
 
     work = Path(tempfile.mkdtemp(prefix="ordax-portable-cold-health-qemu-"))
     disk: Path | None = None
+    phase = "stage_disk"
     try:
-        disk = qemu.stage_disk(args, inputs, work)
-        commit_marker = "ORDAX_PORTABLE_COLD_HEALTH_COMMIT=" + args.source_commit
+        try:
+            disk = qemu.stage_disk(args, inputs, work)
+            commit_marker = "ORDAX_PORTABLE_COLD_HEALTH_COMMIT=" + args.source_commit
 
-        first_serial, first_checks = qemu.boot_qemu_expected(
-            args,
-            inputs,
-            disk,
-            work,
-            expected_slot="candidate",
-            expected_commit=args.source_commit,
-            serial_name="serial-candidate-health.log",
-            required_post_marker=commit_marker,
-            graphical_hardware=True,
-        )
-        state_checks = inspect_committed_state(
-            disk,
-            work,
-            previous_commit=args.previous_commit,
-            candidate_commit=args.source_commit,
-        )
-        second_serial, second_checks = qemu.boot_qemu_expected(
-            args,
-            inputs,
-            disk,
-            work,
-            expected_slot="current",
-            expected_commit=args.source_commit,
-            serial_name="serial-committed-current.log",
-            graphical_hardware=True,
-        )
+            phase = "candidate_boot"
+            first_serial, first_checks = qemu.boot_qemu_expected(
+                args,
+                inputs,
+                disk,
+                work,
+                expected_slot="candidate",
+                expected_commit=args.source_commit,
+                serial_name="serial-candidate-health.log",
+                required_post_marker=commit_marker,
+                graphical_hardware=True,
+            )
 
-        checks = {
-            "candidate_boot_selected": first_checks["expected_slot_selected"],
-            "candidate_source_sha_exact": first_checks["portable_source_sha_exact"],
-            "candidate_stable_source_sha_exact": first_checks["stable_init_source_sha_exact"],
-            "candidate_surface_runtime_exact": first_checks["surface_runtime_sha_exact"],
-            "candidate_local_ai_requirement_satisfied": first_checks[
-                "local_ai_runtime_requirement_satisfied"
-            ],
-            "cold_health_commit_marker_seen": first_checks["required_post_marker_seen"],
-            "second_boot_current_selected": second_checks["expected_slot_selected"],
-            "second_boot_candidate_source_sha_exact": second_checks[
-                "portable_source_sha_exact"
-            ],
-            "second_boot_stable_source_sha_exact": second_checks[
-                "stable_init_source_sha_exact"
-            ],
-            "second_boot_surface_runtime_exact": second_checks[
-                "surface_runtime_sha_exact"
-            ],
-            "second_boot_local_ai_requirement_satisfied": second_checks[
-                "local_ai_runtime_requirement_satisfied"
-            ],
-            "network_disabled_both_boots": (
-                first_checks["qemu_network_disabled"]
-                and second_checks["qemu_network_disabled"]
-            ),
-            "virtio_graphics_both_boots": (
-                first_checks["qemu_graphical_hardware_requested"]
-                and second_checks["qemu_graphical_hardware_requested"]
-            ),
-            "durable_cache_both_boots": (
-                first_checks["qemu_durable_cache_mode"]
-                and second_checks["qemu_durable_cache_mode"]
-            ),
-            **state_checks,
-        }
-        if not all(checks.values()):
-            raise qemu.ProofError(f"cold-health QEMU checks incomplete: {checks}")
+            phase = "inspect_committed_state"
+            state_checks = inspect_committed_state(
+                disk,
+                work,
+                previous_commit=args.previous_commit,
+                candidate_commit=args.source_commit,
+            )
 
-        disk_sha = qemu.sha256_file(disk)
-        disk.unlink()
-        guest_destroyed = not disk.exists()
-        if not guest_destroyed:
-            raise qemu.ProofError("cold-health QEMU guest disk was retained")
+            phase = "committed_current_boot"
+            second_serial, second_checks = qemu.boot_qemu_expected(
+                args,
+                inputs,
+                disk,
+                work,
+                expected_slot="current",
+                expected_commit=args.source_commit,
+                serial_name="serial-committed-current.log",
+                graphical_hardware=True,
+            )
 
-        result = {
-            "$schema": SCHEMA,
-            "status": "pass",
-            "source_commit": args.source_commit,
-            "previous_commit": args.previous_commit,
-            "cold_health_commit_proven": True,
-            "candidate_boot_count": 1,
-            "committed_current_boot_count": 1,
-            "failure_fallback_proven_by_this_receipt": False,
-            "physical_target_device_touched": False,
-            "physical_write_authorized": False,
-            "physical_usb_boot_proven": False,
-            "secure_boot_proven": False,
-            "public_physical_promotion_allowed": False,
-            "network_required": False,
-            "virtual_graphics": {
-                "adapter": "virtio-vga",
-                "host_display_window": False,
-                "surface_path": "cage-wayland-webkit-seatd",
-                "synthetic_health": False,
-            },
-            "guest_disk": {
-                "sha256_before_destruction": disk_sha,
-                "retained": False,
-                "layout": ["ORDAX-ESP", "ORDAX-DATA"],
-            },
-            "serial_markers": [
-                commit_marker,
-                "ORDAX_PORTABLE_V2_SLOT=candidate",
-                "ORDAX_PORTABLE_V2_SLOT=current",
-                "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit,
-            ],
-            "checks": checks,
-        }
-        args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(
-            json.dumps(result, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        return result
+            phase = "final_checks"
+            checks = {
+                "candidate_boot_selected": first_checks["expected_slot_selected"],
+                "candidate_source_sha_exact": first_checks["portable_source_sha_exact"],
+                "candidate_stable_source_sha_exact": first_checks["stable_init_source_sha_exact"],
+                "candidate_surface_runtime_exact": first_checks["surface_runtime_sha_exact"],
+                "candidate_local_ai_requirement_satisfied": first_checks[
+                    "local_ai_runtime_requirement_satisfied"
+                ],
+                "cold_health_commit_marker_seen": first_checks["required_post_marker_seen"],
+                "second_boot_current_selected": second_checks["expected_slot_selected"],
+                "second_boot_candidate_source_sha_exact": second_checks[
+                    "portable_source_sha_exact"
+                ],
+                "second_boot_stable_source_sha_exact": second_checks[
+                    "stable_init_source_sha_exact"
+                ],
+                "second_boot_surface_runtime_exact": second_checks[
+                    "surface_runtime_sha_exact"
+                ],
+                "second_boot_local_ai_requirement_satisfied": second_checks[
+                    "local_ai_runtime_requirement_satisfied"
+                ],
+                "network_disabled_both_boots": (
+                    first_checks["qemu_network_disabled"]
+                    and second_checks["qemu_network_disabled"]
+                ),
+                "virtio_graphics_both_boots": (
+                    first_checks["qemu_graphical_hardware_requested"]
+                    and second_checks["qemu_graphical_hardware_requested"]
+                ),
+                "durable_cache_both_boots": (
+                    first_checks["qemu_durable_cache_mode"]
+                    and second_checks["qemu_durable_cache_mode"]
+                ),
+                **state_checks,
+            }
+            if not all(checks.values()):
+                raise qemu.ProofError(f"cold-health QEMU checks incomplete: {checks}")
+
+            phase = "destroy_guest_disk"
+            disk_sha = qemu.sha256_file(disk)
+            disk.unlink()
+            guest_destroyed = not disk.exists()
+            if not guest_destroyed:
+                raise qemu.ProofError("cold-health QEMU guest disk was retained")
+
+            result = {
+                "$schema": SCHEMA,
+                "status": "pass",
+                "source_commit": args.source_commit,
+                "previous_commit": args.previous_commit,
+                "cold_health_commit_proven": True,
+                "candidate_boot_count": 1,
+                "committed_current_boot_count": 1,
+                "failure_fallback_proven_by_this_receipt": False,
+                "physical_target_device_touched": False,
+                "physical_write_authorized": False,
+                "physical_usb_boot_proven": False,
+                "secure_boot_proven": False,
+                "public_physical_promotion_allowed": False,
+                "network_required": False,
+                "virtual_graphics": {
+                    "adapter": "virtio-vga",
+                    "host_display_window": False,
+                    "surface_path": "cage-wayland-webkit-seatd",
+                    "synthetic_health": False,
+                },
+                "guest_disk": {
+                    "sha256_before_destruction": disk_sha,
+                    "retained": False,
+                    "layout": ["ORDAX-ESP", "ORDAX-DATA"],
+                },
+                "serial_markers": [
+                    commit_marker,
+                    "ORDAX_PORTABLE_V2_SLOT=candidate",
+                    "ORDAX_PORTABLE_V2_SLOT=current",
+                    "ORDAX_PORTABLE_V2_SOURCE_SHA=" + args.source_commit,
+                ],
+                "checks": checks,
+            }
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            args.out.write_text(
+                json.dumps(result, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            return result
+        except Exception as exc:
+            preserve_failure_diagnostics(
+                work,
+                args.out,
+                phase=phase,
+                exc=exc,
+                source_commit=args.source_commit,
+                previous_commit=args.previous_commit,
+            )
+            raise
     finally:
         if disk is not None and disk.exists():
             disk.unlink()
