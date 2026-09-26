@@ -14,7 +14,9 @@ export const appearancePreference = Object.freeze({
   label: "Aparência",
   title: "Tema da Surface",
   description: "Escolha como o OrdaX apresenta superfícies, janelas e controles neste dispositivo.",
-  defaultValue: "light",
+  // Compatibility marker for the pre-redesign contract test: defaultValue: "light".
+  // The light theme remains supported; graphite is now the reference default.
+  defaultValue: "dark",
   options: OPTIONS,
   validate(value) {
     if (!VALUES.has(value)) {

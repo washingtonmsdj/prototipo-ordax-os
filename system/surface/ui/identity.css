@@ -1,0 +1,468 @@
+/*
+ * Shared OrdaX product identity.
+ *
+ * This file owns composition/component styling only. Colors, typography,
+ * spacing, radii, shadows, focus and motion remain owned by tokens.css.
+ * The public landing is a visual reference; no landing demo behavior is used.
+ */
+
+body {
+  background: var(--ordax-bg);
+  font-weight: 400;
+}
+
+::selection {
+  background: var(--ordax-accent);
+  color: var(--ordax-accent-ink);
+}
+
+.ordax-shell {
+  grid-template-columns: 88px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 42px;
+  background:
+    radial-gradient(circle at 78% 18%, color-mix(in srgb, var(--ordax-accent) 7%, transparent), transparent 31%),
+    linear-gradient(135deg, var(--ordax-bg-start), var(--ordax-bg-middle) 58%, var(--ordax-bg-end));
+}
+
+.ordax-rail {
+  border-right-color: var(--ordax-border-soft);
+  background: var(--ordax-rail-bg);
+  box-shadow: 12px 0 36px rgba(0, 0, 0, 0.08);
+}
+
+.ordax-rail-nav {
+  gap: 10px;
+  padding: 22px 8px 16px;
+}
+
+.ordax-rail-button {
+  width: 72px;
+  min-height: 64px;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--ordax-radius-md);
+  color: var(--ordax-muted);
+  font-size: 0.68rem;
+  font-weight: var(--ordax-control-weight);
+  transition:
+    color var(--ordax-motion-base) var(--ordax-ease-standard),
+    background var(--ordax-motion-base) var(--ordax-ease-standard),
+    border-color var(--ordax-motion-base) var(--ordax-ease-standard),
+    transform var(--ordax-motion-base) var(--ordax-ease-standard);
+}
+
+.ordax-rail-button::before {
+  left: -8px;
+  top: 15px;
+  bottom: 15px;
+  width: 2px;
+  border-radius: 99px;
+}
+
+.ordax-rail-button:hover:not(:disabled),
+.ordax-rail-button:focus-visible,
+.ordax-rail-button[data-active="true"] {
+  border-color: var(--ordax-border-soft);
+  background: var(--ordax-hover-bg);
+  color: var(--ordax-text);
+}
+
+.ordax-rail-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.ordax-rail-button[data-active="true"]::before {
+  background: var(--ordax-accent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--ordax-accent) 35%, transparent);
+}
+
+.ordax-rail-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.ordax-brandbar {
+  top: 24px;
+  left: 34px;
+  right: 34px;
+}
+
+.ordax-brand {
+  gap: 10px;
+}
+
+.ordax-brand-symbol {
+  width: 45px;
+  height: 28px;
+}
+
+.ordax-brand-dot {
+  top: 2px;
+  width: 25px;
+  height: 25px;
+  border: 1.5px solid var(--ordax-text);
+  background: transparent;
+}
+
+.ordax-brand-slash {
+  top: 1px;
+  left: 29px;
+  width: 2px;
+  height: 26px;
+  transform: none;
+  background: var(--ordax-muted);
+}
+
+.ordax-brand-slash::after {
+  display: none;
+}
+
+.ordax-brand-word {
+  font-size: 1.2rem;
+  font-weight: 500;
+  letter-spacing: var(--ordax-tracking-tight);
+}
+
+.ordax-brand-rule {
+  width: 56px;
+  background: var(--ordax-border);
+}
+
+.ordax-home-panel {
+  width: min(520px, 46vw);
+  padding: clamp(136px, 18vh, 190px) 0 68px clamp(42px, 4.6vw, 82px);
+}
+
+.ordax-area-kicker,
+.ordax-section-kicker {
+  color: var(--ordax-muted);
+  font-weight: 600;
+  letter-spacing: 0.25em;
+}
+
+.ordax-clock {
+  font-size: clamp(4.6rem, 8.5vw, 7.5rem);
+  font-weight: 420;
+  line-height: 0.9;
+  letter-spacing: -0.07em;
+}
+
+.ordax-date {
+  color: var(--ordax-muted);
+}
+
+.ordax-command {
+  min-height: 52px;
+  border: 1px solid var(--ordax-border);
+  border-radius: 999px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--ordax-panel) 62%, transparent);
+  color: var(--ordax-muted);
+  transition:
+    border-color var(--ordax-motion-base) var(--ordax-ease-standard),
+    background var(--ordax-motion-base) var(--ordax-ease-standard),
+    color var(--ordax-motion-base) var(--ordax-ease-standard),
+    transform var(--ordax-motion-base) var(--ordax-ease-standard);
+}
+
+.ordax-command:hover,
+.ordax-command:focus-visible {
+  border-color: var(--ordax-accent);
+  background: var(--ordax-hover-bg);
+  box-shadow: var(--ordax-glow-soft);
+  transform: translateY(-1px);
+}
+
+.ordax-command kbd,
+.ordax-launcher-search kbd {
+  border-left-color: var(--ordax-border-soft);
+}
+
+.ordax-space-link {
+  border-bottom-color: var(--ordax-border-soft);
+  transition:
+    padding var(--ordax-motion-base) var(--ordax-ease-standard),
+    background var(--ordax-motion-base) var(--ordax-ease-standard),
+    color var(--ordax-motion-base) var(--ordax-ease-standard);
+}
+
+/* Replace the former warm architectural art with a restrained orbital layer. */
+.ordax-identity-art {
+  width: 64%;
+  opacity: 0.9;
+}
+
+.ordax-art-sun {
+  top: 24%;
+  right: 12%;
+  width: min(15vw, 180px);
+  border: 1px solid var(--ordax-border);
+  background:
+    radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--ordax-accent) 22%, transparent), transparent 35%),
+    radial-gradient(circle at 64% 66%, #02060c, var(--ordax-panel) 58%, #050a12 100%);
+  box-shadow: -24px 20px 54px rgba(0, 0, 0, 0.34), var(--ordax-glow-soft);
+}
+
+.ordax-art-arc {
+  top: 6%;
+  left: 2%;
+  width: min(55vw, 820px);
+  border: 1px solid color-mix(in srgb, var(--ordax-accent) 66%, transparent);
+  transform: rotate(-24deg) scaleY(0.48);
+  opacity: 0.76;
+}
+
+.ordax-art-slab {
+  display: none;
+}
+
+.ordax-art-vertical {
+  top: 10%;
+  left: 72%;
+  width: 1px;
+  height: 38%;
+  transform: rotate(38deg);
+  transform-origin: top;
+  background: linear-gradient(transparent, var(--ordax-border), transparent);
+  opacity: 0.65;
+}
+
+.ordax-art-vertical::after {
+  display: none;
+}
+
+.ordax-art-caption {
+  top: auto;
+  right: 8%;
+  bottom: 12%;
+  color: var(--ordax-muted);
+  font-size: 0.56rem;
+  font-weight: 550;
+  letter-spacing: 0.3em;
+}
+
+.ordax-window {
+  width: min(920px, calc(100% - 88px));
+  max-height: calc(100% - 82px);
+  border-color: var(--ordax-border);
+  border-radius: var(--ordax-radius-lg);
+  background: var(--ordax-window-bg);
+  box-shadow: var(--ordax-shadow);
+  transition:
+    border-color var(--ordax-motion-base) var(--ordax-ease-standard),
+    opacity var(--ordax-motion-base) var(--ordax-ease-standard),
+    box-shadow var(--ordax-motion-base) var(--ordax-ease-standard),
+    transform var(--ordax-motion-base) var(--ordax-ease-standard);
+}
+
+.ordax-window[data-active="false"] {
+  opacity: 0.88;
+}
+
+.ordax-window[data-active="true"] {
+  border-color: color-mix(in srgb, var(--ordax-accent) 42%, var(--ordax-border));
+  box-shadow: var(--ordax-shadow), var(--ordax-glow-soft);
+}
+
+.ordax-window-titlebar {
+  min-height: 54px;
+  padding: 9px 12px 9px 15px;
+  border-bottom-color: var(--ordax-border-soft);
+  background: color-mix(in srgb, var(--ordax-panel) 72%, var(--ordax-window-bg));
+}
+
+.ordax-app-mark {
+  width: 34px;
+  height: 34px;
+  border-color: var(--ordax-border);
+  border-radius: var(--ordax-radius-sm);
+  background: var(--ordax-subtle-bg);
+  color: var(--ordax-accent);
+  font-weight: 650;
+}
+
+.ordax-window-title-group strong {
+  font-weight: 560;
+}
+
+.ordax-window-control,
+.ordax-area-button,
+.ordax-status-action,
+.ordax-running-app,
+.ordax-tray-item,
+.ordax-quick-action,
+.ordax-quick-settings-link {
+  transition:
+    background var(--ordax-motion-fast) var(--ordax-ease-standard),
+    border-color var(--ordax-motion-fast) var(--ordax-ease-standard),
+    color var(--ordax-motion-fast) var(--ordax-ease-standard),
+    transform var(--ordax-motion-fast) var(--ordax-ease-standard);
+}
+
+.ordax-app-panel,
+.ordax-app-extension,
+.ordax-quick-network-summary,
+.ordax-quick-current,
+.ordax-quick-timezone,
+.ordax-quick-battery-status {
+  border-color: var(--ordax-border-soft);
+  background: color-mix(in srgb, var(--ordax-panel) 58%, transparent);
+}
+
+.ordax-app-panel-title {
+  font-weight: 560;
+}
+
+.ordax-inline-status[data-state="online"],
+.ordax-inline-status[data-state="available"] {
+  border-color: color-mix(in srgb, var(--ordax-success) 42%, transparent);
+  background: var(--ordax-success-bg);
+  color: var(--ordax-success);
+}
+
+.ordax-preference-choice[data-selected="true"],
+.ordax-quick-action-primary {
+  border-color: var(--ordax-button-bg);
+  background: var(--ordax-button-bg);
+  color: var(--ordax-button-text);
+}
+
+.ordax-launcher {
+  left: calc(88px + (100vw - 88px) * 0.38);
+}
+
+.ordax-launcher-panel,
+.ordax-quick-panel {
+  border-color: var(--ordax-border);
+  background: color-mix(in srgb, var(--ordax-panel) 92%, var(--ordax-app-bg));
+  box-shadow: var(--ordax-shadow), var(--ordax-glow-soft);
+}
+
+.ordax-launcher-app:hover,
+.ordax-launcher-app:focus-visible,
+.ordax-launcher-app[data-selected="true"] {
+  border-color: var(--ordax-border);
+  background: var(--ordax-hover-bg);
+}
+
+.ordax-statusbar {
+  border-top-color: var(--ordax-border-soft);
+  background: var(--ordax-statusbar-bg);
+  backdrop-filter: blur(14px);
+}
+
+.ordax-area-dot,
+.ordax-running-app[data-active="true"]::after,
+.ordax-settings-network-service[data-state="online"] .ordax-settings-network-dot,
+.ordax-settings-network-item[data-state="connected"] .ordax-settings-network-dot {
+  background: var(--ordax-accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ordax-accent) 26%, transparent);
+}
+
+.ordax-settings-theme-preview {
+  border-color: #c5d1e0;
+  background: #eef3f9;
+}
+
+.ordax-settings-theme-preview[data-theme-preview="dark"] {
+  border-color: #243249;
+  background: #080f19;
+}
+
+.ordax-settings-theme-rail {
+  background: #d9e2ed;
+}
+
+.ordax-settings-theme-preview[data-theme-preview="dark"] .ordax-settings-theme-rail {
+  background: #07101b;
+}
+
+.ordax-settings-theme-body {
+  background:
+    linear-gradient(#527eb8 0 0) 9px 10px / 34px 4px no-repeat,
+    linear-gradient(#172b47 0 0) 9px 23px / 46px 3px no-repeat,
+    linear-gradient(#8797aa 0 0) 9px 33px / 33px 3px no-repeat,
+    #eef3f9;
+}
+
+.ordax-settings-theme-preview[data-theme-preview="dark"] .ordax-settings-theme-body {
+  background:
+    linear-gradient(#a9c9f7 0 0) 9px 10px / 34px 4px no-repeat,
+    linear-gradient(#e2ebf7 0 0) 9px 23px / 46px 3px no-repeat,
+    linear-gradient(#8e9db4 0 0) 9px 33px / 33px 3px no-repeat,
+    #090f1b;
+}
+
+/* First-party headings use the product type system rather than landing-scale type. */
+.ordax-settings-title,
+.ordax-system-title,
+.ordax-account-title,
+.ordax-quick-panel-header h2,
+.ordax-quick-battery-status strong,
+.ordax-notes-title,
+.ordax-projects-title {
+  font-family: var(--ordax-font-display);
+  font-weight: var(--ordax-title-weight);
+  letter-spacing: var(--ordax-tracking-tight);
+}
+
+/* Legacy component accents are normalized here while component CSS migrates. */
+.ordax-internet-tab[data-selected="true"] {
+  background: var(--ordax-selected-bg) !important;
+  box-shadow: inset 3px 0 var(--ordax-accent) !important;
+}
+
+.ordax-notes-workspace {
+  --notes-ivory: var(--ordax-window-bg) !important;
+  --notes-ink: var(--ordax-text) !important;
+  --notes-muted: var(--ordax-muted) !important;
+  --notes-accent: var(--ordax-accent) !important;
+}
+
+@media (max-width: 760px) {
+  .ordax-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .ordax-home-panel {
+    width: min(100%, 560px);
+  }
+
+  .ordax-identity-art {
+    opacity: 0.34;
+  }
+
+  .ordax-window {
+    width: calc(100% - 20px);
+    max-height: calc(100% - 20px);
+    border-radius: var(--ordax-radius-md);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ordax-rail-button,
+  .ordax-command,
+  .ordax-window,
+  .ordax-window-control,
+  .ordax-area-button,
+  .ordax-status-action,
+  .ordax-running-app,
+  .ordax-tray-item,
+  .ordax-quick-action,
+  .ordax-quick-settings-link {
+    transition: none;
+  }
+}
+
+[data-ordax-motion="reduced"] .ordax-rail-button,
+[data-ordax-motion="reduced"] .ordax-command,
+[data-ordax-motion="reduced"] .ordax-window,
+[data-ordax-motion="reduced"] .ordax-window-control,
+[data-ordax-motion="reduced"] .ordax-area-button,
+[data-ordax-motion="reduced"] .ordax-status-action,
+[data-ordax-motion="reduced"] .ordax-running-app,
+[data-ordax-motion="reduced"] .ordax-tray-item,
+[data-ordax-motion="reduced"] .ordax-quick-action,
+[data-ordax-motion="reduced"] .ordax-quick-settings-link {
+  transition: none;
+}

@@ -1,0 +1,145 @@
+/*
+ * First-party application identity bridge.
+ *
+ * Semantic values come only from tokens.css. This layer normalizes older app
+ * component styles that still contain presentation-era literals while those
+ * components are migrated to semantic tokens in place.
+ */
+
+.ordax-projects-view,
+.ordax-notes-workspace,
+.ordax-internet-view {
+  color: var(--ordax-text);
+}
+
+.ordax-projects-kicker,
+.ordax-projects-intro,
+.ordax-project-card-meta,
+.ordax-project-card-path,
+.ordax-projects-cloud-summary,
+.ordax-projects-empty-copy {
+  color: var(--ordax-muted);
+}
+
+.ordax-project-card {
+  border-color: var(--ordax-border-soft);
+  background: color-mix(in srgb, var(--ordax-panel) 58%, transparent);
+  box-shadow: var(--ordax-shadow-soft);
+}
+
+.ordax-project-action {
+  border-color: var(--ordax-border);
+  border-radius: var(--ordax-radius-sm);
+  transition:
+    background var(--ordax-motion-fast) var(--ordax-ease-standard),
+    border-color var(--ordax-motion-fast) var(--ordax-ease-standard),
+    color var(--ordax-motion-fast) var(--ordax-ease-standard);
+}
+
+.ordax-project-action:hover,
+.ordax-project-action:focus-visible {
+  border-color: var(--ordax-accent);
+  background: var(--ordax-hover-bg);
+  outline-color: var(--ordax-focus);
+}
+
+/* Notes still exposes local aliases; bind them to the shared semantic source. */
+.ordax-notes-workspace {
+  --notes-ivory: var(--ordax-window-bg) !important;
+  --notes-ink: var(--ordax-text) !important;
+  --notes-muted: var(--ordax-muted) !important;
+  --notes-accent: var(--ordax-accent) !important;
+  --notes-soft: var(--ordax-selected-bg) !important;
+}
+
+/*
+ * Internet deliberately keeps actual page content independent from shell
+ * chrome. The browser chrome itself follows the shared Surface identity.
+ */
+.ordax-internet-view {
+  background: var(--ordax-app-bg) !important;
+  color: var(--ordax-text) !important;
+}
+
+.ordax-internet-toolbar,
+.ordax-internet-sidebar,
+.ordax-internet-project-panel {
+  background: color-mix(in srgb, var(--ordax-panel) 82%, var(--ordax-app-bg)) !important;
+  border-color: var(--ordax-border-soft) !important;
+}
+
+.ordax-internet-address-form,
+.ordax-internet-tab-search,
+.ordax-internet-page-reference,
+.ordax-internet-new-tab {
+  border-color: var(--ordax-border-soft) !important;
+  background: var(--ordax-subtle-bg) !important;
+  color: var(--ordax-text) !important;
+}
+
+.ordax-internet-address-form:focus-within,
+.ordax-internet-tab-search:focus-within {
+  border-color: var(--ordax-focus) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ordax-focus) 32%, transparent) !important;
+}
+
+.ordax-internet-site-control,
+.ordax-internet-tab-search-icon,
+.ordax-internet-tab-search-input::placeholder,
+.ordax-internet-section-label,
+.ordax-internet-tab-icon,
+.ordax-internet-tab-close,
+.ordax-internet-tab-placeholder,
+.ordax-internet-sidebar-footer,
+.ordax-internet-project-intro p,
+.ordax-internet-page-copy small,
+.ordax-internet-reference-state {
+  color: var(--ordax-muted) !important;
+}
+
+.ordax-internet-workspace-mark {
+  border-color: var(--ordax-accent) !important;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--ordax-accent) 18%, transparent);
+}
+
+.ordax-internet-tab[data-selected="true"] {
+  background: var(--ordax-selected-bg) !important;
+  box-shadow: inset 3px 0 var(--ordax-accent) !important;
+}
+
+.ordax-internet-home-mark {
+  color: var(--ordax-accent) !important;
+}
+
+.ordax-internet-save-button {
+  background: var(--ordax-button-bg) !important;
+  color: var(--ordax-button-text) !important;
+  font-weight: var(--ordax-control-weight) !important;
+}
+
+.ordax-internet-save-button:focus-visible,
+.ordax-internet-new-tab:focus-visible,
+.ordax-internet-tab-activate:focus-visible,
+.ordax-internet-tab-close:focus-visible {
+  outline: 2px solid var(--ordax-focus) !important;
+  outline-offset: 2px;
+}
+
+.ordax-internet-project-panel,
+.ordax-internet-page-reference,
+.ordax-internet-save-button,
+.ordax-internet-new-tab,
+.ordax-internet-address-form,
+.ordax-internet-tab-search {
+  border-radius: var(--ordax-radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ordax-project-action {
+    transition: none;
+  }
+}
+
+[data-ordax-motion="reduced"] .ordax-project-action {
+  transition: none;
+}
