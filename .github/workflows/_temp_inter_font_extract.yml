@@ -1,0 +1,26 @@
+name: Temporary Inter Font Extract
+
+on:
+  push:
+    branches:
+      - design/ordax-glacial-identity
+
+permissions:
+  contents: read
+
+jobs:
+  extract:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fetch pinned Inter Latin variable WOFF2
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://raw.githubusercontent.com/fontsource/font-files/d946f2f5f48bb73bb238d189d3b182c98dcbca10/fonts/variable/inter/files/inter-latin-wght-normal.woff2'
+          curl --fail --silent --show-error --location "$url" --output inter-latin-wght-normal.woff2
+          test "$(wc -c < inter-latin-wght-normal.woff2)" -eq 48256
+          actual="$(git hash-object inter-latin-wght-normal.woff2)"
+          test "$actual" = 'd15208de03cd1ad7c5199f0a0ce915fe841e4722'
+          echo 'ORDAX_INTER_BASE64_BEGIN'
+          base64 -w 76 inter-latin-wght-normal.woff2
+          echo 'ORDAX_INTER_BASE64_END'
