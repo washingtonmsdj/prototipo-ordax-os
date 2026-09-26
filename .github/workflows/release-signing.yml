@@ -13,6 +13,8 @@ on:
       - 'docs/contracts/portable-v4-signing-handoff.json'
       - 'tests/test_release_v4_signing_runbook.py'
       - 'tests/test_canonical_v4_operator_inputs.py'
+      - 'tests/test_canonical_v4_proof_receipt.py'
+      - 'tools/creator/bind_canonical_v4_release_proof.py'
       - '.github/workflows/portable-release-image.yml'
       - '.github/workflows/surface-runtime-lock-discovery.yml'
       - '.github/workflows/local-ai-runtime-candidate.yml'
@@ -26,6 +28,8 @@ on:
       - 'docs/contracts/portable-v4-signing-handoff.json'
       - 'tests/test_release_v4_signing_runbook.py'
       - 'tests/test_canonical_v4_operator_inputs.py'
+      - 'tests/test_canonical_v4_proof_receipt.py'
+      - 'tools/creator/bind_canonical_v4_release_proof.py'
       - '.github/workflows/portable-release-image.yml'
       - '.github/workflows/surface-runtime-lock-discovery.yml'
       - '.github/workflows/local-ai-runtime-candidate.yml'
@@ -35,6 +39,22 @@ permissions:
   contents: read
 
 jobs:
+  canonical-receipt-windows:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          check-latest: false
+      - name: Exercise canonical receipt with Windows PowerShell and PowerShell Core
+        run: python -m unittest discover -s tests -p 'test_canonical_v4_proof_receipt.py' -v
+
   signing-tooling:
     runs-on: ubuntu-24.04
     steps:

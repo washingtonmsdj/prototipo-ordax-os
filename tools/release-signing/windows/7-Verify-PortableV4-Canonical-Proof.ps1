@@ -43,12 +43,12 @@ function Require-LowerSha256 {
 
 function Require-False {
     param($Value, [string]$Label)
-    if ($Value -ne $false) { throw "$Label must be false." }
+    if ($Value -isnot [bool] -or $Value -ne $false) { throw "$Label must be JSON boolean false." }
 }
 
 function Require-True {
     param($Value, [string]$Label)
-    if ($Value -ne $true) { throw "$Label must be true." }
+    if ($Value -isnot [bool] -or $Value -ne $true) { throw "$Label must be JSON boolean true." }
 }
 
 $Root = [IO.Path]::GetFullPath($PSScriptRoot)
@@ -155,6 +155,9 @@ foreach ($name in @('system.erofs', 'native-surface-runtime.erofs', 'local-ai-ru
     if ($signedSha -cne $materialSha) {
         throw "Signed and materialized artifact SHA-256 differ for $name."
     }
+    if ($signedArtifact.size -isnot [int] -and $signedArtifact.size -isnot [long]) {
+        throw "Signed receipt artifact size must be a JSON integer for $name."
+    }
     $size = [Int64]$signedArtifact.size
     if ($size -le 0) { throw "Signed receipt artifact size is invalid for $name." }
     $artifactProof[$name] = [ordered]@{
@@ -185,7 +188,13 @@ $receipt = [ordered]@{
     physical_write_authorized = $false
     physical_write_performed = $false
 }
-$receipt | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $ReceiptPath -Encoding UTF8
+# Windows PowerShell 5.1 adds a BOM with Set-Content -Encoding UTF8. The
+# host-neutral binder validates and hashes these exact bytes without rewriting.
+[IO.File]::WriteAllText(
+    $ReceiptPath,
+    ($receipt | ConvertTo-Json -Depth 6) + [Environment]::NewLine,
+    [Text.UTF8Encoding]::new($false)
+)
 
 Write-Host ''
 Write-Host 'PORTABLE_V4_CANONICAL_RELEASE_PROOF=PASS'
