@@ -1,0 +1,91 @@
+name: Temporary Visual Contract Cleanup
+
+on:
+  push:
+    branches:
+      - design/ordax-glacial-identity
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout redesign branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+        with:
+          persist-credentials: false
+
+      - name: Remove compatibility debt and normalize text files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              if text.count(old) != 1:
+                  raise SystemExit(f"expected exactly one match in {path}: {old!r}")
+              p.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          replace_once(
+              "tests/test_surface_ui_contract.py",
+              '        self.assertIn("--ordax-accent: #ed4b25", tokens)\n',
+              '        self.assertIn("--ordax-accent: #a9c9f7", tokens)\n',
+          )
+
+          replace_once(
+              "system/surface/ui/tokens.css",
+              """/*\n * OrdaX visual tokens are the single source of visual policy for the Surface\n * and first-party apps. Components consume semantic tokens; product CSS must\n * not create a second palette per app.\n *\n * Compatibility note for the pre-redesign contract test only:\n * previous source token was --ordax-accent: #ed4b25. The active token below\n * is the approved glacial blue; this historical marker has no CSS effect.\n */\n""",
+              """/*\n * OrdaX visual tokens are the single source of visual policy for the Surface\n * and first-party apps. Components consume semantic tokens; product CSS must\n * not create a second palette per app.\n */\n""",
+          )
+
+          replace_once(
+              "system/surface/ui/identity.css",
+              """/* Legacy component accents are normalized here while component CSS migrates. */\n.ordax-internet-tab[data-selected=\"true\"] {\n  background: var(--ordax-selected-bg) !important;\n  box-shadow: inset 3px 0 var(--ordax-accent) !important;\n}\n\n.ordax-notes-workspace {\n  --notes-ivory: var(--ordax-window-bg) !important;\n  --notes-ink: var(--ordax-text) !important;\n  --notes-muted: var(--ordax-muted) !important;\n  --notes-accent: var(--ordax-accent) !important;\n}\n\n""",
+              "",
+          )
+
+          replace_once(
+              "tests/test_surface_visual_identity.py",
+              '        tokens = (SURFACE / "tokens.css").read_text(encoding="utf-8")\n        for declaration in (\n',
+              '        tokens = (SURFACE / "tokens.css").read_text(encoding="utf-8")\n        self.assertNotIn("#ed4b25", tokens)\n        for declaration in (\n',
+          )
+
+          text_paths = [
+              "docs/DESKTOP-IDENTITY.md",
+              "system/composition/native/index.html",
+              "system/composition/web/index.html",
+              "system/services/preferences/appearance.mjs",
+              "system/surface/ui/app-identity.css",
+              "system/surface/ui/identity.css",
+              "system/surface/ui/tokens.css",
+              "tests/test_surface_ui_contract.py",
+              "tests/test_surface_visual_identity.py",
+              "third_party/fonts/Inter-Latin-Variable-SOURCE.md",
+              "third_party/licenses/Inter-OFL-1.1.txt",
+              "tools/surface-web/browser-smoke.mjs",
+          ]
+          for name in text_paths:
+              p = Path(name)
+              text = p.read_text(encoding="utf-8")
+              p.write_text(text.rstrip("\n") + "\n", encoding="utf-8")
+
+          Path(".github/workflows/_temp_visual_contract_cleanup.yml").unlink()
+          PY
+
+      - name: Commit cleanup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Clean visual contract compatibility debt'
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPOSITORY}.git" "HEAD:${GITHUB_REF}"
