@@ -8,6 +8,7 @@ NATIVE_INDEX = ROOT / "system" / "composition" / "native" / "index.html"
 APPEARANCE = ROOT / "system" / "services" / "preferences" / "appearance.mjs"
 DESKTOP_IDENTITY = ROOT / "docs" / "DESKTOP-IDENTITY.md"
 BROWSER_SMOKE = ROOT / "tools" / "surface-web" / "browser-smoke.mjs"
+PROJECTS_CSS = ROOT / "system" / "apps" / "projects" / "projects.css"
 INTER_FONT = SURFACE / "fonts" / "inter-latin-wght-normal.woff2"
 INTER_SOURCE = ROOT / "third_party" / "fonts" / "Inter-Latin-Variable-SOURCE.md"
 INTER_LICENSE = ROOT / "third_party" / "licenses" / "Inter-OFL-1.1.txt"
@@ -65,7 +66,7 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
         self.assertIn("prefers-reduced-motion", css)
 
         app_css = app_identity.read_text(encoding="utf-8")
-        self.assertIn(".ordax-projects-view", app_css)
+        self.assertNotIn(".ordax-projects-view", app_css)
         self.assertIn(".ordax-notes-workspace", app_css)
         self.assertIn(".ordax-internet-view", app_css)
         self.assertIn("var(--ordax-button-bg)", app_css)
@@ -75,6 +76,21 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
             self.assertIn('../../surface/ui/identity.css', html)
             self.assertIn('../../surface/ui/app-identity.css', html)
             self.assertIn('name="theme-color" content="#080f19"', html)
+
+    def test_projects_consumes_semantic_tokens_in_component_css(self):
+        css = PROJECTS_CSS.read_text(encoding="utf-8")
+        for declaration in (
+            "color: var(--ordax-text)",
+            "color: var(--ordax-muted)",
+            "border: 1px solid var(--ordax-border-soft)",
+            "border-radius: var(--ordax-radius-md)",
+            "background: color-mix(in srgb, var(--ordax-panel) 58%, transparent)",
+            "box-shadow: var(--ordax-shadow-soft)",
+            "border: 1px solid var(--ordax-border)",
+            "outline: 2px solid var(--ordax-focus)",
+            "prefers-reduced-motion",
+        ):
+            self.assertIn(declaration, css)
 
     def test_browser_smoke_exercises_shared_identity_layers(self):
         smoke = BROWSER_SMOKE.read_text(encoding="utf-8")

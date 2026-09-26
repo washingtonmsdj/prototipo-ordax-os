@@ -6,41 +6,9 @@
  * components are migrated to semantic tokens in place.
  */
 
-.ordax-projects-view,
 .ordax-notes-workspace,
 .ordax-internet-view {
   color: var(--ordax-text);
-}
-
-.ordax-projects-kicker,
-.ordax-projects-intro,
-.ordax-project-card-meta,
-.ordax-project-card-path,
-.ordax-projects-cloud-summary,
-.ordax-projects-empty-copy {
-  color: var(--ordax-muted);
-}
-
-.ordax-project-card {
-  border-color: var(--ordax-border-soft);
-  background: color-mix(in srgb, var(--ordax-panel) 58%, transparent);
-  box-shadow: var(--ordax-shadow-soft);
-}
-
-.ordax-project-action {
-  border-color: var(--ordax-border);
-  border-radius: var(--ordax-radius-sm);
-  transition:
-    background var(--ordax-motion-fast) var(--ordax-ease-standard),
-    border-color var(--ordax-motion-fast) var(--ordax-ease-standard),
-    color var(--ordax-motion-fast) var(--ordax-ease-standard);
-}
-
-.ordax-project-action:hover,
-.ordax-project-action:focus-visible {
-  border-color: var(--ordax-accent);
-  background: var(--ordax-hover-bg);
-  outline-color: var(--ordax-focus);
 }
 
 /* Notes still exposes local aliases; bind them to the shared semantic source. */
@@ -132,14 +100,4 @@
 .ordax-internet-address-form,
 .ordax-internet-tab-search {
   border-radius: var(--ordax-radius-sm);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ordax-project-action {
-    transition: none;
-  }
-}
-
-[data-ordax-motion="reduced"] .ordax-project-action {
-  transition: none;
 }

@@ -3,6 +3,7 @@
   gap: 1.25rem;
   min-height: 100%;
   padding: 1.25rem;
+  color: var(--ordax-text);
 }
 
 .ordax-projects-header {
@@ -18,6 +19,7 @@
 .ordax-projects-cloud-summary,
 .ordax-projects-empty-copy {
   margin: 0;
+  color: var(--ordax-muted);
 }
 
 .ordax-projects-kicker {
@@ -25,17 +27,18 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  opacity: 0.65;
 }
 
 .ordax-projects-title {
   margin: 0;
   font-size: clamp(1.5rem, 3vw, 2.35rem);
+  font-family: var(--ordax-font-display);
+  font-weight: var(--ordax-title-weight);
+  letter-spacing: var(--ordax-tracking-tight);
 }
 
 .ordax-projects-intro {
   max-width: 44rem;
-  opacity: 0.72;
 }
 
 .ordax-projects-summary {
@@ -46,11 +49,11 @@
 
 .ordax-projects-summary-item,
 .ordax-project-badge {
-  border: 1px solid currentColor;
+  border: 1px solid var(--ordax-border-soft);
   border-radius: 999px;
   padding: 0.3rem 0.65rem;
   font-size: 0.78rem;
-  opacity: 0.72;
+  color: var(--ordax-muted);
 }
 
 .ordax-projects-body {
@@ -69,8 +72,10 @@
   gap: 0.9rem;
   min-width: 0;
   padding: 1rem;
-  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-  border-radius: 1rem;
+  border: 1px solid var(--ordax-border-soft);
+  border-radius: var(--ordax-radius-md);
+  background: color-mix(in srgb, var(--ordax-panel) 58%, transparent);
+  box-shadow: var(--ordax-shadow-soft);
 }
 
 .ordax-project-card-heading {
@@ -95,7 +100,6 @@
 .ordax-project-card-path {
   white-space: nowrap;
   font-size: 0.78rem;
-  opacity: 0.62;
 }
 
 .ordax-project-badge {
@@ -104,7 +108,6 @@
 
 .ordax-project-card-meta {
   font-size: 0.82rem;
-  opacity: 0.68;
 }
 
 .ordax-project-card-actions {
@@ -115,19 +118,39 @@
 .ordax-project-action {
   min-height: 2.25rem;
   padding: 0.45rem 0.75rem;
-  border: 1px solid currentColor;
-  border-radius: 0.65rem;
+  border: 1px solid var(--ordax-border);
+  border-radius: var(--ordax-radius-sm);
   background: transparent;
   color: inherit;
   font: inherit;
   cursor: pointer;
+  transition:
+    background var(--ordax-motion-fast) var(--ordax-ease-standard),
+    border-color var(--ordax-motion-fast) var(--ordax-ease-standard),
+    color var(--ordax-motion-fast) var(--ordax-ease-standard);
+}
+
+.ordax-project-action:hover,
+.ordax-project-action:focus-visible {
+  border-color: var(--ordax-accent);
+  background: var(--ordax-hover-bg);
 }
 
 .ordax-project-action:focus-visible {
-  outline: 2px solid currentColor;
+  outline: 2px solid var(--ordax-focus);
   outline-offset: 2px;
 }
 
 .ordax-projects-empty-title {
   margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ordax-project-action {
+    transition: none;
+  }
+}
+
+[data-ordax-motion="reduced"] .ordax-project-action {
+  transition: none;
 }
