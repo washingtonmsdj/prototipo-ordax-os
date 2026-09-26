@@ -28,12 +28,12 @@
 }
 
 .ordax-notes-view {
-  --notes-paper: #f9f7f1;
-  --notes-ivory: #efede6;
-  --notes-ink: #171613;
-  --notes-muted: #6c6860;
-  --notes-accent: #ed4b25;
-  --notes-soft: color-mix(in srgb, var(--notes-accent) 9%, transparent);
+  --notes-paper: var(--ordax-panel);
+  --notes-ivory: var(--ordax-app-bg);
+  --notes-ink: var(--ordax-text);
+  --notes-muted: var(--ordax-muted);
+  --notes-accent: var(--ordax-accent);
+  --notes-soft: var(--ordax-selected-bg);
   position: relative;
   display: grid;
   grid-template-columns: 220px 285px minmax(440px, 1fr) 270px;
@@ -94,11 +94,11 @@
   min-height: 42px;
   border: 0;
   border-radius: 9px;
-  background: var(--notes-accent);
-  color: #fff;
+  background: var(--ordax-button-bg);
+  color: var(--ordax-button-text);
   cursor: pointer;
   font: inherit;
-  font-weight: 650;
+  font-weight: var(--ordax-control-weight);
   text-align: left;
   padding: 0 16px;
 }
@@ -557,13 +557,13 @@
 }
 
 .ordax-notes-delete-forever {
-  color: #a62d20;
+  color: var(--ordax-danger);
 }
 
 .ordax-notes-delete-forever:hover,
 .ordax-notes-delete-forever:focus-visible {
-  background: color-mix(in srgb, #a62d20 9%, var(--ordax-hover-bg));
-  color: #8d2117;
+  background: var(--ordax-danger-bg);
+  color: var(--ordax-danger);
 }
 
 .ordax-notes-move-section {
@@ -1302,12 +1302,12 @@
   min-height: 34px;
   border: 0;
   border-radius: 8px;
-  background: var(--notes-accent);
-  color: #fff;
+  background: var(--ordax-button-bg);
+  color: var(--ordax-button-text);
   cursor: pointer;
   font: inherit;
   font-size: 0.68rem;
-  font-weight: 650;
+  font-weight: var(--ordax-control-weight);
 }
 
 .ordax-notes-file-picker-attach:disabled {

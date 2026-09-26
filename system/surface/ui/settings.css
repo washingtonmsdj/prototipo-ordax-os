@@ -151,37 +151,37 @@
   overflow: hidden;
   border: 1px solid var(--ordax-border);
   border-radius: 8px;
-  background: #f1efe8;
+  background: #f7f9fc;
 }
 
 .ordax-settings-theme-preview[data-theme-preview="dark"] {
-  border-color: #53565d;
-  background: #181a1f;
+  border-color: #243249;
+  background: #090f1b;
 }
 
 .ordax-settings-theme-rail {
-  background: #22252a;
+  background: #dbe5f1;
 }
 
 .ordax-settings-theme-preview[data-theme-preview="dark"] .ordax-settings-theme-rail {
-  background: #0f1114;
+  background: #07101b;
 }
 
 .ordax-settings-theme-body {
   position: relative;
   background:
-    linear-gradient(#ed4b25 0 0) 9px 10px / 34px 4px no-repeat,
-    linear-gradient(#2a2c31 0 0) 9px 23px / 46px 3px no-repeat,
-    linear-gradient(#9a9c9f 0 0) 9px 33px / 33px 3px no-repeat,
-    #f1efe8;
+    linear-gradient(#527eb8 0 0) 9px 10px / 34px 4px no-repeat,
+    linear-gradient(#172b47 0 0) 9px 23px / 46px 3px no-repeat,
+    linear-gradient(#8797aa 0 0) 9px 33px / 33px 3px no-repeat,
+    #f7f9fc;
 }
 
 .ordax-settings-theme-preview[data-theme-preview="dark"] .ordax-settings-theme-body {
   background:
-    linear-gradient(#ed4b25 0 0) 9px 10px / 34px 4px no-repeat,
-    linear-gradient(#ece9e1 0 0) 9px 23px / 46px 3px no-repeat,
-    linear-gradient(#767982 0 0) 9px 33px / 33px 3px no-repeat,
-    #181a1f;
+    linear-gradient(#a9c9f7 0 0) 9px 10px / 34px 4px no-repeat,
+    linear-gradient(#e2ebf7 0 0) 9px 23px / 46px 3px no-repeat,
+    linear-gradient(#8e9db4 0 0) 9px 33px / 33px 3px no-repeat,
+    #090f1b;
 }
 
 .ordax-settings-option-copy {

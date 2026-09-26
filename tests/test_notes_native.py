@@ -308,7 +308,7 @@ class NotesNativeTests(unittest.TestCase):
         self.assertNotIn("https://", controls)
 
         self.assertIn("grid-template-columns: 220px 285px", css)
-        self.assertIn("--notes-accent: #ed4b25", css)
+        self.assertIn("--notes-accent: var(--ordax-accent)", css)
         self.assertIn(".ordax-notes-references", css)
         self.assertIn(".ordax-notes-rich-editor", css)
         self.assertIn('[data-notes-empty-state="true"]', css)

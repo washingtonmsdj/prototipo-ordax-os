@@ -1,3 +1,12 @@
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 html[data-ordax-text-scale="standard"] {
   font-size: 100%;
 }
@@ -10,95 +19,147 @@ html[data-ordax-text-scale="extra-large"] {
   font-size: 125%;
 }
 
+/*
+ * OrdaX visual tokens are the single source of visual policy for the Surface
+ * and first-party apps. Components consume semantic tokens; product CSS must
+ * not create a second palette per app.
+ */
 :root,
-[data-ordax-theme="light"] {
-  color-scheme: light;
-  --ordax-bg: #efede6;
-  --ordax-bg-start: #f5f2eb;
-  --ordax-bg-middle: #eeebe3;
-  --ordax-bg-end: #e8e4da;
-  --ordax-surface: rgba(245, 242, 235, 0.92);
-  --ordax-surface-strong: rgba(249, 247, 241, 0.97);
-  --ordax-window-bg: rgba(246, 243, 236, 0.975);
-  --ordax-rail-bg: rgba(236, 232, 223, 0.9);
-  --ordax-statusbar-bg: rgba(242, 239, 232, 0.95);
-  --ordax-subtle-bg: rgba(21, 20, 18, 0.035);
-  --ordax-hover-bg: rgba(21, 20, 18, 0.065);
-  --ordax-selected-bg: rgba(238, 75, 35, 0.1);
-  --ordax-border: rgba(24, 22, 19, 0.2);
-  --ordax-border-soft: rgba(24, 22, 19, 0.11);
-  --ordax-text: #171613;
-  --ordax-muted: #6c6860;
-  --ordax-faint: #989187;
-  --ordax-accent: #ed4b25;
-  --ordax-accent-strong: #d83e1a;
-  --ordax-accent-ink: #fff8f1;
-  --ordax-focus: rgba(237, 75, 37, 0.46);
-  --ordax-danger: #b72f2f;
-  --ordax-danger-bg: rgba(183, 47, 47, 0.1);
-  --ordax-shadow: 0 18px 48px rgba(48, 43, 35, 0.14);
-  --ordax-shadow-soft: 0 8px 24px rgba(48, 43, 35, 0.08);
-  --ordax-concrete-light: #d7d3cb;
-  --ordax-concrete-mid: #aaa79f;
-  --ordax-concrete-dark: #222220;
-  --ordax-radius-sm: 6px;
-  --ordax-radius-md: 10px;
-  --ordax-radius-lg: 16px;
+[data-ordax-theme="dark"] {
+  color-scheme: dark;
+
+  /* Core palette — approved graphite / glacial identity. */
+  --ordax-bg: #080f19;
+  --ordax-app-bg: #090f1b;
+  --ordax-panel: #111e30;
+  --ordax-bg-start: #080f19;
+  --ordax-bg-middle: #0a1320;
+  --ordax-bg-end: #050b13;
+  --ordax-surface: rgba(13, 23, 37, 0.96);
+  --ordax-surface-strong: rgba(17, 30, 48, 0.98);
+  --ordax-window-bg: #090f1b;
+  --ordax-rail-bg: rgba(7, 14, 24, 0.97);
+  --ordax-statusbar-bg: rgba(8, 15, 25, 0.97);
+  --ordax-subtle-bg: rgba(169, 201, 247, 0.045);
+  --ordax-hover-bg: rgba(169, 201, 247, 0.085);
+  --ordax-selected-bg: rgba(169, 201, 247, 0.13);
+  --ordax-border: #243249;
+  --ordax-border-soft: rgba(110, 139, 179, 0.2);
+  --ordax-text: #e2ebf7;
+  --ordax-muted: #8e9db4;
+  --ordax-faint: #607089;
+  --ordax-accent: #a9c9f7;
+  --ordax-accent-strong: #c5dcff;
+  --ordax-accent-ink: #172b47;
+  --ordax-focus: #a9c9f7;
+  --ordax-button-bg: #d1e4ff;
+  --ordax-button-text: #172b47;
+
+  /* Semantic states remain independent from the brand accent. */
+  --ordax-success: #83d2b1;
+  --ordax-success-bg: rgba(131, 210, 177, 0.12);
+  --ordax-warning: #e7c88f;
+  --ordax-warning-bg: rgba(231, 200, 143, 0.12);
+  --ordax-danger: #f0a0a5;
+  --ordax-danger-bg: rgba(240, 160, 165, 0.12);
+
+  /* Depth and material. */
+  --ordax-shadow: 0 24px 64px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(169, 201, 247, 0.025);
+  --ordax-shadow-soft: 0 12px 34px rgba(0, 0, 0, 0.28);
+  --ordax-glow-soft: 0 0 42px rgba(115, 166, 232, 0.08);
+  --ordax-concrete-light: #22334a;
+  --ordax-concrete-mid: #142238;
+  --ordax-concrete-dark: #07101b;
+
+  /* Geometry. */
+  --ordax-radius-xs: 6px;
+  --ordax-radius-sm: 8px;
+  --ordax-radius-md: 12px;
+  --ordax-radius-lg: 18px;
+  --ordax-radius-xl: 24px;
   --ordax-space-1: 0.25rem;
   --ordax-space-2: 0.5rem;
   --ordax-space-3: 0.75rem;
   --ordax-space-4: 1rem;
   --ordax-space-5: 1.5rem;
   --ordax-space-6: 2rem;
-  --ordax-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --ordax-font-display: "Iowan Old Style", Baskerville, "Times New Roman", Georgia, serif;
+  --ordax-space-7: 3rem;
+
+  /* Typography. Inter is the canonical UI/display family. */
+  --ordax-font: Inter, system-ui, "Segoe UI", sans-serif;
+  --ordax-font-display: Inter, system-ui, "Segoe UI", sans-serif;
+  --ordax-title-weight: 450;
+  --ordax-control-weight: 550;
+  --ordax-tracking-tight: -0.035em;
+
+  /* Motion. */
+  --ordax-motion-fast: 150ms;
+  --ordax-motion-base: 200ms;
+  --ordax-motion-slow: 250ms;
+  --ordax-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-[data-ordax-theme="dark"] {
-  color-scheme: dark;
-  --ordax-bg: #151513;
-  --ordax-bg-start: #1b1a17;
-  --ordax-bg-middle: #171714;
-  --ordax-bg-end: #10100f;
-  --ordax-surface: rgba(28, 27, 24, 0.94);
-  --ordax-surface-strong: rgba(34, 33, 29, 0.98);
-  --ordax-window-bg: rgba(29, 28, 25, 0.98);
-  --ordax-rail-bg: rgba(23, 22, 20, 0.94);
-  --ordax-statusbar-bg: rgba(24, 23, 21, 0.96);
-  --ordax-subtle-bg: rgba(255, 248, 239, 0.045);
-  --ordax-hover-bg: rgba(255, 248, 239, 0.08);
-  --ordax-selected-bg: rgba(242, 83, 45, 0.14);
-  --ordax-border: rgba(246, 238, 226, 0.2);
-  --ordax-border-soft: rgba(246, 238, 226, 0.11);
-  --ordax-text: #f3eee5;
-  --ordax-muted: #aaa399;
-  --ordax-faint: #777169;
-  --ordax-accent: #f2532d;
-  --ordax-accent-strong: #ff6740;
-  --ordax-accent-ink: #1b100c;
-  --ordax-focus: rgba(242, 83, 45, 0.55);
-  --ordax-danger: #ff7770;
-  --ordax-danger-bg: rgba(255, 119, 112, 0.13);
-  --ordax-shadow: 0 20px 56px rgba(0, 0, 0, 0.36);
-  --ordax-shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.24);
-  --ordax-concrete-light: #8d8982;
-  --ordax-concrete-mid: #55534e;
-  --ordax-concrete-dark: #090909;
+[data-ordax-theme="light"] {
+  color-scheme: light;
+  --ordax-bg: #eef3f9;
+  --ordax-app-bg: #f7f9fc;
+  --ordax-panel: #ffffff;
+  --ordax-bg-start: #f6f9fd;
+  --ordax-bg-middle: #edf3fa;
+  --ordax-bg-end: #e6edf6;
+  --ordax-surface: rgba(248, 250, 253, 0.96);
+  --ordax-surface-strong: rgba(255, 255, 255, 0.98);
+  --ordax-window-bg: #f8fafc;
+  --ordax-rail-bg: rgba(235, 241, 248, 0.97);
+  --ordax-statusbar-bg: rgba(241, 246, 251, 0.97);
+  --ordax-subtle-bg: rgba(23, 43, 71, 0.035);
+  --ordax-hover-bg: rgba(23, 43, 71, 0.065);
+  --ordax-selected-bg: rgba(77, 121, 178, 0.11);
+  --ordax-border: #c5d1e0;
+  --ordax-border-soft: rgba(80, 103, 134, 0.16);
+  --ordax-text: #172b47;
+  --ordax-muted: #62748c;
+  --ordax-faint: #8797aa;
+  --ordax-accent: #527eb8;
+  --ordax-accent-strong: #365f96;
+  --ordax-accent-ink: #f7fbff;
+  --ordax-focus: #315f9f;
+  --ordax-button-bg: #172b47;
+  --ordax-button-text: #edf5ff;
+  --ordax-success: #28785d;
+  --ordax-success-bg: rgba(40, 120, 93, 0.1);
+  --ordax-warning: #8b651b;
+  --ordax-warning-bg: rgba(139, 101, 27, 0.1);
+  --ordax-danger: #a33e49;
+  --ordax-danger-bg: rgba(163, 62, 73, 0.1);
+  --ordax-shadow: 0 24px 58px rgba(39, 59, 82, 0.16), 0 0 0 1px rgba(39, 59, 82, 0.025);
+  --ordax-shadow-soft: 0 10px 28px rgba(39, 59, 82, 0.1);
+  --ordax-glow-soft: 0 0 36px rgba(82, 126, 184, 0.06);
+  --ordax-concrete-light: #dbe5f1;
+  --ordax-concrete-mid: #9fb0c5;
+  --ordax-concrete-dark: #28384d;
 }
-
 
 [data-ordax-theme="light"][data-ordax-contrast="high"] {
-  --ordax-muted: #4e4941;
-  --ordax-faint: #686158;
-  --ordax-border: rgba(20, 18, 15, 0.42);
-  --ordax-border-soft: rgba(20, 18, 15, 0.24);
-  --ordax-focus: rgba(216, 62, 26, 0.82);
+  --ordax-muted: #40546e;
+  --ordax-faint: #52677f;
+  --ordax-border: #6f839d;
+  --ordax-border-soft: rgba(41, 61, 86, 0.34);
+  --ordax-focus: #173f78;
 }
 
 [data-ordax-theme="dark"][data-ordax-contrast="high"] {
-  --ordax-muted: #d0c8bb;
-  --ordax-faint: #aaa195;
-  --ordax-border: rgba(255, 248, 239, 0.42);
-  --ordax-border-soft: rgba(255, 248, 239, 0.25);
-  --ordax-focus: rgba(255, 103, 64, 0.88);
+  --ordax-muted: #c4d2e4;
+  --ordax-faint: #a5b5cb;
+  --ordax-border: #7187a6;
+  --ordax-border-soft: rgba(193, 215, 244, 0.36);
+  --ordax-focus: #e1edff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ordax-motion-fast: 0ms;
+    --ordax-motion-base: 0ms;
+    --ordax-motion-slow: 0ms;
+  }
 }
