@@ -111,19 +111,19 @@ class CurrentStateFirstRunInputTests(unittest.TestCase):
         )
         self.assertNotIn("public anchor is still not pinned", self.current)
 
-    def test_physical_authorization_is_fail_closed_after_v4_proof_binding(self):
-        self.assertEqual(
-            self.authorization["status"],
-            "blocked-explicit-physical-authorization-pending",
-        )
-        self.assertFalse(self.authorization["physical_write_allowed"])
-        self.assertFalse(self.authorization["explicit_owner_authorization"])
+    def test_physical_authorization_is_bound_but_physical_proof_remains_fail_closed(self):
+        self.assertEqual(self.authorization["status"], "authorized")
+        self.assertTrue(self.authorization["physical_write_allowed"])
+        self.assertTrue(self.authorization["explicit_owner_authorization"])
         self.assertEqual(
             self.authorization["scope"],
             "first-real-stable-mvp-usb-proof",
         )
         self.assertEqual(self.authorization["release_sequence"], 1)
-        self.assertIsNone(self.authorization["authorization_context_sha256"])
+        self.assertEqual(
+            self.authorization["authorization_context_sha256"],
+            "b5803154eed8a85962b5c2dddbfff29f2ff408c92b63247ca62d1c5ca71eda10",
+        )
         self.assertTrue(
             self.authorization["requirements"][
                 "writer_requires_exact_17_artifact_readback"
@@ -139,20 +139,10 @@ class CurrentStateFirstRunInputTests(unittest.TestCase):
             "CANONICAL_V4_RELEASE_PROOF=PASS_SIGNED_MATERIALIZED_EXACT",
             self.current,
         )
-        self.assertIn("CANONICAL_V4_RELEASE_PROOF_BINDING=PASS", self.current)
-        self.assertIn(
-            "PHYSICAL_OWNER_AUTHORIZATION_REACHABLE=YES_FRESH_CONSENT_REQUIRED",
-            self.current,
-        )
-        self.assertIn(
-            "PHYSICAL_WRITE_ALLOWED=NO_EXPLICIT_OWNER_AUTHORIZATION",
-            self.current,
-        )
+        self.assertIn("PHYSICAL_OWNER_AUTHORIZATION_RECORDED=YES_BOUND_CONTEXT", self.current)
+        self.assertIn("PHYSICAL_WRITE_ALLOWED=YES_BOUND_OWNER_AUTHORIZATION", self.current)
         self.assertIn("PHYSICAL_TARGET_SELECTED=NO", self.current)
-        self.assertIn(
-            "PHYSICAL_TARGET_DESTRUCTIVE_CONFIRMATION=PENDING",
-            self.current,
-        )
+        self.assertIn("PHYSICAL_TARGET_DESTRUCTIVE_CONFIRMATION=PENDING", self.current)
         self.assertIn(
             "CANONICAL_SIGNED_RELEASE_BOOT_PROVEN=NO_PHYSICAL_STABLE_MVP_PENDING",
             self.current,

@@ -275,7 +275,6 @@ A release v4 exata foi assinada, materializada/verificada pelo caminho canonical
 Ainda permanecem abertos antes do primeiro Stable/MVP fisico:
 
 ```text
-fresh owner authorization for the current 17-artifact / 39-operation writer context
 real Stable/MVP USB boot/network/runtime/recovery/cold-health evidence
 graphical Surface smoke and known-good/rollback evidence on supported hardware
 Secure Boot evidence or an explicit MVP support policy that does not overclaim it
