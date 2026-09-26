@@ -6,3 +6,6 @@ docs/contracts/minimal-bootstrap.json text eol=lf
 docs/contracts/portable-usb-v2.json text eol=lf
 docs/contracts/creator-portable-media-plan.json text eol=lf
 tools/creator/physical_promotion.py text eol=lf
+
+# The promotion contract binds this generated proof receipt's exact bytes.
+docs/evidence/canonical-v4-release-proof.json -text
