@@ -7,6 +7,8 @@ WEB_INDEX = ROOT / "system" / "composition" / "web" / "index.html"
 NATIVE_INDEX = ROOT / "system" / "composition" / "native" / "index.html"
 APPEARANCE = ROOT / "system" / "services" / "preferences" / "appearance.mjs"
 DESKTOP_IDENTITY = ROOT / "docs" / "DESKTOP-IDENTITY.md"
+INTER_FONT = SURFACE / "fonts" / "inter-latin-wght-normal.woff2"
+INTER_SOURCE = ROOT / "third_party" / "fonts" / "Inter-Latin-Variable-SOURCE.md"
 INTER_LICENSE = ROOT / "third_party" / "licenses" / "Inter-OFL-1.1.txt"
 
 
@@ -71,6 +73,17 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
             self.assertIn('../../surface/ui/identity.css', html)
             self.assertIn('../../surface/ui/app-identity.css', html)
             self.assertIn('name="theme-color" content="#080f19"', html)
+
+    def test_inter_font_is_local_offline_and_source_bound(self):
+        tokens = (SURFACE / "tokens.css").read_text(encoding="utf-8")
+        self.assertIn('@font-face', tokens)
+        self.assertIn('url("./fonts/inter-latin-wght-normal.woff2")', tokens)
+        self.assertTrue(INTER_FONT.is_file())
+        self.assertEqual(INTER_FONT.stat().st_size, 48256)
+        source = INTER_SOURCE.read_text(encoding="utf-8")
+        self.assertIn("d946f2f5f48bb73bb238d189d3b182c98dcbca10", source)
+        self.assertIn("d15208de03cd1ad7c5199f0a0ce915fe841e4722", source)
+        self.assertIn("3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62", source)
 
     def test_inter_license_is_tracked_with_third_party_licenses(self):
         license_text = INTER_LICENSE.read_text(encoding="utf-8")
