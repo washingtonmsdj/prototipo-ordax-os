@@ -31,9 +31,9 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
         ):
             self.assertIn(declaration, tokens)
 
-    def test_graphite_is_reference_default_and_light_remains_available(self):
+    def test_graphite_is_visual_reference_without_changing_theme_default(self):
         appearance = APPEARANCE.read_text(encoding="utf-8")
-        self.assertIn('defaultValue: "dark"', appearance)
+        self.assertIn('defaultValue: "light"', appearance)
         self.assertIn('{ value: "light", label: "Claro" }', appearance)
         self.assertIn('{ value: "dark", label: "Escuro" }', appearance)
 
