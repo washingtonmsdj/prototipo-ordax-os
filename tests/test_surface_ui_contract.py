@@ -306,7 +306,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn('[data-notes-block-type="heading"]', css)
         self.assertIn('[data-notes-block-type="quote"]', css)
         self.assertIn('[data-notes-block-type="bullet"]', css)
-        self.assertIn("--notes-accent: #ed4b25", css)
+        self.assertIn("--notes-accent: var(--ordax-accent)", css)
         self.assertNotIn("../../apps/notes/notes.css", web_html)
         self.assertNotIn("../../apps/notes/notes.css", native_html)
         self.assertIn("createWebNotesStore", web_main)

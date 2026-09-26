@@ -6,18 +6,8 @@
  * components are migrated to semantic tokens in place.
  */
 
-.ordax-notes-workspace,
 .ordax-internet-view {
   color: var(--ordax-text);
-}
-
-/* Notes still exposes local aliases; bind them to the shared semantic source. */
-.ordax-notes-workspace {
-  --notes-ivory: var(--ordax-window-bg) !important;
-  --notes-ink: var(--ordax-text) !important;
-  --notes-muted: var(--ordax-muted) !important;
-  --notes-accent: var(--ordax-accent) !important;
-  --notes-soft: var(--ordax-selected-bg) !important;
 }
 
 /*

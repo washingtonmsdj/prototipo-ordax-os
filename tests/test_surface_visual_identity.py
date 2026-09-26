@@ -9,6 +9,7 @@ APPEARANCE = ROOT / "system" / "services" / "preferences" / "appearance.mjs"
 DESKTOP_IDENTITY = ROOT / "docs" / "DESKTOP-IDENTITY.md"
 BROWSER_SMOKE = ROOT / "tools" / "surface-web" / "browser-smoke.mjs"
 PROJECTS_CSS = ROOT / "system" / "apps" / "projects" / "projects.css"
+NOTES_CSS = ROOT / "system" / "apps" / "notes" / "notes.css"
 INTER_FONT = SURFACE / "fonts" / "inter-latin-wght-normal.woff2"
 INTER_SOURCE = ROOT / "third_party" / "fonts" / "Inter-Latin-Variable-SOURCE.md"
 INTER_LICENSE = ROOT / "third_party" / "licenses" / "Inter-OFL-1.1.txt"
@@ -67,7 +68,7 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
 
         app_css = app_identity.read_text(encoding="utf-8")
         self.assertNotIn(".ordax-projects-view", app_css)
-        self.assertIn(".ordax-notes-workspace", app_css)
+        self.assertNotIn(".ordax-notes-workspace", app_css)
         self.assertIn(".ordax-internet-view", app_css)
         self.assertIn("var(--ordax-button-bg)", app_css)
 
@@ -89,6 +90,22 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
             "border: 1px solid var(--ordax-border)",
             "outline: 2px solid var(--ordax-focus)",
             "prefers-reduced-motion",
+        ):
+            self.assertIn(declaration, css)
+
+    def test_notes_consumes_semantic_tokens_in_component_css(self):
+        css = NOTES_CSS.read_text(encoding="utf-8")
+        self.assertNotIn("--notes-accent: #ed4b25", css)
+        for declaration in (
+            "--notes-paper: var(--ordax-panel)",
+            "--notes-ivory: var(--ordax-app-bg)",
+            "--notes-ink: var(--ordax-text)",
+            "--notes-muted: var(--ordax-muted)",
+            "--notes-accent: var(--ordax-accent)",
+            "--notes-soft: var(--ordax-selected-bg)",
+            "background: var(--ordax-button-bg)",
+            "color: var(--ordax-button-text)",
+            "background: var(--ordax-danger-bg)",
         ):
             self.assertIn(declaration, css)
 
