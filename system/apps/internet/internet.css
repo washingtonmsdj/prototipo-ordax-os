@@ -79,7 +79,7 @@
 }
 
 .ordax-internet-address-form:focus-within {
-  border-color: var(--ordax-danger);
+  border-color: var(--ordax-focus);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--ordax-focus) 32%, transparent);
 }
 
@@ -156,7 +156,7 @@
 }
 
 .ordax-internet-tab-search:focus-within {
-  border-color: var(--ordax-danger);
+  border-color: var(--ordax-focus);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--ordax-focus) 32%, transparent);
   background: var(--ordax-subtle-bg);
 }
