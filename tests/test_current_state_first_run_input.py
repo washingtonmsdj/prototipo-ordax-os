@@ -111,10 +111,10 @@ class CurrentStateFirstRunInputTests(unittest.TestCase):
         )
         self.assertNotIn("public anchor is still not pinned", self.current)
 
-    def test_physical_authorization_is_fail_closed_after_v4_writer_scope_change(self):
+    def test_physical_authorization_is_fail_closed_after_v4_proof_binding(self):
         self.assertEqual(
             self.authorization["status"],
-            "blocked-canonical-v4-release-proof-pending",
+            "blocked-explicit-physical-authorization-pending",
         )
         self.assertFalse(self.authorization["physical_write_allowed"])
         self.assertFalse(self.authorization["explicit_owner_authorization"])
@@ -129,15 +129,23 @@ class CurrentStateFirstRunInputTests(unittest.TestCase):
                 "writer_requires_exact_17_artifact_readback"
             ]
         )
+        self.assertEqual(
+            self.authorization["release_binding"]["source_commit"],
+            "b924ff8d74d1761232381ae3f9604bba17497cfd",
+        )
+        self.assertIn("CANONICAL_V4_RELEASE_PROOF_BINDING=PASS", self.current)
         self.assertIn("PHYSICAL_AUTHORIZATION_ELIGIBLE=YES", self.current)
-        self.assertIn("CANONICAL_V4_RELEASE_PROOF=PENDING_OPERATOR_EXECUTION", self.current)
-        self.assertIn("CANONICAL_V4_RELEASE_PROOF_BINDING=PENDING", self.current)
         self.assertIn(
-            "PHYSICAL_OWNER_AUTHORIZATION_REACHABLE=NO_CANONICAL_V4_RELEASE_PROOF_PENDING",
+            "CANONICAL_V4_RELEASE_PROOF=PASS_SIGNED_MATERIALIZED_EXACT",
+            self.current,
+        )
+        self.assertIn("CANONICAL_V4_RELEASE_PROOF_BINDING=PASS", self.current)
+        self.assertIn(
+            "PHYSICAL_OWNER_AUTHORIZATION_REACHABLE=YES_FRESH_CONSENT_REQUIRED",
             self.current,
         )
         self.assertIn(
-            "PHYSICAL_WRITE_AUTHORIZED=NO_CANONICAL_V4_RELEASE_PROOF_PENDING",
+            "PHYSICAL_WRITE_ALLOWED=NO_EXPLICIT_OWNER_AUTHORIZATION",
             self.current,
         )
         self.assertIn("PHYSICAL_TARGET_SELECTED=NO", self.current)
