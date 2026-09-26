@@ -40,7 +40,7 @@
     const copy = {
       login: {
         ready: ["Acesso disponível", "Continue para o serviço seguro de identidade OrdaX."],
-        gated: ["Serviço de identidade ainda não configurado", "Quando a integração for ativada, o acesso será encaminhado ao owner real de identidade e sessão."],
+        gated: ["Serviço de identidade ainda não configurado", "Quando a integração for ativada, o acesso será conectado ao serviço seguro de identidade e sessão da OrdaX."],
       },
       register: {
         ready: ["Cadastro disponível", "Continue para o serviço seguro de criação da conta OrdaX."],

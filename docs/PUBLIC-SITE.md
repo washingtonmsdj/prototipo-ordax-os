@@ -117,6 +117,20 @@ existing catalog consumer; the illustration does not assert artifact signing,
 OS compatibility or publication. The layout includes USB erasure confirmation,
 optional account access and a link to release compliance.
 
+The Login presentation uses `assets/login.css` and reuses the local titanium
+artwork only as atmosphere. The native POST form, same-origin identity owner and
+fail-closed availability remain controlled by the existing runtime configuration;
+the presentation must never expose a credential field while that owner is gated.
+
+The remaining account, recovery, compliance and legal routes share
+`assets/portal.css` for the graphite and titanium presentation. Their existing
+fail-closed states, catalog consumer and legal wording remain the source of
+truth.
+
+The registration presentation follows the same fail-closed rule with
+`assets/cadastro.css`; its password guidance remains visible only as part of the
+native form contract and does not create a browser-only account.
+
 ## Security invariants
 
 - no private keys, service-role keys, passwords or bearer tokens in `sites/public/`;

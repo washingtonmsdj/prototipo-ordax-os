@@ -3,45 +3,57 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Acesso à futura conta OrdaX.">
+  <meta name="description" content="Acesso seguro à Conta OrdaX.">
   <title>Entrar — OrdaX</title>
   <link rel="stylesheet" href="/assets/site.css">
-  <script src="/assets/site.js" defer></script>
+  <link rel="stylesheet" href="/assets/login.css?v=titanium-1">
+  <script src="/assets/site.js?v=identity-copy-2" defer></script>
 </head>
 <body data-page="login">
   <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
   <header class="site-header">
     <a class="brand" href="/" aria-label="OrdaX — início"><span class="brand-mark" aria-hidden="true"><span></span><i></i></span><span class="brand-name">OrdaX</span></a>
-    <nav class="site-nav" aria-label="Navegação principal"><a href="/">Início</a><a href="/download/">Download</a><a href="/licencas/">Licenças</a><a aria-current="page" href="/login/">Entrar</a><a class="nav-cta" href="/cadastro/">Criar conta</a></nav>
+    <nav class="site-nav" aria-label="Navegação principal"><a href="/#experimente">Experiência</a><a href="/#produto">Intelligence</a><a href="/#dispositivos">Dispositivos</a></nav>
+    <div class="login-nav-actions"><a href="/download/">Download</a><a class="nav-cta" href="/cadastro/">Criar conta <span aria-hidden="true">↗</span></a></div>
   </header>
-  <main id="conteudo" class="auth-shell">
-    <section class="auth-copy">
-      <p class="eyebrow">CONTA ORDA X</p>
-      <h1>Entre para continuar sua experiência OrdaX.</h1>
-      <p>A página pública não coleta credenciais enquanto o serviço real de identidade não estiver conectado.</p>
-    </section>
-    <section class="auth-card" aria-labelledby="auth-title">
-      <p class="eyebrow">ACESSO</p>
-      <h2 id="auth-title">Entrar</h2>
-      <div class="identity-state" data-identity-state="login" aria-live="polite">
-        <strong>Serviço de identidade ainda não configurado</strong>
-        <p>Quando a integração for ativada, o acesso será encaminhado ao owner real de identidade e sessão.</p>
+
+  <main id="conteudo" class="login-stage">
+    <section class="login-story" aria-labelledby="login-story-title">
+      <div class="story-copy">
+        <p class="eyebrow">CONTA ORDA X</p>
+        <h1 id="login-story-title">Um acesso.<br><span>Seu OrdaX inteiro.</span></h1>
+        <p class="story-lead">Quando o acesso público for ativado, sua identidade poderá acompanhar projetos, preferências e dispositivos pelos modos OrdaX.</p>
+        <div class="mode-line" aria-label="Modos do produto"><span>Web</span><i></i><span>Mobile</span><i></i><span>Desktop</span><i></i><span>USB</span><i></i><span>Native</span></div>
       </div>
-      <form class="identity-form" data-identity-form="login" method="post" hidden>
-        <label class="identity-field">
-          <span>E-mail</span>
-          <input type="email" name="email" autocomplete="email" inputmode="email" maxlength="254" required disabled>
-        </label>
-        <label class="identity-field">
-          <span>Senha</span>
-          <input type="password" name="password" autocomplete="current-password" maxlength="256" required disabled>
-        </label>
-        <button class="button button-primary identity-submit" type="submit" disabled>Entrar</button>
-      </form>
-      <p class="auth-switch"><a href="/recuperar/">Esqueci minha senha</a></p>
-      <p class="auth-switch">Ainda não tem uma conta? <a href="/cadastro/">Criar conta</a></p><p class="auth-switch">Documentação de conta: <a href="/privacidade/">Privacidade</a> · <a href="/termos/">Termos</a></p>
+      <div class="identity-promise"><span class="promise-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6ZM8 12l3 3 5-6"/></svg></span><div><strong>Uma identidade, com controle seu.</strong><p>Privacidade, sessão e recuperação seguem o mesmo contrato seguro em todos os modos.</p></div></div>
+      <div class="story-orbit" aria-hidden="true"><span></span><i></i></div>
+    </section>
+
+    <section class="login-access" aria-labelledby="auth-title">
+      <div class="login-card">
+        <header class="login-card-header"><p class="eyebrow">ACESSO SEGURO</p><span aria-hidden="true">01</span></header>
+        <h2 id="auth-title">Entrar na<br>Conta OrdaX.</h2>
+        <p class="login-intro">Continue de onde parou quando o acesso público estiver disponível.</p>
+
+        <div class="identity-state" data-identity-state="login" aria-live="polite">
+          <span class="state-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6ZM8 12l3 3 5-6"/></svg></span>
+          <div><strong>Serviço de identidade ainda não configurado</strong><p>Quando a integração for ativada, o acesso será conectado ao serviço seguro de identidade e sessão da OrdaX.</p></div>
+        </div>
+
+        <form class="identity-form" data-identity-form="login" method="post" hidden>
+          <label class="identity-field"><span>E-mail</span><input type="email" name="email" autocomplete="email" inputmode="email" maxlength="254" placeholder="voce@exemplo.com" required disabled></label>
+          <label class="identity-field"><span>Senha</span><input type="password" name="password" autocomplete="current-password" maxlength="256" placeholder="Sua senha" required disabled></label>
+          <div class="form-support"><a href="/recuperar/">Esqueci minha senha</a></div>
+          <button class="button button-primary identity-submit" type="submit" disabled>Entrar com segurança <span aria-hidden="true">↗</span></button>
+        </form>
+
+        <div class="gated-guidance"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8v5M12 17h.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z"/></svg></span><p>Esta página não coleta credenciais enquanto o serviço real de identidade não estiver conectado.</p></div>
+        <div class="account-entry"><div><span>NOVO NA ORDA X?</span><strong>Prepare sua futura conta.</strong></div><a href="/cadastro/">Conhecer o cadastro <span aria-hidden="true">↗</span></a></div>
+        <nav class="login-legal" aria-label="Documentação da conta"><a href="/recuperar/">Recuperação</a><a href="/privacidade/">Privacidade</a><a href="/termos/">Termos</a></nav>
+      </div>
     </section>
   </main>
-  <footer class="site-footer"><a class="brand brand-small" href="/"><span class="brand-mark" aria-hidden="true"><span></span><i></i></span><span class="brand-name">OrdaX</span></a><p>Conta local e conta online não são simuladas.</p><nav><a href="/">Início</a><a href="/download/">Download</a><a href="/privacidade/">Privacidade</a><a href="/termos/">Termos</a></nav></footer>
+
+  <footer class="site-footer"><div><a class="brand" href="/" aria-label="OrdaX — início"><span class="brand-mark" aria-hidden="true"><span></span><i></i></span><span class="brand-name">OrdaX</span></a><p>Seu sistema. Sua identidade.</p></div><nav aria-label="Rodapé"><a href="/">Início</a><a href="/download/">Download</a><a href="/licencas/">Licenças</a><a href="/privacidade/">Privacidade</a><a href="/termos/">Termos</a></nav></footer>
 </body>
 </html>

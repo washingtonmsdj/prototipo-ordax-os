@@ -4,10 +4,32 @@
   z-index: 10000;
   display: grid;
   place-items: center;
+  overflow: hidden;
   background:
-    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--ordax-accent) 9%, transparent), transparent 32%),
-    var(--ordax-page-bg);
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--ordax-accent) 13%, transparent), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--ordax-bg) 86%, var(--ordax-accent)), var(--ordax-bg));
   color: var(--ordax-text);
+}
+
+.ordax-boot-screen::before,
+.ordax-boot-screen::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+}
+
+.ordax-boot-screen::before {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--ordax-text) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--ordax-text) 5%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at center, black 0%, transparent 68%);
+  opacity: 0.55;
+}
+
+.ordax-boot-screen::after {
+  background: radial-gradient(ellipse at center, transparent 18%, color-mix(in srgb, var(--ordax-bg) 70%, transparent) 84%);
 }
 
 .ordax-boot-screen[hidden] {
@@ -15,17 +37,46 @@
 }
 
 .ordax-boot-screen-card {
+  position: relative;
+  z-index: 1;
   display: grid;
-  min-width: 220px;
+  width: min(360px, calc(100vw - 48px));
   justify-items: center;
-  gap: 14px;
-  padding: 24px;
+  gap: 16px;
+  padding: 34px 32px 30px;
+  border: 1px solid var(--ordax-border-soft);
+  border-radius: var(--ordax-radius-lg);
+  background: color-mix(in srgb, var(--ordax-surface-strong) 78%, transparent);
+  box-shadow: var(--ordax-shadow);
+  backdrop-filter: blur(18px);
   text-align: center;
+}
+
+.ordax-boot-mark {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border: 1.5px solid color-mix(in srgb, var(--ordax-text) 72%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--ordax-accent) 8%, transparent),
+    0 0 34px color-mix(in srgb, var(--ordax-accent) 22%, transparent);
+}
+
+.ordax-boot-mark::after {
+  position: absolute;
+  top: 8px;
+  right: -7px;
+  width: 2px;
+  height: 32px;
+  border-radius: 2px;
+  background: var(--ordax-accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--ordax-accent) 62%, transparent);
+  content: "";
 }
 
 .ordax-boot-wordmark {
   font-family: var(--ordax-font-display);
-  font-size: clamp(2.2rem, 7vw, 4.2rem);
+  font-size: clamp(2rem, 7vw, 3.2rem);
   font-weight: 550;
   letter-spacing: -0.055em;
 }
@@ -34,6 +85,24 @@
   color: var(--ordax-muted);
   font-size: 0.78rem;
   line-height: 1.4;
+}
+
+.ordax-boot-progress {
+  width: min(220px, 80%);
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ordax-border-soft);
+}
+
+.ordax-boot-progress::after {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--ordax-accent), transparent);
+  content: "";
+  animation: ordax-boot-progress 1.8s ease-in-out infinite;
 }
 
 .ordax-boot-spinner {
@@ -56,8 +125,23 @@
   }
 }
 
+@keyframes ordax-boot-progress {
+  from {
+    transform: translateX(-130%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ordax-boot-spinner {
     animation-duration: 1.8s;
+  }
+
+  .ordax-boot-progress::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.75;
   }
 }
