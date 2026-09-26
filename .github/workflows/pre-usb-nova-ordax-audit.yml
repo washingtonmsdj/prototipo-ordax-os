@@ -109,3 +109,32 @@ jobs:
             tests.test_pre_usb_nova_ordax_audit \
             tests.test_stable_mvp_usb_readiness \
             tests.test_physical_promotion_boundary -v
+
+      - name: Probe exact physical authorization plan
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'ops/physical-auth-context-probe' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/physical-auth-context
+          python tools/creator/authorize_physical_write.py check > out/physical-auth-context/authorization-plan.json
+          python - <<'PY'
+          import json, pathlib
+          data = json.loads(pathlib.Path('out/physical-auth-context/authorization-plan.json').read_text(encoding='utf-8'))
+          assert data['status'] == 'ready-for-explicit-owner-authorization'
+          assert data['ready'] is True
+          assert data['scope'] == 'first-real-stable-mvp-usb-proof'
+          assert data['release_sequence'] == 1
+          assert len(data['authorization_context_sha256']) == 64
+          assert data['physical_device_touched'] is False
+          assert data['writer_invoked'] is False
+          assert data['candidate_materialized'] is False
+          PY
+
+      - name: Upload exact physical authorization plan
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'ops/physical-auth-context-probe' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: physical-auth-context-${{ github.event.pull_request.head.sha }}
+          path: out/physical-auth-context/authorization-plan.json
+          if-no-files-found: error
+          retention-days: 1
