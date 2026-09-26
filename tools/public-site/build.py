@@ -101,7 +101,7 @@ def validate_source(root: Path = SOURCE) -> list[Path]:
 
     for path in files:
         suffix = path.suffix.lower()
-        if suffix not in {".html", ".css", ".js", ".json", ".md"}:
+        if suffix not in {".html", ".css", ".js", ".json", ".md", ".png"}:
             raise PublicSiteError(
                 f"unexpected public site source type: {path.relative_to(root).as_posix()}"
             )

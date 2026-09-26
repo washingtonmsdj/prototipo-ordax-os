@@ -110,6 +110,13 @@ public landing
 
 A public release must also pass the release-compliance gate in `docs/RELEASE-COMPLIANCE.md` and `docs/contracts/release-compliance.json`. Each listed release must expose an integrity-bound SBOM, third-party notices and release-specific source-compliance bundle before the Download or Licenças page can render it.
 
+The Download presentation uses `assets/download.css` and the local conceptual
+hero artwork `assets/download-hero.png`. All headings, steps, warnings and release
+links remain semantic HTML. Availability is rendered exclusively through the
+existing catalog consumer; the illustration does not assert artifact signing,
+OS compatibility or publication. The layout includes USB erasure confirmation,
+optional account access and a link to release compliance.
+
 ## Security invariants
 
 - no private keys, service-role keys, passwords or bearer tokens in `sites/public/`;
