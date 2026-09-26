@@ -31,9 +31,9 @@ Motion is restrained to short UI transitions, normally 150–250 ms, and must ho
 
 ## Typography and offline operation
 
-Inter is the canonical UI/display family. The runtime must prefer a locally shipped, license-compliant Inter asset so normal product presentation does not depend on a network request. Until that asset is present in a given build, the declared fallback chain remains `system-ui`, `Segoe UI`, sans-serif; no host-specific font is source authority.
+Inter is the canonical UI/display family. The Surface ships a local Latin variable WOFF2 covering normal weights 100–900 at `system/surface/ui/fonts/inter-latin-wght-normal.woff2`. Its pinned source provenance is recorded under `third_party/fonts/` and its SIL OFL license under `third_party/licenses/`.
 
-When local font binaries are added, their license must be stored with the vendored asset and the Surface/Web builders must include both without introducing a runtime network dependency.
+`tokens.css` loads that font only through a relative local URL. The declared fallback chain remains `system-ui`, `Segoe UI`, sans-serif for hosts or glyphs outside the vendored subset; no host-specific font is source authority. The Surface/Web source graph follows local CSS assets, so the WOFF2 is copied into offline bundles without introducing a runtime network dependency.
 
 ## Interaction contract
 
