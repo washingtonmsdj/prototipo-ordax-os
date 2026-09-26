@@ -10,10 +10,13 @@ on:
       - 'docs/contracts/creator-app-channel.json'
       - 'docs/contracts/creator-component-channel.json'
       - 'docs/contracts/creator-code-signing.json'
+      - 'docs/contracts/creator-consumer-flow.json'
       - 'tools/creator/**'
       - 'tools/release-signing/cmd/ordax-creator-app-signing/**'
       - 'tools/release-signing/cmd/ordax-creator-app-manifest/**'
+      - 'tools/release-signing/windows/8-Sign-Publish-CreatorPhysical.ps1'
       - '.github/workflows/creator-official-candidate.yml'
+      - '.github/workflows/creator-physical-publisher.yml'
   pull_request:
     paths:
       - '.gitattributes'
@@ -22,10 +25,13 @@ on:
       - 'docs/contracts/creator-app-channel.json'
       - 'docs/contracts/creator-component-channel.json'
       - 'docs/contracts/creator-code-signing.json'
+      - 'docs/contracts/creator-consumer-flow.json'
       - 'tools/creator/**'
       - 'tools/release-signing/cmd/ordax-creator-app-signing/**'
       - 'tools/release-signing/cmd/ordax-creator-app-manifest/**'
+      - 'tools/release-signing/windows/8-Sign-Publish-CreatorPhysical.ps1'
       - '.github/workflows/creator-official-candidate.yml'
+      - '.github/workflows/creator-physical-publisher.yml'
   workflow_dispatch:
 
 permissions:
@@ -58,6 +64,9 @@ jobs:
           app = json.loads(pathlib.Path('docs/contracts/creator-app-channel.json').read_text(encoding='utf-8'))
           component = json.loads(pathlib.Path('docs/contracts/creator-component-channel.json').read_text(encoding='utf-8'))
           code_signing = json.loads(pathlib.Path('docs/contracts/creator-code-signing.json').read_text(encoding='utf-8'))
+          consumer = json.loads(pathlib.Path('docs/contracts/creator-consumer-flow.json').read_text(encoding='utf-8'))
+          physical_channel = pathlib.Path('tools/creator/physicalchannel/channel.go').read_text(encoding='utf-8')
+
           assert app['$schema'] == 'prototype-ordax.creator-app-channel/1'
           assert app['purpose'] == 'creator-app-windows-amd64'
           assert app['release_tag'] == 'creator-app'
@@ -110,6 +119,32 @@ jobs:
           assert code_signing['release_policy']['unlisted_artifact_publishable'] is False
           assert code_signing['release_policy']['authenticode_is_release_authenticity_root'] is False
           assert code_signing['release_policy']['ed25519_release_verification_remains_required'] is True
+
+          # The official Creator must stay bound to the same signed Portable v2 physical
+          # channel that the publisher produces. Development builds remain read-only.
+          assert consumer['$schema'] == 'prototype-ordax.creator-consumer-flow/2'
+          assert consumer['publisher_boundary']['physical_release_tag'] == 'creator-physical'
+          assert consumer['publisher_boundary']['physical_release_envelope'] == 'creator-physical-envelope.json'
+          assert consumer['publisher_boundary']['physical_release_purpose'] == 'creator-portable-physical-windows-amd64'
+          assert consumer['publisher_boundary']['physical_release_recipe'] == 'creator/physical/portable-windows/2'
+          assert consumer['publisher_boundary']['development_channel_may_promote_writer'] is False
+          assert consumer['publisher_boundary']['offline_canonical_signing_required_before_publication'] is True
+          assert consumer['physical_candidate_integrity']['whole_disk_raw_image_required'] is False
+          assert consumer['physical_candidate_integrity']['portable_artifact_count'] == 17
+          assert consumer['physical_candidate_integrity']['portable_application_operation_count'] == 39
+          assert consumer['physical_write_gate']['internal_disk_write_allowed_in_mvp'] is False
+          assert consumer['native_installation']['foundation_may_exist_in_source'] is True
+          assert consumer['native_installation']['public_mvp_visible'] is False
+          assert consumer['native_installation']['public_mvp_enabled'] is False
+          assert consumer['native_installation']['internal_disk_destructive_apply_enabled'] is False
+
+          for exact in (
+              'Purpose             = "creator-portable-physical-windows-amd64"',
+              'Recipe              = "creator/physical/portable-windows/2"',
+              'DefaultEnvelopeURL  = "https://github.com/washingtonmsdj/prototipo-ordax-os/releases/download/creator-physical/creator-physical-envelope.json"',
+          ):
+              assert exact in physical_channel
+
           print(app['version'])
           print(app['release_sequence'])
           PY
@@ -141,6 +176,7 @@ jobs:
           echo "app_sequence=$app_sequence" >> "$GITHUB_OUTPUT"
           if [ "$ready" = true ]; then
             echo 'CREATOR_OFFICIAL_TRUST_GATE=READY'
+            echo 'CREATOR_OFFICIAL_PHYSICAL_CHANNEL_COHERENCE=PASS'
           else
             echo 'CREATOR_OFFICIAL_TRUST_GATE=BLOCKED'
             echo 'CREATOR_OFFICIAL_BINARY_BUILT=NO'
@@ -238,6 +274,7 @@ jobs:
           if ([string]$provenance.trust_sha256 -cne $env:EXPECTED_TRUST_SHA256) { throw 'canonical handoff embedded trust SHA differs from trust gate' }
           if ($provenance.publishable_to_end_users -ne $false -or $provenance.authenticode_signed -ne $false) { throw 'unsigned canonical handoff became publishable' }
           Write-Host 'CREATOR_OFFICIAL_SHARED_HANDOFF_RECIPE=PASS'
+          Write-Host 'CREATOR_OFFICIAL_PHYSICAL_TRUST_BOUND=YES'
           Write-Host 'CREATOR_OFFICIAL_AUTHENTICODE_SIGNED=NO'
           Write-Host 'CREATOR_OFFICIAL_PUBLISHABLE=NO'
 
