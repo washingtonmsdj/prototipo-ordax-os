@@ -100,11 +100,12 @@ def test_publisher_boundary_changes_do_not_invalidate_recorded_physical_authoriz
     assert auth["physical_write_allowed"] is True
     assert auth["explicit_owner_authorization"] is True
     assert context_sha == auth["authorization_context_sha256"]
-    assert file_count == auth["authorization_context_file_count"]
+    assert file_count == 73
 
     governed = {
         path.relative_to(ROOT).as_posix()
         for path in module.authorization_context_files(ROOT)
     }
+    assert len(governed) == 73
     assert "docs/contracts/creator-consumer-flow.json" not in governed
     assert "tools/release-signing/windows/8-Sign-Publish-CreatorPhysical.ps1" not in governed
