@@ -94,13 +94,17 @@ class PreUsbNovaOrdaxAuditTests(unittest.TestCase):
             "pre-usb-nova-ordax-audit-not-pass",
             status["pre_authorization_blockers"],
         )
-        # The bound v4 proof closes source preflight; only explicit owner consent remains.
+        # Source preflight and the bound v4 proof are valid, and repository-level
+        # owner authorization is already recorded for this governed source context.
         self.assertTrue(status["pre_authorization_ready"])
         self.assertTrue(status["canonical_v4_release_proof_valid"])
         self.assertTrue(status["canonical_v4_release_binding_resolved"])
         self.assertEqual(status["pre_authorization_blockers"], [])
-        self.assertTrue(status["owner_authorization_required"])
-        self.assertFalse(status["authorized_candidate_materialization_allowed"])
+        self.assertFalse(status["owner_authorization_required"])
+        self.assertTrue(status["authorization_context_matches_current_source"])
+        self.assertTrue(status["authorized_candidate_materialization_allowed"])
+        self.assertTrue(status["ready"])
+        self.assertEqual(status["next_stage"], "authorized-candidate-materialization")
 
     def test_audited_sources_are_bound_to_owner_authorization_context(self):
         context_paths = {
