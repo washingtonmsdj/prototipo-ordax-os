@@ -388,12 +388,12 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertEqual(state["RELEASE_TRUST"], "PASS_CANONICAL_PUBLIC_ANCHOR_PINNED")
         self.assertEqual(state["CANONICAL_V4_RELEASE_PROOF"], "PASS_SIGNED_MATERIALIZED_EXACT")
         self.assertIn("canonical release trust público: **PASS**", mvp)
-        self.assertIn("FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION", mvp)
+        self.assertIn("FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_PHYSICAL_TARGET_SELECTED", mvp)
         self.assertIn("O MVP público oferece **pt-BR e en-US**", mvp)
         self.assertNotIn("canonical release trust público: pendente", mvp)
         self.assertNotIn("O primeiro uso Native oferece **pt-BR, en-US, es-ES, de-DE e fr-FR**", mvp)
 
-        self.assertIn("fresh owner authorization for the current 17-artifact / 39-operation writer context", agents)
+        self.assertNotIn("fresh owner authorization for the current 17-artifact / 39-operation writer context", agents)
         self.assertNotIn("canonical v4 signed/materialized release aggregate proof + binding", agents)
         self.assertNotIn("canonical Ed25519 release trust ceremony/public anchor", agents)
         self.assertIn("| C16 IA nativa | **ENTRA como capability do sistema** |", plan)
@@ -410,7 +410,7 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         self.assertNotIn("SIGNED_RELEASE_V4_WITH_LOCAL_AI=PASS\n", plan)
         self.assertIn("SIGNED_RELEASE_V4_WITH_LOCAL_AI=REQUIRED", promotion)
         self.assertIn("CANONICAL_V4_RELEASE_PROOF=PASS_SIGNED_MATERIALIZED_VERSIONED_PRERELEASE", current)
-        self.assertIn("FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION", current)
+        self.assertIn("FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_PHYSICAL_TARGET_SELECTED", current)
 
 
 if __name__ == "__main__":
