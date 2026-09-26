@@ -107,6 +107,8 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
         css = INTERNET_CSS.read_text(encoding="utf-8")
         for legacy in ("#ed4b25", "#9d2f18", "#5f5b54", "#efede6", "#171613"):
             self.assertNotIn(legacy, css)
+        self.assertNotIn("border-color: var(--ordax-danger)", css)
+        self.assertGreaterEqual(css.count("border-color: var(--ordax-focus)"), 2)
         for declaration in (
             "background: var(--ordax-app-bg)",
             "color: var(--ordax-text)",
