@@ -453,10 +453,10 @@ Voltar à missão física somente quando:
 4. documentação canônica e contratos estiverem coerentes;
 5. somente então permitir o novo preflight de consentimento do dono e, depois dele, aplicar novamente os gates físicos já existentes.
 
-Até haver USB e consentimento explícito novo para o contexto atual:
+Com o consentimento explícito novo já registrado para o contexto atual, até haver USB e confirmação destrutiva específica do alvo:
 
 ```text
 CANONICAL_V4_RELEASE_PROOF=PASS_BOUND_VERSIONED_PRERELEASE
-FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION
-PHYSICAL_WRITE_AUTHORITY=NO_EXPLICIT_OWNER_AUTHORIZATION
+FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_PHYSICAL_TARGET_SELECTED
+PHYSICAL_WRITE_AUTHORITY=AUTHORIZED_CANDIDATE_ONLY_TARGET_CONFIRMATION_REQUIRED
 ```
