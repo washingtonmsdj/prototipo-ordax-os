@@ -229,6 +229,13 @@ The signature is standard Ed25519 over the **exact manifest file bytes**. Whites
 
 Signer support does not authorize publication, activation or physical-media writes. The repository already proves v4 signing/materialization with an ephemeral CI-only key, and the disposable QEMU/UEFI v4 boot path is source/CI-proven. The remaining Stable/MVP release gate is execution of the operator-controlled canonical sequence outside Git: prepare the exact handoff, sign with the canonical private key, verify the signed handoff, review/publish the exact HTTPS artifacts, and run the step-6 canonical materialization verification. None of those steps by itself authorizes a physical USB write.
 
+The step-7 canonical v4 aggregate receipt requires JSON booleans and positive
+integer artifact sizes without PowerShell coercion. It emits UTF-8 without BOM
+under both Windows PowerShell 5.1 and PowerShell Core so the Creator binder can
+validate and preserve its exact bytes and SHA-256 without an encoding rewrite.
+Execution tests use synthetic public receipts in temporary directories; they
+do not sign releases or satisfy the canonical or physical proof gates.
+
 ## Signing backends and custody evolution
 
 The release protocol and device verifier must not depend on where the private signing operation is hosted.
