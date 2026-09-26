@@ -1,0 +1,47 @@
+name: Temporary Internet Focus Fix
+
+on:
+  push:
+    branches:
+      - design/ordax-glacial-identity
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout redesign branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+        with:
+          persist-credentials: false
+
+      - name: Correct Internet focus semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("system/apps/internet/internet.css")
+          text = path.read_text(encoding="utf-8")
+          old = "border-color: var(--ordax-danger);"
+          if text.count(old) != 2:
+              raise SystemExit(f"expected two focus-border regressions, found {text.count(old)}")
+          text = text.replace(old, "border-color: var(--ordax-focus);")
+          path.write_text(text.rstrip("\n") + "\n", encoding="utf-8")
+          Path(".github/workflows/_temp_internet_focus_fix.yml").unlink()
+          PY
+
+      - name: Commit focus fix
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Correct Internet focus token semantics'
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPOSITORY}.git" "HEAD:${GITHUB_REF}"
