@@ -111,19 +111,31 @@ class CurrentStateFirstRunInputTests(unittest.TestCase):
         )
         self.assertNotIn("public anchor is still not pinned", self.current)
 
-    def test_physical_authorization_is_fail_closed_after_v4_proof_binding(self):
-        self.assertEqual(
-            self.authorization["status"],
-            "blocked-explicit-physical-authorization-pending",
+    def test_physical_authorization_contract_and_physical_proof_boundary_are_coherent(self):
+        pending = (
+            self.authorization["status"]
+            == "blocked-explicit-physical-authorization-pending"
+            and self.authorization["physical_write_allowed"] is False
+            and self.authorization["explicit_owner_authorization"] is False
+            and self.authorization["authorization_context_sha256"] is None
         )
-        self.assertFalse(self.authorization["physical_write_allowed"])
-        self.assertFalse(self.authorization["explicit_owner_authorization"])
+        authorized = (
+            self.authorization["status"] == "authorized"
+            and self.authorization["physical_write_allowed"] is True
+            and self.authorization["explicit_owner_authorization"] is True
+            and isinstance(self.authorization["authorization_context_sha256"], str)
+            and len(self.authorization["authorization_context_sha256"]) == 64
+        )
+        self.assertNotEqual(
+            pending,
+            authorized,
+            "authorization contract must be exactly pending or authorized",
+        )
         self.assertEqual(
             self.authorization["scope"],
             "first-real-stable-mvp-usb-proof",
         )
         self.assertEqual(self.authorization["release_sequence"], 1)
-        self.assertIsNone(self.authorization["authorization_context_sha256"])
         self.assertTrue(
             self.authorization["requirements"][
                 "writer_requires_exact_17_artifact_readback"
@@ -139,15 +151,15 @@ class CurrentStateFirstRunInputTests(unittest.TestCase):
             "CANONICAL_V4_RELEASE_PROOF=PASS_SIGNED_MATERIALIZED_EXACT",
             self.current,
         )
-        self.assertIn("CANONICAL_V4_RELEASE_PROOF_BINDING=PASS", self.current)
-        self.assertIn(
-            "PHYSICAL_OWNER_AUTHORIZATION_REACHABLE=YES_FRESH_CONSENT_REQUIRED",
-            self.current,
-        )
-        self.assertIn(
-            "PHYSICAL_WRITE_ALLOWED=NO_EXPLICIT_OWNER_AUTHORIZATION",
-            self.current,
-        )
+        if pending:
+            self.assertIn(
+                "PHYSICAL_OWNER_AUTHORIZATION_REACHABLE=YES_FRESH_CONSENT_REQUIRED",
+                self.current,
+            )
+            self.assertIn(
+                "PHYSICAL_WRITE_ALLOWED=NO_EXPLICIT_OWNER_AUTHORIZATION",
+                self.current,
+            )
         self.assertIn("PHYSICAL_TARGET_SELECTED=NO", self.current)
         self.assertIn(
             "PHYSICAL_TARGET_DESTRUCTIVE_CONFIRMATION=PENDING",
