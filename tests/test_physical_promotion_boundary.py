@@ -288,43 +288,45 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         )
         self.assertIn("'writer_source_commit': os.environ['GITHUB_SHA']", workflow)
 
-    def test_repository_v4_media_scope_requires_fresh_owner_authorization_after_proof(self):
-        auth = json.loads(
-            (ROOT / "docs/contracts/physical-write-authorization.json").read_text(
-                encoding="utf-8"
+    def test_pending_owner_authorization_fixture_remains_fail_closed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_ready_fixture(root)
+            auth_path = self._set_pending_owner_authorization(root)
+            auth = json.loads(auth_path.read_text(encoding="utf-8"))
+
+            self.assertEqual(
+                auth["status"],
+                "blocked-explicit-physical-authorization-pending",
             )
-        )
-        self.assertEqual(
-            auth["status"],
-            "blocked-explicit-physical-authorization-pending",
-        )
-        self.assertFalse(auth["physical_write_allowed"])
-        self.assertFalse(auth["explicit_owner_authorization"])
-        self.assertIsNone(auth["authorization_context_sha256"])
-        self.assertEqual(auth["scope"], "first-real-stable-mvp-usb-proof")
-        self.assertEqual(auth["release_sequence"], 1)
-        self.assertTrue(
-            auth["requirements"]["writer_requires_exact_17_artifact_readback"]
-        )
-        self.assertNotIn(
-            "writer_requires_exact_15_artifact_readback",
-            auth["requirements"],
-        )
-        status = promotion.evaluate(ROOT)
-        self.assertFalse(status["ready"])
-        self.assertTrue(status["pre_authorization_ready"])
-        self.assertTrue(status["canonical_v4_release_proof_valid"])
-        self.assertTrue(status["canonical_v4_release_binding_resolved"])
-        self.assertTrue(status["physical_authorization_bindings_resolved"])
-        self.assertEqual(status["pre_authorization_blockers"], [])
-        self.assertEqual(
-            status["authorization_blockers"],
-            ["explicit-physical-write-authorization-missing"],
-        )
-        self.assertTrue(status["owner_authorization_required"])
-        self.assertFalse(status["authorized_candidate_materialization_allowed"])
-        for forbidden in ("physical_path", "device_path", "disk_number", "volume_id"):
-            self.assertNotIn(forbidden, auth)
+            self.assertFalse(auth["physical_write_allowed"])
+            self.assertFalse(auth["explicit_owner_authorization"])
+            self.assertIsNone(auth["authorization_context_sha256"])
+            self.assertEqual(auth["scope"], "first-real-stable-mvp-usb-proof")
+            self.assertEqual(auth["release_sequence"], 1)
+            self.assertTrue(
+                auth["requirements"]["writer_requires_exact_17_artifact_readback"]
+            )
+            self.assertNotIn(
+                "writer_requires_exact_15_artifact_readback",
+                auth["requirements"],
+            )
+
+            status = promotion.evaluate(root)
+            self.assertFalse(status["ready"])
+            self.assertTrue(status["pre_authorization_ready"])
+            self.assertTrue(status["canonical_v4_release_proof_valid"])
+            self.assertTrue(status["canonical_v4_release_binding_resolved"])
+            self.assertTrue(status["physical_authorization_bindings_resolved"])
+            self.assertEqual(status["pre_authorization_blockers"], [])
+            self.assertEqual(
+                status["authorization_blockers"],
+                ["explicit-physical-write-authorization-missing"],
+            )
+            self.assertTrue(status["owner_authorization_required"])
+            self.assertFalse(status["authorized_candidate_materialization_allowed"])
+            for forbidden in ("physical_path", "device_path", "disk_number", "volume_id"):
+                self.assertNotIn(forbidden, auth)
 
     def _set_pending_owner_authorization(self, root: Path) -> Path:
         auth_path = root / "docs/contracts/physical-write-authorization.json"
