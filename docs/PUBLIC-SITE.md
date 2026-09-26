@@ -122,6 +122,11 @@ artwork only as atmosphere. The native POST form, same-origin identity owner and
 fail-closed availability remain controlled by the existing runtime configuration;
 the presentation must never expose a credential field while that owner is gated.
 
+The remaining account, recovery, compliance and legal routes share
+`assets/portal.css` for the graphite and titanium presentation. Their existing
+fail-closed states, catalog consumer and legal wording remain the source of
+truth.
+
 The registration presentation follows the same fail-closed rule with
 `assets/cadastro.css`; its password guidance remains visible only as part of the
 native form contract and does not create a browser-only account.
