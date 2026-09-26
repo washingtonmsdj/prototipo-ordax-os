@@ -1,0 +1,49 @@
+name: Physical Authorization Context Probe
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/physical-auth-context-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Compute canonical authorization plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/physical-auth-context
+          python tools/creator/authorize_physical_write.py check \
+            > out/physical-auth-context/authorization-plan.json
+          python - <<'PY'
+          import json, pathlib
+          path = pathlib.Path('out/physical-auth-context/authorization-plan.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          assert data['status'] == 'ready-for-explicit-owner-authorization'
+          assert data['ready'] is True
+          assert data['scope'] == 'first-real-stable-mvp-usb-proof'
+          assert data['release_sequence'] == 1
+          assert len(data['authorization_context_sha256']) == 64
+          assert data['physical_device_touched'] is False
+          assert data['writer_invoked'] is False
+          assert data['candidate_materialized'] is False
+          PY
+
+      - name: Upload authorization plan
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: physical-auth-context-${{ github.event.pull_request.head.sha }}
+          path: out/physical-auth-context/authorization-plan.json
+          if-no-files-found: error
+          retention-days: 1
