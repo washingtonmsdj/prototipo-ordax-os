@@ -10,6 +10,7 @@ DESKTOP_IDENTITY = ROOT / "docs" / "DESKTOP-IDENTITY.md"
 BROWSER_SMOKE = ROOT / "tools" / "surface-web" / "browser-smoke.mjs"
 PROJECTS_CSS = ROOT / "system" / "apps" / "projects" / "projects.css"
 NOTES_CSS = ROOT / "system" / "apps" / "notes" / "notes.css"
+INTERNET_CSS = ROOT / "system" / "apps" / "internet" / "internet.css"
 INTER_FONT = SURFACE / "fonts" / "inter-latin-wght-normal.woff2"
 INTER_SOURCE = ROOT / "third_party" / "fonts" / "Inter-Latin-Variable-SOURCE.md"
 INTER_LICENSE = ROOT / "third_party" / "licenses" / "Inter-OFL-1.1.txt"
@@ -54,9 +55,8 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
 
     def test_shared_identity_layers_are_loaded_by_web_and_native(self):
         identity = SURFACE / "identity.css"
-        app_identity = SURFACE / "app-identity.css"
         self.assertTrue(identity.is_file())
-        self.assertTrue(app_identity.is_file())
+        self.assertFalse((SURFACE / "app-identity.css").exists())
 
         css = identity.read_text(encoding="utf-8")
         self.assertIn("var(--ordax-accent)", css)
@@ -66,16 +66,10 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
         self.assertIn(".ordax-launcher-panel", css)
         self.assertIn("prefers-reduced-motion", css)
 
-        app_css = app_identity.read_text(encoding="utf-8")
-        self.assertNotIn(".ordax-projects-view", app_css)
-        self.assertNotIn(".ordax-notes-workspace", app_css)
-        self.assertIn(".ordax-internet-view", app_css)
-        self.assertIn("var(--ordax-button-bg)", app_css)
-
         for index in (WEB_INDEX, NATIVE_INDEX):
             html = index.read_text(encoding="utf-8")
             self.assertIn('../../surface/ui/identity.css', html)
-            self.assertIn('../../surface/ui/app-identity.css', html)
+            self.assertNotIn('../../surface/ui/app-identity.css', html)
             self.assertIn('name="theme-color" content="#080f19"', html)
 
     def test_projects_consumes_semantic_tokens_in_component_css(self):
@@ -109,10 +103,27 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
         ):
             self.assertIn(declaration, css)
 
+    def test_internet_consumes_semantic_tokens_in_component_css(self):
+        css = INTERNET_CSS.read_text(encoding="utf-8")
+        for legacy in ("#ed4b25", "#9d2f18", "#5f5b54", "#efede6", "#171613"):
+            self.assertNotIn(legacy, css)
+        for declaration in (
+            "background: var(--ordax-app-bg)",
+            "color: var(--ordax-text)",
+            "var(--ordax-accent)",
+            "var(--ordax-muted)",
+            "var(--ordax-focus)",
+            "background: var(--ordax-button-bg)",
+            "color: var(--ordax-button-text)",
+            "var(--ordax-danger)",
+        ):
+            self.assertIn(declaration, css)
+
     def test_browser_smoke_exercises_shared_identity_layers(self):
         smoke = BROWSER_SMOKE.read_text(encoding="utf-8")
         self.assertIn("'system/surface/ui/identity.css'", smoke)
-        self.assertIn("'system/surface/ui/app-identity.css'", smoke)
+        self.assertNotIn("'system/surface/ui/app-identity.css'", smoke)
+        self.assertIn("'system/apps/internet/internet.css'", smoke)
 
     def test_inter_font_is_local_offline_and_source_bound(self):
         tokens = (SURFACE / "tokens.css").read_text(encoding="utf-8")

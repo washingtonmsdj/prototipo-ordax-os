@@ -16,8 +16,8 @@
   min-height: 620px;
   display: grid;
   grid-template-rows: 52px minmax(0, 1fr);
-  background: var(--ordax-surface, #efede6);
-  color: var(--ordax-ink, #171613);
+  background: var(--ordax-app-bg);
+  color: var(--ordax-text);
 }
 
 .ordax-internet-toolbar {
@@ -27,7 +27,7 @@
   gap: 4px;
   padding: 6px 10px;
   border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-  background: color-mix(in srgb, var(--ordax-surface, #efede6) 94%, white);
+  background: color-mix(in srgb, var(--ordax-panel) 82%, var(--ordax-app-bg));
 }
 
 .ordax-internet-icon-button,
@@ -57,13 +57,13 @@
   align-items: center;
   border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
   border-radius: 9px;
-  background: color-mix(in srgb, var(--ordax-surface, #efede6) 88%, white);
+  background: var(--ordax-subtle-bg);
   overflow: hidden;
 }
 
 .ordax-internet-site-control {
   text-align: center;
-  color: #5f5b54;
+  color: var(--ordax-muted);
   font-size: 12px;
 }
 
@@ -79,8 +79,8 @@
 }
 
 .ordax-internet-address-form:focus-within {
-  border-color: #9d2f18;
-  box-shadow: 0 0 0 2px #9d2f18;
+  border-color: var(--ordax-danger);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ordax-focus) 32%, transparent);
 }
 
 .ordax-internet-body {
@@ -94,7 +94,7 @@
 .ordax-internet-sidebar,
 .ordax-internet-project-panel {
   min-height: 0;
-  background: color-mix(in srgb, var(--ordax-surface, #efede6) 92%, white);
+  background: color-mix(in srgb, var(--ordax-panel) 82%, var(--ordax-app-bg));
 }
 
 .ordax-internet-sidebar {
@@ -128,7 +128,7 @@
 .ordax-internet-workspace-mark {
   width: 20px;
   height: 20px;
-  border: 2px solid #ed4b25;
+  border: 2px solid var(--ordax-accent);
   border-radius: 50%;
 }
 
@@ -156,13 +156,13 @@
 }
 
 .ordax-internet-tab-search:focus-within {
-  border-color: #9d2f18;
-  box-shadow: 0 0 0 2px #9d2f18;
-  background: color-mix(in srgb, var(--ordax-surface, #efede6) 82%, white);
+  border-color: var(--ordax-danger);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ordax-focus) 32%, transparent);
+  background: var(--ordax-subtle-bg);
 }
 
 .ordax-internet-tab-search-icon {
-  color: #5f5b54;
+  color: var(--ordax-muted);
   text-align: center;
 }
 
@@ -178,7 +178,7 @@
   padding: 6px 0;
 }
 
-.ordax-internet-tab-search-input::placeholder { color: #5f5b54; opacity: 1; }
+.ordax-internet-tab-search-input::placeholder { color: var(--ordax-muted); opacity: 1; }
 .ordax-internet-tab-search-input::-webkit-search-cancel-button { cursor: pointer; }
 
 .ordax-internet-section-label {
@@ -187,7 +187,7 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .08em;
-  color: #5f5b54;
+  color: var(--ordax-muted);
 }
 
 .ordax-internet-tabs { display: grid; gap: 3px; }
@@ -202,8 +202,8 @@
 }
 
 .ordax-internet-tab[data-selected="true"] {
-  background: color-mix(in srgb, #ed4b25 14%, transparent);
-  box-shadow: inset 3px 0 #ed4b25;
+  background: color-mix(in srgb, var(--ordax-accent) 14%, transparent);
+  box-shadow: inset 3px 0 var(--ordax-accent);
 }
 
 .ordax-internet-tab:hover:not([data-selected="true"]) { background: color-mix(in srgb, currentColor 5%, transparent); }
@@ -225,7 +225,7 @@
   cursor: pointer;
 }
 
-.ordax-internet-tab-icon { color: #5f5b54; }
+.ordax-internet-tab-icon { color: var(--ordax-muted); }
 .ordax-internet-tab-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 
 .ordax-internet-tab-close {
@@ -236,14 +236,14 @@
   border: 0;
   border-radius: 5px;
   background: transparent;
-  color: #5f5b54;
+  color: var(--ordax-muted);
   font: inherit;
   font-size: 16px;
   cursor: pointer;
 }
 
 .ordax-internet-tab-close:hover { background: color-mix(in srgb, currentColor 9%, transparent); color: inherit; }
-.ordax-internet-tab-placeholder { padding: 10px 8px; font-size: 12px; color: #5f5b54; }
+.ordax-internet-tab-placeholder { padding: 10px 8px; font-size: 12px; color: var(--ordax-muted); }
 
 .ordax-internet-collections {
   margin-top: 7px;
@@ -265,14 +265,14 @@
   gap: 12px;
   padding: 12px 5px 4px;
   font-size: 11px;
-  color: #5f5b54;
+  color: var(--ordax-muted);
 }
 
 .ordax-internet-center {
   min-width: 0;
   min-height: 0;
   position: relative;
-  background: #f8f7f3;
+  background: var(--ordax-app-bg);
   overflow: hidden;
 }
 
@@ -280,7 +280,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #f8f7f3;
+  background: var(--ordax-app-bg);
 }
 
 .ordax-internet-home {
@@ -290,10 +290,10 @@
 }
 
 .ordax-internet-home[hidden] { display: none; }
-.ordax-internet-home-mark { display: inline-grid; place-items: center; color: #ed4b25; font-size: 34px; }
+.ordax-internet-home-mark { display: inline-grid; place-items: center; color: var(--ordax-accent); font-size: 34px; }
 .ordax-internet-home h2 { margin: 8px 0 5px; font-size: clamp(28px, 4vw, 44px); letter-spacing: -.04em; }
-.ordax-internet-home > p { margin: 0 auto; max-width: 540px; color: #5f5b54; font-size: 14px; line-height: 1.5; }
-.ordax-internet-home-hint { display: block; margin-top: 22px; font-size: 12px; color: #5f5b54; }
+.ordax-internet-home > p { margin: 0 auto; max-width: 540px; color: var(--ordax-muted); font-size: 14px; line-height: 1.5; }
+.ordax-internet-home-hint { display: block; margin-top: 22px; font-size: 12px; color: var(--ordax-muted); }
 
 .ordax-internet-home-links {
   margin-top: 34px;
@@ -306,27 +306,27 @@
 .ordax-internet-home-link {
   min-height: 78px;
   padding: 14px;
-  border: 1px solid rgba(23, 22, 19, .12);
+  border: 1px solid var(--ordax-border-soft);
   border-radius: 10px;
-  background: rgba(255,255,255,.58);
+  background: var(--ordax-subtle-bg);
 }
 
-.ordax-internet-home-link span { display: block; font-size: 9px; letter-spacing: .08em; color: #5f5b54; margin-bottom: 8px; }
+.ordax-internet-home-link span { display: block; font-size: 9px; letter-spacing: .08em; color: var(--ordax-muted); margin-bottom: 8px; }
 .ordax-internet-home-link strong { font-size: 12px; }
 
 .ordax-internet-unavailable {
   max-width: 520px;
   margin: 22px auto 0;
   padding: 13px 15px;
-  border: 1px solid rgba(23,22,19,.13);
+  border: 1px solid var(--ordax-border-soft);
   border-radius: 9px;
-  background: rgba(255,255,255,.55);
+  background: var(--ordax-subtle-bg);
   text-align: left;
   font-size: 12px;
 }
 .ordax-internet-unavailable strong,
 .ordax-internet-unavailable span { display: block; }
-.ordax-internet-unavailable span { margin-top: 4px; color: #5f5b54; line-height: 1.4; }
+.ordax-internet-unavailable span { margin-top: 4px; color: var(--ordax-muted); line-height: 1.4; }
 
 .ordax-internet-message {
   position: absolute;
@@ -335,10 +335,10 @@
   bottom: 12px;
   z-index: 4;
   padding: 9px 12px;
-  border: 1px solid rgba(23,22,19,.14);
+  border: 1px solid var(--ordax-border-soft);
   border-radius: 8px;
-  background: #f5f2eb;
-  box-shadow: 0 8px 24px rgba(23,22,19,.08);
+  background: var(--ordax-surface-strong);
+  box-shadow: var(--ordax-shadow-soft);
   font-size: 11px;
 }
 
@@ -357,7 +357,7 @@
 }
 .ordax-internet-project-header h2 { margin: 0; font-size: 17px; }
 .ordax-internet-project-context-name { display: block; margin-top: 6px; font-size: 13px; }
-.ordax-internet-project-intro p { margin: 7px 0 14px; font-size: 12px; line-height: 1.4; color: #5f5b54; }
+.ordax-internet-project-intro p { margin: 7px 0 14px; font-size: 12px; line-height: 1.4; color: var(--ordax-muted); }
 .ordax-internet-project-section { padding: 10px 0 13px; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); }
 .ordax-internet-project-section h3,
 .ordax-internet-assistance h3 { margin: 0 0 9px; font-size: 12px; }
@@ -373,25 +373,25 @@
   padding: 8px;
   border: 1px solid color-mix(in srgb, currentColor 13%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--ordax-surface, #efede6) 84%, white);
+  background: var(--ordax-subtle-bg);
 }
 .ordax-internet-page-copy { min-width: 0; }
 .ordax-internet-page-copy strong,
 .ordax-internet-page-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ordax-internet-page-copy strong { font-size: 11px; }
-.ordax-internet-page-copy small { margin-top: 3px; font-size: 9px; color: #5f5b54; }
+.ordax-internet-page-copy small { margin-top: 3px; font-size: 9px; color: var(--ordax-muted); }
 
 .ordax-internet-save-button {
   width: 100%;
   margin-top: 8px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--ordax-radius-sm);
   padding: 10px;
-  background: #ed4b25;
-  color: white;
+  background: var(--ordax-button-bg);
+  color: var(--ordax-button-text);
   font: inherit;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--ordax-control-weight);
 }
 .ordax-internet-save-button:disabled { opacity: .52; }
 
@@ -401,7 +401,7 @@
   justify-content: space-between;
   gap: 8px;
   margin-top: 7px;
-  color: #5f5b54;
+  color: var(--ordax-muted);
   font-size: 9px;
 }
 
@@ -413,7 +413,7 @@
   border: 0;
   padding: 2px 0;
   background: transparent;
-  color: #9d2f18;
+  color: var(--ordax-danger);
   cursor: pointer;
   font: inherit;
   font-size: 9px;
@@ -428,7 +428,7 @@
   border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
   border-radius: 8px;
   padding: 9px;
-  background: rgba(255,255,255,.45);
+  background: var(--ordax-subtle-bg);
   color: inherit;
   font: inherit;
   font-size: 11px;
@@ -438,11 +438,11 @@
   resize: none;
 }
 .ordax-internet-note:focus {
-  border-color: color-mix(in srgb, #ed4b25 68%, transparent);
-  outline: 2px solid color-mix(in srgb, #ed4b25 16%, transparent);
+  border-color: color-mix(in srgb, var(--ordax-accent) 68%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--ordax-accent) 16%, transparent);
   outline-offset: 1px;
 }
-.ordax-internet-project-pending { display: block; margin-top: 6px; font-size: 9px; color: #5f5b54; }
+.ordax-internet-project-pending { display: block; margin-top: 6px; font-size: 9px; color: var(--ordax-muted); }
 
 .ordax-internet-material-row {
   display: grid;
@@ -468,7 +468,7 @@
 
 .ordax-internet-project-option:hover,
 .ordax-internet-project-option[aria-pressed="true"] {
-  background: color-mix(in srgb, #ed4b25 10%, transparent);
+  background: color-mix(in srgb, var(--ordax-accent) 10%, transparent);
 }
 
 .ordax-internet-assistance { padding-top: 13px; }
@@ -483,11 +483,11 @@
   font-size: 10px;
   text-align: left;
 }
-.ordax-internet-assistance > span { display: block; margin-top: 7px; font-size: 9px; line-height: 1.35; color: #5f5b54; }
+.ordax-internet-assistance > span { display: block; margin-top: 7px; font-size: 9px; line-height: 1.35; color: var(--ordax-muted); }
 
 .ordax-internet-view button:focus-visible,
 .ordax-internet-project-panel button:focus-visible {
-  outline: 3px solid #9d2f18;
+  outline: 3px solid var(--ordax-focus);
   outline-offset: 2px;
 }
 
@@ -556,7 +556,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #5f5b54;
+  color: var(--ordax-muted);
   font: inherit;
   cursor: pointer;
 }
@@ -590,7 +590,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 4px 6px 6px;
-  color: #5f5b54;
+  color: var(--ordax-muted);
   font-size: 9px;
 }
 
@@ -598,7 +598,7 @@
   border: 0;
   padding: 3px 0;
   background: transparent;
-  color: #9d2f18;
+  color: var(--ordax-danger);
   font: inherit;
   font-size: 9px;
   cursor: pointer;
@@ -645,7 +645,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #5f5b54;
+  color: var(--ordax-muted);
   font: inherit;
   cursor: pointer;
 }

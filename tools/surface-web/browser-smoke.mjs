@@ -15,7 +15,6 @@ const ROOT_MODULES = [SURFACE_ROOT_MODULE, WEB_COMPOSITION_ROOT_MODULE];
 const CSS_FILES = [
   'system/surface/ui/tokens.css',
   'system/surface/ui/identity.css',
-  'system/surface/ui/app-identity.css',
   'system/surface/ui/surface.css',
   'system/surface/ui/boot-screen.css',
   'system/surface/ui/workspace-areas.css',
