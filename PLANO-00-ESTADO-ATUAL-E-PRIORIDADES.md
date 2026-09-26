@@ -1,6 +1,6 @@
 # OrdaX — estado atual e prioridades de execução
 
-**Status:** overlay factual de execução. **Revisão:** 25/09/2026. **Base:** `main`, sempre revalidada contra contratos e source estruturado; este documento não fixa um SHA como autoridade.
+**Status:** overlay factual de execução. **Revisão:** 26/09/2026. **Base:** `main`, sempre revalidada contra contratos e source estruturado; este documento não fixa um SHA como autoridade.
 
 Este arquivo existe para impedir que inventários históricos dos planos longos sejam usados como se fossem o estado atual do repositório. Ele **não substitui a especificação de produto** de `PLANO-FUNCIONAL-SURFACE-E-APPS.md` nem a análise de legado de `PLANO-02-EVOLUCAO-E-REAPROVEITAMENTO-DO-LEGADO.md`. Quando houver divergência sobre **o que já existe, o que já foi provado ou qual é a próxima prioridade**, prevalecem, nesta ordem:
 
@@ -82,15 +82,15 @@ A consolidação USB-only da antiga PR #357 já foi integrada à `main`. Depois 
 
 A falha histórica `ORDAX-ESP partition not found` de um head antigo foi superada e não é uma pendência atual. Não voltar a habilitar flags BusyBox, aumentar timeouts ou criar rotas alternativas por causa daquele log sem primeiro reproduzir a falha no source e CI atuais.
 
-O que permanece aberto é de outra classe: trust canônico, autorização pública de escrita, boot físico Stable/MVP no USB final, Secure Boot e validação gráfica integrada em hardware. Se um contrato de evidência ficar atrás do source, reconciliar a evidência com o último commit realmente provado; não reconstruir o handoff que já existe.
+O que permanece aberto é de outra classe: consentimento físico novo para o writer atual, boot/recovery/cold-health Stable/MVP no USB final, Secure Boot e validação gráfica integrada em hardware. A prova agregada v4 já foi vinculada ao candidato publicado como prerelease versionada; isso não promove o canal estável `latest` nem autoriza escrita física. Se um contrato de evidência ficar atrás do source, reconciliar a evidência com o último commit realmente provado; não reconstruir o handoff que já existe.
 
-### P0 — trust canônico resolvido; fechar proof canônico v4
+### P0 — trust e proof canônico v4 resolvidos; consentimento físico pendente
 
 A infraestrutura de cerimônia, promoção do trust público, verificação e recuperação já está resolvida para o primeiro protótipo controlado. O anchor Ed25519 canônico de SHA-256 `d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250` está pinado, o recovery criptográfico passou e o full-bootstrap canonical-trust proof está fechado. A chave privada continua fora de Git, CI e USB.
 
-O bloqueio atual é mais específico: a release Stable/MVP v4 real precisa ser assinada/publicada no ambiente controlado, materializada/verificada pelo caminho oficial e gerar o aggregate receipt `canonical-v4-release-proof.json`. Esse receipt deve ser validado e vinculado ao trust, source commit, manifest, envelope e três artefatos antes de o novo consentimento físico ficar alcançável. O consentimento anterior de 15 artefatos é stale porque o writer atual possui 17 artefatos / 39 operações. Backup off-device continua obrigatório antes de distribuição pública ampla, mas não bloqueia o primeiro protótipo controlado; KMS/HSM gerenciado permanece evolução provider-neutral.
+O candidato exato Stable/MVP v4 foi assinado, publicado como prerelease versionada, materializado/verificado pelo caminho oficial e agregado no receipt `canonical-v4-release-proof.json`, vinculado ao trust, source commit, manifest, envelope e três artefatos. A prova SHA-256 atual está registrada em `docs/CURRENT-STATE.md`. A prerelease não foi promovida ao canal estável `latest`. O consentimento anterior de 15 artefatos é stale porque o writer atual possui 17 artefatos / 39 operações; um USB ainda requer autorização nova e todos os gates físicos. Backup off-device continua obrigatório antes de distribuição pública ampla, mas não bloqueia o primeiro protótipo controlado; KMS/HSM gerenciado permanece evolução provider-neutral.
 
-Os três EROFS exatos já têm caminho de transferência de operador sem publicação: os workflows canônicos de System, Surface e Local AI exportam os bytes reais **somente por `workflow_dispatch`**, por 1 dia e com o SHA no nome. Os três artifacts devem vir do mesmo commit. Isso remove preparação manual dispersa, mas não assina, não publica em HTTPS canônico e não autoriza USB. O conector GitHub usado nesta sessão não oferece `workflow_dispatch`, portanto a execução desses três runs continua sendo ação explícita do operador.
+Os receipts de operador para os três EROFS exatos passaram a validação de mesmo commit, SHA-256 e tamanho. O candidato subsequente foi assinado e publicado como prerelease versionada, materializado/verificado em CI pelo URL HTTPS exato e vinculado no aggregate receipt. Nenhuma dessas etapas seleciona USB, registra consentimento ou autoriza escrita.
 
 ### P0 — prova Stable/MVP integrada
 

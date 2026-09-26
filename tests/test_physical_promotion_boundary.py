@@ -288,7 +288,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         )
         self.assertIn("'writer_source_commit': os.environ['GITHUB_SHA']", workflow)
 
-    def test_repository_v4_media_scope_requires_canonical_release_proof_before_owner_authorization(self):
+    def test_repository_v4_media_scope_requires_fresh_owner_authorization_after_proof(self):
         auth = json.loads(
             (ROOT / "docs/contracts/physical-write-authorization.json").read_text(
                 encoding="utf-8"
@@ -296,7 +296,7 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         )
         self.assertEqual(
             auth["status"],
-            "blocked-canonical-v4-release-proof-pending",
+            "blocked-explicit-physical-authorization-pending",
         )
         self.assertFalse(auth["physical_write_allowed"])
         self.assertFalse(auth["explicit_owner_authorization"])
@@ -312,26 +312,16 @@ class PhysicalPromotionBoundaryTests(unittest.TestCase):
         )
         status = promotion.evaluate(ROOT)
         self.assertFalse(status["ready"])
-        self.assertFalse(status["pre_authorization_ready"])
-        self.assertFalse(status["canonical_v4_release_proof_valid"])
-        self.assertFalse(status["canonical_v4_release_binding_resolved"])
-        self.assertFalse(status["physical_authorization_bindings_resolved"])
-        self.assertIn(
-            "canonical-v4-release-proof-missing-or-invalid",
-            status["pre_authorization_blockers"],
-        )
-        self.assertIn(
-            "canonical-v4-release-binding-unresolved",
-            status["pre_authorization_blockers"],
-        )
+        self.assertTrue(status["pre_authorization_ready"])
+        self.assertTrue(status["canonical_v4_release_proof_valid"])
+        self.assertTrue(status["canonical_v4_release_binding_resolved"])
+        self.assertTrue(status["physical_authorization_bindings_resolved"])
+        self.assertEqual(status["pre_authorization_blockers"], [])
         self.assertEqual(
             status["authorization_blockers"],
-            [
-                "explicit-physical-write-authorization-missing",
-                "physical-authorization-bindings-unresolved",
-            ],
+            ["explicit-physical-write-authorization-missing"],
         )
-        self.assertFalse(status["owner_authorization_required"])
+        self.assertTrue(status["owner_authorization_required"])
         self.assertFalse(status["authorized_candidate_materialization_allowed"])
         for forbidden in ("physical_path", "device_path", "disk_number", "volume_id"):
             self.assertNotIn(forbidden, auth)

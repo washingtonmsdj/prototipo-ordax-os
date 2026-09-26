@@ -1,6 +1,6 @@
 {
   "$schema": "prototype-ordax.physical-write-authorization/3",
-  "status": "blocked-canonical-v4-release-proof-pending",
+  "status": "blocked-explicit-physical-authorization-pending",
   "physical_write_allowed": false,
   "explicit_owner_authorization": false,
   "scope": "first-real-stable-mvp-usb-proof",
@@ -8,11 +8,11 @@
   "release_sequence": 1,
   "authorization_context_sha256": null,
   "bindings": {
-    "minimal_bootstrap_sha256": "6229a9b101ecdba389b184bbf1481462805422dc2030f18475f76b42244fceef",
+    "minimal_bootstrap_sha256": "5b71a0a520818ecf55f8e18de2938401ee5cb2d6fc636bcaf175da9995242f57",
     "release_trust_sha256": "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
     "portable_usb_contract_sha256": "d5f28c165b07c4d1201ac79f542a494f87ad520b31c98baa836313162f47c4c0",
-    "creator_portable_media_contract_sha256": "f771e519221a59ab065f9f8cf8c02972e0a311755de22b9accae96c5581fc10c",
-    "canonical_v4_release_proof_sha256": null
+    "creator_portable_media_contract_sha256": "cc9219f6a5a1bd1ff148c2f644e792579a35d97154b640b2f5a58ec3c13f903a",
+    "canonical_v4_release_proof_sha256": "2dd17580ddbf5a0fd0433a912e97e6bded04fd0a44ea0849e9da15e13df01e4b"
   },
   "requirements": {
     "pre_usb_nova_ordax_audit_passed": true,
@@ -44,9 +44,9 @@
   "release_binding": {
     "proof_path": "docs/evidence/canonical-v4-release-proof.json",
     "proof_schema": "prototype-ordax.portable-v4-canonical-release-proof/1",
-    "source_commit": null,
-    "canonical_envelope_url": null,
-    "release_manifest_sha256": null,
-    "release_envelope_sha256": null
+    "source_commit": "b924ff8d74d1761232381ae3f9604bba17497cfd",
+    "canonical_envelope_url": "https://github.com/washingtonmsdj/prototipo-ordax-os/releases/download/ordax-stable-v4-b924ff8d74d1761232381ae3f9604bba17497cfd/release-envelope.json",
+    "release_manifest_sha256": "ddab1681ffecacca000ff1014d3b354978c1f4a785985998b673816e18e65b85",
+    "release_envelope_sha256": "cc89cf7436357c5d479624d74e32325d4eb249a6fc1334385fb55827c313f5c9"
   }
 }

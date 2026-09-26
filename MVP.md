@@ -155,17 +155,17 @@ para a primeira prova Stable USB.
 
 ```text
 PRE_USB_NOVA_ORDAX_AUDIT=PASS_SOURCE
-CANONICAL_V4_RELEASE_PROOF=PENDING_OPERATOR_EXECUTION
-FIRST_STABLE_MVP_USB_WRITE=HOLD_CANONICAL_V4_RELEASE_PROOF
+CANONICAL_V4_RELEASE_PROOF=PASS_BOUND_VERSIONED_PRERELEASE
+FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION
 ```
 
 ## 6. Gates do MVP público
 
 Bloqueiam lançamento:
 
-- trust/release signing real;
+- publicação/promocão da release Stable no canal `latest` (o proof real da candidata v4 já passou como prerelease);
 - Creator físico promovido e autorizado **para criação do USB**;
-- payload final verificável;
+- readback verificável da mídia física (o payload da candidata v4 já foi materializado e verificado);
 - known-good/fallback suficientemente provados;
 - primeiro USB canônico Stable/MVP;
 - boot USB -> OOBE/primeiro uso -> Surface -> apps;
@@ -267,7 +267,7 @@ Estado atual do caminho v2:
 - `release-manifest/2`: compatibilidade preservada;
 - `release-manifest/3`: generator + signer + verifier + aquisição não-ativante implementados e verdes em CI, com `system.erofs` + `native-surface-runtime.erofs`;
 - runtime gráfico v3: armazenamento content-addressed por SHA-256 e reuso de bytes verificados entre releases implementados;
-- `release-manifest/4`: caminho de protocolo implementado para acrescentar `local-ai-runtime.erofs`, com binding assinado ao source-lock do engine/modelo e armazenamento da IA por SHA-256 separado do runtime gráfico; o runtime **real** de `llama-server` + Qwen3.5-0.8B-Q4_0 já foi construído duas vezes com bytes idênticos no mesmo job, montado read-only e validado com inferência real tanto no host de CI quanto em Alpine 3.22.5. O engine está pinado por SHA-256/size; boot/handoff v4 e regressão descartável QEMU/UEFI já estão provados em source/CI, enquanto assinatura/materialização canônica Stable v4 e prova física no USB continuam pendentes;
+- `release-manifest/4`: caminho de protocolo implementado para acrescentar `local-ai-runtime.erofs`, com binding assinado ao source-lock do engine/modelo e armazenamento da IA por SHA-256 separado do runtime gráfico; o runtime **real** de `llama-server` + Qwen3.5-0.8B-Q4_0 já foi construído duas vezes com bytes idênticos no mesmo job, montado read-only e validado com inferência real tanto no host de CI quanto em Alpine 3.22.5. O engine está pinado por SHA-256/size; boot/handoff v4 e regressão descartável QEMU/UEFI já estão provados em source/CI. A candidata v4 foi assinada e materializada como prerelease, com proof agregado validado e vinculado; promoção do canal estável `latest` e prova física no USB continuam pendentes;
 - materialização portátil: implementada sem ativação implícita; v4 também permanece não-ativante;
 - revalidação offline exata da release assinada: implementada para v2, v3 e para o caminho de protocolo v4;
 - mount EROFS + estado ext4 + runtime system read-only: prova descartável verde;
@@ -286,7 +286,7 @@ Estado atual do caminho v2:
 - writer físico Portable: implementado apenas no backend interno/tagged e continua inacessível ao Creator público;
 - boot físico Stable/MVP v2/v3: não provado;
 - Secure Boot: não provado;
-- canonical release trust público: **PASS** — anchor Ed25519 canônico pinado; o gate pendente é o aggregate receipt real `canonical-v4-release-proof.json` + binding ao commit/manifest/envelope exatos;
+- canonical release trust público: **PASS** — anchor Ed25519 canônico pinado; proof v4 agregado está **PASS e vinculado** aos bytes do commit `b924ff8d74d1761232381ae3f9604bba17497cfd`. Foi publicada uma prerelease versionada, sem promover o canal estável `latest`; USB real e nova autorização física continuam pendentes;
 - Native continua fora do MVP.
 
 A mídia transitória atual continua apenas como caminho de validação de hardware. O trust público canônico já está resolvido e o caminho Stable/MVP atual é v4. Não habilitar o writer público antes de **prova canônica v4 assinada/materializável, binding do receipt, nova autorização física explícita e prova física do USB Stable/MVP**.
@@ -371,9 +371,9 @@ O MVP público oferece **pt-BR e en-US** nos seletores de primeiro uso e da Surf
 ## 12. Ordem recomendada de lançamento
 
 ```text
-1. executar a assinatura/publicação controlada da release Stable v4 e produzir `canonical-v4-release-proof.json`
-2. validar e vincular o receipt ao trust, source commit, manifest, envelope e três artefatos v4
-3. obter nova autorização explícita do owner para o contexto atual de 17 artefatos / 39 operações
+1. **concluído como prerelease:** assinar/publicar o candidato v4 versionado, materializar e verificar os três artefatos; proof agregado produzido no commit `b924ff8d74d1761232381ae3f9604bba17497cfd`
+2. **concluído:** validar e vincular o receipt ao trust, source commit, manifest, envelope e três artefatos v4
+3. obter nova autorização explícita do owner para o contexto atual de 17 artefatos / 39 operações quando for iniciar a preparação física; a autorização antiga de 15 artefatos não vale
 4. selecionar/revalidar o USB real, passar UAC e confirmação destrutiva específica do alvo
 5. gerar a primeira mídia Stable/MVP física
 6. validar UEFI, rede, assinatura, Surface, OOBE e apps no hardware suportado

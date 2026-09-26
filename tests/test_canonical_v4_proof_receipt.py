@@ -23,6 +23,12 @@ class CanonicalProofReceiptTests(unittest.TestCase):
         auth = root / "docs/contracts/physical-write-authorization.json"
         auth.parent.mkdir(parents=True)
         shutil.copyfile(ROOT / "docs/contracts/physical-write-authorization.json", auth)
+        authorization = json.loads(auth.read_text(encoding="utf-8"))
+        authorization["status"] = "blocked-canonical-v4-release-proof-pending"
+        authorization["bindings"]["canonical_v4_release_proof_sha256"] = None
+        for name in ("source_commit", "canonical_envelope_url", "release_manifest_sha256", "release_envelope_sha256"):
+            authorization["release_binding"][name] = None
+        auth.write_text(json.dumps(authorization, indent=2) + "\n", encoding="utf-8")
         common = dict(source_commit="b" * 40,
                       canonical_trust_sha256=hashlib.sha256(trust.read_bytes()).hexdigest(),
                       release_manifest_sha256="1" * 64, release_envelope_sha256="2" * 64,
@@ -68,6 +74,7 @@ class CanonicalProofReceiptTests(unittest.TestCase):
                 proof = root / "proof.json"
                 payload = proof.read_bytes()
                 self.assertFalse(payload.startswith(b"\xef\xbb\xbf"), "receipt must be UTF-8 without BOM")
+                self.assertNotIn(b"\r", payload, "receipt line endings must be canonical LF")
                 bound = binding.bind(root, proof)
                 self.assertEqual(bound["proof_sha256"], hashlib.sha256(payload).hexdigest())
                 self.assertEqual((root / binding.DESTINATION_PATH).read_bytes(), payload)

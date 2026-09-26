@@ -1,2 +1,11 @@
 # Canonical byte-pinned release trust must keep identical bytes on every host.
 bootstrap/trust/release-ed25519.json text eol=lf
+
+# Physical promotion binds these exact source files by SHA-256 across Windows and Linux.
+docs/contracts/minimal-bootstrap.json text eol=lf
+docs/contracts/portable-usb-v2.json text eol=lf
+docs/contracts/creator-portable-media-plan.json text eol=lf
+tools/creator/physical_promotion.py text eol=lf
+
+# The proof producer emits canonical LF and the promotion contract binds its bytes.
+docs/evidence/canonical-v4-release-proof.json text eol=lf

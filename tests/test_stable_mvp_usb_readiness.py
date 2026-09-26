@@ -64,15 +64,18 @@ class StableMvpUsbReadinessTests(unittest.TestCase):
             "authorized-candidate-ready-for-separate-physical-flow",
         )
 
-    def test_current_repository_is_source_ready_but_proof_blocked(self):
+    def test_current_repository_is_source_ready_but_owner_consent_pending(self):
         status = readiness.evaluate(ROOT)
 
         self.assertTrue(status["source_ready"], status["blockers"])
         self.assertEqual(
             status["stage"],
-            "canonical-v4-release-proof-pending",
+            "explicit-owner-authorization-pending",
         )
-        self.assertFalse(status["canonical_v4_release_proof_valid"])
+        self.assertTrue(status["canonical_v4_release_proof_valid"])
+        self.assertTrue(status["canonical_v4_release_binding_resolved"])
+        self.assertTrue(status["pre_authorization_ready"])
+        self.assertTrue(status["owner_authorization_required"])
         self.assertFalse(status["authorized_candidate_materialization_allowed"])
         self.assertFalse(status["physical_target_selected"])
         self.assertFalse(status["target_specific_destructive_confirmation_recorded"])
