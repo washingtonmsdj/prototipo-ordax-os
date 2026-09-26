@@ -100,6 +100,8 @@
   },
   "mvp_scope": {
     "execution_mode": "usb-only",
+    "account_required_for_public_download": false,
+    "account_required_for_first_use": false,
     "native_installation_available": false,
     "internal_disk_write_available": false,
     "dual_boot_available": false,

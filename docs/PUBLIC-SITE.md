@@ -94,6 +94,20 @@ source commit
 
 When there is no authorized release, the generated catalog is valid but empty; the page says so and exposes no download button. A missing or malformed catalog still fails closed.
 
+The user-facing MVP path is USB-only and does not require an online account:
+
+```text
+public landing
+ -> /download/ (authorized OrdaX Creator download)
+ -> Creator selects an authorized Stable/MVP release
+ -> Creator verifies release trust and integrity
+ -> user confirms the identified USB target, knowing its contents will be erased
+ -> Creator prepares and verifies the USB
+ -> user boots and runs OrdaX from USB
+```
+
+`/login/` and `/cadastro/` remain optional entry points; they do not gate public downloads or first use. This follows the MVP's offline and no-account path. The Creator must not offer internal-disk installation or writing. The page must distinguish the Creator download from the OS release selected by the Creator, and must state that there is no public download while the catalog is empty.
+
 A public release must also pass the release-compliance gate in `docs/RELEASE-COMPLIANCE.md` and `docs/contracts/release-compliance.json`. Each listed release must expose an integrity-bound SBOM, third-party notices and release-specific source-compliance bundle before the Download or Licenças page can render it.
 
 ## Security invariants

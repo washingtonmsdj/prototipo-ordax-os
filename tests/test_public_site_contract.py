@@ -58,6 +58,8 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertTrue(account["ordax_web_is_separate_product_mode"])
         scope = contract["mvp_scope"]
         self.assertEqual(scope["execution_mode"], "usb-only")
+        self.assertFalse(scope["account_required_for_public_download"])
+        self.assertFalse(scope["account_required_for_first_use"])
         self.assertFalse(scope["native_installation_available"])
         self.assertFalse(scope["internal_disk_write_available"])
         self.assertFalse(scope["dual_boot_available"])
@@ -100,6 +102,9 @@ class PublicSiteContractTests(unittest.TestCase):
         self.assertIn("Área da conta ainda indisponível", account)
         self.assertIn("não simula dados", account)
         self.assertIn("data-download-status", download)
+        self.assertIn("Entrar é opcional", download)
+        self.assertIn("A preparação apaga o conteúdo do USB escolhido", download)
+        self.assertIn("não oferece instalação", download)
 
         publications = json.loads(
             (ROOT / "platform" / "releases" / "publications.json").read_text(encoding="utf-8")
