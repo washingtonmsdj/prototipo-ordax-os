@@ -1,0 +1,65 @@
+name: Creator Physical Publisher
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/contracts/creator-consumer-flow.json'
+      - 'tools/release-signing/windows/8-Sign-Publish-CreatorPhysical.ps1'
+      - 'tests/test_creator_physical_publisher_boundary.py'
+      - '.github/workflows/creator-physical-publisher.yml'
+  pull_request:
+    paths:
+      - 'docs/contracts/creator-consumer-flow.json'
+      - 'tools/release-signing/windows/8-Sign-Publish-CreatorPhysical.ps1'
+      - 'tests/test_creator_physical_publisher_boundary.py'
+      - '.github/workflows/creator-physical-publisher.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          check-latest: false
+      - name: Verify Portable publisher and authorization boundary
+        run: python -m unittest tests.test_creator_physical_publisher_boundary -v
+
+  powershell-parse:
+    runs-on: windows-2025
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Parse physical publisher runbook
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = 'tools/release-signing/windows/8-Sign-Publish-CreatorPhysical.ps1'
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path -LiteralPath $path),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -ne 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            throw "PowerShell parse failed: $path"
+          }
+          Write-Host 'CREATOR_PHYSICAL_PUBLISHER_POWERSHELL_PARSE=PASS'
+          Write-Host 'PRIVATE_KEY_USED=NO'
+          Write-Host 'PHYSICAL_TARGET_SELECTED=NO'
+          Write-Host 'PHYSICAL_WRITE_PERFORMED=NO'
