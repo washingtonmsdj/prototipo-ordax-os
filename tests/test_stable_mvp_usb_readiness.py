@@ -2,11 +2,13 @@
 """Regression coverage for the aggregate Stable/MVP USB readiness gate."""
 
 import importlib.util
+import json
 from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOL_PATH = ROOT / "tools" / "creator" / "stable_mvp_usb_readiness.py"
+AUTHORIZATION_PATH = ROOT / "docs" / "contracts" / "physical-write-authorization.json"
 
 
 def load_module():
@@ -107,21 +109,30 @@ class StableMvpUsbReadinessTests(unittest.TestCase):
             ["repair-promotion-state-consistency"],
         )
 
-    def test_current_repository_is_source_ready_but_owner_consent_pending(self):
+    def test_current_repository_readiness_matches_authorization_contract(self):
         status = readiness.evaluate(ROOT)
+        authorization = json.loads(AUTHORIZATION_PATH.read_text(encoding="utf-8"))
+
+        pending = (
+            authorization["status"] == "blocked-explicit-physical-authorization-pending"
+            and authorization["physical_write_allowed"] is False
+            and authorization["explicit_owner_authorization"] is False
+            and authorization["authorization_context_sha256"] is None
+        )
+        authorized = (
+            authorization["status"] == "authorized"
+            and authorization["physical_write_allowed"] is True
+            and authorization["explicit_owner_authorization"] is True
+            and isinstance(authorization["authorization_context_sha256"], str)
+            and len(authorization["authorization_context_sha256"]) == 64
+        )
+        self.assertNotEqual(pending, authorized, "authorization contract must be exactly pending or authorized")
 
         self.assertTrue(status["source_ready"], status["blockers"])
         self.assertTrue(status["pre_usb_product_source_complete"])
-        self.assertEqual(
-            status["stage"],
-            "explicit-owner-authorization-pending",
-        )
         self.assertTrue(status["canonical_v4_release_proof_valid"])
         self.assertTrue(status["canonical_v4_release_binding_resolved"])
         self.assertTrue(status["pre_authorization_ready"])
-        self.assertTrue(status["owner_authorization_required"])
-        self.assertFalse(status["owner_authorization_recorded"])
-        self.assertFalse(status["authorized_candidate_materialization_allowed"])
         self.assertEqual(
             status["proof_boundaries"]["pre_usb_product_source"],
             "pass",
@@ -129,10 +140,6 @@ class StableMvpUsbReadinessTests(unittest.TestCase):
         self.assertEqual(
             status["proof_boundaries"]["canonical_v4_release_candidate"],
             "pass",
-        )
-        self.assertEqual(
-            status["proof_boundaries"]["physical_write_authorization"],
-            "pending",
         )
         self.assertEqual(
             status["proof_boundaries"]["canonical_stable_graphical_session"],
@@ -151,10 +158,34 @@ class StableMvpUsbReadinessTests(unittest.TestCase):
             "docs/MVP-PRE-PHYSICAL-HANDOFF.md",
         )
         self.assertTrue((ROOT / status["handoff_document"]).is_file())
-        self.assertEqual(
-            status["remaining_gates"][0],
-            "explicit-owner-authorization",
-        )
+
+        if pending:
+            self.assertEqual(status["stage"], "explicit-owner-authorization-pending")
+            self.assertTrue(status["owner_authorization_required"])
+            self.assertFalse(status["owner_authorization_recorded"])
+            self.assertFalse(status["authorized_candidate_materialization_allowed"])
+            self.assertEqual(
+                status["proof_boundaries"]["physical_write_authorization"],
+                "pending",
+            )
+            self.assertEqual(status["remaining_gates"][0], "explicit-owner-authorization")
+        else:
+            self.assertEqual(
+                status["stage"],
+                "authorized-candidate-ready-for-separate-physical-flow",
+            )
+            self.assertFalse(status["owner_authorization_required"])
+            self.assertTrue(status["owner_authorization_recorded"])
+            self.assertTrue(status["authorized_candidate_materialization_allowed"])
+            self.assertEqual(
+                status["proof_boundaries"]["physical_write_authorization"],
+                "pass",
+            )
+            self.assertEqual(
+                status["remaining_gates"][0],
+                "physical-target-selection-and-live-revalidation",
+            )
+
         self.assertFalse(status["physical_target_selected"])
         self.assertFalse(status["target_specific_destructive_confirmation_recorded"])
         self.assertFalse(status["writer_invoked"])
