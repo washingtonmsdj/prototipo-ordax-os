@@ -136,20 +136,21 @@ class StableMvpUsbReadinessTests(unittest.TestCase):
         )
         self.assertEqual(
             status["proof_boundaries"]["canonical_stable_graphical_session"],
-            "pending-physical-proof",
+            "requires-physical-proof",
         )
         self.assertEqual(
             status["proof_boundaries"]["canonical_system_runtime"],
-            "pending-physical-proof",
+            "requires-physical-proof",
         )
         self.assertEqual(
             status["proof_boundaries"]["stable_publication"],
-            "pending-after-physical-proof",
+            "requires-separate-post-physical-promotion",
         )
         self.assertEqual(
             status["handoff_document"],
             "docs/MVP-PRE-PHYSICAL-HANDOFF.md",
         )
+        self.assertTrue((ROOT / status["handoff_document"]).is_file())
         self.assertEqual(
             status["remaining_gates"][0],
             "explicit-owner-authorization",
