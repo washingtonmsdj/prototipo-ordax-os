@@ -25,7 +25,7 @@ The approved direction is deliberately restrained: glow, blur and transparency m
 
 `system/surface/ui/identity.css` is the shared component/composition layer for this identity. It may map existing components onto the semantic tokens while older component CSS is migrated, but it must not become a second token source.
 
-The dark graphite identity is the reference presentation. The light theme remains supported as a cool pearl/blue presentation of the same semantic interface; it is not a separate shell. Success, warning and error retain independent semantic colors and must not be reduced to the brand accent.
+The dark graphite identity is the visual reference presentation. Existing appearance preference and default behavior remain unchanged; the light theme remains supported as a cool pearl/blue presentation of the same semantic interface rather than a separate shell. Success, warning and error retain independent semantic colors and must not be reduced to the brand accent.
 
 Motion is restrained to short UI transitions, normally 150–250 ms, and must honor both the OrdaX reduced-motion preference and the host `prefers-reduced-motion` signal. Focus remains visibly distinct in both themes and in high-contrast mode.
 
