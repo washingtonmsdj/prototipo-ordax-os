@@ -53,11 +53,11 @@ if ($LASTEXITCODE -ne 0) {
 $verifyOutput | ForEach-Object { Write-Host $_ }
 
 $manifestBytes = [IO.File]::ReadAllBytes($Manifest)
-$manifest = Get-Content -LiteralPath $Manifest -Raw -Encoding UTF8 | ConvertFrom-Json
-if ([string]$manifest.'$schema' -cne 'prototype-ordax.release-manifest/4') {
+$manifestDocument = Get-Content -LiteralPath $Manifest -Raw -Encoding UTF8 | ConvertFrom-Json
+if ([string]$manifestDocument.'$schema' -cne 'prototype-ordax.release-manifest/4') {
     throw 'Signed handoff verification requires release-manifest/4.'
 }
-$sourceCommit = [string]$manifest.source_commit
+$sourceCommit = [string]$manifestDocument.source_commit
 if ($sourceCommit -cnotmatch '^[0-9a-f]{40}$') {
     throw 'Manifest source_commit is not exact lowercase 40-hex.'
 }
@@ -65,12 +65,12 @@ if (-not [string]::IsNullOrWhiteSpace($ExpectedCommit) -and $ExpectedCommit -cne
     throw "Manifest source commit mismatch: expected=$ExpectedCommit actual=$sourceCommit"
 }
 
-$envelope = Get-Content -LiteralPath $Envelope -Raw -Encoding UTF8 | ConvertFrom-Json
-if ([string]$envelope.'$schema' -cne 'prototype-ordax.release-envelope/1') {
+$envelopeDocument = Get-Content -LiteralPath $Envelope -Raw -Encoding UTF8 | ConvertFrom-Json
+if ([string]$envelopeDocument.'$schema' -cne 'prototype-ordax.release-envelope/1') {
     throw 'Unexpected release envelope schema.'
 }
 try {
-    $signedPayload = [Convert]::FromBase64String([string]$envelope.payload)
+    $signedPayload = [Convert]::FromBase64String([string]$envelopeDocument.payload)
 } catch {
     throw 'Release envelope payload is not valid base64.'
 }
@@ -88,7 +88,7 @@ $expected = [ordered]@{
     'native-surface-runtime.erofs' = $SurfaceRuntime
     'local-ai-runtime.erofs' = $LocalAiRuntime
 }
-$artifacts = @($manifest.artifacts)
+$artifacts = @($manifestDocument.artifacts)
 if ($artifacts.Count -ne 3) {
     throw "release-manifest/4 must bind exactly three artifacts; found $($artifacts.Count)."
 }
