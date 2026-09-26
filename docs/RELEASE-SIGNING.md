@@ -125,6 +125,8 @@ After the signed envelope and its exact three artifacts have been deliberately p
 
 The step requires a stable public HTTPS envelope URL with no query/fragment, a fresh empty local materialization root, the canonical public trust and the official release agent copied by step 3. It calls `materialize-portable-v4`, immediately calls `verify-portable-v4-exact`, validates the release directory plus the content-addressed Surface and Local AI stores, and writes `canonical-materialization-verification.json`.
 
+When the operator host cannot provide the filesystem durability primitives required by the source-owned agent, `.github/workflows/canonical-v4-materialization.yml` runs the same materialize-then-verify sequence on the pinned Linux CI executor. Dispatch it with the exact signed source commit and versioned canonical HTTPS envelope URL. It checks out that same source commit, builds the release agent from it, uses the repository's pinned public trust, and preserves the same receipt schema; it does not activate a release or touch physical media. The resulting receipt feeds step 7 without changing its verification rules.
+
 The materialization proof remains **non-activating and non-physical**. It fails if the fresh proof root contains `current`, `known-good`, `candidate` or an activation transaction, and it has no USB-target parameter. The proof therefore closes only the canonical signed/materializable-release boundary; physical-media authority and target confirmation stay separate.
 
 After steps 5 and 6 both succeed, step 7 binds their receipts into one final non-physical proof:

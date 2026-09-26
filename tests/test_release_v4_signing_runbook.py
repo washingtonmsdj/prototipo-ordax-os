@@ -216,6 +216,12 @@ class ReleaseV4SigningRunbookTests(unittest.TestCase):
         )
         self.assertTrue(contract["canonical_materialization_boundary"]["official_release_agent_materialize_portable_v4_required"])
         self.assertTrue(contract["canonical_materialization_boundary"]["official_release_agent_verify_portable_v4_exact_required"])
+        self.assertEqual(
+            contract["canonical_materialization_boundary"]["canonical_materialization_ci_workflow"],
+            ".github/workflows/canonical-v4-materialization.yml",
+        )
+        self.assertTrue(contract["canonical_materialization_boundary"]["canonical_materialization_ci_uses_exact_source_commit"])
+        self.assertTrue(contract["canonical_materialization_boundary"]["canonical_materialization_ci_receipt_schema_matches_local_step"])
         self.assertFalse(contract["canonical_materialization_boundary"]["release_activated"])
         self.assertFalse(contract["canonical_materialization_boundary"]["physical_target_selection_performed"])
         self.assertFalse(contract["canonical_materialization_boundary"]["physical_write_performed"])
