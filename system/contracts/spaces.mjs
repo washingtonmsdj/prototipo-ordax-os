@@ -7,6 +7,16 @@ const SPACE_KINDS = new Set(["personal", "work", "professional"]);
 const MEMBER_ROLES = new Set(["owner", "admin", "member", "viewer"]);
 const SPACE_STATES = new Set(["active", "archived"]);
 const SNAPSHOT_STATES = new Set(["idle", "loading", "ready", "unavailable", "error"]);
+const FORBIDDEN_SPACES_MUTATION_METHODS = Object.freeze([
+  "archive",
+  "create",
+  "delete",
+  "execute",
+  "mutate",
+  "remove",
+  "restore",
+  "update",
+]);
 
 function boundedText(value, label, max = 160) {
   if (typeof value !== "string" || value.includes("\0")) {
@@ -107,6 +117,11 @@ export function assertSpacesPort(port) {
   for (const method of ["getSnapshot", "subscribe", "refresh", "reset"]) {
     if (typeof port[method] !== "function") {
       throw new TypeError(`Spaces port must implement ${method}()`);
+    }
+  }
+  for (const method of FORBIDDEN_SPACES_MUTATION_METHODS) {
+    if (method in port) {
+      throw new TypeError(`Spaces port exposed to Surface must not implement ${method}()`);
     }
   }
   validateSpacesSnapshot(port.getSnapshot());
