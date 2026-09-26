@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  SPACES_PORT_SCHEMA,
   SPACES_SNAPSHOT_SCHEMA,
   assertSpacesPort,
   validateSpacesSnapshot,
@@ -96,4 +97,41 @@ test("Spaces snapshot rejects duplicate identities and stale non-ready data", ()
     }),
     /must not expose stale spaces/,
   );
+});
+
+test("Spaces port exposed to Surface rejects domain mutation methods", () => {
+  const snapshot = Object.freeze({
+    schema: SPACES_SNAPSHOT_SCHEMA,
+    state: "ready",
+    spaces: Object.freeze([]),
+  });
+  const readOnlyPort = {
+    schema: SPACES_PORT_SCHEMA,
+    getSnapshot: () => snapshot,
+    subscribe: () => () => {},
+    refresh: async () => snapshot,
+    reset: () => snapshot,
+  };
+
+  assert.equal(assertSpacesPort(readOnlyPort), readOnlyPort);
+
+  for (const method of [
+    "archive",
+    "create",
+    "delete",
+    "execute",
+    "mutate",
+    "remove",
+    "restore",
+    "update",
+  ]) {
+    const mutablePort = {
+      ...readOnlyPort,
+      [method]: () => {},
+    };
+    assert.throws(
+      () => assertSpacesPort(mutablePort),
+      new RegExp(`must not implement ${method}\\(\\)`),
+    );
+  }
 });
