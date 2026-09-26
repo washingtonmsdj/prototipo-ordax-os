@@ -12,7 +12,7 @@
     "release_trust_sha256": "d2836df77a3d5a54ccf64cc5643cfd5c19052efc83f2e3e2666c6d3197fce250",
     "portable_usb_contract_sha256": "d5f28c165b07c4d1201ac79f542a494f87ad520b31c98baa836313162f47c4c0",
     "creator_portable_media_contract_sha256": "cc9219f6a5a1bd1ff148c2f644e792579a35d97154b640b2f5a58ec3c13f903a",
-    "canonical_v4_release_proof_sha256": "08638ea9c416f10e7634c10b6b74887e4a44f8da069e8911676a1fda02c30bee"
+    "canonical_v4_release_proof_sha256": "2dd17580ddbf5a0fd0433a912e97e6bded04fd0a44ea0849e9da15e13df01e4b"
   },
   "requirements": {
     "pre_usb_nova_ordax_audit_passed": true,

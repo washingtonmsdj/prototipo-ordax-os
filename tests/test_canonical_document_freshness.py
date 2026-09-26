@@ -386,17 +386,18 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         plan = (ROOT / "PLANO-00-ESTADO-ATUAL-E-PRIORIDADES.md").read_text(encoding="utf-8")
 
         self.assertEqual(state["RELEASE_TRUST"], "PASS_CANONICAL_PUBLIC_ANCHOR_PINNED")
-        self.assertEqual(state["CANONICAL_V4_RELEASE_PROOF"], "PENDING_OPERATOR_EXECUTION")
+        self.assertEqual(state["CANONICAL_V4_RELEASE_PROOF"], "PASS_SIGNED_MATERIALIZED_EXACT")
         self.assertIn("canonical release trust público: **PASS**", mvp)
-        self.assertIn("FIRST_STABLE_MVP_USB_WRITE=HOLD_CANONICAL_V4_RELEASE_PROOF", mvp)
+        self.assertIn("FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION", mvp)
         self.assertIn("O MVP público oferece **pt-BR e en-US**", mvp)
         self.assertNotIn("canonical release trust público: pendente", mvp)
         self.assertNotIn("O primeiro uso Native oferece **pt-BR, en-US, es-ES, de-DE e fr-FR**", mvp)
 
-        self.assertIn("canonical v4 signed/materialized release aggregate proof + binding", agents)
+        self.assertIn("fresh owner authorization for the current 17-artifact / 39-operation writer context", agents)
+        self.assertNotIn("canonical v4 signed/materialized release aggregate proof + binding", agents)
         self.assertNotIn("canonical Ed25519 release trust ceremony/public anchor", agents)
         self.assertIn("| C16 IA nativa | **ENTRA como capability do sistema** |", plan)
-        self.assertIn("trust canônico resolvido; fechar proof canônico v4", plan)
+        self.assertIn("trust e proof canônico v4 resolvidos; consentimento físico pendente", plan)
 
     def test_pre_usb_v4_gate_distinguishes_requirement_from_current_pending_state(self):
         plan = (ROOT / "PLANO-03-FECHAMENTO-PRE-USB-NOVA-ORDAX.md").read_text(encoding="utf-8")
@@ -408,8 +409,8 @@ class CanonicalDocumentFreshnessTests(unittest.TestCase):
         )
         self.assertNotIn("SIGNED_RELEASE_V4_WITH_LOCAL_AI=PASS\n", plan)
         self.assertIn("SIGNED_RELEASE_V4_WITH_LOCAL_AI=REQUIRED", promotion)
-        self.assertIn("CANONICAL_V4_RELEASE_PROOF=PENDING_OPERATOR_EXECUTION", current)
-        self.assertIn("FIRST_STABLE_MVP_USB_WRITE=HOLD_CANONICAL_V4_RELEASE_PROOF", current)
+        self.assertIn("CANONICAL_V4_RELEASE_PROOF=PASS_SIGNED_MATERIALIZED_VERSIONED_PRERELEASE", current)
+        self.assertIn("FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION", current)
 
 
 if __name__ == "__main__":

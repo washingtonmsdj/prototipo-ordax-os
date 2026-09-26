@@ -380,7 +380,7 @@ SIGNED_RELEASE_V4_WITH_LOCAL_AI=REQUIRED_PASS_BEFORE_PHYSICAL_PREFLIGHT
 PHYSICAL_WRITE=STILL_SEPARATE
 ```
 
-O bloco acima descreve o **estado exigido para liberar o preflight físico**, não o estado atual. Enquanto `CANONICAL_V4_RELEASE_PROOF=PENDING_OPERATOR_EXECUTION`, este requisito permanece pendente e `FIRST_STABLE_MVP_USB_WRITE` continua em HOLD.
+O bloco acima descreve o **estado exigido para liberar o preflight físico**. A candidata v4 versionada já passou por assinatura, materialização/verificação canônica e agregação/vínculo da prova; isso libera somente a etapa separada de consentimento do dono. Como não há USB disponível nem consentimento novo para o contexto atual, `FIRST_STABLE_MVP_USB_WRITE` permanece em HOLD.
 
 Os três inputs EROFS reais agora podem ser exportados sem publicação por `workflow_dispatch` nos builders canônicos de System, Surface e Local AI. A exportação é manual-only, retida por 1 dia e não contém chave privada. Cada pacote inclui `operator-receipt.json` com source commit, SHA-256 e tamanho dos bytes exportados; o receipt de Local AI também vincula `source-lock.json`. O preflight local recalcula esses bindings e exige os três receipts no mesmo SHA. Essa barreira passou em CI no run `36166653548`, incluindo rejeição de receipt com commit divergente e bytes adulterados após a emissão. Ela reduz a preparação operacional, mas **não** substitui assinatura com a chave canônica, publicação HTTPS revisada, materialização canônica, agregação do recibo ou autorização física.
 
@@ -412,12 +412,12 @@ O gate é de produto/source. Ele **não** substitui:
 
 ### P2 — fechar release
 
-8. Handoff v4 com AI real. — **PASS_SOURCE**; materialização/assinatura Stable real ainda pendente.
-9. Materialização v4 com bytes reais + assinatura efêmera + regressão QEMU/UEFI v4. — **PASS_CI_NON_PROMOTIONAL**; a assinatura/materialização canônica Stable continua pendente e CI não substitui a prova física.
+8. Handoff v4 com AI real. — **PASS_CANONICAL_VERSIONED_PRERELEASE**: os três artefatos assinados foram publicados na candidata versionada.
+9. Materialização v4 com bytes reais + regressão QEMU/UEFI v4. — **PASS_CANONICAL_CI_NON_PROMOTIONAL**: a URL HTTPS exata foi materializada e verificada em CI e entrou na prova agregada; isso não substitui a prova física nem promove `latest`.
 10. Creator físico alinhado ao payload Stable v4. — **PASS_SOURCE_CANDIDATE**: plano final passa de 15 para 17 artefatos e de 35 para 39 operações, incluindo `local-ai-runtime.erofs` content-addressed + `local-ai-runtime.sha256`; o writer mantém seu próprio Git SHA apenas como provenance e vincula o `source_commit` do plano Portable ao release canônico de `release_binding.source_commit`; `prepare-portable`/`apply-portable` exigem exatamente 17 fontes e falham se o commit do plano divergir do release provado; consentimento físico anterior fica inválido por contexto.
 11. Preflight canônico v4 do operador. — **PASS_SOURCE_READ_ONLY**: valida artefatos públicos, source-lock, trust, tooling, commit, URLs HTTPS estáveis e metadados do caminho da chave privada sem ler o PEM, assinar, publicar, materializar ou tocar mídia física.
-12. Gate proof-before-consent. — **PASS_SOURCE**: promoção física exige `canonical-v4-release-proof.json` real, validado contra trust/commit/manifest/envelope/3 artefatos e vinculado por SHA-256 antes de `pre_authorization_ready`; o receipt real ainda está **PENDING_OPERATOR_EXECUTION**.
-13. Somente depois do proof canônico vinculado, novo consentimento explícito e demais gates físicos, voltar ao primeiro USB Stable/MVP físico.
+12. Gate proof-before-consent. — **PASS_CANONICAL_PRERELEASE_BOUND**: `canonical-v4-release-proof.json` real foi validado contra trust/commit/manifest/envelope/3 artefatos e vinculado por SHA-256 antes de `pre_authorization_ready`.
+13. Próximo passo condicionado ao hardware: novo consentimento explícito para o contexto atual e execução dos gates físicos antes do primeiro USB Stable/MVP.
 
 ---
 
@@ -448,14 +448,15 @@ Voltar à missão física somente quando:
 
 1. todos os itens A estiverem PASS em source/CI ou tiverem uma decisão canônica explícita
    retirando-os do MVP;
-2. o manifest v4 real estiver assinado/materializável e o aggregate receipt `canonical-v4-release-proof.json` estiver validado/vinculado;
+2. o manifest v4 real estiver assinado/materializável e o aggregate receipt `canonical-v4-release-proof.json` estiver validado/vinculado — **PASS para a candidata prerelease atual**;
 3. os testes descartáveis/UEFI relevantes estiverem verdes;
 4. documentação canônica e contratos estiverem coerentes;
 5. somente então permitir o novo preflight de consentimento do dono e, depois dele, aplicar novamente os gates físicos já existentes.
 
-Até lá:
+Até haver USB e consentimento explícito novo para o contexto atual:
 
 ```text
-FIRST_STABLE_MVP_USB_WRITE=HOLD_CANONICAL_V4_RELEASE_PROOF
-PHYSICAL_WRITE_AUTHORITY=CANONICAL_V4_RELEASE_PROOF_THEN_FRESH_OWNER_AUTHORIZATION_REQUIRED
+CANONICAL_V4_RELEASE_PROOF=PASS_BOUND_VERSIONED_PRERELEASE
+FIRST_STABLE_MVP_USB_WRITE=HOLD_NO_USB_AND_NO_FRESH_AUTHORIZATION
+PHYSICAL_WRITE_AUTHORITY=NO_EXPLICIT_OWNER_AUTHORIZATION
 ```

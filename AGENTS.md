@@ -270,10 +270,11 @@ O Creator Windows ja mede a capacidade real do `PhysicalDrive`, inclui essa capa
 
 A prova byte-completa com confianca efemera tambem passou para o bootstrap seed. A chave privada efemera e a imagem RAW foram destruidas antes do upload; somente metadados de prova foram preservados. O anchor Ed25519 canonico ja foi gerado, recuperado criptograficamente, promovido e pinado; o full-bootstrap canonical-trust proof tambem passou. Esses fatos nao autorizam por si so promocao fisica.
 
+A release v4 exata foi assinada, materializada/verificada pelo caminho canonical e agregada em prova vinculada; ela segue como prerelease versionada, sem promocao do canal `latest`. Esse fechamento habilita apenas o preflight separado de consentimento, nao uma escrita fisica.
+
 Ainda permanecem abertos antes do primeiro Stable/MVP fisico:
 
 ```text
-canonical v4 signed/materialized release aggregate proof + binding
 fresh owner authorization for the current 17-artifact / 39-operation writer context
 real Stable/MVP USB boot/network/runtime/recovery/cold-health evidence
 graphical Surface smoke and known-good/rollback evidence on supported hardware

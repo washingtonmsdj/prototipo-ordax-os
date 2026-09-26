@@ -188,11 +188,13 @@ $receipt = [ordered]@{
     physical_write_authorized = $false
     physical_write_performed = $false
 }
-# Windows PowerShell 5.1 adds a BOM with Set-Content -Encoding UTF8. The
-# host-neutral binder validates and hashes these exact bytes without rewriting.
+# Emit BOM-free UTF-8 with canonical LF endings so the bound receipt hashes
+# identically on Windows and Linux.
+$canonicalJson = $receipt | ConvertTo-Json -Depth 6
+$canonicalJson = [regex]::Replace($canonicalJson, '\r\n?', [string][char]10)
 [IO.File]::WriteAllText(
     $ReceiptPath,
-    ($receipt | ConvertTo-Json -Depth 6) + [Environment]::NewLine,
+    $canonicalJson + [char]10,
     [Text.UTF8Encoding]::new($false)
 )
 
