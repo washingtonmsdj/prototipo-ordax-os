@@ -1,0 +1,58 @@
+name: Temporary Settings Preview Migration
+
+on:
+  push:
+    branches:
+      - design/ordax-glacial-identity
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout redesign branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+        with:
+          persist-credentials: false
+
+      - name: Align theme previews with glacial palette
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("system/surface/ui/settings.css")
+          text = path.read_text(encoding="utf-8")
+          replacements = (
+              ("  background: #f1efe8;", "  background: #f7f9fc;"),
+              ("  border-color: #53565d;\n  background: #181a1f;", "  border-color: #243249;\n  background: #090f1b;"),
+              ("  background: #22252a;", "  background: #dbe5f1;"),
+              ("  background: #0f1114;", "  background: #07101b;"),
+              ("""    linear-gradient(#ed4b25 0 0) 9px 10px / 34px 4px no-repeat,\n    linear-gradient(#2a2c31 0 0) 9px 23px / 46px 3px no-repeat,\n    linear-gradient(#9a9c9f 0 0) 9px 33px / 33px 3px no-repeat,\n    #f1efe8;""", """    linear-gradient(#527eb8 0 0) 9px 10px / 34px 4px no-repeat,\n    linear-gradient(#172b47 0 0) 9px 23px / 46px 3px no-repeat,\n    linear-gradient(#8797aa 0 0) 9px 33px / 33px 3px no-repeat,\n    #f7f9fc;"""),
+              ("""    linear-gradient(#ed4b25 0 0) 9px 10px / 34px 4px no-repeat,\n    linear-gradient(#ece9e1 0 0) 9px 23px / 46px 3px no-repeat,\n    linear-gradient(#767982 0 0) 9px 33px / 33px 3px no-repeat,\n    #181a1f;""", """    linear-gradient(#a9c9f7 0 0) 9px 10px / 34px 4px no-repeat,\n    linear-gradient(#e2ebf7 0 0) 9px 23px / 46px 3px no-repeat,\n    linear-gradient(#8e9db4 0 0) 9px 33px / 33px 3px no-repeat,\n    #090f1b;"""),
+          )
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f"settings preview shape changed: {old!r}")
+              text = text.replace(old, new, 1)
+          if "#ed4b25" in text:
+              raise SystemExit("legacy orange remains in settings.css")
+          path.write_text(text.rstrip("\n") + "\n", encoding="utf-8")
+          Path(".github/workflows/_temp_settings_preview_migration.yml").unlink()
+          PY
+
+      - name: Commit preview migration
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Align Settings previews with glacial palette'
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPOSITORY}.git" "HEAD:${GITHUB_REF}"
