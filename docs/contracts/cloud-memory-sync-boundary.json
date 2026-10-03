@@ -1,6 +1,7 @@
 {
   "$schema": "prototype-ordax.cloud-memory-sync-boundary/1",
-  "status": "backend-mutation-deployed-rollout-disabled",
+  "status": "mvp-required-backend-mutation-deployed-rollout-disabled",
+  "mvp_required": true,
   "public_mvp_enabled": false,
   "source_of_truth": {
     "table": "public.ordax_memory_items",
@@ -60,6 +61,7 @@
     "two-client proof passes with dedicated non-admin account",
     "bidirectional edit convergence and fresh-session restore proof passes with dedicated non-admin account",
     "quota/entitlement behavior is server-authoritative under real authenticated sessions",
+    "account and Space rollout policy is explicitly approved before the MVP release is closed",
     "public copy remains disabled until rollout gates pass"
   ],
   "implementation": {
