@@ -479,6 +479,23 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 	switch message {
 	case wmPaint:
 		return paintGuidedVisual(hwnd)
+	case wmEraseBkgnd:
+		return 1
+	case wmDrawItem:
+		return drawCreatorButton(lParam)
+	case wmCtlColorStatic, wmCtlColorEdit, wmCtlColorListBox:
+		if brush := creatorControlColor(message, wParam, lParam); brush != 0 {
+			return brush
+		}
+	case wmSize:
+		layoutCreatorControls(int32(loword(lParam)), int32(hiword(lParam)))
+		return 0
+	case wmGetMinMaxInfo:
+		if lParam != 0 {
+			info := (*creatorMinMaxInfo)(unsafe.Pointer(lParam))
+			info.MinTrackSize = point{X: 1120, Y: 710}
+		}
+		return 0
 	case wmCommand:
 		id := int(loword(wParam))
 		notify := hiword(wParam)
@@ -530,9 +547,11 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 			showWriteBusyMessage()
 			return 0
 		}
-		procPostQuitMessage.Call(0)
+		procDestroyWindow.Call(hwnd)
 		return 0
 	case wmDestroy:
+		shutdownCreatorControls()
+		releaseCreatorVisualTheme()
 		procPostQuitMessage.Call(0)
 		return 0
 	}
@@ -541,6 +560,7 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 }
 
 func createMainWindow() {
+	loadCreatorVisualTheme()
 	controls := initCommonControlsEx{Size: uint32(unsafe.Sizeof(initCommonControlsEx{})), ICC: iccProgressClass}
 	procInitCommonControlsEx.Call(uintptr(unsafe.Pointer(&controls)))
 
@@ -550,7 +570,7 @@ func createMainWindow() {
 		Size:       uint32(unsafe.Sizeof(wndClassEx{})),
 		WndProc:    syscall.NewCallback(wndProc),
 		Instance:   instance,
-		Background: 6,
+		Background: 0,
 		ClassName:  className,
 	}
 	atom, _, err := procRegisterClassExW.Call(uintptr(unsafe.Pointer(&class)))
@@ -564,19 +584,20 @@ func createMainWindow() {
 		uintptr(unsafe.Pointer(utf16Ptr(windowTitle))),
 		wsOverlappedWindow|wsClipChildren,
 		cwUseDefault, cwUseDefault,
-		900, 390,
+		1148, 726,
 		0, 0, instance, 0,
 	)
 	if hwnd == 0 {
 		panic(fmt.Sprintf("CreateWindowExW(main): %v", err))
 	}
 	mainWindow = hwnd
+	creatorEnableNativeDarkTitlebar(hwnd)
 
-	headerTitleLabel = createControl("STATIC", creatorT(msgHeaderTitle), 0, 28, 24, 630, 28, 0)
-	headerSubtitleLabel = createControl("STATIC", creatorT(msgHeaderSubtitle), 0, 28, 56, 630, 22, 0)
-	languageLabel = createControl("STATIC", creatorT(msgFieldLanguage), 0, 28, 88, 180, 20, 0)
-	usbLabel = createControl("STATIC", creatorT(msgFieldUSB), 0, 224, 88, 434, 20, 0)
-	localeCombo = createControl("COMBOBOX", "", wsTabStop|cbsDropDownList, 28, 112, 180, 160, idLocaleCombo)
+	headerTitleLabel = createControl("STATIC", creatorT(msgHeaderTitle), 0, 137, 47, 640, 49, 0)
+	headerSubtitleLabel = createControl("STATIC", creatorT(msgHeaderSubtitle), 0, 139, 101, 638, 42, 0)
+	languageLabel = createControl("STATIC", creatorT(msgFieldLanguage), 0, 45, 193, 268, 26, 0)
+	usbLabel = createControl("STATIC", creatorT(msgFieldUSB), 0, 364, 193, 415, 26, 0)
+	localeCombo = createControl("COMBOBOX", "", wsTabStop|cbsDropDownList, 45, 224, 268, 216, idLocaleCombo)
 	for index, locale := range creatorSupportedLocales() {
 		label := creatorLocaleDisplayName(locale)
 		send(localeCombo, cbAddString, 0, uintptr(unsafe.Pointer(utf16Ptr(label))))
@@ -584,15 +605,16 @@ func createMainWindow() {
 			send(localeCombo, cbSetCurSel, uintptr(index), 0)
 		}
 	}
-	deviceCombo = createControl("COMBOBOX", "", wsTabStop|wsVScroll|cbsDropDownList|wsDisabled, 224, 112, 434, 220, idDeviceCombo)
-	statusLabel = createControl("STATIC", creatorT(msgRefreshSearching), 0, 28, 172, 630, 22, idStatus)
-	hintLabel = createControl("STATIC", "", 0, 28, 202, 630, 42, idHint)
-	progressBar = createControl("msctls_progress32", "", pbsMarquee, 28, 250, 630, 14, idProgress)
-	versionLabel = createControl("STATIC", "OrdaX Creator • "+creatorT(msgVersionChecking), 0, 28, 292, 245, 20, idVersion)
-	updateButton = createControl("BUTTON", creatorT(msgUpdateControl), wsTabStop|bsPushButton, 280, 280, 118, 36, idUpdate)
-	refreshButton = createControl("BUTTON", creatorT(msgActionReloadUSB), wsTabStop|bsPushButton, 406, 280, 118, 36, idRefresh)
-	writeButton = createControl("BUTTON", creatorT(msgActionCreate), wsTabStop|bsDefPushButton|wsDisabled, 532, 280, 126, 36, idWrite)
-	bootHelpButton = createControl("BUTTON", creatorT(msgActionBootHelp), wsTabStop|bsPushButton, 704, 294, 148, 32, idBootHelp)
+	deviceCombo = createControl("COMBOBOX", "", wsTabStop|wsVScroll|cbsDropDownList|wsDisabled, 364, 224, 415, 216, idDeviceCombo)
+	statusLabel = createControl("STATIC", creatorT(msgRefreshSearching), 0, 112, 335, 665, 35, idStatus)
+	hintLabel = createControl("STATIC", "", 0, 112, 379, 665, 97, idHint)
+	progressBar = createControl("msctls_progress32", "", pbsMarquee, 46, 558, 744, 16, idProgress)
+	versionLabel = createControl("STATIC", "OrdaX Creator • "+creatorT(msgVersionChecking), 0, 47, 644, 282, 22, idVersion)
+	updateButton = createControl("BUTTON", creatorT(msgUpdateControl), wsTabStop|bsOwnerDraw, 365, 630, 128, 43, idUpdate)
+	refreshButton = createControl("BUTTON", creatorT(msgActionReloadUSB), wsTabStop|bsOwnerDraw, 501, 630, 138, 43, idRefresh)
+	writeButton = createControl("BUTTON", creatorT(msgActionCreate), wsTabStop|bsOwnerDraw|wsDisabled, 648, 630, 150, 43, idWrite)
+	bootHelpButton = createControl("BUTTON", creatorT(msgActionBootHelp), wsTabStop|bsOwnerDraw, 855, 610, 255, 43, idBootHelp)
+	initializeCreatorControls()
 	setProgressIdle()
 
 	procShowWindow.Call(mainWindow, swShow)
