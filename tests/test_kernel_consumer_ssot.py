@@ -94,6 +94,20 @@ class KernelConsumerSSOTTests(unittest.TestCase):
         self.assertNotIn("kernel-modules-6.6.52.tar", workflow)
         self.assertIn("manifest['physical_write_allowed'] = False", workflow)
 
+    def test_owner_development_trust_is_ephemeral_and_isolated(self):
+        workflow = (ROOT / ".github/workflows/creator-owner-dev-git.yml").read_text(encoding="utf-8")
+        canonical_trust = ROOT / "bootstrap/trust/release-ed25519.json"
+        pinned = json.loads(canonical_trust.read_text(encoding="utf-8"))
+        self.assertEqual(pinned["$schema"], "prototype-ordax.release-trust/1")
+        self.assertIn('trust="$RUNNER_TEMP/owner-prototype-trust.json"', workflow)
+        self.assertIn('--trust "$trust"', workflow)
+        self.assertIn('test ! -e "$trust"', workflow)
+        self.assertIn('sha256sum "$RUNNER_TEMP/owner-prototype-trust.json"', workflow)
+        self.assertNotIn('--trust bootstrap/trust/release-ed25519.json', workflow)
+        self.assertNotIn('sha256sum bootstrap/trust/release-ed25519.json', workflow)
+        self.assertEqual(workflow.count('rm -f "$RUNNER_TEMP/owner-prototype-trust.json"'), 2)
+        self.assertIn('rm -f "$RUNNER_TEMP/owner-prototype-private.pem"', workflow)
+
     def test_stale_bootstrap_manifest_rejected_before_output(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

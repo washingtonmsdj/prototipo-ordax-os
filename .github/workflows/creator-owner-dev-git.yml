@@ -123,10 +123,17 @@ jobs:
           )
           signer="$PWD/out/owner-prototype/ordax-release-signing"
           private="$RUNNER_TEMP/owner-prototype-private.pem"
+          trust="$RUNNER_TEMP/owner-prototype-trust.json"
+          # Source-pinned public release trust must never be overwritten by a
+          # temporary Owner/Development identity generated during CI.
+          test ! -e "$private"
+          test ! -e "$trust"
           "$signer" generate-key \
             --private-key "$private" \
-            --trust bootstrap/trust/release-ed25519.json \
+            --trust "$trust" \
             --key-id owner-dev-${GITHUB_SHA::12}
+          test -s "$private"
+          test -s "$trust"
           echo "$private" > "$RUNNER_TEMP/owner-prototype-private-path"
 
       - name: Derive development Git bootstrap manifest
@@ -257,7 +264,7 @@ jobs:
           bundle="$RUNNER_TEMP/OrdaX-Creator"
           mkdir -p "$release" "$bundle"
 
-          trust_sha="$(sha256sum bootstrap/trust/release-ed25519.json | cut -d' ' -f1)"
+          trust_sha="$(sha256sum "$RUNNER_TEMP/owner-prototype-trust.json" | cut -d' ' -f1)"
           manifest_sha="$(sha256sum "$manifest" | cut -d' ' -f1)"
           seed_sha="$(sha256sum "$seed" | cut -d' ' -f1)"
           seed_size="$(stat -c '%s' "$seed")"
@@ -390,6 +397,7 @@ jobs:
           private="$(cat "$RUNNER_TEMP/owner-prototype-private-path")"
           rm -f "$private"
           test ! -e "$private"
+          rm -f "$RUNNER_TEMP/owner-prototype-trust.json"
           rm -f out/owner-prototype/ordax-release-signing
 
       - name: Publish development Creator bundle
@@ -425,4 +433,7 @@ jobs:
             private="$(cat "$RUNNER_TEMP/owner-prototype-private-path")"
             rm -f "$private"
           fi
+          # Covers failure between exclusive private-key creation and pointer creation.
+          rm -f "$RUNNER_TEMP/owner-prototype-private.pem"
+          rm -f "$RUNNER_TEMP/owner-prototype-trust.json"
           rm -f out/owner-prototype/ordax-release-signing
