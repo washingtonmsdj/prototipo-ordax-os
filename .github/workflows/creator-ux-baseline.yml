@@ -140,9 +140,9 @@ jobs:
                   'msgActionBootHelp', 'Illustration', 'creatorMessageFor(locale, id, nil)',
               ],
               'visuals': [
-                  'drawStepRail', 'drawUSBIllustration', 'currentGuidedExperience',
-                  'creatorStepReview', 'creatorStepCreating', 'creatorStepComplete', 'creatorStepBlocked',
-                  'procGetSysColor', 'procDrawTextW', 'procEllipse', 'procRectangle',
+                  'drawCreatorRail', 'drawCreatorUSBStatus', 'currentGuidedExperience',
+                  'creatorStepReview', 'creatorStepComplete', 'creatorStepBlocked',
+                  'procGetSysColor', 'procDrawTextW', 'procEllipse', 'procRoundRect',
               ],
               'boot_help': ['creatorT(msgBootHelp)'],
               'physical': [

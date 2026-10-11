@@ -170,7 +170,7 @@ func drawCreatorUSBStatus(hdc uintptr, left int32, view creatorExperienceView) {
         return
     }
     target := targets[selection]
-    drawTextInRect(hdc, "USB detectado", rect{left+34, 513, left+260, 536}, dtSingleLine, creatorColorFor("text", colorWindowText))
+    drawTextInRect(hdc, creatorT(msgUSBDetected), rect{left+34, 513, left+260, 536}, dtSingleLine, creatorColorFor("text", colorWindowText))
     display := strings.TrimSpace(target.DriveLetter + " · " + target.VolumeLabel)
     if len([]rune(display)) > 28 { display = string([]rune(display)[:26]) + "…" }
     drawTextInRect(hdc, display, rect{left+34, 540, left+268, 560}, dtSingleLine, creatorColorFor("muted", colorGrayText))
@@ -208,11 +208,11 @@ func paintGuidedVisual(hwnd uintptr) uintptr {
     if view.Step == creatorStepReview || view.Step == creatorStepComplete { symbol = "✓" }
     drawCreatorCircle(hdc, rect{49, 348, 92, 391}, iconFill, symbol, creatorColorFor("background", colorWindow))
     drawCreatorPanel(hdc, rect{22, 514, mainRight, client.Bottom-77}, "panel", "border", 12)
-    drawTextInRect(hdc, "Status", rect{43, 525, 190, 551}, dtSingleLine, creatorColorFor("accent", colorHighlight))
+    drawTextInRect(hdc, creatorT(msgStatusCaption), rect{43, 525, 190, 551}, dtSingleLine, creatorColorFor("accent", colorHighlight))
 
     drawCreatorPanel(hdc, rect{sidebar, 174, right-21, client.Bottom-20}, "panel", "border", 16)
     creatorDrawOfficialLogo(hdc, 44, 55, 75, 75)
-    drawTextInRect(hdc, "Seu OrdaX USB", rect{sidebar+32, 187, right-38, 213}, dtSingleLine, creatorColorFor("text", colorWindowText))
+    drawTextInRect(hdc, creatorT(msgSidebarUSBTitle), rect{sidebar+32, 187, right-38, 213}, dtSingleLine, creatorColorFor("text", colorWindowText))
     drawCreatorRail(hdc, sidebar, view)
     drawCreatorUSBStatus(hdc, sidebar, view)
     return 0

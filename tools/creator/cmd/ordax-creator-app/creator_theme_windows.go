@@ -86,7 +86,7 @@ func loadCreatorVisualTheme() {
     var document creatorVisualTheme
     if err := json.Unmarshal(themeBytes, &document); err != nil ||
         document.Schema != "prototype-ordax.creator-ui-theme/1" ||
-        document.Source != "system/surface/ui/tokens.css" ||
+        document.Source == "" ||
         len(document.Colors) != 15 {
         return
     }
