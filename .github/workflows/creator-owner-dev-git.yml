@@ -55,6 +55,11 @@ jobs:
           check-latest: false
           cache: false
 
+      - name: Resolve signed kernel version from canonical source
+        run: |
+          set -euo pipefail
+          python3 bootstrap/kernel/ci_env.py --github-env "$GITHUB_ENV"
+
       - name: Test Creator core
         run: |
           set -euo pipefail
@@ -68,6 +73,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             gcc gcc-13 make bc perl bison flex openssl libssl-dev libelf-dev \
             dwarves kmod xz-utils pkg-config musl-tools binutils bzip2 \
+            gpg gpg-agent \
             meson ninja-build gperf libcap-dev libmount-dev libblkid-dev \
             liblz4-dev libzstd-dev liblzma-dev libpcre2-dev \
             gdisk dosfstools e2fsprogs mtools util-linux proot
@@ -89,7 +95,7 @@ jobs:
           python bootstrap/initramfs/build.py verify
           proot --version
           sudo -E python bootstrap/dev-base/build.py \
-            --kernel-modules out/kernel/kernel-modules-6.6.52.tar \
+            --kernel-modules "out/kernel/kernel-modules-$ORDAX_KERNEL_VERSION.tar" \
             --out-dir out/dev-base
           rootfs=out/dev-base/rootfs
           sudo touch "$rootfs/dev/null"
@@ -127,7 +133,7 @@ jobs:
         run: |
           set -euo pipefail
           python - "$RUNNER_TEMP/minimal-bootstrap-owner-dev.json" <<'PY'
-          import hashlib, json, pathlib, sys
+          import hashlib, json, os, pathlib, sys
           def digest(path):
               return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
           output = pathlib.Path(sys.argv[1])
@@ -135,7 +141,15 @@ jobs:
           keep = {'uefi-boot', 'kernel', 'initramfs', 'bootstrap-orchestrator', 'bootstrap-recovery'}
           manifest['artifact_groups'] = [group for group in manifest['artifact_groups'] if group['id'] in keep]
           groups = {group['id']: group for group in manifest['artifact_groups']}
-          groups['kernel']['artifacts'][0]['sha256'] = digest('out/kernel/vmlinuz-6.6.52')
+          kernel_version = os.environ['ORDAX_KERNEL_VERSION']
+          kernel_artifacts = groups['kernel']['artifacts']
+          if len(kernel_artifacts) != 1:
+              raise SystemExit('owner-development kernel artifact inventory must contain one artifact')
+          kernel_artifact = kernel_artifacts[0]
+          expected_source = f'bootstrap/kernel/vmlinuz-{kernel_version}'
+          if kernel_artifact['source_path'] != expected_source:
+              raise SystemExit('owner-development kernel source differs from canonical manifest')
+          kernel_artifact['sha256'] = digest(f'out/kernel/vmlinuz-{kernel_version}')
           groups['initramfs']['artifacts'][0]['sha256'] = digest('out/initramfs/initramfs.cpio.gz')
           orchestrator = groups['bootstrap-orchestrator']
           orchestrator['source_owner'] = 'bootstrap/dev'

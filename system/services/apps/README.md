@@ -95,6 +95,14 @@ The canonical `ordaxsystems/ordax-apps` repository has independent unsigned cand
 
 This extension is *not* an expansion of the initial public USB MVP application payload. `mvp-delivery-policy.mjs` continues to define the six initial on-demand products, plus Files/Internet bootstrap and structural surfaces; additional policies must remain `store-only`. New on-demand policies do **not** publish candidates, select artifacts, authorize a signer or enable the native lifecycle executor. Unknown app IDs, unsigned catalogs and unavailable Native activation metadata still fail closed. The Store UI remains disabled for the public MVP under its existing contract. No app source is copied from the platform by adding a delivery policy.
 
+### Ampliação gradual do leitor Native de módulos
+
+A **Calculadora** é o primeiro utilitário de `ordax-apps` acrescentado ao escopo de leitura de módulos assinados, preservando seu código e manifesto na fonte oficial `apps/calculator`. O SSOT é `docs/contracts/runtime-component-package.json`; `tools/app-policy/render_native_store_metadata_policy.py` agora produz no mesmo arquivo gerado as três listas com direitos distintos: `STORE_METADATA_COMPONENT_IDS` (consultar estado), `NATIVE_MODULE_READ_COMPONENT_IDS` (solicitar arquivo ao helper assinado) e `NATIVE_HEALTH_MUTATION_COMPONENT_IDS` (registrar saúde). Não existem allowlists Python locais paralelas.
+
+A adição da Calculadora **não** altera o conjunto de health mutation (Internet e Notas), não assina/copia pacotes, não ativa o instalador, não promove a versão, não habilita a chave de produção e não prova montagem em dispositivo. O loader continua verificando fonte, caminho, identidade do slot corrente e assinatura via helper. **A Loja bloqueia a instalação/atualização da Calculadora com `runtime-probation-unavailable` enquanto não houver saúde e probation Native compatíveis**, mesmo quando existe candidato de catálogo verificado. O gerador `render_external_first_party_policy.py` deriva a lista de componentes com probation apta do mesmo SSOT, separada dos componentes somente-leitura. Os demais utilitários continuam sem permissão de leitura executável até provas equivalentes.
+
+**Gates seguintes:** caminho de saúde/probation validado para apps externos com runtime real, assinatura/publicação oficial do catálogo, pré-instalação transacional e E2E de instalação/remover/reiniciar/reinstalar. Sem esses gates, não apresentar a Calculadora como pré-instalada em produção.
+
 ## Surface da Loja: experiência e contrato
 
 A Loja estrutural permanece sob `system/apps/store` e `system/surface/ui/store-overview-controls.mjs`, usando estilos em `store.css` e mensagens component-scoped em `system/services/i18n/catalog/store.mjs`. Este frontend **não** é um segundo catálogo nem um gerenciador de pacotes: consome somente o snapshot validado `ordax.app-store-catalog/2`.

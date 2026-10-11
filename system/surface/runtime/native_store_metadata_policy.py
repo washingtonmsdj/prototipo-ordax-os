@@ -1,7 +1,7 @@
 # GENERATED FILE. DO NOT EDIT BY HAND.
 # Source of truth: docs/contracts/runtime-component-package.json
 # Generator: tools/app-policy/render_native_store_metadata_policy.py
-# This is METADATA QUERY scope only, not module-read or health authority.
+# Metadata queries, verified executable file reads and health mutations have DISTINCT scopes.
 
 STORE_METADATA_COMPONENT_IDS = frozenset({
     "calculator",
@@ -19,4 +19,16 @@ STORE_METADATA_COMPONENT_IDS = frozenset({
     "studio",
     "text-viewer",
     "toolbox",
+})
+
+NATIVE_MODULE_READ_COMPONENT_IDS = frozenset({
+    "calculator",
+    "internet",
+    "notes",
+    "studio",
+})
+
+NATIVE_HEALTH_MUTATION_COMPONENT_IDS = frozenset({
+    "internet",
+    "notes",
 })

@@ -118,6 +118,61 @@ test("verified Native component is rechecked before mount and cleaned on shutdow
   assert.equal(destroyed, 1);
 });
 
+test("calculator Native slot is discoverable and mountable only with reverified current identity", async () => {
+  const calculator = Object.freeze({
+    component: Object.freeze({
+      ...component, id: "calculator", title: "Calculadora",
+      version: "0.2.0", dependencies: [],
+    }),
+    metadata: Object.freeze({
+      ...metadata, componentId: "calculator", version: "0.2.0",
+      entrypoint: "system/apps/calculator/src/runtime.mjs",
+    }),
+    presentation: Object.freeze({
+      ...presentation, appId: "calculator", appVersion: "0.2.0",
+      monogram: "CL", description: "Calculadora",
+    }),
+  });
+  const installed = createNativeVerifiedInstalledAppCatalog([calculator]).installed;
+  assert.equal(installed.length, 1);
+  assert.equal(installed[0].component.id, "calculator");
+  const previousAppData = trustedAppData;
+  trustedAppData = appDataPort("calculator");
+  const loadedUrls = [];
+  let mounts = 0;
+  let destroys = 0;
+  try {
+    const result = await mountNativeVerifiedInstalledApps({
+      installed, source, context: Object.freeze({ root: "calculator-root" }),
+      onError(error) { throw error; },
+      fetchImpl: async (url) => ({
+        ok: true,
+        json: async () => calculator.metadata,
+      }),
+      importModule: async (url) => {
+        loadedUrls.push(url);
+        return { componentRuntime: {
+          schema: COMPONENT_RUNTIME_SCHEMA,
+          componentId: "calculator", version: "0.2.0",
+          mount({ root }) {
+            assert.equal(root, "calculator-root");
+            mounts += 1;
+            return { destroy() { destroys += 1; } };
+          },
+        } };
+      },
+    });
+    assert.equal(mounts, 1);
+    assert.equal(result.mountedCount, 1);
+    assert.deepEqual(result.mountedIds, ["calculator"]);
+    assert.match(loadedUrls[0], /\/__ordax\/native\/component-module\/calculator\/current\/0\.2\.0\//);
+    result.destroy();
+    assert.equal(destroys, 1);
+  } finally {
+    trustedAppData = previousAppData;
+  }
+});
+
 test("missing verified slot never mounts and does not abort Native startup", async () => {
   const installed = createNativeVerifiedInstalledAppCatalog([item]).installed;
   let executed = false;

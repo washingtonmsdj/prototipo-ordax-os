@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import runpy
 from pathlib import Path
 import os
 import subprocess
@@ -76,18 +78,64 @@ class NativeComponentSlotTests(unittest.TestCase):
                 )
             )
 
-    def test_read_and_health_mutation_allowlists_are_explicit_and_separate(self):
-        self.assertEqual(slots.SUPPORTED_COMPONENTS, frozenset({"internet", "notes", "studio"}))
-        self.assertEqual(slots.HEALTH_MUTATION_COMPONENTS, frozenset({"internet", "notes"}))
-        self.assertIn("studio", slots.SUPPORTED_COMPONENTS)
-        self.assertNotIn("studio", slots.HEALTH_MUTATION_COMPONENTS)
+    def test_generated_native_scopes_exactly_match_ssot_and_reject_health_escalation(self):
+        policy = json.loads(
+            (ROOT / "docs/contracts/runtime-component-package.json").read_text(encoding="utf-8")
+        )
+        generator = runpy.run_path(str(ROOT / "tools/app-policy/render_native_store_metadata_policy.py"))
+        generated = generator["render"](policy)
+        output = (ROOT / "system/surface/runtime/native_store_metadata_policy.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(generated, output)
+        self.assertNotIn('"clock",', generated.split("NATIVE_MODULE_READ_COMPONENT_IDS", 1)[1])
+        self.assertNotIn('"calculator",', generated.split("NATIVE_HEALTH_MUTATION_COMPONENT_IDS", 1)[1])
+        with self.assertRaises(generator["MetadataPolicyError"]):
+            generator["render"]({
+                **policy,
+                "native_loopback_broker_health_mutation_components": ["internet", "notes", "clock"],
+            })
+        with self.assertRaises(generator["MetadataPolicyError"]):
+            generator["render"]({
+                **policy,
+                "native_loopback_broker_supported_components": ["internet", "internet"],
+            })
+        with self.assertRaises(generator["MetadataPolicyError"]):
+            generator["render"]({
+                **policy,
+                "native_loopback_broker_supported_components": ["calculator", "internet", "unknown-app"],
+            })
+        with self.assertRaises(generator["MetadataPolicyError"]):
+            generator["render"]({
+                **policy,
+                "native_loopback_broker_supported_components": ["internet", "local-ai-service"],
+            })
 
-    def test_store_metadata_queries_support_canonical_utility_without_runtime_read(self):
+    def test_read_and_health_mutation_allowlists_are_derived_and_separate(self):
+        from native_store_metadata_policy import (
+            STORE_METADATA_COMPONENT_IDS,
+            NATIVE_MODULE_READ_COMPONENT_IDS,
+            NATIVE_HEALTH_MUTATION_COMPONENT_IDS,
+        )
+        self.assertIs(slots.SUPPORTED_COMPONENTS, NATIVE_MODULE_READ_COMPONENT_IDS)
+        self.assertIs(slots.HEALTH_MUTATION_COMPONENTS, NATIVE_HEALTH_MUTATION_COMPONENT_IDS)
+        self.assertEqual(
+            slots.SUPPORTED_COMPONENTS,
+            frozenset({"calculator", "internet", "notes", "studio"}),
+        )
+        self.assertEqual(slots.HEALTH_MUTATION_COMPONENTS, frozenset({"internet", "notes"}))
+        self.assertTrue(slots.HEALTH_MUTATION_COMPONENTS < slots.SUPPORTED_COMPONENTS)
+        self.assertTrue(slots.SUPPORTED_COMPONENTS.issubset(STORE_METADATA_COMPONENT_IDS))
+        self.assertNotIn("calculator", slots.HEALTH_MUTATION_COMPONENTS)
+        self.assertNotIn("studio", slots.HEALTH_MUTATION_COMPONENTS)
+        self.assertNotIn("clock", slots.SUPPORTED_COMPONENTS)
+
+    def test_verified_calculator_module_read_requires_signed_helper_and_keeps_unknown_blocked(self):
         from native_store_metadata_policy import STORE_METADATA_COMPONENT_IDS
         self.assertIn("calculator", STORE_METADATA_COMPONENT_IDS)
-        self.assertNotIn("calculator", slots.SUPPORTED_COMPONENTS)
-        self.assertIn("studio", STORE_METADATA_COMPONENT_IDS)
-        self.assertNotIn("calculator", slots.HEALTH_MUTATION_COMPONENTS)
+        self.assertIn("clock", STORE_METADATA_COMPONENT_IDS)
+        self.assertIn("calculator", slots.SUPPORTED_COMPONENTS)
+        self.assertNotIn("clock", slots.SUPPORTED_COMPONENTS)
 
         output = (
             b"RUNTIME_COMPONENT_CURRENT_RESOLVED=YES\n"
@@ -106,32 +154,52 @@ class NativeComponentSlotTests(unittest.TestCase):
             )
         self.assertEqual(result.source, "absent")
         self.assertEqual(result.component_id, "calculator")
-        self.assertEqual(result.state, "current")
         self.assertIsNone(result.entrypoint)
-        self.assertIsNone(result.version)
         self.assertIn("resolve-current", run.call_args.args[0])
 
+        module_url = (
+            slots.COMPONENT_MODULE_PREFIX
+            + "calculator/current/0.2.0/" + ("a" * 40)
+            + "/system/apps/calculator/src/runtime.mjs"
+        )
+        request = slots.parse_component_module_path(module_url)
+        self.assertEqual(request.component_id, "calculator")
+        self.assertEqual(request.requested_path, "system/apps/calculator/src/runtime.mjs")
+
+        payload = b"export const componentRuntime = Object.freeze({});\n"
+        success = subprocess.CompletedProcess([], 0, stdout=payload, stderr=b"")
+        with mock.patch.object(slots.subprocess, "run", return_value=success) as runner:
+            data = slots.read_component_runtime_file(
+                helper_path="/signed/bin/ordax-runtime-component-channel",
+                trust_path="/signed/trust/runtime-components-ed25519.json",
+                component_id="calculator",
+                state="current",
+                version="0.2.0",
+                source_commit="a" * 40,
+                requested_path="system/apps/calculator/src/runtime.mjs",
+            )
+        self.assertEqual(data, payload)
+        self.assertIn("read-runtime-file", runner.call_args.args[0])
+        self.assertIn("calculator", runner.call_args.args[0])
+
         with mock.patch.object(slots.subprocess, "run") as runner:
-            with self.assertRaises(slots.ComponentSlotRequestError):
-                slots.resolve_component_slot(
-                    helper_path="/signed/bin/helper",
-                    trust_path="/signed/trust/public.json",
-                    component_id="calculator",
-                    state="pending",
-                )
-            with self.assertRaises(slots.ComponentSlotRequestError):
-                slots.read_component_runtime_file(
-                    helper_path="/signed/bin/helper",
-                    trust_path="/signed/trust/public.json",
-                    component_id="calculator",
-                    state="current",
-                    version="0.2.0",
-                    source_commit="a" * 40,
-                    requested_path="src/runtime.mjs",
-                )
+            for forbidden in ("clock", "unknown-component"):
+                with self.subTest(component_id=forbidden):
+                    with self.assertRaises(slots.ComponentSlotRequestError):
+                        slots.read_component_runtime_file(
+                            helper_path="/signed/bin/helper",
+                            trust_path="/signed/trust/public.json",
+                            component_id=forbidden,
+                            state="current",
+                            version="0.2.0",
+                            source_commit="a" * 40,
+                            requested_path=f"system/apps/{forbidden}/src/runtime.mjs",
+                        )
             with self.assertRaises(slots.ComponentSlotRequestError):
                 slots.parse_component_module_path(
-                    slots.COMPONENT_MODULE_PREFIX + "calculator/current/0.2.0/" + ("a" * 40) + "/src/runtime.mjs"
+                    slots.COMPONENT_MODULE_PREFIX
+                    + "clock/current/0.2.0/" + ("a" * 40)
+                    + "/system/apps/clock/src/runtime.mjs"
                 )
             with self.assertRaises(slots.ComponentSlotRequestError):
                 slots.resolve_component_slot(

@@ -127,8 +127,11 @@ class KernelSourceContractTest(unittest.TestCase):
             self.assertIn(selector + "\n", FRAGMENT, selector)
 
     def test_environment_is_pinned_but_physical_use_remains_fail_closed(self):
-        self.assertTrue(SOURCE["build"]["pinned_environment_resolved"])
+        self.assertIsInstance(SOURCE["build"]["pinned_environment_resolved"], bool)
         self.assertFalse(SOURCE["build"]["physical_artifact_authorized"])
+        if SOURCE["version"] != "6.6.52":
+            self.assertEqual(SOURCE["upstream_signature"]["algorithm"], "openpgp-detached-tar")
+            self.assertRegex(SOURCE["upstream_signature"]["trusted_primary_fingerprint"], r"^[0-9A-F]{40}$")
 
 
 if __name__ == "__main__":

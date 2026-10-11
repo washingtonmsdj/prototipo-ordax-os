@@ -9,7 +9,11 @@ import stat
 import subprocess
 from dataclasses import dataclass
 
-from native_store_metadata_policy import STORE_METADATA_COMPONENT_IDS
+from native_store_metadata_policy import (
+    STORE_METADATA_COMPONENT_IDS,
+    NATIVE_MODULE_READ_COMPONENT_IDS,
+    NATIVE_HEALTH_MUTATION_COMPONENT_IDS,
+)
 
 DEFAULT_SLOT_ROOT = "/var/lib/ordax/components"
 COMPONENT_MODULE_PREFIX = "/__ordax/native/component-module/"
@@ -22,12 +26,14 @@ _COMPONENT_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 _SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 _SEMVER_RE = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")
 
-SUPPORTED_COMPONENTS = frozenset({"internet", "notes", "studio"})
-# Metadata-only current-state queries may include more known first-party apps.
-# Executable file reads, Native module URLs and health writes stay restricted.
+# Compatibility exports for Native callers; their ONLY source is the generated
+# canonical component access policy, not a hand-maintained Python allowlist.
+SUPPORTED_COMPONENTS = NATIVE_MODULE_READ_COMPONENT_IDS
+HEALTH_MUTATION_COMPONENTS = NATIVE_HEALTH_MUTATION_COMPONENT_IDS
 if not SUPPORTED_COMPONENTS.issubset(STORE_METADATA_COMPONENT_IDS):
     raise RuntimeError("Native module components missing from canonical metadata registry")
-HEALTH_MUTATION_COMPONENTS = frozenset({"internet", "notes"})
+if not HEALTH_MUTATION_COMPONENTS.issubset(SUPPORTED_COMPONENTS):
+    raise RuntimeError("Native health mutations exceed canonical read scope")
 SUPPORTED_STATES = frozenset({"current", "pending"})
 
 

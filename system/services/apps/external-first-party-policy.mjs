@@ -28,12 +28,21 @@ export const EXTERNAL_FIRST_PARTY_COMPONENT_IDS = Object.freeze(
 // Generated from the same canonical OS package policy's Native module broker
 // scope. Store catalog presence alone does not grant executable-read support.
 export const EXTERNAL_FIRST_PARTY_NATIVE_MODULE_READ_IDS = Object.freeze([
+  "calculator",
   "notes",
   "studio",
+]);
+export const EXTERNAL_FIRST_PARTY_NATIVE_PROBATION_IDS = Object.freeze([
+  "notes",
 ]);
 
 const IDS = new Set(EXTERNAL_FIRST_PARTY_COMPONENT_IDS);
 const MODULE_READ_IDS = new Set(EXTERNAL_FIRST_PARTY_NATIVE_MODULE_READ_IDS);
+const PROBATION_IDS = new Set(EXTERNAL_FIRST_PARTY_NATIVE_PROBATION_IDS);
+if (PROBATION_IDS.size !== EXTERNAL_FIRST_PARTY_NATIVE_PROBATION_IDS.length
+  || [...PROBATION_IDS].some((appId) => !MODULE_READ_IDS.has(appId))) {
+  throw new TypeError("External first-party probation ids disagree with canonical Native read scope");
+}
 if (MODULE_READ_IDS.size !== EXTERNAL_FIRST_PARTY_NATIVE_MODULE_READ_IDS.length
   || [...MODULE_READ_IDS].some((appId) => !IDS.has(appId))) {
   throw new TypeError("External first-party module-read ids disagree with canonical owners");
@@ -65,6 +74,15 @@ export function isExternalFirstPartyComponentId(value) {
 export function hasNativeExternalFirstPartyModuleRead(value) {
   try {
     return MODULE_READ_IDS.has(validateComponentId(value));
+  } catch {
+    return false;
+  }
+}
+
+// Required, never sufficient for production activation.
+export function hasNativeExternalFirstPartyProbation(value) {
+  try {
+    return PROBATION_IDS.has(validateComponentId(value));
   } catch {
     return false;
   }

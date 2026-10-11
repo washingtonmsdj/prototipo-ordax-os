@@ -77,6 +77,23 @@ class KernelConsumerSSOTTests(unittest.TestCase):
         self.assertNotIn('6.6.52', diagnosis)
         self.assertNotIn('6.6.52', physical)
 
+    def test_owner_development_usb_uses_canonical_kernel_and_openpgp(self):
+        workflow = (ROOT / ".github/workflows/creator-owner-dev-git.yml").read_text(encoding="utf-8")
+        self.assertIn('python3 bootstrap/kernel/ci_env.py --github-env "$GITHUB_ENV"', workflow)
+        self.assertLess(
+            workflow.index("Resolve signed kernel version from canonical source"),
+            workflow.index("Build boot kernel initramfs and Git development base"),
+        )
+        self.assertIn('out/kernel/kernel-modules-$ORDAX_KERNEL_VERSION.tar', workflow)
+        self.assertIn("kernel_version = os.environ['ORDAX_KERNEL_VERSION']", workflow)
+        self.assertIn("expected_source = f'bootstrap/kernel/vmlinuz-{kernel_version}'", workflow)
+        self.assertIn("kernel_artifact['source_path'] != expected_source", workflow)
+        self.assertIn("digest(f'out/kernel/vmlinuz-{kernel_version}')", workflow)
+        self.assertIn("gpg gpg-agent", workflow)
+        self.assertNotIn("vmlinuz-6.6.52", workflow)
+        self.assertNotIn("kernel-modules-6.6.52.tar", workflow)
+        self.assertIn("manifest['physical_write_allowed'] = False", workflow)
+
     def test_stale_bootstrap_manifest_rejected_before_output(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

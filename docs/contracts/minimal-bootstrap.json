@@ -86,12 +86,12 @@
       "resolved": true,
       "artifacts": [
         {
-          "source_path": "bootstrap/kernel/vmlinuz-6.6.52",
+          "source_path": "bootstrap/kernel/vmlinuz-6.6.158",
           "target_path": "/ordax/vmlinuz",
-          "sha256": "cbe9b7421d6d4ece48b6025866c371557e6301fef981336a52a949544e925205",
+          "sha256": "16d1b7a190d7a11f748aa65fa7f6e940a0e7f5c79641f38bb2c98354918ec87f",
           "mode": "0644",
           "logical_owner": "kernel",
-          "reason": "Shared Linux 6.6.52 candidate with built-in portable USB v2 exFAT/EROFS/loop/OverlayFS prerequisites plus retained post-MVP Native dm-crypt/AES-XTS/Btrfs prerequisites"
+          "reason": "Kernel Linux 6.6 LTS selected by bootstrap/kernel/source.json, with Portable v2 and Native boot prerequisites; hash provisionally bound to authenticated candidate build, requiring exact active-source boot and repeat proofs before release."
         }
       ]
     },

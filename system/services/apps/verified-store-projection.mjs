@@ -22,6 +22,7 @@ import {
 import {
   listExternalFirstPartyComponentIds,
   hasNativeExternalFirstPartyModuleRead,
+  hasNativeExternalFirstPartyProbation,
 } from "./external-first-party-policy.mjs";
 
 const REQUEST_OPTIONS = Object.freeze({
@@ -110,6 +111,12 @@ function projectEntry({ appId, candidate, current, policy }) {
         reason: "runtime-module-read-unavailable",
       });
     }
+    if (!hasNativeExternalFirstPartyProbation(appId)) {
+      return blockedEntry({
+        appId, title, candidate,
+        reason: "runtime-probation-unavailable",
+      });
+    }
     return {
       appId,
       title,
@@ -163,6 +170,13 @@ function projectEntry({ appId, candidate, current, policy }) {
       return blockedEntry({
         appId, title, installedVersion, candidate,
         reason: "runtime-module-read-unavailable",
+        removable: policy.removable,
+      });
+    }
+    if (!hasNativeExternalFirstPartyProbation(appId)) {
+      return blockedEntry({
+        appId, title, installedVersion, candidate,
+        reason: "runtime-probation-unavailable",
         removable: policy.removable,
       });
     }
