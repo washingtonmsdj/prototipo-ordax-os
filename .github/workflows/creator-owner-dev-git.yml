@@ -276,6 +276,7 @@ jobs:
               '$schema': 'prototype-ordax.creator-owner-physical/1',
               'status': 'owner-prototype-write-enabled',
               'source_commit': os.environ['GITHUB_SHA'],
+              'creator_version': json.loads(pathlib.Path('tools/creator/version.json').read_text(encoding='utf-8'))['version'],
               'canonical_public_release': False,
               'ephemeral_prototype_trust': True,
               'private_key_in_package': False,
@@ -297,7 +298,7 @@ jobs:
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
             go build -trimpath -buildvcs=false \
               -tags 'ordax_raw_backend' \
-              -ldflags="-s -w -X main.buildSourceCommit=$GITHUB_SHA -X main.buildCanonicalTrustSHA256=$trust_sha -X main.buildManifestSHA256=$manifest_sha -X main.buildSeedImageSHA256=$seed_sha -X main.buildSeedImageSize=$seed_size -X main.buildPhysicalWriteAuthorized=YES" \
+              -ldflags="-s -w -X main.buildSourceCommit=$GITHUB_SHA -X main.buildReleaseSourceCommit=$GITHUB_SHA -X main.buildCanonicalTrustSHA256=$trust_sha -X main.buildManifestSHA256=$manifest_sha -X main.buildSeedImageSHA256=$seed_sha -X main.buildSeedImageSize=$seed_size -X main.buildPhysicalWriteAuthorized=YES" \
               -o "$bundle/ordax-creator-physical-test.exe" \
               ./cmd/ordax-creator-physical-test
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
@@ -357,7 +358,7 @@ jobs:
           zip_sha="$(sha256sum "$release/OrdaX-Creator-Owner-Prototype.zip" | cut -d' ' -f1)"
           zip_size="$(stat -c '%s' "$release/OrdaX-Creator-Owner-Prototype.zip")"
           printf '%s  %s\n' "$zip_sha" 'OrdaX-Creator-Owner-Prototype.zip' > "$release/SHA256SUMS.txt"
-          version="owner-${GITHUB_SHA:0:12}"
+          version="$(python3 -c 'import json; print(json.load(open("tools/creator/version.json", encoding="utf-8"))["version"])')"
           python - "$release/creator-owner-update.json" "$GITHUB_SHA" "$version" "$zip_sha" "$zip_size" <<'PY'
           import json, pathlib, sys
           output, source, version, digest, size = sys.argv[1:]

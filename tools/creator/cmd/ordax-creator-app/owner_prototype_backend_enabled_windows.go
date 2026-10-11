@@ -13,6 +13,7 @@ type ownerPrototypeProvenance struct {
 	Schema                          string `json:"$schema"`
 	Status                          string `json:"status"`
 	SourceCommit                    string `json:"source_commit"`
+	CreatorVersion                 string `json:"creator_version"`
 	CanonicalPublicRelease          bool   `json:"canonical_public_release"`
 	EphemeralPrototypeTrust         bool   `json:"ephemeral_prototype_trust"`
 	PrivateKeyInPackage             bool   `json:"private_key_in_package"`
@@ -86,6 +87,7 @@ func ownerPrototypeBuildInfo() (version string, sourceCommit string, ok bool) {
 	if provenance.Schema != "prototype-ordax.creator-owner-physical/1" ||
 		provenance.Status != "owner-prototype-write-enabled" ||
 		!validOwnerSourceCommit(provenance.SourceCommit) ||
+		!validCreatorVersion(provenance.CreatorVersion) ||
 		provenance.CanonicalPublicRelease ||
 		!provenance.EphemeralPrototypeTrust ||
 		provenance.PrivateKeyInPackage ||
@@ -101,5 +103,5 @@ func ownerPrototypeBuildInfo() (version string, sourceCommit string, ok bool) {
 		provenance.SeedSize <= 0 {
 		return "", "", false
 	}
-	return "owner-" + provenance.SourceCommit[:12], provenance.SourceCommit, true
+	return provenance.CreatorVersion, provenance.SourceCommit, true
 }

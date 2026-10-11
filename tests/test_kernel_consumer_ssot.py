@@ -108,6 +108,17 @@ class KernelConsumerSSOTTests(unittest.TestCase):
         self.assertEqual(workflow.count('rm -f "$RUNNER_TEMP/owner-prototype-trust.json"'), 2)
         self.assertIn('rm -f "$RUNNER_TEMP/owner-prototype-private.pem"', workflow)
 
+    def test_owner_creator_physical_writer_binding_uses_complete_source(self):
+        workflow = (ROOT / ".github/workflows/creator-owner-dev-git.yml").read_text(encoding="utf-8")
+        self.assertIn("-X main.buildReleaseSourceCommit=$GITHUB_SHA", workflow)
+        self.assertIn("-X main.buildSourceCommit=$GITHUB_SHA", workflow)
+        self.assertIn("-X main.buildPhysicalWriteAuthorized=YES", workflow)
+        writer = (ROOT / "tools/creator/cmd/ordax-creator-physical-test/main_windows.go").read_text(encoding="utf-8")
+        self.assertIn("validLowerHex(buildReleaseSourceCommit, 20)", writer)
+        self.assertIn("Ready: ready", writer)
+        self.assertEqual(json.loads((ROOT / "tools/creator/version.json").read_text(encoding="utf-8"))["version"], "0.6.0-dev")
+        self.assertIn("creator_version", workflow)
+
     def test_stale_bootstrap_manifest_rejected_before_output(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

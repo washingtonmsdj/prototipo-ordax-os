@@ -21,6 +21,7 @@ EXPECTED = {
     "OrdaX-Creator/LEIA-ME.txt",
 }
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
+CREATOR_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[a-z][a-z0-9]*(?:\.[0-9]+)?)?$")
 
 def fail(reason: str) -> None:
     raise ValueError(reason)
@@ -52,7 +53,10 @@ def main() -> int:
         fail("source-commit-drift")
     if metadata.get("artifact") != "OrdaX-Creator-Owner-Prototype.zip":
         fail("unexpected-artifact-name")
-    if metadata.get("version") != "owner-" + args.source_commit[:12]:
+    version = json.loads((Path(__file__).parent / "version.json").read_text(encoding="utf-8"))["version"]
+    if not isinstance(version, str) or not CREATOR_VERSION.fullmatch(version):
+        fail("invalid-canonical-creator-version")
+    if metadata.get("version") != version:
         fail("version-drift")
     digest, size = sha_file(args.archive)
     if digest != metadata.get("sha256") or size != metadata.get("size"):
@@ -73,6 +77,8 @@ def main() -> int:
             fail("incorrect-provenance-schema")
         if provenance.get("source_commit") != args.source_commit:
             fail("seed-commit-drift")
+        if provenance.get("creator_version") != version:
+            fail("creator-version-provenance-drift")
         if provenance.get("canonical_public_release") is not False:
             fail("dev-bundle-misrepresented-as-public-release")
         if provenance.get("ephemeral_prototype_trust") is not True:
