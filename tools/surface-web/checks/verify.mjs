@@ -10,17 +10,26 @@ let verified = 0;
 for (const entry of provenance.files) {
   if (entry.path === 'src/lib/intelligence/ai.functions.ts' || Object.hasOwn(provenance.excluded_files ?? {}, entry.path)) continue;
   let bytes = await readFile(new URL(entry.path.replace(/^src\//, ''), sourceRoot));
-  for (const change of [...(provenance.textChanges?.[entry.path] ?? [])].reverse()) {
-    const source = bytes.toString('utf8');
-    assert.ok(source.includes(change.to), 'Recorded adjustment missing: ' + entry.path);
-    bytes = Buffer.from(source.replaceAll(change.to, change.from));
-  }
   const sha = value => createHash('sha256').update(value).digest('hex');
   const candidates = [sha(bytes)];
-  // Git may normalize text line endings between platforms.
   if (!entry.path.startsWith('src/assets/')) {
-    const text = bytes.toString('utf8').replace(/\r\n/g, '\n');
-    candidates.push(sha(text), sha(text.replace(/\n/g, '\r\n')));
+    // Normalize both the source and recorded edits before reversing multiline changes.
+    // Windows checkouts use CRLF; the provenance may have been recorded with LF.
+    const restore = raw => {
+      let source = raw.replace(/\r\n/g, '\n');
+      for (const change of [...(provenance.textChanges?.[entry.path] ?? [])].reverse()) {
+        const from = change.from.replace(/\r\n/g, '\n');
+        const to = change.to.replace(/\r\n/g, '\n');
+        assert.ok(to.length > 0 && source.includes(to), 'Recorded adjustment missing: ' + entry.path);
+        source = source.replaceAll(to, from);
+      }
+      return source;
+    };
+    const text = bytes.toString('utf8');
+    const restored = restore(text);
+    assert.equal(restore(text.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n')), restored,
+      'Reference restoration must work for Windows and Unix checkouts: ' + entry.path);
+    candidates.push(sha(restored), sha(restored.replace(/\n/g, '\r\n')));
   }
   assert.ok(candidates.includes(entry.sha256), 'Reference drift: ' + entry.path);
   verified++;
@@ -45,7 +54,7 @@ assert.equal(JSON.stringify(initialWindows), before, 'Interactions preserve init
 const result = await askIntelligence({message:'verification'});
 assert.equal(result.ok, false);
 assert.equal(result.status, 503, 'Visual preview must not execute a model');
-console.log('PASS: ' + verified + ' reference files/assets (recorded edits reversed); window lifecycle, geometry and disabled AI');
+console.log('PASS: ' + verified + ' reference files/assets (recorded edits reversed for LF/CRLF); window lifecycle, geometry and disabled AI');
 
 if (process.argv.includes('--preview')) {
   const origin = 'http://127.0.0.1:4201';
