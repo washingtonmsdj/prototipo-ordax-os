@@ -1,0 +1,223 @@
+{
+  "repository": "https://github.com/washingtonmsdj/account-hub-pro",
+  "commit": "0f955ece6e570801976d8ed77d2cada101b7a3fa",
+  "purpose": "User-approved canonical Web presentation cutover; no service authority",
+  "files": [
+    {
+      "path": "src/assets/demo-recipe.jpg",
+      "sha256": "501e932399666c27b9e8051f5da8249f81ae4b0db4511ed8383cfec8c4f53876"
+    },
+    {
+      "path": "src/assets/demo-salvador-1.jpg",
+      "sha256": "598ff0b7f5a378ed8f047e7b51462be68418d5d486b9e3e5d7f7d086e1ff6011"
+    },
+    {
+      "path": "src/assets/demo-salvador-2.jpg",
+      "sha256": "2f8d0409837413db4e4be86c6d1e675ba3ee91fbf961fefda5deeb222d3bd03a"
+    },
+    {
+      "path": "src/assets/demo-salvador-3.jpg",
+      "sha256": "087049517d77564bac29d2993d249528aea26464930da71ba429afcf5f070c89"
+    },
+    {
+      "path": "src/assets/ordax-landscape.jpg",
+      "sha256": "7ddb6607fa2584e9702fe55a7c9d06e610ab1fe3db0f31e40757b7d9e0347294"
+    },
+    {
+      "path": "src/assets/ordax-mark.png",
+      "sha256": "e261b8e4e12dccb83c9dc2bbb77155ec7e6e69fe70c5b0a1e6bfee58f492827c"
+    },
+    {
+      "path": "src/assets/ordax-web-wallpaper.jpg",
+      "sha256": "831a798e74554151893048c7696d43f8738c3c0a7fd3989f061b056e7708dbab"
+    },
+    {
+      "path": "src/assets/store-hero.jpg",
+      "sha256": "01467eac64e0ef6313cea5a618331da522ca003c00f0d8e689d27c24536209ef"
+    },
+    {
+      "path": "src/components/intelligence/results.tsx",
+      "sha256": "5e72b2fbcf85f5cf1b24b9a0c1fec5526adc5ce97dfa2eee9e75e41d1f358b36"
+    },
+    {
+      "path": "src/components/intelligence/session.tsx",
+      "sha256": "be181acff9984bad5ffb7703d7ca6cd1a0deee184b4217f8675d70c57b1bb188"
+    },
+    {
+      "path": "src/components/intelligence/surface.tsx",
+      "sha256": "cfbefe5bf5c360b0765e86471f28cd9734781bcf58ffd9c71546cc89999f556e"
+    },
+    {
+      "path": "src/components/store/store.tsx",
+      "sha256": "1d7b8bf2974ff238bc77d11fec283f118eabdfd5e74e9a44bda4c991546becd6"
+    },
+    {
+      "path": "src/components/ui/button.tsx",
+      "sha256": "2c8aae724f8effc35a91f833f9c0e8dee010f5cb0b8698441001dac93e8811bf"
+    },
+    {
+      "path": "src/components/ui/dialog.tsx",
+      "sha256": "a5b691c73830e0eab35b93a0ff08703cf7b1dd42a7acd435f1a4ebb9a2e232e9"
+    },
+    {
+      "path": "src/components/ui/dropdown-menu.tsx",
+      "sha256": "15f01555648d666df9e3f6ddc7474e85c815624d765adaf166e66329e69991d4"
+    },
+    {
+      "path": "src/components/ui/switch.tsx",
+      "sha256": "194d3554933df8573ef1bf84584e1acb9b255f55e73b24b2076c36cca116c5e6"
+    },
+    {
+      "path": "src/components/web/app-content.tsx",
+      "sha256": "61196ad4fb8993afbbdc7cf0c98f3fe2bf1cb39fd98355696c6e9786cd390391"
+    },
+    {
+      "path": "src/components/web/home.tsx",
+      "sha256": "57c9d4bff03bf24612bb3de1570e826ddb2296246f2220c83d92820393584edd"
+    },
+    {
+      "path": "src/components/web/launcher.tsx",
+      "sha256": "ea88124d04fbdac1700ad937d2820b9b1288c6af60f4cddbb1e0470eae40cbdd"
+    },
+    {
+      "path": "src/components/web/pages.tsx",
+      "sha256": "77660d6ca063079a5accaaead23862f3191fa621fec0dbb6530cdbd3e1b36045"
+    },
+    {
+      "path": "src/components/web/primitives.tsx",
+      "sha256": "f356eb4dcf9e095fa49d94ff9104c7e5f6c504e6a3a7c08f4e4ee7cabf807fd9"
+    },
+    {
+      "path": "src/components/web/shell.tsx",
+      "sha256": "e2ff567f3f6a24cb2bcedfd6db50542b5b6b797acf05026ccd8f144c6f27cd15"
+    },
+    {
+      "path": "src/components/web/window-menu.tsx",
+      "sha256": "e5d9f027d3e75df7c3cfef6aed746e70872d6e42426f39f64135f1295aa21205"
+    },
+    {
+      "path": "src/components/web/window.tsx",
+      "sha256": "c77853cdbcda2c339d968605add6db2203786d056b1e6f90e6c8d49cf1c01bfe"
+    },
+    {
+      "path": "src/lib/account/model.ts",
+      "sha256": "2246155df9bfda004600b5478e9b43ef2960b8c3522398bbc9986e1df1b0af26"
+    },
+    {
+      "path": "src/lib/intelligence/ai.functions.ts",
+      "sha256": "90220a222bdb584755440136ff02d26527b79dafcb1f8dddccb93fefd0bf28a9"
+    },
+    {
+      "path": "src/lib/intelligence/demo.ts",
+      "sha256": "a7fc53a591b985cfdfd3eeac28c0effd89508bc5976400b936f42c9c78a531b5"
+    },
+    {
+      "path": "src/lib/intelligence/export.ts",
+      "sha256": "4c1d9fc0095de28e3f5754df8a3dd82340402f4615641f154bd9a7f8113def00"
+    },
+    {
+      "path": "src/lib/intelligence/session.ts",
+      "sha256": "108705f3f34f17db942b3e1caebd71a4035c55fb57a9c375635199b9bf4c34b6"
+    },
+    {
+      "path": "src/lib/store/catalog.ts",
+      "sha256": "e9ad236cbcebda382d96421cf47c2b2f37a5602d53be26b55ddf7f99ac0cfacb"
+    },
+    {
+      "path": "src/lib/store/state.ts",
+      "sha256": "7ef42d2a507d0ce6fe38bef62c1bd2f8b8389c6b0c4d5aa414ce41134716037f"
+    },
+    {
+      "path": "src/lib/utils.ts",
+      "sha256": "c0adf27efbfa148d5abcf99e860f8e3e6c8fc77a1f99e023c08ef4f12e6ece29"
+    },
+    {
+      "path": "src/lib/web/model.ts",
+      "sha256": "6518123ca40b26bf2a0f135ef32ec78e2fd436aa9cb2ee9afac4f6a62bcb1b78"
+    },
+    {
+      "path": "src/lib/web/windows.ts",
+      "sha256": "4ad891b57c6face2dc416453271b21b83b7795bb707ebc8508a2f66c8e920ebc"
+    },
+    {
+      "path": "src/lib/web/workspace.ts",
+      "sha256": "e335086e825214a01c4e1d7bd63b889f96d228338bafb76fe8a549a2e1dfdf41"
+    },
+    {
+      "path": "src/styles.css",
+      "sha256": "9ed510fc77a643fadecebeb5a787b14339a270ec37be850e28b24408c59d452f"
+    }
+  ],
+  "modifications": [
+    "ai.functions.ts: model disabled; visual unchanged",
+    "pages.tsx: remove unreachable Store comparison after Store already rendered; no visual change",
+    "ai.functions.ts: typed fail-closed response matching existing caller",
+    "Canonical composition/build; test route and folder removed",
+    "Account and site navigation use ordinary links, not workspace routes",
+    "Native/shared service implementations preserved; UI unavailable until connected",
+    "Typography uses the local canonical Inter face and license; no Google Fonts runtime",
+    "Brand imports resolve to the canonical Surface symbol",
+    "Tailwind explicit source paths follow the canonical Surface/composition after cutover."
+  ],
+  "textChanges": {
+    "src/components/web/shell.tsx": [
+      {
+        "from": "'/web'",
+        "to": "'.'"
+      },
+      {
+        "from": "\"/web\"",
+        "to": "\".\""
+      },
+      {
+        "from": "<Link to=\"/\"><UserRound/>Minha Conta</Link>",
+        "to": "<a href=\"/conta/\"><UserRound/>Minha Conta</a>"
+      },
+      {
+        "from": "<Link to=\"/landing\">Site OrdaX</Link>",
+        "to": "<a href=\"/\">Site OrdaX</a>"
+      },
+      {
+        "from": "@/assets/ordax-mark.png",
+        "to": "@ordax-brand/ordax-symbol.png"
+      },
+      {
+        "from": "<Button variant=\"ghost\" onClick={() => setLauncher(true)}><LayoutGrid/><small>Apps</small></Button>",
+        "to": "<Button variant=\"ghost\" aria-label=\"Abrir aplicativos\" onClick={() => setLauncher(true)}><LayoutGrid/><small>Apps</small></Button>"
+      }
+    ],
+    "src/components/web/pages.tsx": [
+      {
+        "from": "id === 'apps' ? 'APLICATIVOS' : id === 'store' ? 'LOJA' : 'SPACES'",
+        "to": "id === 'apps' ? 'APLICATIVOS' : 'SPACES'"
+      }
+    ],
+    "src/styles.css": [
+      {
+        "from": "--font-sans: 'Manrope', sans-serif; --font-display: 'Space Grotesk', sans-serif;",
+        "to": "--font-sans: var(--ordax-font-family, 'Inter'), sans-serif; --font-display: var(--ordax-font-family, 'Inter'), sans-serif;"
+      },
+      {
+        "from": "@source \"../src\";",
+        "to": "@source \"./components\";\n@source \"./lib\";\n@source \"../../composition/web\";"
+      }
+    ],
+    "src/components/intelligence/surface.tsx": [
+      {
+        "from": "@/assets/ordax-mark.png",
+        "to": "@ordax-brand/ordax-symbol.png"
+      }
+    ],
+    "src/components/web/app-content.tsx": [
+      {
+        "from": "@/assets/ordax-mark.png",
+        "to": "@ordax-brand/ordax-symbol.png"
+      }
+    ]
+  },
+  "owner": "OrdaX OS Surface",
+  "source_root": "system/surface/workspace",
+  "excluded_files": {
+    "src/assets/ordax-mark.png": "Existing canonical Surface symbol is the sole brand owner"
+  }
+}

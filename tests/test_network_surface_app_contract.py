@@ -8,11 +8,11 @@ CATALOG = ROOT / "system" / "apps" / "catalog.mjs"
 COMPONENT_CATALOG = ROOT / "system" / "apps" / "component-catalog.mjs"
 SHELL = ROOT / "system" / "surface" / "ui" / "desktop-shell.mjs"
 NATIVE = ROOT / "system" / "composition" / "native" / "main.mjs"
-WEB = ROOT / "system" / "composition" / "web" / "main.mjs"
+WEB = ROOT / "system" / "composition" / "web" / "main.tsx"
 DRAFT = ROOT / "system" / "services" / "professional-network" / "draft.mjs"
 I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "network-app.mjs"
 WORKFLOW = ROOT / ".github" / "workflows" / "surface-web-candidate.yml"
-BROWSER_SMOKE = ROOT / "tools" / "surface-web" / "browser-smoke.mjs"
+BROWSER_SMOKE = ROOT / "tools" / "surface-native" / "browser-smoke.mjs"
 
 
 class NetworkSurfaceAppContractTests(unittest.TestCase):
@@ -57,11 +57,6 @@ class NetworkSurfaceAppContractTests(unittest.TestCase):
         self.assertIn("spaceSelection,", native)
         self.assertIn("networkComponent?.destroy()", native)
 
-        self.assertIn('componentId: "network"', web)
-        self.assertIn('import("../../apps/network/runtime.mjs")', web)
-        self.assertIn("identitySession,", web)
-        self.assertIn("spaceSelection: null", web)
-        self.assertIn("networkComponent?.destroy()", web)
 
     def test_composer_preserves_focus_while_draft_body_updates(self):
         controls = self.text(APP / "ui" / "workspace-controls.mjs")
@@ -78,13 +73,12 @@ class NetworkSurfaceAppContractTests(unittest.TestCase):
         selection_subscription = draft.split("const unsubscribeSelection", 1)[1].split("const port", 1)[0]
         self.assertNotIn("draft =", selection_subscription)
 
-    def test_real_browser_smoke_opens_network_and_proves_honest_offline_state(self):
+    def test_native_browser_fixture_keeps_network_styles_and_offline_owner(self):
         smoke = self.text(BROWSER_SMOKE)
+        controls = self.text(APP / "ui" / "workspace-controls.mjs")
         self.assertIn("'system/apps/network/network.css': 'text/css'", smoke)
-        self.assertIn("await launch('network')", smoke)
-        self.assertIn("networkOwnerMounted", smoke)
-        self.assertIn("networkWebUnavailableHonest", smoke)
-        self.assertIn("'networkComponentStyleMounted'", smoke)
+        self.assertIn('backend.dataset.networkBackend = "unavailable"', controls)
+        self.assertNotIn("fetch(", controls)
 
     def test_surface_ci_executes_network_app_regressions(self):
         workflow = self.text(WORKFLOW)

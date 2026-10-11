@@ -9,7 +9,7 @@ WEB_INDEX = ROOT / "system" / "composition" / "web" / "index.html"
 NATIVE_INDEX = ROOT / "system" / "composition" / "native" / "index.html"
 APPEARANCE = ROOT / "system" / "services" / "preferences" / "appearance.mjs"
 DESKTOP_IDENTITY = ROOT / "docs" / "DESKTOP-IDENTITY.md"
-BROWSER_SMOKE = ROOT / "tools" / "surface-web" / "browser-smoke.mjs"
+BROWSER_SMOKE = ROOT / "tools" / "surface-native" / "browser-smoke.mjs"
 PROJECTS_CSS = ROOT / "system" / "apps" / "projects" / "projects.css"
 INTERNET_CSS = ROOT / "system" / "apps" / "internet" / "internet.css"
 SETTINGS_CSS = SURFACE / "settings.css"
@@ -72,7 +72,7 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
         self.assertIn(".ordax-launcher-panel", css)
         self.assertIn("prefers-reduced-motion", css)
 
-        for index in (WEB_INDEX, NATIVE_INDEX):
+        for index in (NATIVE_INDEX,):
             html = index.read_text(encoding="utf-8")
             self.assertIn('../../surface/ui/identity.css', html)
             self.assertNotIn('../../surface/ui/app-identity.css', html)
@@ -217,7 +217,7 @@ class SurfaceVisualIdentityTests(unittest.TestCase):
         self.assertIn('background: url("./ordax-symbol.png")', css)
         self.assertIn('@media (forced-colors: active)', css)
         self.assertIn('[data-ordax-contrast="high"]', css)
-        for composition in (WEB_INDEX, NATIVE_INDEX):
+        for composition in (NATIVE_INDEX,):
             self.assertIn('../../surface/ui/brand/symbol.css', composition.read_text(encoding='utf-8'))
         for stylesheet in ('identity.css', 'boot-screen.css'):
             self.assertNotIn('ordax-symbol.png', (SURFACE / stylesheet).read_text(encoding='utf-8'))

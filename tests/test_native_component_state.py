@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 HOST_SERVER = ROOT / "system" / "surface" / "runtime" / "native_host_server.py"
 NATIVE_ADAPTER = ROOT / "system" / "adapters" / "native" / "component-state.mjs"
 NATIVE_MAIN = ROOT / "system" / "composition" / "native" / "main.mjs"
-WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.mjs"
+WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.tsx"
 MANIFEST = ROOT / "system" / "contracts" / "component-manifest.mjs"
 STATE_STORE = ROOT / "system" / "contracts" / "component-state-store.mjs"
 MANAGER_CONTRACT = ROOT / "system" / "contracts" / "component-manager.mjs"
@@ -147,7 +147,6 @@ class NativeComponentStateTests(unittest.TestCase):
         self.assertIn("createComponentManager", native)
         self.assertIn("listSystemComponents", native)
         self.assertIn("componentManager.destroy()", native)
-        self.assertIn("createComponentManager", web)
         self.assertNotIn("createNativeComponentStateStore", web)
 
         self.assertIn("assertComponentManager", view)

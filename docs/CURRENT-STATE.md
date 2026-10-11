@@ -1,5 +1,18 @@
 # Current State
 
+## Canonical Web presentation cutover — 2026-10-10
+
+The approved workspace presentation lives under system/surface/workspace and
+uses the official Web build. One composition, one root dependency lock and
+shared symbol/font sources remain, with no evaluation route or redirect.
+Pending app interfaces are preserved. Real service wiring is the next phase:
+presentation asserts no authenticated session, user files, inference, sync,
+package installation or remote-device access. Native operational UI, services,
+contracts and public Account are preserved. See docs/DESKTOP-IDENTITY.md and
+migration ledger 007. This is a source/candidate change, not production activation.
+
+
+
 ## Canonical v4 — assinatura offline verificada, ainda não publicada (2026-10-10)
 
 O candidato v4 com origem congelada em `6128e2c` passou nos três builds de

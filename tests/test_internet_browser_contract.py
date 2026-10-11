@@ -297,7 +297,7 @@ class InternetBrowserContractTests(unittest.TestCase):
         self.assertNotIn('from "../../services/internet/', native)
         self.assertNotIn('from "../../surface/ui/internet-browser-', native)
 
-    def test_both_compositions_load_internet_as_optional_component_runtime(self):
+    def test_native_loads_internet_as_optional_component_runtime(self):
         runtime = self.text(INTERNET_RUNTIME)
         component = self.text(INTERNET_COMPONENT)
         version = self.text(INTERNET_VERSION)
@@ -311,7 +311,7 @@ class InternetBrowserContractTests(unittest.TestCase):
         self.assertIn('new URL("./internet.css", import.meta.url)', runtime)
         self.assertIn('mountInternetStyles', runtime)
         self.assertIn('releaseStyles()', runtime)
-        for composition in (WEB_COMPOSITION, NATIVE_COMPOSITION):
+        for composition in (NATIVE_COMPOSITION,):
             html = self.text(composition / "index.html")
             main = self.text(composition / "main.mjs")
             self.assertNotIn('../../surface/ui/internet.css', html)

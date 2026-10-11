@@ -217,11 +217,27 @@ IMPLEMENTATION=COMPLETE_FOUNDATION
 NOTES=Reimplements the legacy Compatibility Manager inspection/runtime-selection invariants clean-room. Windows execution remains unavailable until a real verified runtime adapter and sandbox/profile lifecycle are implemented.
 ```
 
+## Ledger 007 — Account Hub Web presentation
+
+COMPONENT=canonical-web-presentation
+UPSTREAM_REPOSITORY=washingtonmsdj/account-hub-pro
+UPSTREAM_COMMIT=0f955ece6e570801976d8ed77d2cada101b7a3fa
+RESPONSIBILITY=Web presentation, local view/window interactions, labeled design demonstrations
+WHY_NEEDED=user approved canonical cutover before real service integration
+DEPENDENCIES=one root npm manifest/lock; locally bundled UI; shared local Inter and symbol
+SECURITY_REVIEW=no upstream credentials/providers; model requests fail closed; no filesystem/native endpoints/grants/installation authority
+LICENSE_REVIEW=README states author ownership; user approved reproduction; no LICENSE found; distribution review pending
+MAINTENANCE=OS Surface owns adopted source; fixed provenance and locked dependencies
+TESTS=typecheck + reference digests + window reducer + candidate receipt + Chromium route/viewport proof + Native/domain regressions
+DECISION=ADOPTED_PRESENTATION_ONLY
+TARGET_PATH=system/surface/workspace + system/composition/web + tools/surface-web
+IMPLEMENTATION=SOURCE_CANDIDATE
+NOTES=portal handoff/services/contracts retain ownership; no production activation or kernel/USB changes
+
 ## Current ledger state
 
-```text
-REVIEWED_COMPONENT_COUNT=6
+REVIEWED_COMPONENT_COUNT=7
 IMPLEMENTED_MIGRATION_COUNT=3
+ADOPTED_PRESENTATION_CANDIDATE_COUNT=1
 BULK_LEGACY_IMPORT=NO
 LEGACY_REPOSITORY_CHANGED_BY_MIGRATION=NO
-```

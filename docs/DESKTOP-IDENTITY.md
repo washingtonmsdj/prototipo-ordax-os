@@ -79,31 +79,39 @@ Roadmap: shared Surface identity and minimal functional desktop in `PLANO-FUNCIO
 Acceptance requires visual/contrast regressions, existing preference/localization tests, source-graph and deterministic bundle verification, and real Chromium shell/composition smoke. Web inspection covers desktop and narrow breakpoints and both materials. Source publication is a reviewable candidate, not production activation, a signed release or proof of USB/mobile hardware operation. A visual refresh does not require a kernel rebuild or USB rewrite.
 
 
-## Account Hub workspace composition — 2026-10-10
+## Canonical Web presentation — 2026-10-10
 
-The user requested the Web composition from `washingtonmsdj/account-hub-pro`
-(commit `0f955ece6e570801976d8ed77d2cada101b7a3fa`). The structural reference is
-`src/components/web/shell.tsx`, `home.tsx` and the workspace rules in `src/styles.css`.
-The repository README declares author ownership and has no explicit LICENSE;
-layout reproduction was explicitly requested by the same user. Decision:
-REFERENCE_ONLY for React components, reducers, simulated services and AI providers;
-REIMPLEMENTED for the visual composition in the existing shared Surface.
+The approved Account Hub layout is adopted into the OS-owned portable Surface at
+system/surface/workspace/. The sole Web bootstrap is system/composition/web/main.tsx.
+The evaluation workspace has been removed; no compatibility route or redirect remains.
 
-Owner: `system/surface/ui/desktop-shell.mjs` for markup, `identity.css` for composition,
-`tokens.css` for geometry and semantic policy. No second Web shell is introduced.
-The full-width header sits above the rail and workspace; the dock spans the frame.
-Home places the welcome/actions beside the application panel, with real context
-and continuation cards below. Narrow viewports stack these regions and expose
-compact, labeled launcher/Space controls. The existing artwork, symbol, fonts,
-localization, themes and capabilities remain canonical. Public `/web/` remains the
-verified Identity/runtime handoff, independent of this working Surface.
+Upstream: washingtonmsdj/account-hub-pro@0f955ece6e570801976d8ed77d2cada101b7a3fa.
+Digests, reversible edits and asset exclusions are recorded in
+docs/evidence/web-layout-reference-2026-10-10.json. User approved copying their
+supplied layout and replacing Web presentation. Upstream README states author
+ownership; no LICENSE was found. Distribution license review remains pending.
 
-No reference credentials, prototype window reducer, fake projects, simulated
-Intelligence, account session or package authority were imported. Apps still use
-the catalog, workspace, lifecycle and existing event delegation. Risks: geometry
-changes affect both Web and Native because they share the source. Acceptance:
-localized shortcuts invoke existing owners; unavailable user files remain disabled;
-launcher, window minimize/restore/close and Space menus work at desktop/mobile;
-viewport has no horizontal overflow; light/dark/high-contrast preferences retain
-one owner; build graph remains offline and dependency-free. Source and browser
-proof do not authorize a public release or enable unavailable remote services.
+Owner: OrdaX OS Surface. Root package.json/package-lock.json own dependencies;
+tools/surface-web owns compilation and candidate receipts. React/router/UI code
+is bundled locally. Existing shared Inter and approved symbol remain the asset
+authority. Browsers need no Node, CDN or remote font to render the client.
+This Web-only cutover preserves the Native operational composition and controls.
+
+Service integration is explicitly the next phase. Studio, Files, Projects,
+Spaces, Gallery, Notes, Internet, Settings, Store and Intelligence interfaces
+remain, including future controls. Unavailable services cannot create accounts,
+expose user files, grant tools or activate packages. Labeled Store/Intelligence
+demonstrations are interface examples. Account links to canonical /conta/;
+it does not create another Identity flow.
+
+Future connections must consume existing services, contracts and adapters.
+The public /web/ portal remains a separately configured Identity/runtime
+handoff: this source change does not enable that production gate.
+Native/domain assertions and browser proof remain; obsolete Web DOM wiring
+checks are replaced by canonical compiled-client route/viewport/window proofs.
+
+Acceptance: strict typecheck, reference integrity, atomic build receipts,
+repeatable compilation, Chromium desktop/mobile proof and Native/domain
+regressions. Risks: initial JS/artwork payload, dependency maintenance, final
+distribution review and deferred service wiring. No kernel rebuild, USB write,
+signing or production activation is implied.

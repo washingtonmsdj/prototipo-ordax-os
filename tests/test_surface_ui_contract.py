@@ -123,7 +123,7 @@ class SurfaceUiContractTests(unittest.TestCase):
             COMPONENT_MANAGER,
             NATIVE_COMPONENT_STATE,
             COMPOSITION / "index.html",
-            COMPOSITION / "main.mjs",
+            COMPOSITION / "main.tsx",
             NATIVE_COMPOSITION / "index.html",
             NATIVE_COMPOSITION / "main.mjs",
             WEB_ADAPTER,
@@ -245,7 +245,6 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn('panel.kind === "extension"', surface)
         self.assertIn("dataset.appExtension", surface)
         self.assertIn('.ordax-files-view', css)
-        self.assertIn("../../surface/ui/files.css", web_html)
         self.assertIn("../../surface/ui/files.css", native_html)
 
     def test_assistant_is_optional_intelligence_client_without_memory_ownership(self):
@@ -255,7 +254,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         controls = (APPS / "assistant" / "ui" / "conversation-controls.mjs").read_text(encoding="utf-8")
         component = (APPS / "assistant" / "component.mjs").read_text(encoding="utf-8")
         shell = DESKTOP_SHELL.read_text(encoding="utf-8")
-        web_main = (COMPOSITION / "main.mjs").read_text(encoding="utf-8")
+        web_main = (COMPOSITION / "main.tsx").read_text(encoding="utf-8")
         native_main = (NATIVE_COMPOSITION / "main.mjs").read_text(encoding="utf-8")
         localization = SURFACE_LOCALIZATION.read_text(encoding="utf-8")
         assistant_i18n = (
@@ -284,11 +283,8 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn('ASSISTANT_ENGLISH_MESSAGES', localization)
         self.assertIn('"app.assistant.title": "Assistente"', assistant_i18n)
         self.assertIn('"app.assistant.title": "Assistant"', assistant_i18n)
-        self.assertIn('componentId: "assistant"', web_main)
-        self.assertIn('intelligence: null', web_main)
         self.assertIn('componentId: "assistant"', native_main)
         self.assertIn('intelligence: selectedSpaceIntelligence', native_main)
-        self.assertIn('assistantComponent?.destroy()', web_main)
         self.assertIn('assistantComponent?.destroy()', native_main)
 
 
@@ -300,7 +296,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         shell = DESKTOP_SHELL.read_text(encoding="utf-8")
         web_html = (COMPOSITION / "index.html").read_text(encoding="utf-8")
         native_html = (NATIVE_COMPOSITION / "index.html").read_text(encoding="utf-8")
-        web_main = (COMPOSITION / "main.mjs").read_text(encoding="utf-8")
+        web_main = (COMPOSITION / "main.tsx").read_text(encoding="utf-8")
         native_main = (NATIVE_COMPOSITION / "main.mjs").read_text(encoding="utf-8")
         internet_runtime = (
             APPS / "internet" / "runtime.mjs"
@@ -324,11 +320,8 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn(".ordax-internet-project-panel", css)
         self.assertNotIn("../../surface/ui/internet.css", web_html)
         self.assertNotIn("../../surface/ui/internet.css", native_html)
-        self.assertIn("createWebBrowserSession", web_main)
         self.assertIn("createNativeBrowserSession", native_main)
-        self.assertIn("loadOptionalComponentRuntime", web_main)
         self.assertIn("loadOptionalComponentRuntime", native_main)
-        self.assertIn('import("../../apps/internet/runtime.mjs")', web_main)
         self.assertIn('import("../../apps/internet/runtime.mjs")', native_main)
         self.assertNotIn('from "../../surface/ui/internet-browser-controls.mjs"', web_main)
         self.assertNotIn('from "../../surface/ui/internet-browser-controls.mjs"', native_main)
@@ -337,9 +330,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn('new URL("./internet.css", import.meta.url)', internet_runtime)
         self.assertIn("mountInternetStyles", internet_runtime)
         self.assertIn("releaseStyles()", internet_runtime)
-        self.assertIn("internetComponent?.destroy()", web_main)
         self.assertIn("internetComponent?.destroy()", native_main)
-        self.assertIn("browserSession.dispose()", web_main)
         self.assertIn("browserSession.dispose()", native_main)
 
     def test_system_uses_formal_shared_overview_extension(self):
@@ -365,7 +356,6 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn('"system.components.version.detail.bundled"', overview)
         self.assertIn("services/update/presentation.mjs", overview)
         self.assertIn(".ordax-system-view", css)
-        self.assertIn("../../surface/ui/system.css", web_html)
         self.assertIn("../../surface/ui/system.css", native_html)
 
     def test_settings_uses_live_preference_runtime_and_shared_overview(self):
@@ -377,7 +367,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         preferences = PREFERENCE_CATALOG.read_text(encoding="utf-8")
         surface = (SURFACE / "surface.mjs").read_text(encoding="utf-8")
         css = (SURFACE / "settings.css").read_text(encoding="utf-8")
-        web_main = (COMPOSITION / "main.mjs").read_text(encoding="utf-8")
+        web_main = (COMPOSITION / "main.tsx").read_text(encoding="utf-8")
         native_main = (NATIVE_COMPOSITION / "main.mjs").read_text(encoding="utf-8")
         self.assertIn('kind: "extension"', settings)
         self.assertIn('extensionId: "settings-overview"', settings)
@@ -420,22 +410,14 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn("dataset.ordaxContrast", surface)
         self.assertIn("dataset.ordaxMotion", surface)
         self.assertIn(".ordax-settings-view", css)
-        self.assertIn("surface.preferences", web_main)
         self.assertIn("surface.preferences", native_main)
         self.assertIn("networkManagement,", native_main)
-        self.assertIn("createPreferenceSyncRuntime", web_main)
         self.assertIn("createPreferenceSyncRuntime", native_main)
-        self.assertIn("preferenceSync", web_main)
         self.assertIn("preferenceSync", native_main)
-        self.assertIn("createWebSyncStateStore", web_main)
         self.assertIn("createNativeSyncStateStore", native_main)
-        self.assertIn("syncStateStore", web_main)
         self.assertIn("syncStateStore", native_main)
-        self.assertIn("createWorkspaceMetadataBridge", web_main)
         self.assertIn("createWorkspaceMetadataBridge", native_main)
-        self.assertIn("workspaceMetadata.store", web_main)
         self.assertIn("workspaceMetadata.store", native_main)
-        self.assertIn("workspaceMetadata.source", web_main)
         self.assertIn("workspaceMetadata.source", native_main)
         self.assertNotIn("localStorage", overview)
         self.assertNotIn("/__ordax/native/preferences", overview)
@@ -498,7 +480,6 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn('t("account.registration.legal.privacy")', overview)
         self.assertIn('t("account.registration.legal.terms")', overview)
         self.assertIn(".ordax-account-view", css)
-        self.assertIn("../../surface/ui/account.css", web_html)
         self.assertIn("../../surface/ui/account.css", native_html)
         self.assertNotIn("adapters/native", overview)
         self.assertNotIn("adapters/web", overview)
@@ -512,7 +493,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         adapter = NATIVE_POWER_ADAPTER.read_text(encoding="utf-8")
         native_main = (NATIVE_COMPOSITION / "main.mjs").read_text(encoding="utf-8")
         native_html = (NATIVE_COMPOSITION / "index.html").read_text(encoding="utf-8")
-        web_main = (COMPOSITION / "main.mjs").read_text(encoding="utf-8")
+        web_main = (COMPOSITION / "main.tsx").read_text(encoding="utf-8")
 
         self.assertIn("ordax.power-actions/1", contract)
         self.assertIn('"restart"', contract)
@@ -589,14 +570,12 @@ class SurfaceUiContractTests(unittest.TestCase):
     def test_web_preference_adapter_owns_browser_storage(self):
         adapter = WEB_PREFERENCE_ADAPTER.read_text(encoding="utf-8")
         contract = PREFERENCE_STORE_CONTRACT.read_text(encoding="utf-8")
-        composition = (COMPOSITION / "main.mjs").read_text(encoding="utf-8")
+        composition = (COMPOSITION / "main.tsx").read_text(encoding="utf-8")
         surface = (SURFACE / "surface.mjs").read_text(encoding="utf-8")
         self.assertIn("localStorage", adapter)
         self.assertIn("contracts/preference-store.mjs", adapter)
         self.assertIn('"ordax.preferences.v1"', adapter)
         self.assertIn("ordax.preference-store/1", contract)
-        self.assertIn("createWebPreferenceStore", composition)
-        self.assertIn("identityActions", composition)
         self.assertIn("assertPreferenceStore", surface)
         self.assertIn("store.save(state.preferences)", surface)
 
@@ -632,25 +611,16 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertNotIn("platform", text.lower())
         self.assertNotIn("navigator.", text)
 
-    def test_web_composition_is_wiring_not_visual_fork(self):
-        main = (COMPOSITION / "main.mjs").read_text(encoding="utf-8")
+    def test_web_composition_wires_surface_without_duplicate_account_or_runtime(self):
+        main = (COMPOSITION / "main.tsx").read_text(encoding="utf-8")
         html = (COMPOSITION / "index.html").read_text(encoding="utf-8")
-        self.assertIn("../../surface/ui/surface.mjs", main)
-        self.assertIn("../../adapters/web/runtime.mjs", main)
-        self.assertIn("../../adapters/web/preferences.mjs", main)
-        self.assertIn("../../adapters/web/identity.mjs", main)
-        self.assertIn("../../adapters/web/identity-actions.mjs", main)
-        self.assertIn("createWebIdentitySession", main)
-        self.assertIn("createWebIdentityActions", main)
-        self.assertIn("validateAccountRuntime", main)
-        self.assertIn("../../surface/ui/tokens.css", html)
-        self.assertIn("../../surface/ui/surface.css", html)
-        self.assertIn("../../surface/ui/files.css", html)
-        self.assertNotIn("../../apps/notes/notes.css", html)
-        self.assertIn("../../surface/ui/system.css", html)
-        self.assertIn("../../surface/ui/account.css", html)
-        self.assertIn("../../surface/ui/settings.css", html)
+        self.assertIn("../../surface/workspace/components/web/shell", main)
+        self.assertIn("../../surface/ui/tokens.css", main)
+        self.assertIn("../../surface/ui/boot-screen.css", main)
+        self.assertIn('src="./main.tsx"', html)
         self.assertNotIn("<style", html.lower())
+        self.assertNotIn("adapters/native", main)
+        self.assertNotIn("createWebIdentitySession", main)
 
     def test_visual_surface_has_no_remote_asset_or_runtime_dependency(self):
         roots = [SURFACE, APPS, ROOT / "system" / "components", COMPOSITION, NATIVE_COMPOSITION, PREFERENCES]
@@ -750,7 +720,7 @@ class SurfaceUiContractTests(unittest.TestCase):
         battery = BATTERY_QUICK_PANEL.read_text(encoding="utf-8")
         shell = DESKTOP_SHELL.read_text(encoding="utf-8")
         native_main = (NATIVE_COMPOSITION / "main.mjs").read_text(encoding="utf-8")
-        web_main = (COMPOSITION / "main.mjs").read_text(encoding="utf-8")
+        web_main = (COMPOSITION / "main.tsx").read_text(encoding="utf-8")
 
         self.assertIn("data-quick-panel-toggle", controller)
         self.assertIn('event.key === "Escape"', controller)
@@ -800,8 +770,6 @@ class SurfaceUiContractTests(unittest.TestCase):
         self.assertIn("batteryQuickPanel?.destroy()", native_main)
         self.assertIn("mountSystemTrayQuickPanels", native_main)
         self.assertIn("mountNetworkQuickPanel", native_main)
-        self.assertIn("mountSystemTrayQuickPanels", web_main)
-        self.assertIn("mountNetworkQuickPanel(root, null, null, surface)", web_main)
 
     def test_windows_center_by_default_and_maximize_to_full_workspace(self):
         surface = (SURFACE / "surface.mjs").read_text(encoding="utf-8")
