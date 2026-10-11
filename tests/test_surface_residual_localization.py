@@ -12,7 +12,7 @@ UPDATES = ROOT / "system/surface/ui/update-controls.mjs"
 BOOT = ROOT / "system/surface/ui/boot-screen.mjs"
 DESKTOP = ROOT / "system/surface/ui/desktop-shell.mjs"
 NATIVE_MAIN = ROOT / "system/composition/native/main.mjs"
-WEB_MAIN = ROOT / "system/composition/web/main.mjs"
+WEB_MAIN = ROOT / "system/composition/web/main.tsx"
 NATIVE_HTML = ROOT / "system/composition/native/index.html"
 WEB_HTML = ROOT / "system/composition/web/index.html"
 
@@ -107,7 +107,7 @@ class SurfaceResidualLocalizationTests(unittest.TestCase):
             "export function translateSurfaceMessage",
         ):
             self.assertIn(marker, i18n)
-        for composition in (native, web):
+        for composition in (native,):
             self.assertIn("translateSurfaceMessage", composition)
             self.assertIn('"surface.boot.loadingSurface"', composition)
             self.assertIn('"surface.boot.loadingApps"', composition)

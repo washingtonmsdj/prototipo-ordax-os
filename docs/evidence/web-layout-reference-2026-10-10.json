@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/washingtonmsdj/account-hub-pro",
   "commit": "0f955ece6e570801976d8ed77d2cada101b7a3fa",
-  "purpose": "User-authorized isolated visual copy; no production authority",
+  "purpose": "User-approved canonical Web presentation cutover; no service authority",
   "files": [
     {
       "path": "src/assets/demo-recipe.jpg",
@@ -150,21 +150,40 @@
   ],
   "modifications": [
     "ai.functions.ts: model disabled; visual unchanged",
-    "shell.tsx: /web navigation changed to /web2/ only",
-    "standalone main/vite/index preview harness with original Google Fonts",
     "pages.tsx: remove unreachable Store comparison after Store already rendered; no visual change",
     "ai.functions.ts: typed fail-closed response matching existing caller",
-    "preview harness: root asset base and canonical trailing slash fix direct reload; native dark controls declared once in HTML"
+    "Canonical composition/build; test route and folder removed",
+    "Account and site navigation use ordinary links, not workspace routes",
+    "Native/shared service implementations preserved; UI unavailable until connected",
+    "Typography uses the local canonical Inter face and license; no Google Fonts runtime",
+    "Brand imports resolve to the canonical Surface symbol",
+    "Tailwind explicit source paths follow the canonical Surface/composition after cutover."
   ],
   "textChanges": {
     "src/components/web/shell.tsx": [
       {
         "from": "'/web'",
-        "to": "'/web2/'"
+        "to": "'.'"
       },
       {
         "from": "\"/web\"",
-        "to": "\"/web2/\""
+        "to": "\".\""
+      },
+      {
+        "from": "<Link to=\"/\"><UserRound/>Minha Conta</Link>",
+        "to": "<a href=\"/conta/\"><UserRound/>Minha Conta</a>"
+      },
+      {
+        "from": "<Link to=\"/landing\">Site OrdaX</Link>",
+        "to": "<a href=\"/\">Site OrdaX</a>"
+      },
+      {
+        "from": "@/assets/ordax-mark.png",
+        "to": "@ordax-brand/ordax-symbol.png"
+      },
+      {
+        "from": "<Button variant=\"ghost\" onClick={() => setLauncher(true)}><LayoutGrid/><small>Apps</small></Button>",
+        "to": "<Button variant=\"ghost\" aria-label=\"Abrir aplicativos\" onClick={() => setLauncher(true)}><LayoutGrid/><small>Apps</small></Button>"
       }
     ],
     "src/components/web/pages.tsx": [
@@ -172,6 +191,33 @@
         "from": "id === 'apps' ? 'APLICATIVOS' : id === 'store' ? 'LOJA' : 'SPACES'",
         "to": "id === 'apps' ? 'APLICATIVOS' : 'SPACES'"
       }
+    ],
+    "src/styles.css": [
+      {
+        "from": "--font-sans: 'Manrope', sans-serif; --font-display: 'Space Grotesk', sans-serif;",
+        "to": "--font-sans: var(--ordax-font-family, 'Inter'), sans-serif; --font-display: var(--ordax-font-family, 'Inter'), sans-serif;"
+      },
+      {
+        "from": "@source \"../src\";",
+        "to": "@source \"./components\";\n@source \"./lib\";\n@source \"../../composition/web\";"
+      }
+    ],
+    "src/components/intelligence/surface.tsx": [
+      {
+        "from": "@/assets/ordax-mark.png",
+        "to": "@ordax-brand/ordax-symbol.png"
+      }
+    ],
+    "src/components/web/app-content.tsx": [
+      {
+        "from": "@/assets/ordax-mark.png",
+        "to": "@ordax-brand/ordax-symbol.png"
+      }
     ]
+  },
+  "owner": "OrdaX OS Surface",
+  "source_root": "system/surface/workspace",
+  "excluded_files": {
+    "src/assets/ordax-mark.png": "Existing canonical Surface symbol is the sole brand owner"
   }
 }

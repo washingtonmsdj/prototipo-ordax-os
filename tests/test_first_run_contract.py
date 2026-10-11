@@ -15,7 +15,7 @@ CSS = ROOT / "system" / "surface" / "ui" / "first-run.css"
 SETTINGS = ROOT / "system" / "surface" / "ui" / "settings-overview-controls.mjs"
 NATIVE_MAIN = ROOT / "system" / "composition" / "native" / "main.mjs"
 NATIVE_HTML = ROOT / "system" / "composition" / "native" / "index.html"
-WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.mjs"
+WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.tsx"
 WEB_HTML = ROOT / "system" / "composition" / "web" / "index.html"
 
 

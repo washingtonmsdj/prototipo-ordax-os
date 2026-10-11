@@ -8,7 +8,7 @@ import { demoCommands, stages } from '@/lib/intelligence/demo';
 import { activeEntry } from '@/lib/intelligence/session';
 import { ResultRenderer, DemoTag } from './results';
 import { useIntelligenceSession } from './session';
-import mark from '@/assets/ordax-mark.png';
+import mark from '@ordax-brand/ordax-symbol.png';
 
 export type Presentation = 'page' | 'panel' | 'compact';
 

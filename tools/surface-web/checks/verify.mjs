@@ -1,15 +1,16 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile, readdir} from 'node:fs/promises';
-import {windowReducer, initialWindows} from '../src/lib/web/windows.ts';
-import {askIntelligence} from '../src/lib/intelligence/ai.functions.ts';
-const root = new URL('../', import.meta.url);
-const provenance = JSON.parse(await readFile(new URL('provenance.json', root), 'utf8'));
+import {windowReducer, initialWindows} from '../../../system/surface/workspace/lib/web/windows.ts';
+import {askIntelligence} from '../../../system/surface/workspace/lib/intelligence/ai.functions.ts';
+const root = new URL('../../../', import.meta.url);
+const sourceRoot = new URL('system/surface/workspace/', root);
+const provenance = JSON.parse(await readFile(new URL('docs/evidence/web-layout-reference-2026-10-10.json', root), 'utf8'));
 let verified = 0;
 for (const entry of provenance.files) {
-  if (['src/lib/intelligence/ai.functions.ts'].includes(entry.path)) continue;
-  let bytes = await readFile(new URL(entry.path, root));
-  for (const change of provenance.textChanges?.[entry.path] ?? []) {
+  if (entry.path === 'src/lib/intelligence/ai.functions.ts' || Object.hasOwn(provenance.excluded_files ?? {}, entry.path)) continue;
+  let bytes = await readFile(new URL(entry.path.replace(/^src\//, ''), sourceRoot));
+  for (const change of [...(provenance.textChanges?.[entry.path] ?? [])].reverse()) {
     const source = bytes.toString('utf8');
     assert.ok(source.includes(change.to), 'Recorded adjustment missing: ' + entry.path);
     bytes = Buffer.from(source.replaceAll(change.to, change.from));
@@ -49,23 +50,24 @@ console.log('PASS: ' + verified + ' reference files/assets (recorded edits rever
 if (process.argv.includes('--preview')) {
   const origin = 'http://127.0.0.1:4201';
   const views = ['home', 'assistant', 'apps', 'projects', 'files', 'spaces', 'internet', 'store'];
+  for (const path of ['/web2', '/web2/']) assert.equal((await fetch(origin + path)).status, 404, 'Retired route must not be preserved: ' + path);
   let html = '';
-  for (const path of ['/web2/', ...views.map(view => '/web2?view=' + view)]) {
-    const response = await fetch(origin + path, {signal: AbortSignal.timeout(8000)});
+  for (const path of ['/', ...views.map(view => '/?view=' + view)]) {
+    const response = await fetch(new URL(path, origin), {signal: AbortSignal.timeout(8000)});
     assert.equal(response.status, 200, 'Direct reload fails: ' + path);
     html = await response.text();
-    assert.ok(html.includes('<div id="root"></div>'), 'Missing app document: ' + path);
+    assert.ok(html.includes('<div id="ordax-root"></div>'), 'Missing app document: ' + path);
   }
-  assert.ok(html.includes('<meta name="color-scheme" content="dark">'), 'Native controls must match the dark theme');
-  const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^" ]+)"/g)].map(match => match[1]);
+  assert.ok(html.includes('<meta name="color-scheme" content="dark"'), 'Native controls must match the dark theme');
+  const assets = [...html.matchAll(/(?:src|href)="((?:\.\/|\/)assets\/[^" ]+)"/g)].map(match => match[1]);
   assert.ok(assets.length >= 2, 'Missing compiled JS/CSS references');
-  const compiledAssets = await readdir(new URL('dist/assets/', root));
+  const compiledAssets = await readdir(new URL('out/web-ui/assets/', root));
   for (const path of new Set([...assets, ...compiledAssets.map(name => '/assets/' + name)])) {
-    const response = await fetch(origin + path, {signal: AbortSignal.timeout(8000)});
+    const response = await fetch(new URL(path, origin + '/'), {signal: AbortSignal.timeout(8000)});
     assert.equal(response.status, 200, 'Missing asset: ' + path);
     assert.ok(!response.headers.get('content-type')?.includes('text/html'), 'HTML fallback instead of asset: ' + path);
     const served = Buffer.from(await response.arrayBuffer());
-    const built = await readFile(new URL('dist' + path, root));
+    const built = await readFile(new URL('out/web-ui/' + path.replace(/^\.\//, '').replace(/^\//, ''), root));
     assert.equal(createHash('sha256').update(served).digest('hex'), createHash('sha256').update(built).digest('hex'), 'Stale build served: ' + path);
   }
   console.log('PASS: preview direct reload for 8 views; ' + compiledAssets.length + ' build assets match served bytes; dark native controls declared (HTTP only, not browser rendering)');

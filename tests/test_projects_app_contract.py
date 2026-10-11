@@ -8,7 +8,7 @@ PROJECTS = APPS / "projects"
 CATALOG = APPS / "catalog.mjs"
 COMPONENT_CATALOG = APPS / "component-catalog.mjs"
 NATIVE = ROOT / "system" / "composition" / "native" / "main.mjs"
-WEB = ROOT / "system" / "composition" / "web" / "main.mjs"
+WEB = ROOT / "system" / "composition" / "web" / "main.tsx"
 SHELL = ROOT / "system" / "surface" / "ui" / "desktop-shell.mjs"
 SURFACE_I18N = ROOT / "system" / "services" / "i18n" / "surface.mjs"
 PROJECTS_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "projects.mjs"
@@ -62,9 +62,6 @@ class ProjectsAppContractTests(unittest.TestCase):
         self.assertIn("createNativeProjectCloudLinkStore", native)
         self.assertIn("createProjectCloudLinksReader", native)
         self.assertIn("projectCloudLinks?.destroy()", native)
-        self.assertIn('componentId: "projects"', web)
-        self.assertIn("projects: null", web)
-        self.assertIn("projectCloudLinks: null", web)
         self.assertNotIn("createProjectCatalogRuntime", web)
 
     def test_projects_opens_existing_project_through_shared_app_activation(self):

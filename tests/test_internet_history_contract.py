@@ -6,7 +6,7 @@ CONTROLS = ROOT / "system" / "apps" / "internet" / "ui" / "browser-controls.mjs"
 INTERNET_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "internet.mjs"
 CSS = ROOT / "system" / "apps" / "internet" / "internet.css"
 NATIVE_MAIN = ROOT / "system" / "composition" / "native" / "main.mjs"
-WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.mjs"
+WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.tsx"
 INTERNET_RUNTIME = ROOT / "system" / "apps" / "internet" / "runtime.mjs"
 CONTRACT = ROOT / "system" / "contracts" / "browser-history.mjs"
 STORE = ROOT / "system" / "contracts" / "browser-history-store.mjs"
@@ -50,7 +50,6 @@ class InternetHistoryContractTests(unittest.TestCase):
         self.assertNotIn('createNativeBrowserHistoryStore', web)
         self.assertNotIn('createBrowserHistoryRuntime', web)
         self.assertNotIn('createBrowserHistoryBridge', web)
-        self.assertIn('import("../../apps/internet/runtime.mjs")', web)
 
     def test_history_has_bounded_independent_contract_and_privileged_store(self):
         contract = self.text(CONTRACT)

@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTROLS = ROOT / "system" / "apps" / "internet" / "ui" / "browser-controls.mjs"
 INTERNET_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "internet.mjs"
 NATIVE_MAIN = ROOT / "system" / "composition" / "native" / "main.mjs"
-WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.mjs"
+WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.tsx"
 INTERNET_RUNTIME = ROOT / "system" / "apps" / "internet" / "runtime.mjs"
 REFERENCE_CONTRACT = ROOT / "system" / "contracts" / "project-web-references.mjs"
 REFERENCE_STORE = ROOT / "system" / "contracts" / "project-web-reference-store.mjs"
@@ -45,7 +45,6 @@ class InternetProjectContextContractTests(unittest.TestCase):
 
     def test_web_composition_keeps_project_context_unavailable_without_fake_storage(self):
         web = self.text(WEB_MAIN)
-        self.assertIn('import("../../apps/internet/runtime.mjs")', web)
         self.assertNotIn('createProjectCatalogRuntime', web)
         self.assertNotIn('createProjectWebReferenceRuntime', web)
         self.assertNotIn('createNativeProjectWebReferenceStore', web)

@@ -52,7 +52,7 @@ on:
       - 'system/services/intelligence/**'
       - 'system/apps/assistant/**'
       - 'system/adapters/web/space-selection.mjs'
-      - 'system/composition/web/main.mjs'
+      - 'system/composition/web/main.tsx'
       - 'tests/test_assistant_result_canvas.mjs'
       - 'tests/test_assistant_work_strip.mjs'
       - 'tests/test_web_intelligence_canvas.mjs'
@@ -141,7 +141,7 @@ on:
       - 'system/services/profile-packs/catalog.mjs'
       - 'system/services/profile-packs/taxonomy.mjs'
       - 'system/services/profile-packs/taxonomy-source.mjs'
-      - 'system/composition/web/main.mjs'
+      - 'system/composition/web/main.tsx'
       - 'tests/test_profile_pack_catalog.mjs'
       - 'tests/test_profile_taxonomy.mjs'
       - 'tests/test_profile_pack_catalog.py'
@@ -232,7 +232,7 @@ on:
       - 'system/services/intelligence/**'
       - 'system/apps/assistant/**'
       - 'system/adapters/web/space-selection.mjs'
-      - 'system/composition/web/main.mjs'
+      - 'system/composition/web/main.tsx'
       - 'tests/test_assistant_result_canvas.mjs'
       - 'tests/test_assistant_work_strip.mjs'
       - 'tests/test_web_intelligence_canvas.mjs'
@@ -321,7 +321,7 @@ on:
       - 'system/services/profile-packs/catalog.mjs'
       - 'system/services/profile-packs/taxonomy.mjs'
       - 'system/services/profile-packs/taxonomy-source.mjs'
-      - 'system/composition/web/main.mjs'
+      - 'system/composition/web/main.tsx'
       - 'tests/test_profile_pack_catalog.mjs'
       - 'tests/test_profile_taxonomy.mjs'
       - 'tests/test_profile_pack_catalog.py'
@@ -378,6 +378,9 @@ jobs:
         with:
           python-version: '3.12'
           check-latest: false
+
+      - name: Install locked Web dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Validate Intelligence source syntax
         run: |
@@ -446,7 +449,7 @@ jobs:
           node --check system/composition/native/account-memory-foundation.mjs
           node --check tests/test_native_account_memory_protected_composition.mjs
           node --check system/composition/native/main.mjs
-          node --check system/composition/web/main.mjs
+          npm run typecheck --workspace tools/surface-web
           python -m json.tool docs/contracts/intelligence.json >/dev/null
           python -m json.tool docs/contracts/local-ai.json >/dev/null
           python -m json.tool docs/contracts/memory.json >/dev/null

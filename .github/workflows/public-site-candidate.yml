@@ -9,7 +9,8 @@ on:
       - 'api/account-proxy.mjs'
       - 'vercel.json'
       - 'tools/public-site/**'
-      - 'tools/surface-web/browser-smoke.mjs'
+      - 'tools/public-site/browser-smoke.mjs'
+      - 'tools/browser-proof/**'
       - 'tools/brand/**'
       - 'system/surface/ui/tokens.css'
       - 'system/surface/ui/brand/**'
@@ -90,7 +91,8 @@ on:
       - 'api/account-proxy.mjs'
       - 'vercel.json'
       - 'tools/public-site/**'
-      - 'tools/surface-web/browser-smoke.mjs'
+      - 'tools/public-site/browser-smoke.mjs'
+      - 'tools/browser-proof/**'
       - 'tools/brand/**'
       - 'system/surface/ui/tokens.css'
       - 'system/surface/ui/brand/**'
@@ -264,7 +266,7 @@ jobs:
             fi
             sleep 0.25
           done
-          node tools/surface-web/browser-smoke.mjs \
+          node tools/public-site/browser-smoke.mjs \
             --public-account-url http://127.0.0.1:4178/conta/ \
             --evidence-dir out/account-viewport-proof
 

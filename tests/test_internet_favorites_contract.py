@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTROLS = ROOT / "system" / "apps" / "internet" / "ui" / "browser-controls.mjs"
 INTERNET_I18N = ROOT / "system" / "services" / "i18n" / "catalog" / "internet.mjs"
 NATIVE_MAIN = ROOT / "system" / "composition" / "native" / "main.mjs"
-WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.mjs"
+WEB_MAIN = ROOT / "system" / "composition" / "web" / "main.tsx"
 INTERNET_RUNTIME = ROOT / "system" / "apps" / "internet" / "runtime.mjs"
 CONTRACT = ROOT / "system" / "contracts" / "browser-favorites.mjs"
 STORE = ROOT / "system" / "contracts" / "browser-favorites-store.mjs"
@@ -47,7 +47,6 @@ class InternetFavoritesContractTests(unittest.TestCase):
         runtime = self.text(INTERNET_RUNTIME)
         self.assertNotIn('createNativeBrowserFavoritesStore', web)
         self.assertNotIn('createBrowserFavoritesRuntime', web)
-        self.assertIn('import("../../apps/internet/runtime.mjs")', web)
         self.assertIn('createFavoritesStore = null', runtime)
 
     def test_favorites_have_bounded_independent_contract_and_store(self):

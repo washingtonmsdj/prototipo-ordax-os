@@ -937,7 +937,7 @@ Histórico não oferece “Instalar qualquer commit”. Uma ação de rollback p
 | Semântica de identidade/sync | `system/services/account/`, `system/services/sync/`. | Serviços não conhecem fornecedor de banco, UI ou APIs concretas de host. |
 | Portas neutras | `system/contracts/`. | Contratos pequenos ligados a uma necessidade real, sem criar framework especulativo. |
 | Implementação por ambiente | `system/adapters/*/`. | Permissão, acesso físico, transporte e integração; sem duplicar política de produto. |
-| Montagem das dependências | `system/composition/web/main.mjs`, `system/composition/native/main.mjs`. | Injetar portas; UI não importa adapter concreto. |
+| Montagem das dependências | `system/composition/web/main.tsx`, `system/composition/native/main.mjs`. | Injetar portas; UI não importa adapter concreto. |
 | Host nativo | `system/surface/runtime/native_host_server.py`. | Preservar fronteiras de origem, autorização, caminhos delimitados e validação no servidor. |
 | Atualização e energia | Watcher, controles e serviços existentes. | Observação separada de comando; menu e página compartilham um dono. |
 
@@ -1362,8 +1362,11 @@ endossa ou participa da OrdaX.
 A política detalhada de licença, proveniência e modos de adoção fica em
 `PLANO-04-FUNDACAO-ECOSSISTEMA-PRE-MVP.md`, seção 4.
 
-## Avaliação visual Web2 solicitada — 2026-10-10
-Exceção explícita ao incremento anterior: usuário solicitou cópia integral do
-layout Account Hub em preview separado antes de qualquer integração.
-Fixture em tools/web2-preview; provenance, owner, risco e aceite registrados em
-docs/DESKTOP-IDENTITY.md. Web atual preservado; nenhum serviço foi integrado.
+## Apresentação Web canônica aprovada — 2026-10-10
+
+Incremento autorizado: layout Account Hub aprovado como única interface Web,
+em system/surface/workspace/, com composição fina e build oficial. Owner,
+proveniência, dependências, riscos e aceite: docs/DESKTOP-IDENTITY.md.
+Não existe workspace/rota de avaliação ou redirect. Recursos pendentes
+permanecem na interface; serviços reais serão conectados no próximo incremento.
+Autoridades de Apps, Runtime, Identity, Memory, Intelligence e sync preservadas.

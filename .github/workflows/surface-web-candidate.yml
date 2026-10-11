@@ -101,6 +101,10 @@ on:
       - 'system/composition/web/**'
       - 'system/composition/native/**'
       - 'tools/surface-web/**'
+      - 'tools/browser-proof/**'
+      - 'tools/surface-native/**'
+      - 'package.json'
+      - 'package-lock.json'
       - 'tools/source_graph.py'
       - 'tests/test_surface_ui_contract.py'
       - 'tests/test_surface_visual_identity.py'
@@ -316,6 +320,10 @@ on:
       - 'system/composition/web/**'
       - 'system/composition/native/**'
       - 'tools/surface-web/**'
+      - 'tools/browser-proof/**'
+      - 'tools/surface-native/**'
+      - 'package.json'
+      - 'package-lock.json'
       - 'tools/source_graph.py'
       - 'tests/test_surface_ui_contract.py'
       - 'tests/test_surface_visual_identity.py'
@@ -441,6 +449,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+
+      - name: Install locked Web build dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -630,6 +641,8 @@ jobs:
       - name: Run real Chromium Surface smoke
         run: |
           set -euo pipefail
+          npm run verify --workspace tools/surface-web
+          node tools/surface-native/browser-smoke.mjs
           node tools/surface-web/browser-smoke.mjs --bundle-dir out/web-client
 
       - name: Upload Web client candidate

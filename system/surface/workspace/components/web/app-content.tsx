@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { getWebApp, webApps, type WebAppId } from '@/lib/web/model';
 import { AppIcon, ServiceEmpty } from './primitives';
 import { IntelligenceSurface } from '@/components/intelligence/surface';
-import mark from '@/assets/ordax-mark.png';
+import mark from '@ordax-brand/ordax-symbol.png';
 import landscape from '@/assets/ordax-landscape.jpg';
 
 export type Appearance = { wallpaper: boolean; compact: boolean };

@@ -71,11 +71,11 @@ class NotificationCenterUiContractTest(unittest.TestCase):
         ]:
             self.assertIn(selector, css)
 
-    def test_web_and_native_share_notification_runtime_with_settings_and_center(self):
-        web = read("system/composition/web/main.mjs")
+    def test_native_notification_runtime_wires_settings_and_center(self):
+        web = read("system/composition/web/main.tsx")
         native = read("system/composition/native/main.mjs")
 
-        for source in [web, native]:
+        for source in [native]:
             self.assertIn("createNotificationsRuntime", source)
             self.assertIn(
                 "mountNotificationCenterControls(root, notifications, appActivation, surface)",

@@ -259,3 +259,14 @@ OrdaX Web / Mobile
 ```
 
 The goal is continuity of identity, Surface, apps and safe synchronized user state across every tier while keeping each environment's authority boundary explicit.
+
+## Canonical Web presentation cutover — 2026-10-10
+
+The approved workspace presentation lives under system/surface/workspace and
+uses the official Web build. One composition, one root dependency lock and
+shared symbol/font sources remain, with no evaluation route or redirect.
+Pending app interfaces are preserved. Real service wiring is the next phase:
+presentation asserts no authenticated session, user files, inference, sync,
+package installation or remote-device access. Native operational UI, services,
+contracts and public Account are preserved. See docs/DESKTOP-IDENTITY.md and
+migration ledger 007. This is a source/candidate change, not production activation.
