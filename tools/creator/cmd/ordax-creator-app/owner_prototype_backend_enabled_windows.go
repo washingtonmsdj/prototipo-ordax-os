@@ -3,6 +3,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -14,6 +16,8 @@ type ownerPrototypeProvenance struct {
 	Status                          string `json:"status"`
 	SourceCommit                    string `json:"source_commit"`
 	CreatorVersion                 string `json:"creator_version"`
+	SymbolSHA256                   string `json:"symbol_sha256"`
+	ThemeSHA256                    string `json:"theme_sha256"`
 	CanonicalPublicRelease          bool   `json:"canonical_public_release"`
 	EphemeralPrototypeTrust         bool   `json:"ephemeral_prototype_trust"`
 	PrivateKeyInPackage             bool   `json:"private_key_in_package"`
@@ -88,6 +92,8 @@ func ownerPrototypeBuildInfo() (version string, sourceCommit string, ok bool) {
 		provenance.Status != "owner-prototype-write-enabled" ||
 		!validOwnerSourceCommit(provenance.SourceCommit) ||
 		!validCreatorVersion(provenance.CreatorVersion) ||
+		!validOwnerHex(provenance.SymbolSHA256, 64) ||
+		!validOwnerHex(provenance.ThemeSHA256, 64) ||
 		provenance.CanonicalPublicRelease ||
 		!provenance.EphemeralPrototypeTrust ||
 		provenance.PrivateKeyInPackage ||
@@ -102,6 +108,19 @@ func ownerPrototypeBuildInfo() (version string, sourceCommit string, ok bool) {
 		!validOwnerHex(provenance.SeedSHA256, 64) ||
 		provenance.SeedSize <= 0 {
 		return "", "", false
+	}
+	for _, asset := range []struct{ name, digest string }{
+		{"ordax-symbol.png", provenance.SymbolSHA256},
+		{"ordax-design-theme.json", provenance.ThemeSHA256},
+	} {
+		data, err := os.ReadFile(filepath.Join(directory, asset.name))
+		if err != nil || len(data) == 0 || len(data) > 2<<20 {
+			return "", "", false
+		}
+		hash := sha256.Sum256(data)
+		if hex.EncodeToString(hash[:]) != asset.digest {
+			return "", "", false
+		}
 	}
 	return provenance.CreatorVersion, provenance.SourceCommit, true
 }
