@@ -11,6 +11,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "tools/creator/verify_owner_dev_bundle.py"
 COMMIT = "a" * 40
+VERSION = json.loads((ROOT / "tools/creator/version.json").read_text(encoding="utf-8"))["version"]
 
 class DevelopmentCreatorBundleTests(unittest.TestCase):
     def setUp(self):
@@ -24,6 +25,7 @@ class DevelopmentCreatorBundleTests(unittest.TestCase):
         self.provenance = {
             "$schema": "prototype-ordax.creator-owner-physical/1",
             "source_commit": COMMIT,
+            "creator_version": VERSION,
             "canonical_public_release": False,
             "ephemeral_prototype_trust": True,
             "private_key_in_package": False,
@@ -43,7 +45,7 @@ class DevelopmentCreatorBundleTests(unittest.TestCase):
         digest = hashlib.sha256(self.archive.read_bytes()).hexdigest()
         self.metadata.write_text(json.dumps({
             "$schema": "prototype-ordax.creator-owner-bundle-update/1",
-            "channel": "owner-prototype", "version": "owner-" + COMMIT[:12],
+            "channel": "owner-prototype", "version": VERSION,
             "source_commit": COMMIT, "artifact": self.archive.name,
             "download_url": "https://example.invalid/dev.zip", "sha256": digest,
             "size": self.archive.stat().st_size, "automatic_in_app_update": False,
@@ -69,6 +71,17 @@ class DevelopmentCreatorBundleTests(unittest.TestCase):
     def test_wrong_source_commit_fails(self):
         d = json.loads(self.metadata.read_text())
         d["source_commit"] = "b" * 40
+        self.metadata.write_text(json.dumps(d))
+        self.assertNotEqual(self.run_check().returncode, 0)
+
+    def test_version_provenance_drift_fails(self):
+        self.provenance["creator_version"] = "999.0.0"
+        self.create()
+        self.assertNotEqual(self.run_check().returncode, 0)
+
+    def test_version_manifest_drift_fails(self):
+        d = json.loads(self.metadata.read_text())
+        d["version"] = "owner-" + COMMIT[:12]
         self.metadata.write_text(json.dumps(d))
         self.assertNotEqual(self.run_check().returncode, 0)
 
