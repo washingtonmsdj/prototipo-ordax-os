@@ -12,6 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "tools/creator/verify_owner_dev_bundle.py"
 COMMIT = "a" * 40
 VERSION = json.loads((ROOT / "tools/creator/version.json").read_text(encoding="utf-8"))["version"]
+sys.path.insert(0, str(ROOT / "tools/creator"))
+from theme_bridge import render_theme, SYMBOL
+THEME = render_theme()
+SYMBOL_BYTES = SYMBOL.read_bytes()
 
 class DevelopmentCreatorBundleTests(unittest.TestCase):
     def setUp(self):
@@ -26,6 +30,8 @@ class DevelopmentCreatorBundleTests(unittest.TestCase):
             "$schema": "prototype-ordax.creator-owner-physical/1",
             "source_commit": COMMIT,
             "creator_version": VERSION,
+            "symbol_sha256": hashlib.sha256(SYMBOL_BYTES).hexdigest(),
+            "theme_sha256": hashlib.sha256(THEME).hexdigest(),
             "canonical_public_release": False,
             "ephemeral_prototype_trust": True,
             "private_key_in_package": False,
@@ -41,6 +47,8 @@ class DevelopmentCreatorBundleTests(unittest.TestCase):
             z.writestr("OrdaX-Creator/ordax-creator-physical-test.exe", b"MZ" + b"writer")
             z.writestr("OrdaX-Creator/ordax-bootstrap-seed.raw", self.seed)
             z.writestr("OrdaX-Creator/provenance.json", json.dumps(self.provenance))
+            z.writestr("OrdaX-Creator/ordax-symbol.png", SYMBOL_BYTES)
+            z.writestr("OrdaX-Creator/ordax-design-theme.json", THEME)
             z.writestr("OrdaX-Creator/LEIA-ME.txt", "Development Git USB")
         digest = hashlib.sha256(self.archive.read_bytes()).hexdigest()
         self.metadata.write_text(json.dumps({
@@ -88,6 +96,23 @@ class DevelopmentCreatorBundleTests(unittest.TestCase):
     def test_public_release_mislabeling_fails(self):
         self.provenance["canonical_public_release"] = True
         self.create()
+        self.assertNotEqual(self.run_check().returncode, 0)
+
+    def test_tampered_theme_fails(self):
+        # Tampering must be rejected even when the ZIP metadata has been re-hashed.
+        with zipfile.ZipFile(self.archive, "w") as z:
+            z.writestr("OrdaX-Creator/OrdaX-Creator.exe", b"MZgui")
+            z.writestr("OrdaX-Creator/ordax-creator-physical-test.exe", b"MZwriter")
+            z.writestr("OrdaX-Creator/ordax-bootstrap-seed.raw", self.seed)
+            z.writestr("OrdaX-Creator/provenance.json", json.dumps(self.provenance))
+            z.writestr("OrdaX-Creator/ordax-symbol.png", SYMBOL_BYTES)
+            z.writestr("OrdaX-Creator/ordax-design-theme.json", THEME + b" ")
+            z.writestr("OrdaX-Creator/LEIA-ME.txt", "Development Git USB")
+        digest = hashlib.sha256(self.archive.read_bytes()).hexdigest()
+        d = json.loads(self.metadata.read_text())
+        d["sha256"], d["size"] = digest, self.archive.stat().st_size
+        self.metadata.write_text(json.dumps(d))
+        self.sums.write_text(f"{digest}  {self.archive.name}\n")
         self.assertNotEqual(self.run_check().returncode, 0)
 
     def test_missing_member_fails(self):
