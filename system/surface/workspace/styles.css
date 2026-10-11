@@ -331,6 +331,8 @@ details.oi-demo-commands{display:block;margin-top:6px;text-align:center}details.
 .st-nav b{font-size:10px;background:var(--primary);color:var(--primary-foreground);border-radius:99px;padding:1px 7px}
 .st-nav button[aria-current=page] b{background:var(--background);color:var(--foreground)}
 .st-main{min-width:0;display:flex;flex-direction:column;gap:14px}
+.st-mode{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px;background:var(--web-glass);border:1px solid var(--web-line);border-radius:10px}
+.st-mode>div{flex:1;min-width:min(210px,100%)}.st-mode strong{font-size:13px}.st-mode p{font-size:12px;line-height:1.5;color:var(--muted-foreground);margin-top:4px}.st-mode button{max-width:100%;white-space:normal}
 .st-searchbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .st-searchbar label{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:var(--web-glass);border:1px solid var(--web-line);border-radius:9px;padding:0 12px;height:40px}
 .st-searchbar label svg{width:16px;color:var(--muted-foreground)}.st-searchbar input{flex:1;min-width:0;background:transparent;outline:none;font-size:13px}

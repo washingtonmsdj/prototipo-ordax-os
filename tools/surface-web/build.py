@@ -47,13 +47,15 @@ def discover_graph(root: Path = ROOT) -> list[PurePosixPath]:
         PurePosixPath("tools/surface-web/tsconfig.json"),
         PurePosixPath("docs/evidence/web-layout-reference-2026-10-10.json"),
         PurePosixPath("system/surface/ui/brand/ordax-symbol.png"),
+        PurePosixPath("system/services/local-ai/source-lock.json"),
         PurePosixPath("third_party/licenses/Inter-OFL-1.1.txt"),
     }
     for subtree in ("system/surface/workspace",):
         inputs.update(PurePosixPath(p.relative_to(root).as_posix())
                       for p in (root / subtree).rglob("*") if p.is_file())
     for entry in ("system/surface/ui/boot-screen.mjs", "system/surface/ui/boot-screen.css",
-                  "system/surface/ui/tokens.css", "system/services/i18n/surface.mjs"):
+                  "system/surface/ui/tokens.css", "system/services/i18n/surface.mjs",
+                  "system/contracts/app-store.mjs", "system/services/local-ai/model-candidate.generated.mjs"):
         inputs.update(discover_source_graph(root, PurePosixPath(entry),
                                            allowed_prefixes=("system",)))
     for relative in inputs:

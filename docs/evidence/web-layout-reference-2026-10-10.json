@@ -200,6 +200,10 @@
       {
         "from": "@source \"../src\";",
         "to": "@source \"./components\";\n@source \"./lib\";\n@source \"../../composition/web\";"
+      },
+      {
+        "from": ".st-main{min-width:0;display:flex;flex-direction:column;gap:14px}",
+        "to": ".st-main{min-width:0;display:flex;flex-direction:column;gap:14px}\n.st-mode{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px;background:var(--web-glass);border:1px solid var(--web-line);border-radius:10px}\n.st-mode>div{flex:1;min-width:min(210px,100%)}.st-mode strong{font-size:13px}.st-mode p{font-size:12px;line-height:1.5;color:var(--muted-foreground);margin-top:4px}.st-mode button{max-width:100%;white-space:normal}"
       }
     ],
     "src/components/intelligence/surface.tsx": [
@@ -212,6 +216,206 @@
       {
         "from": "@/assets/ordax-mark.png",
         "to": "@ordax-brand/ordax-symbol.png"
+      }
+    ],
+    "src/components/store/store.tsx": [
+      {
+        "from": "import { catalog, findItem, kindMeta, searchCatalog, platformLabel, evaluateModel, models, providers, agents, apps, plugins, connectors, packages, type Kind, type StoreItem, type ModelItem, type Platform } from '@/lib/store/catalog';",
+        "to": "import { catalog, kindMeta, platformLabel, evaluateModel, type Kind, type StoreItem, type ModelItem, type Platform } from '@/lib/store/catalog';\nimport { useStoreCatalog } from './catalog-context';\nimport { officialEntryStatus, projectOfficialStoreItems, type ProductStatus, type StoreSnapshot, type StoreEntry } from '@/lib/store/official';"
+      },
+      {
+        "from": "Record<ItemStatus, string>",
+        "to": "Record<ProductStatus, string>"
+      },
+      {
+        "from": "  disabled: 'Desabilitado', enabled: 'Habilitado',",
+        "to": "  disabled: 'Desabilitado', enabled: 'Habilitado', installing: 'Instalando', updating: 'Atualizando', removing: 'Removendo',\n  staged: 'Preparado, aguardando ativação', blocked: 'Bloqueado', 'failed-retained': 'Falhou · versão anterior mantida',"
+      },
+      {
+        "from": "st: ItemStatus):",
+        "to": "st: ProductStatus):"
+      },
+      {
+        "from": "export function StoreExperience({ onOpenApp }: { onOpenApp?: ((id: string) => void) | undefined }) {\n  const [state, dispatch] = useReducer(storeReducer, initialStore);",
+        "to": "export function StoreExperience({ onOpenApp }: { onOpenApp?: ((id: string) => void) | undefined }) {\n  const snapshot = useStoreCatalog();\n  const [demo, setDemo] = useState(false);\n  // A mode change disposes timers and session state; simulations never become host state.\n  return <StoreBody key={demo ? 'demo' : 'official'} snapshot={snapshot} demo={demo} onModeChange={() => setDemo(value => !value)} onOpenApp={onOpenApp}/>;\n}\n\nfunction StoreBody({ snapshot, demo, onModeChange, onOpenApp }: { snapshot: StoreSnapshot; demo: boolean; onModeChange: () => void; onOpenApp?: ((id: string) => void) | undefined }) {\n  const [state, dispatch] = useReducer(storeReducer, demo ? initialStore : { status: {}, ops: [], favorites: [], history: [] });\n  const items = useMemo(() => demo ? catalog : projectOfficialStoreItems(snapshot), [demo, snapshot]);\n  const entries = useMemo(() => new Map(snapshot.entries.map((entry: StoreEntry) => [entry.appId, entry])), [snapshot]);\n  const find = (id: string) => items.find(item => item.id === id);\n  const status = (item: StoreItem): ProductStatus => demo ? statusOf(state, item) : item.kind === 'model' ? 'informational' : entries.has(item.id) ? officialEntryStatus(entries.get(item.id)!) : 'unavailable';"
+      },
+      {
+        "from": "    if (!running.length) return;",
+        "to": "    if (!demo || !running.length) return;"
+      },
+      {
+        "from": "  }, [runKey]);",
+        "to": "  }, [demo, runKey]);"
+      },
+      {
+        "from": "  const request = (i: StoreItem, op: OpKind) => dispatch({ type: 'request', itemId: i.id, op, id: `op-${i.id}-${Date.now()}` });",
+        "to": "  const request = (i: StoreItem, op: OpKind) => { if (demo) dispatch({ type: 'request', itemId: i.id, op, id: `op-${i.id}-${Date.now()}` }); };"
+      },
+      {
+        "from": "  const item = selected ? findItem(selected) : null;\n  const ups = updatable(state);\n  const results = query.trim() ? searchCatalog(query, kind) : null;\n  const ctx: Ctx = { state, open, request, dispatch, onOpenApp };\n\n  return <div className=\"st-root\">",
+        "to": "  const item = selected ? find(selected) : null;\n  const ups = items.filter(item => status(item) === 'update-available');\n  const term = query.trim().toLocaleLowerCase('pt-BR');\n  const results = term ? items.filter(item => (kind === 'all' || item.kind === kind) && [item.name, item.tagline, item.description, ...item.tags].join(' ').toLocaleLowerCase('pt-BR').includes(term)) : null;\n  const ctx: Ctx = { state, open, request, dispatch, onOpenApp, demo, items, entries, status, find, catalogState: snapshot.state };\n\n  return <div className=\"st-root\" data-store-mode={demo ? 'demo' : 'official'}>"
+      },
+      {
+        "from": "    <div className=\"st-main\">\n      <div className=\"st-searchbar\">",
+        "to": "    <div className=\"st-main\">\n      <div className=\"st-mode\">\n        <div role=\"status\"><strong>{demo ? 'Demonstração da Loja' : 'Loja oficial'}</strong><p>{demo ? 'Exemplos e operações simuladas nesta sessão. Nenhuma alteração no dispositivo.' : snapshot.state === 'ready' ? 'Estado recebido do catálogo oficial. Operações no dispositivo ainda indisponíveis nesta versão Web.' : 'O catálogo verificado ainda não está conectado à versão Web. Explore a demonstração para avaliar os recursos previstos.'}</p></div>\n        <Button variant=\"outline\" onClick={onModeChange} aria-label={demo ? 'Voltar à Loja oficial' : 'Ver demonstração da Loja'}>{demo ? 'Voltar à Loja oficial' : 'Ver demonstração'}</Button>\n      </div>\n      <div className=\"st-searchbar\">"
+      },
+      {
+        "from": "items={plugins}",
+        "to": "items={ofKind(ctx, 'plugin')}"
+      },
+      {
+        "from": "items={connectors}",
+        "to": "items={ofKind(ctx, 'connector')}"
+      },
+      {
+        "from": "items={packages}",
+        "to": "items={ofKind(ctx, 'package')}"
+      },
+      {
+        "from": "<p className=\"st-foot\"><Info/>Catálogo demonstrativo. Instalação, conexão, assinatura e verificação pertencem aos mecanismos oficiais do OrdaX OS, ainda não conectados. Marcas de terceiros são exemplos ilustrativos, sem integração oficial.</p>",
+        "to": "<p className=\"st-foot\"><Info/>{demo ? 'Catálogo demonstrativo. Marcas de terceiros são exemplos ilustrativos, sem integração oficial.' : 'Consulta sem autoridade de execução. Instalação, atualização e permissões pertencem aos serviços oficiais do OrdaX OS.'}</p>"
+      },
+      {
+        "from": "type Ctx = { state: StoreState;",
+        "to": "type Ctx = { demo: boolean; items: StoreItem[]; entries: Map<string, StoreEntry>; catalogState: StoreSnapshot['state']; status: (item: StoreItem) => ProductStatus; find: (id: string) => StoreItem | undefined; state: StoreState;"
+      },
+      {
+        "from": "function ActionButton({ item, ctx, size = 'sm' }",
+        "to": "function ofKind<K extends Kind>(ctx: Ctx, kind: K): Extract<StoreItem, { kind: K }>[] {\n  return ctx.items.filter((item): item is Extract<StoreItem, { kind: K }> => item.kind === kind);\n}\n\nfunction ActionButton({ item, ctx, size = 'sm' }"
+      },
+      {
+        "from": "statusOf(ctx.state, item)",
+        "to": "ctx.status(item)"
+      },
+      {
+        "from": "  const a = primaryAction(item, st);",
+        "to": "  const a = primaryAction(item, st);\n  if (!ctx.demo) return <Button size={size} variant=\"outline\" disabled title=\"As operações exigem o serviço autorizado do OrdaX OS\">{item.kind === 'model' ? 'Informativo' : 'Operação indisponível'}</Button>;"
+      },
+      {
+        "from": "<Empty text=\"Nada por aqui ainda.\"/>",
+        "to": "<Empty text={ctx.demo ? \"Nada por aqui ainda.\" : ctx.catalogState === 'unavailable' ? \"Catálogo indisponível nesta versão Web.\" : \"Nenhum item publicado nesta seção do catálogo.\"}/>"
+      },
+      {
+        "from": "'item' : 'itens'} no catálogo demonstrativo",
+        "to": "'item' : 'itens'} ${ctx.demo ? 'na demonstração' : 'no catálogo oficial'}"
+      },
+      {
+        "from": "  const featured = ['studio', 'llama-8b', 'openai', 'projects-agent', 'github', 'aurora'].map(findItem).filter((x): x is StoreItem => !!x);",
+        "to": "  const featured = ctx.demo ? ['studio', 'llama-8b', 'openai', 'projects-agent', 'github', 'aurora'].map(ctx.find).filter((x): x is StoreItem => !!x) : ctx.items;"
+      },
+      {
+        "from": "<Grid title=\"Destaques\" note=\"Seleção editorial demonstrativa, sem avaliações ou downloads.\" items={featured} ctx={ctx}/>",
+        "to": "<Grid title={ctx.demo ? \"Destaques\" : \"Catálogos do sistema\"} note={ctx.demo ? \"Seleção editorial demonstrativa, sem avaliações ou downloads.\" : \"Aplicativos do catálogo verificado e candidato de IA registrado no OS. Um candidato não comprova instalação ou disponibilidade neste dispositivo.\"} items={featured} ctx={ctx}/>"
+      },
+      {
+        "from": "  const list = apps.filter",
+        "to": "  const list = ofKind(ctx, 'app').filter"
+      },
+      {
+        "from": "items={models}",
+        "to": "items={ofKind(ctx, 'model')}"
+      },
+      {
+        "from": "items={providers}",
+        "to": "items={ofKind(ctx, 'provider')}"
+      },
+      {
+        "from": "items={agents}",
+        "to": "items={ofKind(ctx, 'agent')}"
+      },
+      {
+        "from": "Exemplos ilustrativos. Não há integração oficial, login externo nem armazenamento de chaves nesta prévia.",
+        "to": "{ctx.demo ? 'Exemplos ilustrativos. Não há integração oficial, login externo nem armazenamento de chaves nesta prévia.' : 'O catálogo de provedores ainda não está conectado à versão Web.'}"
+      },
+      {
+        "from": "  const rows: [string, (m: ModelItem) => string][]",
+        "to": "  const models = ofKind(ctx, 'model');\n  const rows: [string, (m: ModelItem) => string][]"
+      },
+      {
+        "from": "  const by = (pred: (i: StoreItem, s: ItemStatus) => boolean) => catalog.filter(i => pred(i, statusOf(ctx.state, i)));",
+        "to": "  const by = (pred: (i: StoreItem, s: ProductStatus) => boolean) => ctx.items.filter(i => pred(i, ctx.status(i)));"
+      },
+      {
+        "from": "['Aplicativos instalados', by((i, s) => (i.kind === 'app' || i.kind === 'plugin') && (s === 'installed' || s === 'update-available'))]",
+        "to": "['Aplicativos instalados', by((i, s) => (i.kind === 'app' || i.kind === 'plugin') && (ctx.demo ? s === 'installed' || s === 'update-available' : ctx.entries.get(i.id)?.installedVersion != null))]"
+      },
+      {
+        "from": "['Modelos de IA (informativos)', models]",
+        "to": "['Modelos de IA (informativos)', ofKind(ctx, 'model')]"
+      },
+      {
+        "from": "ctx.state.favorites.map(findItem)",
+        "to": "ctx.state.favorites.map(ctx.find)"
+      },
+      {
+        "from": "ctx.state.history.map(findItem)",
+        "to": "ctx.state.history.map(ctx.find)"
+      },
+      {
+        "from": "Biblioteca demonstrativa da sessão. Não reflete instalações reais do seu dispositivo.",
+        "to": "{ctx.demo ? 'Biblioteca demonstrativa da sessão. Não reflete instalações reais do seu dispositivo.' : ctx.catalogState === 'unavailable' ? 'Sem conexão com o catálogo, não é possível consultar as instalações do dispositivo.' : 'Instalações informadas pelo catálogo oficial. Favoritos e itens vistos permanecem apenas nesta sessão.'}"
+      },
+      {
+        "from": "  const ups = updatable(ctx.state).map(findItem).filter((x): x is StoreItem => !!x);",
+        "to": "  const ups = ctx.items.filter(item => ctx.status(item) === 'update-available');"
+      },
+      {
+        "from": "{ups.length > 0 && <Button onClick={() => ups.forEach",
+        "to": "{ctx.demo && ups.length > 0 && <Button onClick={() => ups.forEach"
+      },
+      {
+        "from": "<Empty text=\"Tudo em dia nesta demonstração.\"/>",
+        "to": "<Empty text={ctx.demo ? \"Tudo em dia nesta demonstração.\" : ctx.catalogState === 'unavailable' ? \"Conecte o catálogo para consultar atualizações.\" : \"Nenhuma atualização elegível informada pelo catálogo.\"}/>"
+      },
+      {
+        "from": "findItem(o.itemId)",
+        "to": "ctx.find(o.itemId)"
+      },
+      {
+        "from": "{(item.kind === 'app' || item.kind === 'plugin') && (st === 'installed'",
+        "to": "{ctx.demo && (item.kind === 'app' || item.kind === 'plugin') && (st === 'installed'"
+      },
+      {
+        "from": "{st === 'authorization-required' && (item.kind",
+        "to": "{ctx.demo && st === 'authorization-required' && (item.kind"
+      },
+      {
+        "from": "function KindBody({ item, ctx }: { item: StoreItem; ctx: Ctx }) {\n  switch (item.kind) {",
+        "to": "function KindBody({ item, ctx }: { item: StoreItem; ctx: Ctx }) {\n  if (!ctx.demo && item.kind === 'app') {\n    const entry = ctx.entries.get(item.id)!;\n    return <div className=\"st-detail-grid\">\n      <Facts rows={[[ 'Estado', statusText[ctx.status(item)] ], ['Versão instalada', entry.installedVersion ?? 'Nenhuma informada'], ['Versão disponível', entry.availableVersion ?? 'Nenhuma informada'], ['Identidade do artefato verificada', entry.artifactIdentityVerified ? 'Sim' : 'Não'], ['Procedência verificada', entry.provenanceVerified ? 'Sim' : 'Não'], ['Bloqueio', entry.blockedReason ?? 'Nenhum informado']]}/>\n      <Notice icon={Info}>Plataformas, permissões e requisitos não são informados por este contrato. Consulte a publicação oficial antes de instalar.</Notice>\n    </div>;\n  }\n  switch (item.kind) {"
+      },
+      {
+        "from": "Seção informativa: a instalação independente de modelos ainda não está habilitada. Esta página demonstra a experiência futura.",
+        "to": "{ctx.demo ? 'Seção informativa: a instalação independente de modelos ainda não está habilitada. Esta página demonstra a experiência futura.' : 'Candidato registrado no catálogo canônico de IA do OS. A publicação, instalação e compatibilidade neste dispositivo não foram verificadas pela versão Web.'}"
+      },
+      {
+        "from": "Nenhum computador com Runtime está conectado, então não há avaliação.",
+        "to": "A versão Web não recebeu dados de hardware nem de instalação, então não há avaliação."
+      },
+      {
+        "from": "['Estado', 'Não instalado · informativo']",
+        "to": "['Estado', ctx.demo ? 'Não instalado · informativo' : 'Instalação não verificada · candidato informativo']"
+      },
+      {
+        "from": "m.tasks.join(', ')",
+        "to": "m.tasks.join(', ') || 'Não informado'"
+      },
+      {
+        "from": "item.tasks.join(', ')",
+        "to": "item.tasks.join(', ') || 'Não informado'"
+      },
+      {
+        "from": "new Map(snapshot.entries.map((entry: StoreEntry) => [entry.appId, entry]))",
+        "to": "new Map<string, StoreEntry>(snapshot.entries.map((entry: StoreEntry) => [entry.appId, entry] as const))"
+      },
+      {
+        "from": "import { initialStore, storeReducer, statusOf, activeOps, updatable, type ItemStatus, type OpKind, type Operation, type StoreState } from '@/lib/store/state';",
+        "to": "import { initialStore, storeReducer, statusOf, activeOps, type OpKind, type Operation, type StoreState } from '@/lib/store/state';"
+      }
+    ],
+    "src/lib/store/catalog.ts": [
+      {
+        "from": "export function platformLabel(p: Platform[]): string {",
+        "to": "export function platformLabel(p: Platform[]): string {\n  if (!p.length) return 'Compatibilidade não informada pelo catálogo';"
       }
     ]
   },
