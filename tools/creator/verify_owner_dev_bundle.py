@@ -12,12 +12,15 @@ from pathlib import Path
 import re
 import sys
 import zipfile
+from theme_bridge import render_theme, SYMBOL
 
 EXPECTED = {
     "OrdaX-Creator/OrdaX-Creator.exe",
     "OrdaX-Creator/ordax-creator-physical-test.exe",
     "OrdaX-Creator/ordax-bootstrap-seed.raw",
     "OrdaX-Creator/provenance.json",
+    "OrdaX-Creator/ordax-symbol.png",
+    "OrdaX-Creator/ordax-design-theme.json",
     "OrdaX-Creator/LEIA-ME.txt",
 }
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
@@ -79,6 +82,18 @@ def main() -> int:
             fail("seed-commit-drift")
         if provenance.get("creator_version") != version:
             fail("creator-version-provenance-drift")
+        theme = archive.read("OrdaX-Creator/ordax-design-theme.json")
+        symbol = archive.read("OrdaX-Creator/ordax-symbol.png")
+        if len(theme) > 64 << 10 or len(symbol) > 2 << 20:
+            fail("creator-brand-assets-exceed-bounds")
+        if theme != render_theme():
+            fail("creator-theme-mismatch-with-surface-ssot")
+        if symbol != SYMBOL.read_bytes():
+            fail("creator-logo-mismatch-with-surface-ssot")
+        if hashlib.sha256(theme).hexdigest() != provenance.get("theme_sha256"):
+            fail("creator-theme-digest-mismatch")
+        if hashlib.sha256(symbol).hexdigest() != provenance.get("symbol_sha256"):
+            fail("creator-symbol-digest-mismatch")
         if provenance.get("canonical_public_release") is not False:
             fail("dev-bundle-misrepresented-as-public-release")
         if provenance.get("ephemeral_prototype_trust") is not True:

@@ -59,6 +59,9 @@ const (
 	msgRefreshHint               creatorMessageID = "creator.refresh.hint"
 	msgHeaderTitle               creatorMessageID = "creator.header.title"
 	msgHeaderSubtitle            creatorMessageID = "creator.header.subtitle"
+	msgSidebarUSBTitle           creatorMessageID = "creator.sidebar.usbTitle"
+	msgUSBDetected               creatorMessageID = "creator.sidebar.usbDetected"
+	msgStatusCaption             creatorMessageID = "creator.sidebar.statusCaption"
 	msgFieldUSB                  creatorMessageID = "creator.field.usb"
 	msgFieldLanguage             creatorMessageID = "creator.field.language"
 	msgUpdateChecking            creatorMessageID = "creator.update.checking"
@@ -155,6 +158,9 @@ var creatorPTBRMessages = map[creatorMessageID]string{
 	msgVersionUpdated:            "atualizado",
 	msgRefreshSearching:          "Procurando pendrives…",
 	msgRefreshHint:               "Atualizando a lista de dispositivos USB disponíveis. Seus discos internos continuam fora da seleção do Creator.",
+	msgSidebarUSBTitle:            "Seu OrdaX USB",
+	msgUSBDetected:                "USB detectado",
+	msgStatusCaption:              "Status",
 	msgHeaderTitle:               "Criar pendrive OrdaX",
 	msgHeaderSubtitle:            "Assistente guiado: conecte o USB, confirme o destino e acompanhe a criação até a verificação final.",
 	msgFieldUSB:                  "Pendrive",
@@ -253,6 +259,9 @@ var creatorENUSMessages = map[creatorMessageID]string{
 	msgVersionUpdated:            "updated",
 	msgRefreshSearching:          "Searching for USB drives…",
 	msgRefreshHint:               "Refreshing the list of available USB devices. Internal disks remain outside Creator's target selection.",
+	msgSidebarUSBTitle:            "Your OrdaX USB",
+	msgUSBDetected:                "USB detected",
+	msgStatusCaption:              "Status",
 	msgHeaderTitle:               "Create an OrdaX USB drive",
 	msgHeaderSubtitle:            "Guided assistant: connect the USB drive, confirm the target, and follow creation through final verification.",
 	msgFieldUSB:                  "USB drive",

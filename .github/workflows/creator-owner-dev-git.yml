@@ -263,6 +263,11 @@ jobs:
           release="$GITHUB_WORKSPACE/out/owner-prototype/release"
           bundle="$RUNNER_TEMP/OrdaX-Creator"
           mkdir -p "$release" "$bundle"
+          python3 tools/creator/theme_bridge.py --out "$bundle/ordax-design-theme.json"
+          cp system/surface/ui/brand/ordax-symbol.png "$bundle/ordax-symbol.png"
+          python3 tools/creator/theme_bridge.py --out "$bundle/ordax-design-theme.json" --check
+          symbol_sha="$(sha256sum "$bundle/ordax-symbol.png" | cut -d' ' -f1)"
+          theme_sha="$(sha256sum "$bundle/ordax-design-theme.json" | cut -d' ' -f1)"
 
           trust_sha="$(sha256sum "$RUNNER_TEMP/owner-prototype-trust.json" | cut -d' ' -f1)"
           manifest_sha="$(sha256sum "$manifest" | cut -d' ' -f1)"
@@ -270,7 +275,7 @@ jobs:
           seed_size="$(stat -c '%s' "$seed")"
           cp "$seed" "$bundle/ordax-bootstrap-seed.raw"
 
-          python - "$bundle/provenance.json" "$trust_sha" "$manifest_sha" "$seed_sha" "$seed_size" <<'PY'
+          python - "$bundle/provenance.json" "$trust_sha" "$manifest_sha" "$seed_sha" "$seed_size" "$symbol_sha" "$theme_sha" <<'PY'
           import json, os, pathlib, sys
           data = {
               '$schema': 'prototype-ordax.creator-owner-physical/1',
@@ -289,7 +294,9 @@ jobs:
               'trust_sha256': sys.argv[2],
               'prototype_manifest_sha256': sys.argv[3],
               'seed_sha256': sys.argv[4],
-              'seed_size': int(sys.argv[5])
+              'seed_size': int(sys.argv[5]),
+              'symbol_sha256': sys.argv[6],
+              'theme_sha256': sys.argv[7]
           }
           pathlib.Path(sys.argv[1]).write_text(json.dumps(data, indent=2, sort_keys=True) + '\n', encoding='utf-8')
           PY
@@ -313,6 +320,8 @@ jobs:
           test -s "$bundle/ordax-creator-physical-test.exe"
           test -s "$bundle/ordax-bootstrap-seed.raw"
           test -s "$bundle/provenance.json"
+          test -s "$bundle/ordax-symbol.png"
+          test -s "$bundle/ordax-design-theme.json"
 
           cat > "$bundle/LEIA-ME.txt" <<'TXT'
           OrdaX Creator - Development Git USB
@@ -345,6 +354,8 @@ jobs:
               'ordax-creator-physical-test.exe',
               'ordax-bootstrap-seed.raw',
               'provenance.json',
+              'ordax-symbol.png',
+              'ordax-design-theme.json',
               'LEIA-ME.txt',
           ]
           with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
@@ -376,6 +387,8 @@ jobs:
           pathlib.Path(output).write_text(json.dumps(data, indent=2, sort_keys=True) + '\n', encoding='utf-8')
           PY
 
+          echo "OWNER_CREATOR_THEME_SHA256=$theme_sha"
+          echo "OWNER_CREATOR_SYMBOL_SHA256=$symbol_sha"
           echo "OWNER_BUNDLE_SOURCE=$GITHUB_SHA"
           echo "OWNER_BUNDLE_SHA256=$zip_sha"
           echo "OWNER_SEED_SHA256=$seed_sha"
