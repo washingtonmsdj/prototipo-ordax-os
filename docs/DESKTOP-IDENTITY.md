@@ -115,3 +115,10 @@ repeatable compilation, Chromium desktop/mobile proof and Native/domain
 regressions. Risks: initial JS/artwork payload, dependency maintenance, final
 distribution review and deferred service wiring. No kernel rebuild, USB write,
 signing or production activation is implied.
+
+## Web Store consumer — 2026-10-11
+
+The canonical workspace Store now projects the public OS catalog port and
+source-locked local AI candidate. It defaults to official mode, with an
+explicit demonstration inside the same renderer. No Web transport or lifecycle
+authority has been introduced. See [Store boundary and acceptance](STORE-WEB-CATALOG-PRESENTATION.md).

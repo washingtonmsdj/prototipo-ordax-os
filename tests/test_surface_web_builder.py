@@ -19,6 +19,9 @@ class SurfaceWebBuilderTests(unittest.TestCase):
             "system/surface/ui/brand/ordax-symbol.png", "system/surface/ui/tokens.css",
             "system/surface/ui/fonts/inter-latin-wght-normal.woff2",
             "system/services/i18n/surface.mjs",
+            "system/contracts/app-store.mjs", "system/contracts/component-manifest.mjs",
+            "system/services/local-ai/model-candidate.generated.mjs",
+            "system/services/local-ai/source-lock.json",
         ):
             self.assertIn(expected, graph)
         self.assertFalse((ROOT / "tools/web2-preview").exists())

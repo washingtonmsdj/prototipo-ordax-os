@@ -92,6 +92,7 @@ export function searchCatalog(query: string, kind: Kind | 'all' = 'all', items: 
 
 /** Platform labels for apps/connectors; never claims availability. */
 export function platformLabel(p: Platform[]): string {
+  if (!p.length) return 'Compatibilidade não informada pelo catálogo';
   if (p.includes('device')) return 'Requer computador com Runtime autorizado';
   if (p.includes('web') && p.includes('os')) return 'OrdaX Web e OS';
   return p.includes('web') ? 'OrdaX Web' : 'OrdaX OS nativo';

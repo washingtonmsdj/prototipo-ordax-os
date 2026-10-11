@@ -53,6 +53,27 @@ try {
       await client.send('Page.navigate',{url:origin+'/?view='+view});await ready();
       const state=await evaluate("({canonical:document.querySelectorAll('.web-workspace').length===1&&location.pathname==='/',noOverflow:document.documentElement.scrollWidth<=innerWidth,assets:[...document.images].filter(img=>img.getClientRects().length>0).every(img=>img.complete&&img.naturalWidth>0),font:document.fonts.check('14px Inter'),unavailable:document.querySelector('.web-sidebar-status')?.textContent.includes('não conectados')})");
       assert.ok(Object.values(state).every(Boolean),JSON.stringify({width,height,view,state}));
+      if (view === 'store') {
+        assert.equal(await evaluate("document.querySelector('.st-root')?.dataset.storeMode"), 'official');
+        assert.equal(await evaluate("document.querySelectorAll('.st-card').length"), 1, 'Only the OS model candidate is known without the Web transport');
+        assert.equal(await evaluate("!!document.querySelector('.st-card button[disabled]')"), true);
+        await click('[aria-label="Ver demonstração da Loja"]');
+        assert.equal(await evaluate("document.querySelector('.st-root')?.dataset.storeMode"), 'demo');
+        await click('.st-nav button:nth-child(7)');
+        assert.equal(await evaluate("document.querySelector('.st-body').textContent.includes('Conectado')"), true, 'Demo connected items remain available to evaluate');
+        await click('.st-nav button:nth-child(2)');
+        await click('[aria-label="Ver detalhes de Player de Mídia"]');
+        await click('.st-detail-actions button:first-child');
+        assert.equal(await evaluate("!!document.querySelector('.st-running')"), true, 'Demo request has its own progress');
+        await click('[aria-label="Voltar à Loja oficial"]');
+        await sleep(1100);
+        const isolated = await evaluate("({official:document.querySelector('.st-root')?.dataset.storeMode==='official',noProgress:!document.querySelector('.st-running'),noDemoItems:!document.querySelector('.st-body').textContent.includes('Player de Mídia'),noClaimedInstall:!document.querySelector('.st-status.st-s-installed')})");
+        assert.ok(Object.values(isolated).every(Boolean), JSON.stringify(isolated));
+        assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'), true);
+        const storeShot = await client.send('Page.captureScreenshot', {format:'png',captureBeyondViewport:false});
+        await writeFile(join(evidence,'store-'+width+'x'+height+'.png'),Buffer.from(storeShot.data,'base64'));
+      }
+
     }
     await client.send('Page.navigate',{url:origin+'/?view=home'});await ready();
     await click('[aria-label="Abrir aplicativos"]');
@@ -74,7 +95,7 @@ try {
     }
     const shot=await client.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
     await writeFile(join(evidence,'web-'+width+'x'+height+'.png'),Buffer.from(shot.data,'base64'));
-    reports.push({width,height,views:8,assets:true,noOverflow:true,launcher:true,windowLifecycle:width>760});
+    reports.push({width,height,views:8,storeModeIsolation:true,assets:true,noOverflow:true,launcher:true,windowLifecycle:width>760});
   }
   return reports;
  });

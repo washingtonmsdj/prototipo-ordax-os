@@ -1,5 +1,16 @@
 # Current State
 
+## Web Store catalog presentation — 2026-10-11
+
+Store now consumes the existing authority-free catalog port through one React
+presentation. It opens in official mode; demonstration requires an explicit
+action and is disposed when leaving it. The local AI candidate comes from the
+OS source-lock/generated catalog. Snapshot revocation or invalidation clears
+old entries. Web transport and real lifecycle remain unavailable; no package
+installation, authenticated catalog or model compatibility is claimed.
+Owner, public dependencies, risk and acceptance: docs/STORE-WEB-CATALOG-PRESENTATION.md.
+
+
 ## Canonical Web presentation cutover — 2026-10-10
 
 The approved workspace presentation lives under system/surface/workspace and

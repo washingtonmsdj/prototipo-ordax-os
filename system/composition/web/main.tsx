@@ -2,6 +2,8 @@ import { Component, useEffect, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createRootRoute, createRoute, createRouter, RouterProvider } from '@tanstack/react-router';
 import { Toaster } from 'sonner';
+import { createUnavailableAppStoreCatalogPort } from '../../contracts/app-store.mjs';
+import { StoreCatalogProvider } from '../../surface/workspace/components/store/catalog-context';
 import { WebShell } from '../../surface/workspace/components/web/shell';
 import { normalizeWebView } from '../../surface/workspace/lib/web/model';
 import { createSurfaceBootScreen } from '../../surface/ui/boot-screen.mjs';
@@ -15,6 +17,7 @@ boot.setStage(text('surface.boot.loadingSurface'));
 const root = document.querySelector('#ordax-root');
 if (!root) throw new Error('OrdaX composition root is missing #ordax-root');
 const route = createRootRoute();
+const storeCatalog = createUnavailableAppStoreCatalogPort('web-store-transport-unavailable');
 class WorkspaceBoundary extends Component<{children: ReactNode}, {failed: boolean}> {
   state = {failed: false};
   static getDerivedStateFromError() { return {failed: true}; }
@@ -24,7 +27,7 @@ class WorkspaceBoundary extends Component<{children: ReactNode}, {failed: boolea
 function Workspace() {
   const { view } = web.useSearch();
   useEffect(() => { boot.ready(); }, []);
-  return <><WebShell view={view}/><Toaster/></>;
+  return <><StoreCatalogProvider port={storeCatalog}><WebShell view={view}/></StoreCatalogProvider><Toaster/></>;
 }
 const web = createRoute({
   getParentRoute: () => route, path: '/',
