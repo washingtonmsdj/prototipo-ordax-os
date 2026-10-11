@@ -46,7 +46,6 @@ var (
     procGetWindowTextW = user32.NewProc("GetWindowTextW")
     procGetWindowTextLengthW = user32.NewProc("GetWindowTextLengthW")
     procDestroyWindow = user32.NewProc("DestroyWindow")
-    procGetStockObject = gdi32.NewProc("GetStockObject")
     procCreateFontW = gdi32.NewProc("CreateFontW")
     procSetWindowTheme = syscall.NewLazyDLL("uxtheme.dll").NewProc("SetWindowTheme")
     creatorFontTitle uintptr
